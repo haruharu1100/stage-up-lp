@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5" />
+<meta name="theme-color" content="#fff7ed" />
+<meta name="robots" content="noindex, nofollow" />
+
+<title>株式会社ポスティング角屋｜奈良・大阪南部の確実なチラシ配布。</title>
+<meta name="description" content="株式会社ポスティング角屋は、奈良・大阪南部・東部エリアを中心とした地域密着のポスティング会社です。一軒一軒、お客様の声が届く配布を。" />
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;800;900&family=Bebas+Neue&display=swap" rel="stylesheet" />
+
+<style>
+:root{
+  --bg:#fff7ed;
+  --bg-2:#ffedd5;
+  --paper:#ffffff;
+  --ink:#1c1917;
+  --ink-2:#44403c;
+  --ink-3:#78716c;
+  --line:#fed7aa;
+  --line-2:#fdba74;
+  --orange:#ea580c;
+  --orange-2:#c2410c;
+  --orange-deep:#9a3412;
+  --yellow:#facc15;
+  --navy:#1e3a8a;
+  --green:#16a34a;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%;scroll-padding-top:80px}
+body{
+  font-family:"Noto Sans JP","Hiragino Kaku Gothic ProN","Yu Gothic",sans-serif;
+  background:var(--bg);color:var(--ink-2);
+  font-size:15px;line-height:1.8;-webkit-font-smoothing:antialiased;
+}
+img{display:block;max-width:100%;height:auto}
+a{color:inherit;text-decoration:none;transition:opacity .2s,color .2s}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+ul,ol{list-style:none}
+
+.sample-bar{
+  position:fixed;top:0;left:0;right:0;z-index:60;
+  background:#1c1917;color:#fdba74;padding:8px 16px;text-align:center;
+  font-size:11px;letter-spacing:.1em;
+}
+body{padding-top:32px}
+
+.container{width:100%;max-width:1180px;margin:0 auto;padding:0 20px}
+.container-narrow{max-width:880px}
+@media(min-width:768px){.container{padding:0 32px}}
+
+/* ── Header ── */
+.site-header{
+  position:fixed;top:32px;left:0;right:0;z-index:50;
+  background:rgba(255,247,237,.92);backdrop-filter:blur(14px);
+  border-bottom:1px solid transparent;transition:border-color .3s;
+}
+.site-header.is-scrolled{border-bottom-color:var(--line-2)}
+.header-inner{display:flex;align-items:center;justify-content:space-between;gap:16px;height:64px}
+.brand{display:inline-flex;align-items:center;gap:12px}
+.brand-mark{
+  width:40px;height:40px;display:grid;place-items:center;
+  background:var(--orange);color:#fff;font-weight:900;font-size:18px;
+  border-radius:10px;transform:rotate(-6deg);
+}
+.brand-text{display:flex;flex-direction:column;line-height:1.1}
+.brand-name{font-weight:900;color:var(--ink);font-size:17px}
+.brand-sub{font-size:10px;color:var(--orange-2);font-weight:700;letter-spacing:.15em;margin-top:2px}
+
+.nav-desktop{display:none;gap:30px}
+.nav-desktop a{font-size:14px;color:var(--ink-2);font-weight:600}
+.nav-desktop a:hover{color:var(--orange)}
+@media(min-width:1024px){.nav-desktop{display:flex}}
+
+.header-cta{display:flex;align-items:center;gap:10px}
+.header-tel{display:none;color:var(--orange-deep);font-weight:900;font-size:18px}
+.header-tel small{display:block;font-size:9px;color:var(--ink-3);font-weight:400;letter-spacing:.15em}
+@media(min-width:1024px){.header-tel{display:block}}
+.btn-h-primary{
+  display:inline-flex;align-items:center;gap:6px;
+  background:var(--orange);color:#fff;padding:11px 20px;border-radius:30px;
+  font-weight:700;font-size:13px;
+  box-shadow:0 4px 0 0 var(--orange-deep);
+}
+.btn-h-primary:hover{transform:translateY(1px);box-shadow:0 3px 0 0 var(--orange-deep)}
+
+.menu-toggle{
+  width:40px;height:40px;display:grid;gap:4px;align-content:center;justify-items:center;
+  background:var(--paper);border:2px solid var(--ink);border-radius:8px;
+}
+.menu-toggle span{width:16px;height:2px;background:var(--ink);transition:transform .3s,opacity .3s}
+.menu-toggle[aria-expanded="true"] span:nth-child(1){transform:translateY(6px) rotate(45deg)}
+.menu-toggle[aria-expanded="true"] span:nth-child(2){opacity:0}
+.menu-toggle[aria-expanded="true"] span:nth-child(3){transform:translateY(-6px) rotate(-45deg)}
+@media(min-width:1024px){.menu-toggle{display:none}}
+.nav-mobile{
+  display:flex;flex-direction:column;max-height:0;overflow:hidden;
+  background:var(--paper);border-top:1px solid var(--line-2);padding:0 24px;
+  transition:max-height .4s,padding .3s;
+}
+.nav-mobile.is-open{max-height:80vh;padding:8px 24px 24px}
+.nav-mobile a{padding:14px 0;border-bottom:1px solid var(--line);font-size:14px;color:var(--ink);font-weight:600}
+
+/* ── Hero ── */
+.hero{
+  position:relative;padding:130px 0 90px;overflow:hidden;
+  background:linear-gradient(135deg,#fff7ed 0%,#ffedd5 100%);
+}
+@media(min-width:768px){.hero{padding:170px 0 120px}}
+.hero::before{
+  content:"";position:absolute;inset:0;
+  background-image:
+    radial-gradient(circle at 15% 30%,rgba(234,88,12,.08) 0,transparent 5%),
+    radial-gradient(circle at 75% 20%,rgba(234,88,12,.08) 0,transparent 5%),
+    radial-gradient(circle at 85% 75%,rgba(234,88,12,.08) 0,transparent 5%),
+    radial-gradient(circle at 25% 80%,rgba(234,88,12,.08) 0,transparent 5%);
+  background-size:120px 120px;
+  pointer-events:none;
+}
+.hero-inner{position:relative}
+.hero-badge{
+  display:inline-flex;align-items:center;gap:8px;
+  background:var(--orange);color:#fff;padding:8px 16px;border-radius:30px;
+  font-size:12px;font-weight:700;letter-spacing:.05em;margin-bottom:28px;
+  transform:rotate(-2deg);box-shadow:0 4px 0 0 var(--orange-deep);
+}
+.hero-title{
+  font-weight:900;color:var(--ink);
+  font-size:38px;line-height:1.25;letter-spacing:-.02em;
+}
+@media(min-width:640px){.hero-title{font-size:50px}}
+@media(min-width:1024px){.hero-title{font-size:68px}}
+.hero-title .hl{
+  background:linear-gradient(transparent 60%,var(--yellow) 60%);padding:0 4px;
+}
+.hero-title .orange{color:var(--orange)}
+.hero-sub{
+  margin-top:28px;color:var(--ink-2);font-size:16px;line-height:1.85;max-width:560px;
+}
+@media(min-width:768px){.hero-sub{font-size:18px}}
+
+.hero-features{
+  margin-top:36px;display:flex;flex-wrap:wrap;gap:10px;
+}
+.hero-features li{
+  background:var(--paper);color:var(--ink);
+  padding:8px 14px;border-radius:30px;border:2px solid var(--ink);
+  font-size:13px;font-weight:700;
+  box-shadow:3px 3px 0 0 var(--orange);
+}
+
+.hero-cta{margin-top:40px;display:flex;flex-wrap:wrap;gap:14px}
+.btn-primary{
+  display:inline-flex;align-items:center;justify-content:center;gap:10px;
+  background:var(--orange);color:#fff;padding:18px 32px;border-radius:14px;
+  font-weight:800;font-size:15px;letter-spacing:.05em;
+  box-shadow:0 6px 0 0 var(--orange-deep);
+}
+.btn-primary:hover{transform:translateY(2px);box-shadow:0 4px 0 0 var(--orange-deep)}
+.btn-secondary{
+  display:inline-flex;align-items:center;justify-content:center;gap:10px;
+  background:var(--paper);color:var(--ink);padding:18px 32px;border-radius:14px;
+  font-weight:800;font-size:15px;letter-spacing:.05em;
+  border:2px solid var(--ink);box-shadow:0 6px 0 0 var(--ink);
+}
+.btn-secondary:hover{transform:translateY(2px);box-shadow:0 4px 0 0 var(--ink)}
+
+.hero-stats{
+  margin-top:64px;display:grid;grid-template-columns:repeat(3,1fr);gap:0;
+  background:var(--paper);border:2px solid var(--ink);border-radius:18px;
+  box-shadow:0 8px 0 0 var(--ink);overflow:hidden;
+}
+.hstat{padding:24px 20px;text-align:center;border-right:2px dashed var(--line-2)}
+.hstat:last-child{border-right:0}
+.hstat-n{font-family:"Bebas Neue",sans-serif;font-size:42px;color:var(--orange);line-height:1;letter-spacing:.02em}
+@media(min-width:768px){.hstat-n{font-size:54px}}
+.hstat-l{margin-top:6px;font-size:11px;color:var(--ink-3);font-weight:700;letter-spacing:.1em}
+@media(min-width:768px){.hstat-l{font-size:12px}}
+
+/* ── Section base ── */
+.section{padding:90px 0}
+@media(min-width:768px){.section{padding:120px 0}}
+.section-paper{background:var(--paper)}
+.section-bg-2{background:var(--bg-2)}
+
+.s-eyebrow{
+  display:inline-block;padding:5px 14px;
+  background:var(--ink);color:var(--yellow);
+  font-weight:800;font-size:11px;letter-spacing:.2em;
+  margin-bottom:18px;border-radius:6px;
+}
+.s-title{
+  font-weight:900;color:var(--ink);font-size:30px;line-height:1.3;letter-spacing:-.01em;
+}
+@media(min-width:768px){.s-title{font-size:42px}}
+.s-title .hl{background:linear-gradient(transparent 65%,var(--yellow) 65%);padding:0 4px}
+.s-lead{margin-top:20px;color:var(--ink-2);font-size:15px;line-height:1.9;max-width:660px}
+
+/* ── 対応エリア ── */
+.area-grid{
+  margin-top:56px;display:grid;gap:24px;
+}
+@media(min-width:768px){.area-grid{grid-template-columns:1fr 1fr;gap:48px;align-items:center}}
+.area-map{
+  position:relative;aspect-ratio:5/4;background:var(--paper);
+  border:2px dashed var(--ink);border-radius:18px;padding:40px 24px;
+  display:flex;flex-direction:column;justify-content:center;align-items:center;
+  text-align:center;
+}
+.area-map h3{font-family:"Bebas Neue",sans-serif;font-size:60px;color:var(--orange);line-height:1}
+.area-map h3 span{display:block;font-size:.4em;color:var(--ink);font-family:"Noto Sans JP",sans-serif;font-weight:900;letter-spacing:.1em;margin-top:8px}
+.area-map .dots{margin-top:24px;display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+.area-map .dot{
+  padding:6px 12px;background:var(--bg-2);border:1px solid var(--line-2);
+  border-radius:30px;font-size:12px;font-weight:700;color:var(--ink);
+}
+.area-list h3{font-weight:900;color:var(--ink);font-size:22px;margin-bottom:14px}
+.area-list h3 small{display:block;font-size:11px;color:var(--orange);font-weight:700;letter-spacing:.15em;margin-bottom:6px}
+.area-list ul{display:grid;gap:0;margin-top:20px}
+.area-list li{
+  padding:14px 0;border-bottom:1px solid var(--line);
+  display:flex;align-items:center;gap:12px;font-size:14px;color:var(--ink);font-weight:600;
+}
+.area-list li::before{
+  content:"";display:inline-block;width:14px;height:14px;border-radius:50%;
+  background:var(--orange);box-shadow:0 0 0 4px rgba(234,88,12,.15);
+}
+
+/* ── 配布力（強み） ── */
+.strength-grid{margin-top:56px;display:grid;gap:24px}
+@media(min-width:768px){.strength-grid{grid-template-columns:repeat(3,1fr)}}
+.strength{
+  background:var(--paper);padding:32px 28px;border-radius:18px;
+  border:2px solid var(--ink);box-shadow:0 6px 0 0 var(--ink);
+  transition:transform .2s;
+}
+.strength:hover{transform:translateY(-3px)}
+.strength-no{
+  font-family:"Bebas Neue",sans-serif;font-size:36px;color:var(--orange);line-height:1;
+  margin-bottom:14px;
+}
+.strength-h{font-weight:900;color:var(--ink);font-size:18px;line-height:1.4}
+.strength-d{margin-top:12px;font-size:14px;color:var(--ink-2);line-height:1.85}
+
+/* ── 流れ（配布の流れ） ── */
+.flow{margin-top:56px;display:grid;gap:24px}
+@media(min-width:768px){.flow{grid-template-columns:repeat(4,1fr);gap:14px}}
+.fstep{
+  background:var(--paper);padding:24px 20px;border-radius:14px;
+  border:2px solid var(--ink);position:relative;
+}
+.fstep-n{
+  position:absolute;top:-14px;left:20px;
+  background:var(--orange);color:#fff;padding:4px 10px;border-radius:6px;
+  font-family:"Bebas Neue",sans-serif;font-size:16px;letter-spacing:.05em;
+}
+.fstep-h{margin-top:8px;font-weight:800;color:var(--ink);font-size:15px;line-height:1.4}
+.fstep-d{margin-top:10px;font-size:13px;color:var(--ink-3);line-height:1.7}
+
+/* ── 配布実績/事例 ── */
+.case-grid{margin-top:56px;display:grid;gap:24px}
+@media(min-width:768px){.case-grid{grid-template-columns:repeat(2,1fr)}}
+.case{
+  background:var(--paper);padding:32px;border-radius:18px;
+  border:2px dashed var(--orange);
+}
+.case-cat{
+  display:inline-block;padding:4px 10px;background:var(--bg-2);
+  border-radius:6px;font-size:11px;color:var(--orange-deep);font-weight:800;letter-spacing:.1em;
+}
+.case-h{margin-top:14px;font-weight:900;color:var(--ink);font-size:20px;line-height:1.45}
+.case-result{
+  margin-top:20px;padding:14px 18px;background:var(--bg-2);border-radius:10px;
+  display:flex;align-items:baseline;gap:14px;
+}
+.case-result strong{font-family:"Bebas Neue",sans-serif;font-size:32px;color:var(--orange);line-height:1}
+.case-result span{font-size:12px;color:var(--ink-2);font-weight:600}
+.case-d{margin-top:14px;font-size:14px;color:var(--ink-2);line-height:1.85}
+
+/* ── 声 ── */
+.voice-grid{margin-top:56px;display:grid;gap:20px}
+@media(min-width:768px){.voice-grid{grid-template-columns:repeat(2,1fr)}}
+.voice{
+  background:var(--paper);padding:28px;border-radius:18px;
+  border-left:6px solid var(--orange);
+}
+.voice-text{font-size:15px;color:var(--ink);line-height:1.95;font-weight:500}
+.voice-by{margin-top:18px;font-size:13px;color:var(--ink-3);font-weight:600}
+.voice-by strong{color:var(--ink);font-weight:800}
+
+/* ── FAQ ── */
+.faq{margin-top:56px;display:grid;gap:14px}
+.faq-item{background:var(--paper);border:2px solid var(--ink);border-radius:14px;overflow:hidden}
+.faq-item[data-open="true"]{background:var(--bg-2)}
+.faq-q{
+  width:100%;text-align:left;padding:22px 24px;
+  display:flex;align-items:center;gap:14px;
+  font-weight:800;color:var(--ink);
+}
+.faq-q-mark{
+  flex-shrink:0;width:32px;height:32px;background:var(--orange);color:#fff;
+  display:grid;place-items:center;border-radius:8px;font-family:"Bebas Neue",sans-serif;font-size:18px;
+}
+.faq-qt{flex:1;font-size:15px;line-height:1.5}
+.faq-icon{flex-shrink:0;width:24px;height:24px;display:grid;place-items:center;color:var(--ink);font-size:18px;transition:transform .3s}
+.faq-item[data-open="true"] .faq-icon{transform:rotate(45deg)}
+.faq-a{max-height:0;overflow:hidden;transition:max-height .5s}
+.faq-item[data-open="true"] .faq-a{max-height:400px}
+.faq-a-inner{padding:0 24px 24px 70px;font-size:14px;color:var(--ink-2);line-height:1.85}
+
+/* ── Contact ── */
+.contact{
+  background:var(--ink);color:#fff;padding:100px 0;
+  position:relative;overflow:hidden;
+}
+.contact::before{
+  content:"";position:absolute;inset:0;
+  background-image:radial-gradient(circle at 20% 30%,rgba(250,204,21,.06) 0,transparent 20%);
+}
+.contact-inner{position:relative}
+.contact .s-eyebrow{background:var(--orange);color:#fff}
+.contact .s-title{color:#fff}
+.contact .s-lead{color:#a8a29e}
+.contact-cards{margin-top:48px;display:grid;gap:16px}
+@media(min-width:768px){.contact-cards{grid-template-columns:repeat(3,1fr)}}
+.ccard{
+  padding:30px 24px;background:rgba(255,255,255,.06);border:1px solid rgba(253,186,116,.3);
+  border-radius:14px;text-align:center;
+}
+.ccard-l{font-size:11px;letter-spacing:.2em;color:var(--orange);font-weight:800}
+.ccard-v{margin-top:12px;font-weight:900;color:#fff;font-size:22px;line-height:1.4}
+.ccard-n{margin-top:8px;font-size:12px;color:#a8a29e}
+
+.contact-buttons{margin-top:36px;display:flex;flex-direction:column;gap:12px}
+@media(min-width:768px){.contact-buttons{flex-direction:row;justify-content:center}}
+.btn-c-primary{
+  display:inline-flex;align-items:center;justify-content:center;gap:10px;
+  background:var(--orange);color:#fff;padding:18px 36px;border-radius:14px;
+  font-weight:800;font-size:15px;
+  box-shadow:0 6px 0 0 var(--orange-deep);
+}
+.btn-c-primary:hover{transform:translateY(2px);box-shadow:0 4px 0 0 var(--orange-deep)}
+.btn-c-line{
+  display:inline-flex;align-items:center;justify-content:center;gap:10px;
+  background:#06c755;color:#fff;padding:18px 36px;border-radius:14px;
+  font-weight:800;font-size:15px;
+}
+.contact-note{margin-top:32px;text-align:center;font-size:12px;color:#a8a29e}
+.sample-mark{
+  margin:48px auto 0;max-width:640px;padding:14px 20px;
+  border:1px dashed rgba(253,186,116,.4);border-radius:10px;
+  text-align:center;font-size:11px;color:#a8a29e;
+}
+
+/* ── Footer ── */
+.site-footer{background:var(--ink);color:rgba(255,255,255,.6);padding:48px 0 32px;border-top:1px dashed rgba(255,255,255,.15)}
+.footer-inner{display:grid;gap:32px}
+@media(min-width:768px){.footer-inner{grid-template-columns:1.5fr 1fr 1fr}}
+.footer-lead{margin-top:16px;font-size:13px;line-height:1.85;color:rgba(255,255,255,.55)}
+.footer-h{font-weight:900;color:var(--orange);font-size:12px;letter-spacing:.15em;margin-bottom:14px}
+.footer-list li{font-size:13px;margin-bottom:8px}
+.footer-list a:hover{color:var(--orange)}
+.footer-bottom{
+  margin-top:40px;padding-top:24px;border-top:1px solid rgba(255,255,255,.1);
+  display:flex;flex-direction:column;gap:10px;font-size:11px;color:rgba(255,255,255,.4);
+}
+@media(min-width:640px){.footer-bottom{flex-direction:row;justify-content:space-between}}
+.footer-sample{margin-top:8px;text-align:center;width:100%;font-size:10px}
+
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+<div class="sample-bar">※ご提案用サンプルページ｜本ページは公開されておりません</div>
+
+<header class="site-header" id="header">
+  <div class="container header-inner">
+    <a href="#top" class="brand">
+      <span class="brand-mark">角</span>
+      <span class="brand-text">
+        <span class="brand-name">ポスティング角屋</span>
+        <span class="brand-sub">POSTING SUMIYA</span>
+      </span>
+    </a>
+    <nav class="nav-desktop">
+      <a href="#area">対応エリア</a>
+      <a href="#strength">強み</a>
+      <a href="#flow">配布の流れ</a>
+      <a href="#case">配布事例</a>
+      <a href="#voice">お客様の声</a>
+      <a href="#faq">FAQ</a>
+    </nav>
+    <div class="header-cta">
+      <span class="header-tel">XXX-XXXX-XXXX<small>9:00-18:00 受付</small></span>
+      <a href="#contact" class="btn-h-primary">無料相談</a>
+    </div>
+    <button class="menu-toggle" id="menuToggle" aria-label="メニュー" aria-expanded="false">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+  <div class="nav-mobile" id="navMobile">
+    <a href="#area">対応エリア</a>
+    <a href="#strength">強み</a>
+    <a href="#flow">配布の流れ</a>
+    <a href="#case">配布事例</a>
+    <a href="#voice">お客様の声</a>
+    <a href="#faq">FAQ</a>
+    <a href="#contact">お問い合わせ</a>
+  </div>
+</header>
+
+<main id="top">
+
+<section class="hero">
+  <div class="container hero-inner">
+    <div class="hero-badge">📮 奈良・大阪南部・東部対応</div>
+    <h1 class="hero-title">
+      <span class="hl">一軒ずつ、</span><br />
+      確実に届ける。<br />
+      <span class="orange">あなたの街の</span><br />
+      ポスティング会社。
+    </h1>
+    <p class="hero-sub">
+      地域に住む人の顔が見えるからこそ、できる配布があります。<br />
+      飲食店、不動産、医療、店舗、通販まで、業種を問わず承ります。
+    </p>
+    <ul class="hero-features">
+      <li>📍 エリア配布</li>
+      <li>🎯 セグメント配布</li>
+      <li>📊 配布報告書あり</li>
+      <li>✅ GPS管理</li>
+      <li>👥 自社スタッフ</li>
+    </ul>
+    <div class="hero-cta">
+      <a href="#contact" class="btn-primary">お問い合わせはこちら →</a>
+      <a href="#area" class="btn-secondary">対応エリアを確認</a>
+    </div>
+    <div class="hero-stats">
+      <div class="hstat">
+        <p class="hstat-n">15<small style="font-size:.5em">年</small></p>
+        <p class="hstat-l">地域配布の経験</p>
+      </div>
+      <div class="hstat">
+        <p class="hstat-n">300<small style="font-size:.5em">社+</small></p>
+        <p class="hstat-l">累計配布実績</p>
+      </div>
+      <div class="hstat">
+        <p class="hstat-n">98<small style="font-size:.5em">%</small></p>
+        <p class="hstat-l">クライアント満足度</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="area" class="section section-paper">
+  <div class="container">
+    <p class="s-eyebrow">AREA</p>
+    <h2 class="s-title">対応エリア。<br /><span class="hl">奈良・大阪</span>を、隅々まで。</h2>
+    <p class="s-lead">地域に根ざした自社スタッフで、配布漏れなく一軒ずつお届けします。</p>
+    <div class="area-grid">
+      <div class="area-map">
+        <h3>NARA<span>＋ OSAKA SOUTH ＆ EAST</span></h3>
+        <div class="dots">
+          <span class="dot">奈良市</span>
+          <span class="dot">大和高田</span>
+          <span class="dot">橿原</span>
+          <span class="dot">桜井</span>
+          <span class="dot">天理</span>
+          <span class="dot">生駒</span>
+          <span class="dot">大和郡山</span>
+          <span class="dot">堺市</span>
+          <span class="dot">松原</span>
+          <span class="dot">羽曳野</span>
+          <span class="dot">藤井寺</span>
+          <span class="dot">柏原</span>
+        </div>
+      </div>
+      <div class="area-list">
+        <h3><small>SERVICE AREA</small>主要対応エリア</h3>
+        <ul>
+          <li>奈良県内 全域（市町村別配布も対応）</li>
+          <li>大阪南部（南河内・中河内エリア）</li>
+          <li>大阪東部（柏原市・八尾市周辺）</li>
+          <li>奈良・大阪府境エリア</li>
+          <li>対応外エリアもご相談に応じます</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="strength" class="section">
+  <div class="container">
+    <p class="s-eyebrow">STRENGTH</p>
+    <h2 class="s-title">配布力に、<span class="hl">こだわる</span>理由。</h2>
+    <p class="s-lead">「ただ撒く」のではなく「届ける」ためにこだわっている3つのポイントです。</p>
+    <div class="strength-grid">
+      <article class="strength">
+        <div class="strength-no">01</div>
+        <h3 class="strength-h">地域密着の<br />自社スタッフ配布</h3>
+        <p class="strength-d">外注に丸投げせず、地域を知る自社スタッフが配布。マンション・戸建ての違いを見極めた的確な配布を実現します。</p>
+      </article>
+      <article class="strength">
+        <div class="strength-no">02</div>
+        <h3 class="strength-h">GPS管理による<br />配布報告書</h3>
+        <p class="strength-d">配布実施エリアをGPS記録。お客様には配布実施報告書をご提出し、「ちゃんと配ったか」を可視化します。</p>
+      </article>
+      <article class="strength">
+        <div class="strength-no">03</div>
+        <h3 class="strength-h">業種別の<br />配布ノウハウ</h3>
+        <p class="strength-d">飲食店、不動産、医療、サービス、通販まで、業種ごとに最適な配布エリア・タイミングをご提案します。</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section id="flow" class="section section-bg-2">
+  <div class="container">
+    <p class="s-eyebrow">FLOW</p>
+    <h2 class="s-title">ご依頼の流れ。<br /><span class="hl">最短3日</span>で配布開始。</h2>
+    <div class="flow">
+      <div class="fstep">
+        <span class="fstep-n">STEP 01</span>
+        <h3 class="fstep-h">お問い合わせ</h3>
+        <p class="fstep-d">電話・LINE・フォームより、配布希望エリア・部数をお気軽にご相談ください。</p>
+      </div>
+      <div class="fstep">
+        <span class="fstep-n">STEP 02</span>
+        <h3 class="fstep-h">エリア提案・お見積もり</h3>
+        <p class="fstep-d">配布目的をヒアリングし、最適なエリア・部数・配布方法をご提案します。</p>
+      </div>
+      <div class="fstep">
+        <span class="fstep-n">STEP 03</span>
+        <h3 class="fstep-h">配布実施</h3>
+        <p class="fstep-d">GPS管理で実施。配布員にもエリア理解の指示書を持たせ、的確に配布します。</p>
+      </div>
+      <div class="fstep">
+        <span class="fstep-n">STEP 04</span>
+        <h3 class="fstep-h">配布報告書のご提出</h3>
+        <p class="fstep-d">配布完了後、GPSログ込みの配布報告書をご提出。次回の改善にもつながります。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="case" class="section">
+  <div class="container">
+    <p class="s-eyebrow">CASE</p>
+    <h2 class="s-title">業種別の<span class="hl">配布事例</span>。</h2>
+    <p class="s-lead">これまでに承った業種ごとの配布事例の一部をご紹介します。</p>
+    <div class="case-grid">
+      <article class="case">
+        <span class="case-cat">飲食店</span>
+        <h3 class="case-h">新規オープンの居酒屋様<br />開店告知 5,000部</h3>
+        <div class="case-result">
+          <strong>+82%</strong>
+          <span>来店客<br />前月比</span>
+        </div>
+        <p class="case-d">徒歩圏内の住宅エリアに集中配布。オープン2週間で配布前比+82%の来店増を実現。</p>
+      </article>
+      <article class="case">
+        <span class="case-cat">不動産</span>
+        <h3 class="case-h">新築マンションご案内<br />中和エリア 30,000部</h3>
+        <div class="case-result">
+          <strong>112</strong>
+          <span>問い合わせ<br />獲得</span>
+        </div>
+        <p class="case-d">ファミリー層が多いエリアを選定し配布。問い合わせ112件を獲得しました。</p>
+      </article>
+      <article class="case">
+        <span class="case-cat">医療・歯科</span>
+        <h3 class="case-h">新規開業歯科様<br />開院告知 8,000部</h3>
+        <div class="case-result">
+          <strong>+3.5倍</strong>
+          <span>新患数<br />初月比</span>
+        </div>
+        <p class="case-d">徒歩・自転車圏のセグメント配布で、新患数を当初予測の3.5倍に。</p>
+      </article>
+      <article class="case">
+        <span class="case-cat">通販・サービス</span>
+        <h3 class="case-h">健康食品の通販様<br />シニア層 20,000部</h3>
+        <div class="case-result">
+          <strong>1.8%</strong>
+          <span>反応率<br />（業界平均0.3%）</span>
+        </div>
+        <p class="case-d">高齢者比率の高いエリアを選定。業界平均の6倍の反応率を達成しました。</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section id="voice" class="section section-paper">
+  <div class="container">
+    <p class="s-eyebrow">VOICE</p>
+    <h2 class="s-title">お客様からの<span class="hl">お声</span>。</h2>
+    <div class="voice-grid">
+      <figure class="voice">
+        <p class="voice-text">「配布報告書を出してくれるのが本当に助かります。社内の上長への報告も楽になりました。」</p>
+        <p class="voice-by">飲食チェーン 販促ご担当者様 / <strong>M 様</strong></p>
+      </figure>
+      <figure class="voice">
+        <p class="voice-text">「ただ撒くだけじゃなく、エリアの提案までしてくれるので毎回成果が安定しています。」</p>
+        <p class="voice-by">不動産会社 マーケ担当 / <strong>K 様</strong></p>
+      </figure>
+      <figure class="voice">
+        <p class="voice-text">「他社にお願いしたら反応がいまいちで、こちらに切り替えたら反応率が3倍になりました。」</p>
+        <p class="voice-by">医療法人 事務長 / <strong>S 様</strong></p>
+      </figure>
+      <figure class="voice">
+        <p class="voice-text">「電話の対応も親切で、初めてのポスティング依頼でも安心してお任せできました。」</p>
+        <p class="voice-by">小規模店舗様 / <strong>T 様</strong></p>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<section id="faq" class="section section-bg-2">
+  <div class="container container-narrow">
+    <p class="s-eyebrow">FAQ</p>
+    <h2 class="s-title">よくあるご質問。</h2>
+    <div class="faq">
+      <div class="faq-item" data-open="true">
+        <button class="faq-q" type="button" aria-expanded="true">
+          <span class="faq-q-mark">Q</span>
+          <span class="faq-qt">最小ロットはどれくらいから対応できますか？</span>
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-a"><p class="faq-a-inner">エリアにもよりますが、1,000部からご相談承ります。配布エリア・期間に合わせて最適なご提案をいたします。</p></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" type="button" aria-expanded="false">
+          <span class="faq-q-mark">Q</span>
+          <span class="faq-qt">チラシのデザインからお願いできますか？</span>
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-a"><p class="faq-a-inner">提携デザイン会社と連携してチラシ制作からトータルでお受けできます。配布効果まで踏まえた制作が可能です。</p></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" type="button" aria-expanded="false">
+          <span class="faq-qn">Q</span>
+          <span class="faq-q-mark">Q</span>
+          <span class="faq-qt">配布期間はどれくらいかかりますか？</span>
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-a"><p class="faq-a-inner">部数とエリアによりますが、5,000部で約1週間、30,000部で約2〜3週間が目安です。お急ぎの場合もご相談ください。</p></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" type="button" aria-expanded="false">
+          <span class="faq-q-mark">Q</span>
+          <span class="faq-qt">クレーム対応はどうしていますか？</span>
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-a"><p class="faq-a-inner">「投函禁止」シールが貼られたお宅には絶対に投函しません。配布員教育を徹底し、クレームを最小限に抑える体制を整えています。</p></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" type="button" aria-expanded="false">
+          <span class="faq-q-mark">Q</span>
+          <span class="faq-qt">配布実施の証拠は出せますか？</span>
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-a"><p class="faq-a-inner">GPSログ・配布写真を含めた配布報告書をご提出します。「ちゃんと配ったか」を可視化できます。</p></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" type="button" aria-expanded="false">
+          <span class="faq-q-mark">Q</span>
+          <span class="faq-qt">セグメント配布もできますか？</span>
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-a"><p class="faq-a-inner">マンション/戸建て、世帯属性、エリア特性ごとのセグメント配布が可能です。ターゲットを明確にすることで反応率が大きく改善します。</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="contact" class="contact">
+  <div class="container contact-inner">
+    <p class="s-eyebrow">CONTACT</p>
+    <h2 class="s-title">まずは、お問い合わせください。</h2>
+    <p class="s-lead">ご相談・配布エリアの提案・お見積もりは無料です。お気軽にどうぞ。</p>
+    <div class="contact-cards">
+      <div class="ccard"><p class="ccard-l">TEL</p><p class="ccard-v">XXX-XXXX-XXXX</p><p class="ccard-n">受付 9:00-18:00</p></div>
+      <div class="ccard"><p class="ccard-l">LINE</p><p class="ccard-v">お問い合わせ<br />はこちら</p><p class="ccard-n">公式LINE</p></div>
+      <div class="ccard"><p class="ccard-l">FORM</p><p class="ccard-v">お問い合わせ<br />はこちら</p><p class="ccard-n">24時間 受付中</p></div>
+    </div>
+    <div class="contact-buttons">
+      <a href="#" class="btn-c-line"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3C6.48 3 2 6.58 2 11c0 3.96 3.58 7.27 8.4 7.92.33.07.78.22.89.5.1.25.07.65.03.9l-.14.86c-.05.25-.2.99.87.54s5.75-3.39 7.84-5.8C21.32 14.36 22 12.77 22 11c0-4.42-4.48-8-10-8z"/></svg>お問い合わせはこちら</a>
+      <a href="#" class="btn-c-primary">お問い合わせフォーム</a>
+    </div>
+    <p class="contact-note">※お返事は最短当日・通常24時間以内にいたします。</p>
+    <div class="sample-mark">※本ページはご提案用サンプルとして作成しております。掲載情報は仮の内容を含みます。</div>
+  </div>
+</section>
+
+</main>
+
+<footer class="site-footer">
+  <div class="container footer-inner">
+    <div>
+      <a href="#top" class="brand">
+        <span class="brand-mark">角</span>
+        <span class="brand-text"><span class="brand-name" style="color:#fff">ポスティング角屋</span><span class="brand-sub">POSTING SUMIYA</span></span>
+      </a>
+      <p class="footer-lead">株式会社ポスティング角屋<br />奈良・大阪南部の確実なチラシ配布。</p>
+    </div>
+    <div>
+      <p class="footer-h">MENU</p>
+      <ul class="footer-list"><li><a href="#area">対応エリア</a></li><li><a href="#strength">強み</a></li><li><a href="#flow">配布の流れ</a></li><li><a href="#case">配布事例</a></li><li><a href="#faq">FAQ</a></li></ul>
+    </div>
+    <div>
+      <p class="footer-h">COMPANY</p>
+      <ul class="footer-list"><li>住所：〇〇県〇〇市〇〇町〇-〇-〇</li><li>TEL：XXX-XXXX-XXXX</li><li>Mail：info@example.com</li><li>営業：9:00-18:00</li></ul>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <p>© <span id="year"></span> 株式会社ポスティング角屋 All rights reserved.</p>
+    <ul style="display:flex;gap:18px;"><li><a href="#">プライバシーポリシー</a></li><li><a href="#">特定商取引法</a></li></ul>
+    <p class="footer-sample">※本ページはご提案用サンプルとして作成しております。掲載情報は仮の内容を含みます。</p>
+  </div>
+</footer>
+
+<script>
+  document.querySelectorAll(".faq-item .faq-q").forEach(function(btn){
+    btn.addEventListener("click",function(){
+      var item=btn.closest(".faq-item");
+      var open=item.getAttribute("data-open")==="true";
+      document.querySelectorAll(".faq-item").forEach(function(o){o.setAttribute("data-open","false");var q=o.querySelector(".faq-q");if(q)q.setAttribute("aria-expanded","false")});
+      if(!open){item.setAttribute("data-open","true");btn.setAttribute("aria-expanded","true")}
+    });
+  });
+  var t=document.getElementById("menuToggle"),m=document.getElementById("navMobile");
+  if(t&&m){t.addEventListener("click",function(){var e=t.getAttribute("aria-expanded")==="true";t.setAttribute("aria-expanded",String(!e));m.classList.toggle("is-open")});}
+  var h=document.getElementById("header");
+  window.addEventListener("scroll",function(){if(window.scrollY>20)h.classList.add("is-scrolled");else h.classList.remove("is-scrolled")},{passive:true});
+  var y=document.getElementById("year");if(y)y.textContent=String(new Date().getFullYear());
+</script>
+
+</body>
+</html>
