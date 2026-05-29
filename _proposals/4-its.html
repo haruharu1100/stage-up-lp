@@ -3,115 +3,414 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5" />
-<meta name="theme-color" content="#050505" />
+<meta name="theme-color" content="#ffffff" />
 <meta name="robots" content="noindex, nofollow" />
 
-<title>ITS株式会社｜技術で、ビジネスを加速する。</title>
-<meta name="description" content="ITS株式会社は、システム開発・クラウド導入・DX推進まで、企業のテクノロジー課題をワンストップで解決するIT企業です。" />
+<title>ITS株式会社｜Technology that accelerates your business.</title>
+<meta name="description" content="ITS株式会社は、システム開発・クラウド導入・DX推進を一気通貫で提供するIT企業です。" />
 
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700;800&family=Shippori+Mincho:wght@500;600;700;800&display=swap" rel="stylesheet" />
-
-<link rel="stylesheet" href="/style.css" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
 
 <style>
-  .sample-bar{
-    position:fixed; top:0; left:0; right:0; z-index:60;
-    background:rgba(5,5,5,.85); backdrop-filter:blur(10px);
-    border-bottom:1px solid rgba(212,175,55,.25);
-    color:#ecce6b;
-    padding:8px 16px; text-align:center;
-    font-size:11px; letter-spacing:.1em;
-  }
-  body{ padding-top: 34px; }
-  .site-header{ top:34px; }
+:root{
+  --bg:#ffffff;
+  --bg-soft:#f6f9fd;
+  --bg-deep:#0a1628;
+  --ink:#0f172a;
+  --ink-2:#334155;
+  --ink-3:#64748b;
+  --ink-4:#94a3b8;
+  --line:#e2e8f0;
+  --line-soft:#eef2f6;
+  --brand:#2563eb;
+  --brand-2:#06b6d4;
+  --brand-deep:#1e40af;
+  --brand-soft:#dbeafe;
+  --accent:#0ea5e9;
+  --success:#10b981;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%;scroll-padding-top:80px}
+body{
+  font-family:"Inter","Noto Sans JP",-apple-system,BlinkMacSystemFont,sans-serif;
+  background:var(--bg);color:var(--ink-2);
+  font-size:15px;line-height:1.7;-webkit-font-smoothing:antialiased;
+}
+img{display:block;max-width:100%;height:auto}
+a{color:inherit;text-decoration:none;transition:color .2s ease,opacity .2s ease}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+ul,ol{list-style:none}
+input,textarea,select{font-size:16px}
 
-  .hero-name{
-    font-family:"Shippori Mincho", serif;
-    font-size: 22px; letter-spacing:.2em;
-    color:#ecce6b;
-    margin-bottom: 18px;
-  }
-  .hero-region{
-    margin-top: 14px;
-    font-size:13px; letter-spacing:.15em; color:rgba(255,255,255,.65);
-  }
-  .hero-region::before{ content:"〈 "; color:#d4af37; }
-  .hero-region::after{  content:" 〉"; color:#d4af37; }
+.sample-bar{
+  position:fixed;top:0;left:0;right:0;z-index:60;
+  background:#0a1628;color:#94a3b8;padding:8px 16px;text-align:center;
+  font-size:11px;letter-spacing:.08em;
+}
+body{padding-top:32px}
 
-  .contact-grid{
-    display:grid; gap:14px; margin-top:36px;
-  }
-  @media(min-width:768px){
-    .contact-grid{ grid-template-columns:repeat(3, 1fr); }
-  }
-  .contact-card{
-    padding:24px; border-radius:16px;
-    background:rgba(10,10,10,.7);
-    border:1px solid rgba(212,175,55,.25);
-    text-align:center;
-    transition: border-color .3s ease, transform .3s ease;
-  }
-  .contact-card:hover{ border-color:rgba(212,175,55,.55); transform: translateY(-2px); }
-  .contact-card .label{
-    font-size:11px; letter-spacing:.25em; text-transform:uppercase;
-    color:#ecce6b; margin-bottom:10px;
-  }
-  .contact-card .value{
-    font-family:"Shippori Mincho", serif;
-    font-size: 22px; color:#fff; line-height:1.4;
-  }
-  .contact-card .note{
-    margin-top:10px; font-size:12px; color:rgba(255,255,255,.55);
-  }
+.container{width:100%;max-width:1200px;margin:0 auto;padding:0 20px}
+.container-narrow{max-width:880px}
+@media(min-width:768px){.container{padding:0 32px}}
 
-  .sample-notice{
-    margin: 30px auto 0;
-    padding: 12px 18px;
-    border:1px dashed rgba(212,175,55,.35);
-    border-radius: 10px;
-    max-width: 720px;
-    text-align:center;
-    font-size: 11px; line-height: 1.7;
-    color: rgba(255,255,255,.55);
-    background: rgba(10,10,10,.4);
-  }
+/* ── Header ── */
+.site-header{
+  position:fixed;top:32px;left:0;right:0;z-index:50;
+  background:rgba(255,255,255,.8);
+  backdrop-filter:blur(20px) saturate(180%);
+  border-bottom:1px solid transparent;transition:border-color .3s ease;
+}
+.site-header.is-scrolled{border-bottom-color:var(--line)}
+.header-inner{display:flex;align-items:center;justify-content:space-between;gap:16px;height:64px}
+.brand{display:inline-flex;align-items:center;gap:10px}
+.brand-mark{
+  width:34px;height:34px;display:grid;place-items:center;
+  background:linear-gradient(135deg,#2563eb 0%,#06b6d4 100%);
+  color:#fff;font-weight:800;font-size:14px;
+  border-radius:8px;letter-spacing:-.02em;
+}
+.brand-name{font-weight:700;font-size:18px;color:var(--ink);letter-spacing:-.01em}
+.brand-tld{font-weight:400;color:var(--ink-3);font-size:18px}
+
+.nav-desktop{display:none;gap:32px;margin-left:auto;margin-right:32px}
+.nav-desktop a{font-size:14px;color:var(--ink-2);font-weight:500}
+.nav-desktop a:hover{color:var(--brand)}
+@media(min-width:1024px){.nav-desktop{display:flex}}
+
+.header-cta{display:flex;gap:8px;align-items:center}
+.btn-h-text{font-size:13px;font-weight:500;color:var(--ink-2);padding:8px 14px;display:none}
+@media(min-width:1024px){.btn-h-text{display:inline-block}}
+.btn-h-primary{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:10px 18px;border-radius:8px;font-size:13px;font-weight:600;
+  background:var(--ink);color:#fff;
+}
+.btn-h-primary:hover{background:var(--brand-deep)}
+
+.menu-toggle{
+  width:40px;height:40px;display:grid;gap:4px;align-content:center;justify-items:center;
+  border:1px solid var(--line);border-radius:8px;background:var(--bg);
+}
+.menu-toggle span{width:16px;height:1.5px;background:var(--ink);border-radius:2px;transition:transform .3s,opacity .3s}
+.menu-toggle[aria-expanded="true"] span:nth-child(1){transform:translateY(5.5px) rotate(45deg)}
+.menu-toggle[aria-expanded="true"] span:nth-child(2){opacity:0}
+.menu-toggle[aria-expanded="true"] span:nth-child(3){transform:translateY(-5.5px) rotate(-45deg)}
+@media(min-width:1024px){.menu-toggle{display:none}}
+.nav-mobile{
+  display:flex;flex-direction:column;max-height:0;overflow:hidden;
+  background:var(--bg);border-top:1px solid var(--line);padding:0 24px;
+  transition:max-height .4s ease,padding .3s ease;
+}
+.nav-mobile.is-open{max-height:80vh;padding:8px 24px 24px}
+.nav-mobile a{padding:14px 0;border-bottom:1px solid var(--line-soft);font-size:14px;color:var(--ink-2)}
+
+/* ── Hero ── */
+.hero{
+  position:relative;padding:140px 0 80px;overflow:hidden;
+  background:
+    radial-gradient(ellipse 80% 60% at 20% 0%,rgba(37,99,235,.12) 0%,transparent 60%),
+    radial-gradient(ellipse 60% 50% at 80% 100%,rgba(6,182,212,.08) 0%,transparent 60%),
+    var(--bg);
+}
+@media(min-width:768px){.hero{padding:180px 0 120px}}
+.hero-pill{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:6px 14px;border-radius:999px;
+  background:var(--brand-soft);color:var(--brand-deep);
+  font-size:12px;font-weight:600;letter-spacing:.02em;margin-bottom:28px;
+}
+.hero-pill::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--brand)}
+.hero-title{
+  font-weight:800;color:var(--ink);
+  font-size:42px;line-height:1.15;letter-spacing:-.025em;
+}
+@media(min-width:640px){.hero-title{font-size:54px}}
+@media(min-width:1024px){.hero-title{font-size:68px;letter-spacing:-.03em}}
+.hero-title .grad{
+  background:linear-gradient(135deg,#2563eb 0%,#06b6d4 100%);
+  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+}
+.hero-sub{
+  margin-top:24px;color:var(--ink-3);font-size:17px;line-height:1.7;max-width:620px;
+}
+@media(min-width:768px){.hero-sub{font-size:19px;margin-top:28px}}
+.hero-cta{margin-top:36px;display:flex;flex-wrap:wrap;gap:12px}
+.btn-primary{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  background:var(--ink);color:#fff;padding:14px 24px;border-radius:10px;
+  font-weight:600;font-size:14px;
+  box-shadow:0 1px 0 0 rgba(255,255,255,.1) inset,0 4px 12px -2px rgba(0,0,0,.18);
+}
+.btn-primary:hover{background:var(--brand-deep);transform:translateY(-1px)}
+.btn-secondary{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  background:#fff;color:var(--ink);padding:14px 24px;border-radius:10px;
+  border:1px solid var(--line);font-weight:600;font-size:14px;
+}
+.btn-secondary:hover{border-color:var(--ink-3);background:var(--bg-soft)}
+
+.hero-stats{
+  margin-top:64px;padding-top:48px;border-top:1px solid var(--line);
+  display:grid;gap:32px;grid-template-columns:repeat(2,1fr);
+}
+@media(min-width:768px){.hero-stats{grid-template-columns:repeat(4,1fr)}}
+.hstat-n{
+  font-size:38px;font-weight:700;color:var(--ink);letter-spacing:-.02em;line-height:1;
+}
+.hstat-n span{font-size:.6em;color:var(--brand)}
+.hstat-l{margin-top:8px;font-size:13px;color:var(--ink-3);font-weight:500}
+
+/* ── Section base ── */
+.section{padding:96px 0}
+@media(min-width:768px){.section{padding:140px 0}}
+.section-soft{background:var(--bg-soft)}
+.section-dark{background:var(--bg-deep);color:#cbd5e1}
+
+.s-eyebrow{
+  display:inline-block;padding:5px 12px;border-radius:6px;
+  background:var(--brand-soft);color:var(--brand-deep);
+  font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+  margin-bottom:20px;
+}
+.section-dark .s-eyebrow{background:rgba(37,99,235,.18);color:#93c5fd}
+.s-title{
+  font-weight:800;color:var(--ink);font-size:32px;line-height:1.2;letter-spacing:-.02em;
+}
+.section-dark .s-title{color:#fff}
+@media(min-width:768px){.s-title{font-size:44px}}
+.s-lead{margin-top:18px;color:var(--ink-3);font-size:16px;line-height:1.7;max-width:680px}
+.section-dark .s-lead{color:#94a3b8}
+
+/* ── Services ── */
+.svc-grid{
+  margin-top:64px;display:grid;gap:24px;
+}
+@media(min-width:768px){.svc-grid{grid-template-columns:repeat(2,1fr)}}
+@media(min-width:1024px){.svc-grid{grid-template-columns:repeat(4,1fr);gap:20px}}
+.svc{
+  background:var(--bg);border:1px solid var(--line);
+  padding:28px;border-radius:14px;transition:all .3s ease;
+}
+.svc:hover{border-color:var(--brand);transform:translateY(-4px);box-shadow:0 20px 40px -20px rgba(37,99,235,.25)}
+.svc-icon{
+  width:44px;height:44px;border-radius:10px;
+  background:linear-gradient(135deg,#dbeafe 0%,#cffafe 100%);
+  color:var(--brand-deep);display:grid;place-items:center;margin-bottom:20px;
+}
+.svc-icon svg{width:22px;height:22px}
+.svc-h{font-weight:700;color:var(--ink);font-size:16px;line-height:1.4}
+.svc-desc{margin-top:8px;font-size:13px;color:var(--ink-3);line-height:1.7}
+
+/* ── Results / 効果 ── */
+.results-grid{
+  margin-top:56px;display:grid;gap:16px;
+}
+@media(min-width:768px){.results-grid{grid-template-columns:repeat(4,1fr)}}
+.rcard{
+  padding:28px 24px;border-radius:14px;
+  background:#fff;border:1px solid var(--line);
+  position:relative;overflow:hidden;
+}
+.rcard::before{
+  content:"";position:absolute;left:0;top:0;bottom:0;width:4px;
+  background:linear-gradient(180deg,var(--brand) 0%,var(--brand-2) 100%);
+}
+.rcard-n{font-size:36px;font-weight:800;color:var(--ink);letter-spacing:-.02em;line-height:1}
+.rcard-n .mini{font-size:.5em;color:var(--brand);margin-left:2px}
+.rcard-h{margin-top:12px;font-weight:600;color:var(--ink);font-size:14px}
+.rcard-d{margin-top:6px;font-size:12px;color:var(--ink-3);line-height:1.6}
+
+/* ── Cases ── */
+.case-grid{margin-top:56px;display:grid;gap:24px}
+@media(min-width:768px){.case-grid{grid-template-columns:repeat(2,1fr)}}
+.case{
+  background:#fff;border:1px solid var(--line);border-radius:14px;overflow:hidden;
+  transition:all .3s ease;
+}
+.case:hover{transform:translateY(-2px);box-shadow:0 20px 40px -20px rgba(15,23,42,.18)}
+.case-photo{position:relative;aspect-ratio:16/9;overflow:hidden;background:var(--bg-soft)}
+.case-photo img{width:100%;height:100%;object-fit:cover}
+.case-tag{
+  position:absolute;top:14px;left:14px;
+  padding:4px 10px;border-radius:6px;
+  background:rgba(255,255,255,.95);backdrop-filter:blur(6px);
+  font-size:11px;font-weight:600;color:var(--brand-deep);letter-spacing:.05em;
+}
+.case-body{padding:24px}
+.case-cat{font-size:12px;color:var(--ink-3);font-weight:500}
+.case-h{margin-top:6px;font-weight:700;color:var(--ink);font-size:18px;line-height:1.45}
+.case-m{margin-top:10px;font-size:12px;color:var(--ink-3)}
+.case-d{margin-top:14px;font-size:13px;color:var(--ink-2);line-height:1.7}
+
+/* ── Support ── */
+.support-grid{
+  margin-top:56px;display:grid;gap:24px;
+}
+@media(min-width:768px){.support-grid{grid-template-columns:repeat(3,1fr)}}
+.sup{
+  padding:32px;background:rgba(255,255,255,.04);
+  border:1px solid rgba(148,163,184,.18);border-radius:14px;
+}
+.sup-icon{
+  width:48px;height:48px;display:grid;place-items:center;
+  background:rgba(37,99,235,.18);border:1px solid rgba(37,99,235,.3);
+  color:#93c5fd;border-radius:12px;margin-bottom:20px;
+}
+.sup-icon svg{width:24px;height:24px}
+.sup-h{font-weight:700;color:#fff;font-size:17px;line-height:1.4}
+.sup-d{margin-top:10px;font-size:14px;color:#94a3b8;line-height:1.7}
+.sup-meta{
+  margin-top:16px;padding-top:14px;border-top:1px solid rgba(148,163,184,.15);
+  font-size:12px;color:#64748b;letter-spacing:.05em;
+}
+
+/* ── Reasons (横並びリスト風) ── */
+.why-list{margin-top:56px;display:grid;gap:0}
+.why{
+  padding:32px 0;border-top:1px solid var(--line);
+  display:grid;gap:24px;
+}
+@media(min-width:768px){.why{grid-template-columns:120px 1fr 1.5fr;align-items:start}}
+.why:last-child{border-bottom:1px solid var(--line)}
+.why-no{
+  font-family:"Inter",sans-serif;font-weight:800;
+  font-size:32px;color:var(--brand);letter-spacing:-.02em;line-height:1;
+}
+.why-h{font-weight:700;color:var(--ink);font-size:18px;line-height:1.4}
+.why-d{color:var(--ink-3);font-size:14px;line-height:1.8}
+
+/* ── Voice ── */
+.voice-grid{margin-top:56px;display:grid;gap:24px}
+@media(min-width:768px){.voice-grid{grid-template-columns:repeat(2,1fr)}}
+.voice{padding:32px;background:#fff;border:1px solid var(--line);border-radius:14px}
+.voice-rate{color:var(--brand);font-size:14px;letter-spacing:.1em;margin-bottom:14px}
+.voice-text{color:var(--ink);font-size:15px;line-height:1.8;font-weight:500}
+.voice-by{
+  margin-top:24px;padding-top:18px;border-top:1px solid var(--line);
+  display:flex;align-items:center;gap:14px;
+}
+.voice-avatar{
+  width:42px;height:42px;border-radius:10px;
+  background:linear-gradient(135deg,#dbeafe 0%,#cffafe 100%);
+  color:var(--brand-deep);display:grid;place-items:center;font-weight:700;
+}
+.voice-name{font-weight:600;color:var(--ink);font-size:14px}
+.voice-co{font-size:12px;color:var(--ink-3);margin-top:2px}
+
+/* ── FAQ ── */
+.faq{margin-top:56px;display:grid;gap:10px}
+.faq-item{background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden;transition:border-color .3s}
+.faq-item[data-open="true"]{border-color:var(--brand)}
+.faq-q{
+  width:100%;text-align:left;padding:22px 24px;
+  display:flex;align-items:center;gap:16px;font-weight:600;
+}
+.faq-qt{flex:1;color:var(--ink);font-size:15px;line-height:1.5}
+.faq-icon{
+  flex-shrink:0;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;
+  background:var(--bg-soft);color:var(--brand-deep);
+  font-size:16px;transition:transform .3s;
+}
+.faq-item[data-open="true"] .faq-icon{transform:rotate(45deg);background:var(--brand);color:#fff}
+.faq-a{max-height:0;overflow:hidden;transition:max-height .5s ease}
+.faq-item[data-open="true"] .faq-a{max-height:500px}
+.faq-a-inner{padding:0 24px 24px;font-size:14px;color:var(--ink-3);line-height:1.8}
+
+/* ── Contact ── */
+.contact{
+  background:linear-gradient(135deg,#0a1628 0%,#1e3a8a 100%);
+  color:#fff;padding:96px 0;border-radius:24px;margin:0 12px;
+}
+@media(min-width:768px){.contact{padding:120px 0;margin:0 32px}}
+.contact .s-title{color:#fff}
+.contact .s-lead{color:#94a3b8}
+.contact .s-eyebrow{background:rgba(37,99,235,.25);color:#93c5fd}
+.contact-cards{margin-top:48px;display:grid;gap:14px}
+@media(min-width:768px){.contact-cards{grid-template-columns:repeat(3,1fr)}}
+.ccard{
+  padding:28px;background:rgba(255,255,255,.06);
+  border:1px solid rgba(148,163,184,.18);border-radius:14px;text-align:center;
+  backdrop-filter:blur(10px);
+}
+.ccard-l{font-size:11px;letter-spacing:.2em;color:#93c5fd;text-transform:uppercase}
+.ccard-v{margin-top:12px;font-size:22px;font-weight:700;color:#fff;line-height:1.4}
+.ccard-n{margin-top:10px;font-size:12px;color:#94a3b8}
+.contact-buttons{margin-top:36px;display:flex;flex-direction:column;gap:12px}
+@media(min-width:768px){.contact-buttons{flex-direction:row;justify-content:center}}
+.btn-c-primary{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  background:linear-gradient(135deg,#2563eb 0%,#06b6d4 100%);color:#fff;
+  padding:16px 32px;border-radius:10px;font-weight:600;font-size:14px;
+  box-shadow:0 10px 30px -10px rgba(37,99,235,.55);
+}
+.btn-c-primary:hover{transform:translateY(-2px)}
+.btn-c-line{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  background:#06c755;color:#fff;padding:16px 32px;border-radius:10px;
+  font-weight:600;font-size:14px;
+}
+.btn-c-line:hover{background:#05a647}
+.contact-note{margin-top:36px;text-align:center;font-size:12px;color:#94a3b8}
+.sample-mark{
+  margin:48px auto 0;max-width:640px;padding:14px 20px;
+  border:1px dashed rgba(148,163,184,.3);border-radius:10px;
+  text-align:center;font-size:11px;color:#94a3b8;
+}
+
+/* ── Footer ── */
+.site-footer{background:#fff;border-top:1px solid var(--line);padding:64px 0 32px}
+.footer-inner{display:grid;gap:36px}
+@media(min-width:768px){.footer-inner{grid-template-columns:1.4fr 1fr 1fr 1fr}}
+.footer-brand .brand-name{color:var(--ink)}
+.footer-lead{margin-top:14px;font-size:13px;color:var(--ink-3);line-height:1.8}
+.footer-h{font-size:11px;letter-spacing:.15em;color:var(--ink);text-transform:uppercase;font-weight:700;margin-bottom:16px}
+.footer-list li{margin-bottom:10px;font-size:13px;color:var(--ink-3)}
+.footer-list a:hover{color:var(--brand)}
+.footer-bottom{
+  margin-top:56px;padding-top:24px;border-top:1px solid var(--line);
+  display:flex;flex-direction:column;gap:10px;
+  font-size:12px;color:var(--ink-4);
+}
+@media(min-width:640px){.footer-bottom{flex-direction:row;justify-content:space-between;align-items:center}}
+.footer-sample{margin-top:8px;width:100%;font-size:10px;text-align:center;color:var(--ink-4)}
+
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
 <body>
 
-<div class="sample-bar">
-  ※ご提案用サンプルページ｜本ページは公開されておりません
-</div>
+<div class="sample-bar">※ご提案用サンプルページ｜本ページは公開されておりません</div>
 
-<header class="site-header" id="site-header">
+<header class="site-header" id="header">
   <div class="container header-inner">
-    <a href="#top" class="brand" aria-label="ITS株式会社 トップへ">
-      <span class="brand-mark" aria-hidden="true">I</span>
-      <span class="brand-name">ITS</span>
+    <a href="#top" class="brand">
+      <span class="brand-mark">I</span>
+      <span class="brand-name">ITS<span class="brand-tld">.</span></span>
     </a>
-    <nav class="nav-desktop" aria-label="グローバルナビゲーション">
-      <a href="#reason">選ばれる理由</a>
+    <nav class="nav-desktop">
       <a href="#services">サービス</a>
-      <a href="#cases">導入実績</a>
-      <a href="#voice">お客様の声</a>
+      <a href="#results">導入効果</a>
+      <a href="#cases">事例</a>
+      <a href="#support">サポート</a>
+      <a href="#why">選ばれる理由</a>
       <a href="#faq">FAQ</a>
-      <a href="#contact">お問い合わせ</a>
     </nav>
     <div class="header-cta">
-      <a href="#contact" class="btn-ghost-gold btn-sm hide-mobile">資料請求</a>
-      <a href="#contact" class="btn-line btn-sm">お問い合わせはこちら</a>
+      <a href="#contact" class="btn-h-text">資料請求</a>
+      <a href="#contact" class="btn-h-primary">お問い合わせ</a>
     </div>
-    <button class="menu-toggle" id="menu-toggle" aria-label="メニュー" aria-expanded="false">
+    <button class="menu-toggle" id="menuToggle" aria-label="メニュー" aria-expanded="false">
       <span></span><span></span><span></span>
     </button>
   </div>
-  <div class="nav-mobile" id="nav-mobile" aria-hidden="true">
-    <a href="#reason">選ばれる理由</a>
+  <div class="nav-mobile" id="navMobile">
     <a href="#services">サービス</a>
-    <a href="#cases">導入実績</a>
-    <a href="#voice">お客様の声</a>
+    <a href="#results">導入効果</a>
+    <a href="#cases">事例</a>
+    <a href="#support">サポート</a>
+    <a href="#why">選ばれる理由</a>
     <a href="#faq">FAQ</a>
     <a href="#contact">お問い合わせ</a>
   </div>
@@ -119,522 +418,402 @@
 
 <main id="top">
 
-<section class="hero" aria-label="ファーストビュー">
-  <div class="hero-bg" aria-hidden="true">
-    <img src="https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=2000&q=80" alt="" loading="eager" />
-    <div class="hero-overlay"></div>
-    <div class="hero-grid"></div>
-  </div>
-  <div class="container hero-inner">
-    <p class="hero-name">ITS株式会社</p>
+<section class="hero">
+  <div class="container">
+    <div class="hero-pill">Trusted by 300+ enterprises</div>
     <h1 class="hero-title">
-      <span class="block gold-text gold-text--lg">技術で、ビジネスを、</span>
-      <span class="block gold-text gold-text--lg">加速する。</span>
+      技術で、<br />
+      ビジネスを、<br />
+      <span class="grad">加速する。</span>
     </h1>
-    <p class="hero-region">システム開発 / クラウド導入 / DX推進 / 国内開発体制</p>
     <p class="hero-sub">
-      システム受託開発からクラウド導入、DX推進まで。<br />
-      お客様のビジネス課題に最適な技術ソリューションを、<br class="hide-mobile" />
-      設計から運用まで一気通貫でご提供します。
+      システム開発からクラウド導入、DX推進まで。
+      お客様のビジネス課題に最適な技術ソリューションを、設計から運用まで一気通貫でご提供します。
     </p>
-
-    <ul class="hero-chips" aria-label="主な特徴">
-      <li>受託開発</li>
-      <li>クラウド対応</li>
-      <li>DX推進支援</li>
-      <li>アジャイル開発</li>
-      <li>24/365 サポート</li>
-    </ul>
-
-    <div class="cta-row">
-      <a href="#contact" class="btn-gold" aria-label="お問い合わせはこちら">
-        <span>お問い合わせはこちら</span>
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
-      </a>
-      <a href="#contact" class="btn-line" aria-label="LINEで相談">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 3C6.477 3 2 6.582 2 11c0 3.957 3.582 7.272 8.4 7.918.328.07.776.215.89.494.103.252.067.648.033.901l-.144.864c-.045.252-.2.99.866.539 1.067-.45 5.748-3.387 7.842-5.798C21.32 14.36 22 12.766 22 11c0-4.418-4.477-8-10-8z"/></svg>
-        <span>LINEで相談</span>
-      </a>
-      <a href="#cases" class="btn-ghost-gold" aria-label="導入実績を見る">
-        導入実績を見る
-      </a>
-    </div>
-
-    <p class="hero-note">
-      ※ 初回ご相談・お見積もり無料
-    </p>
-
-    <ul class="hero-stats">
-      <li>
-        <div class="stat-n">300+</div>
-        <div class="stat-l">累計プロジェクト</div>
-      </li>
-      <li>
-        <div class="stat-n">10年</div>
-        <div class="stat-l">業界実績</div>
-      </li>
-      <li>
-        <div class="stat-n">24/7</div>
-        <div class="stat-l">運用サポート</div>
-      </li>
-    </ul>
-  </div>
-</section>
-
-<section id="reason" class="section section-dark">
-  <div class="container">
-    <header class="section-head">
-      <p class="kicker">Why Chosen</p>
-      <h2 class="section-title">ITSが<span class="gold-text">選ばれる理由</span></h2>
-      <p class="section-lead">中小〜大手企業まで、多くのお客様に選ばれてきた6つの理由。</p>
-    </header>
-    <div class="grid grid-3">
-      <article class="card card-num-big">
-        <span class="big-num">01</span>
-        <p class="reason-kicker">Reason 01</p>
-        <h3>要件定義から運用までの一気通貫</h3>
-        <p>ヒアリング・要件定義・設計・開発・テスト・運用まで、自社内で完結する一気通貫体制。情報共有のロスがなく、品質を担保します。</p>
-      </article>
-      <article class="card card-num-big">
-        <span class="big-num">02</span>
-        <p class="reason-kicker">Reason 02</p>
-        <h3>業界横断の豊富な開発実績</h3>
-        <p>製造・小売・物流・サービス・金融まで、多様な業界の基幹システム・業務システム開発を経験。業界知見を活かしたご提案が可能です。</p>
-      </article>
-      <article class="card card-num-big">
-        <span class="big-num">03</span>
-        <p class="reason-kicker">Reason 03</p>
-        <h3>アジャイル開発による柔軟性</h3>
-        <p>要件の変化を前提とした反復型開発で、市場やビジネスの変化に追従。最小スタートで価値を素早く届ける開発スタイル。</p>
-      </article>
-      <article class="card card-num-big">
-        <span class="big-num">04</span>
-        <p class="reason-kicker">Reason 04</p>
-        <h3>クラウドネイティブ対応</h3>
-        <p>AWS / Azure / GCP の主要クラウドに精通。マルチクラウド構成、コンテナ化、サーバーレスまで、最適なアーキテクチャをご提案。</p>
-      </article>
-      <article class="card card-num-big">
-        <span class="big-num">05</span>
-        <p class="reason-kicker">Reason 05</p>
-        <h3>国内開発体制で安心</h3>
-        <p>すべて日本国内のエンジニアによる開発体制。コミュニケーションの齟齬がなく、セキュリティ面でも安心の品質を担保します。</p>
-      </article>
-      <article class="card card-num-big">
-        <span class="big-num">06</span>
-        <p class="reason-kicker">Reason 06</p>
-        <h3>24/365 運用サポート</h3>
-        <p>本番運用後も、専任チームが24時間365日体制でシステムを監視。トラブルにも即時対応する安心の体制をご提供します。</p>
-      </article>
-    </div>
-  </div>
-</section>
-
-<section id="services" class="section">
-  <div class="container">
-    <header class="section-head">
-      <p class="kicker">Services</p>
-      <h2 class="section-title">提供する<span class="gold-text">ITサービス</span></h2>
-      <p class="section-lead">企業のあらゆる技術課題に対し、最適なソリューションをご提供します。</p>
-    </header>
-    <div class="grid grid-4">
-      <article class="card service-card">
-        <div class="service-icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
-        </div>
-        <p class="service-tag">Service 01</p>
-        <h3>システム受託開発</h3>
-        <p>業務システム・基幹システム・Webサービスをフルスクラッチで構築します。</p>
-      </article>
-      <article class="card service-card">
-        <div class="service-icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg>
-        </div>
-        <p class="service-tag">Service 02</p>
-        <h3>クラウド導入・移行</h3>
-        <p>オンプレからクラウドへの移行設計。AWS / Azure / GCPに精通したエンジニアが対応。</p>
-      </article>
-      <article class="card service-card">
-        <div class="service-icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 3v18h18"/><polyline points="7 14 12 9 16 13 21 8"/></svg>
-        </div>
-        <p class="service-tag">Service 03</p>
-        <h3>DX推進コンサル</h3>
-        <p>業務プロセスの可視化から、デジタル化の戦略立案・実行まで一貫支援します。</p>
-      </article>
-      <article class="card service-card">
-        <div class="service-icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><circle cx="17" cy="9" r="3"/><path d="M21 19v-1a3 3 0 0 0-3-3"/></svg>
-        </div>
-        <p class="service-tag">Service 04</p>
-        <h3>SES・エンジニア常駐</h3>
-        <p>お客様の現場に経験豊富なエンジニアを派遣。チームの一員として開発に貢献します。</p>
-      </article>
-      <article class="card service-card">
-        <div class="service-icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 9h6v6H9z"/></svg>
-        </div>
-        <p class="service-tag">Service 05</p>
-        <h3>SaaS導入支援</h3>
-        <p>業務効率化・コラボレーション系SaaSの選定〜定着まで、運用面までサポートします。</p>
-      </article>
-      <article class="card service-card">
-        <div class="service-icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M6 14h12"/></svg>
-        </div>
-        <p class="service-tag">Service 06</p>
-        <h3>インフラ構築・運用</h3>
-        <p>サーバー・ネットワーク・データベース・コンテナ基盤の設計・構築・運用代行。</p>
-      </article>
-      <article class="card service-card">
-        <div class="service-icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-        </div>
-        <p class="service-tag">Service 07</p>
-        <h3>セキュリティ対策</h3>
-        <p>脆弱性診断・WAF導入・SOC運用まで、企業情報を守る総合的な対策をご提供。</p>
-      </article>
-      <article class="card service-card">
-        <div class="service-icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 0 1 4 10 15 15 0 0 1-4 10 15 15 0 0 1-4-10 15 15 0 0 1 4-10z"/></svg>
-        </div>
-        <p class="service-tag">Service 08</p>
-        <h3>AI・データ活用</h3>
-        <p>機械学習モデル開発・データ分析基盤構築。蓄積データをビジネス価値に変えます。</p>
-      </article>
-    </div>
-  </div>
-</section>
-
-<section id="cases" class="section section-dark">
-  <div class="container">
-    <header class="section-head">
-      <p class="kicker">Case Studies</p>
-      <h2 class="section-title">これまでの<span class="gold-text">導入実績</span></h2>
-      <p class="section-lead">様々な業界のお客様に、テクノロジーで課題解決をサポートしてきました。</p>
-    </header>
-    <div class="grid grid-2">
-      <article class="case-card">
-        <div class="case-img">
-          <img src="https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&w=1200&q=80" alt="製造業 基幹システム刷新" loading="lazy" />
-          <span class="case-tag">Case 01</span>
-        </div>
-        <div class="case-body">
-          <p class="case-company">製造業 / 従業員500名規模</p>
-          <p class="case-metric gold-text">基幹システム刷新</p>
-          <p class="case-period">期間 約14ヶ月</p>
-          <p>20年使用していたレガシーシステムをクラウドネイティブな基幹システムへ刷新。業務効率を大幅改善。</p>
-        </div>
-      </article>
-      <article class="case-card">
-        <div class="case-img">
-          <img src="https://images.unsplash.com/photo-1556761175-5973dc0f32e7?auto=format&fit=crop&w=1200&q=80" alt="EC構築・基幹連携" loading="lazy" />
-          <span class="case-tag">Case 02</span>
-        </div>
-        <div class="case-body">
-          <p class="case-company">小売業 / 全国50店舗</p>
-          <p class="case-metric gold-text">EC構築・基幹連携</p>
-          <p class="case-period">期間 約8ヶ月</p>
-          <p>独自ECサイトを構築し、既存基幹システムとリアルタイム連携。在庫・受注の一元管理を実現。</p>
-        </div>
-      </article>
-      <article class="case-card">
-        <div class="case-img">
-          <img src="https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&w=1200&q=80" alt="配送管理システム" loading="lazy" />
-          <span class="case-tag">Case 03</span>
-        </div>
-        <div class="case-body">
-          <p class="case-company">物流業 / 中堅企業</p>
-          <p class="case-metric gold-text">配送管理システム開発</p>
-          <p class="case-period">期間 約6ヶ月</p>
-          <p>配送ルート最適化アルゴリズムを搭載した配送管理システムを開発。配送効率の大幅改善を実現。</p>
-        </div>
-      </article>
-      <article class="case-card">
-        <div class="case-img">
-          <img src="https://images.unsplash.com/photo-1497032628192-86f99bcd76bc?auto=format&fit=crop&w=1200&q=80" alt="業務クラウド化" loading="lazy" />
-          <span class="case-tag">Case 04</span>
-        </div>
-        <div class="case-body">
-          <p class="case-company">サービス業 / 全国展開企業</p>
-          <p class="case-metric gold-text">業務システム クラウド移行</p>
-          <p class="case-period">期間 約10ヶ月</p>
-          <p>オンプレミス環境のシステムをAWSへ移行。運用コスト削減と災害対策を同時に実現しました。</p>
-        </div>
-      </article>
-    </div>
-    <ul class="stat-grid">
-      <li><div class="stat-n">300+</div><div class="stat-l">プロジェクト実績</div></li>
-      <li><div class="stat-n">98%</div><div class="stat-l">プロジェクト成功率</div></li>
-      <li><div class="stat-n">10年</div><div class="stat-l">業界知見</div></li>
-      <li><div class="stat-n">24/7</div><div class="stat-l">運用サポート</div></li>
-    </ul>
-  </div>
-</section>
-
-<section id="voice" class="section">
-  <div class="container">
-    <header class="section-head">
-      <p class="kicker">Voice</p>
-      <h2 class="section-title">お客様の<span class="gold-text">声</span></h2>
-      <p class="section-lead">プロジェクトをご一緒させていただいたお客様より、嬉しいお言葉を頂戴しています。</p>
-    </header>
-    <div class="grid grid-2">
-      <figure class="card voice-card">
-        <span class="voice-badge">VOICE</span>
-        <blockquote>「業界の知見をベースに、業務をよく理解した上で提案してくださいました。要件定義の段階で、こちらが気付いていない課題まで引き出してくれて本当に助かりました。」</blockquote>
-        <figcaption>
-          <span class="avatar" aria-hidden="true">M</span>
-          <div>
-            <p class="voice-name">M 様</p>
-            <p class="voice-company">製造業 / 情報システム部</p>
-          </div>
-        </figcaption>
-      </figure>
-      <figure class="card voice-card">
-        <span class="voice-badge">VOICE</span>
-        <blockquote>「途中で仕様変更を希望することが多々ありましたが、柔軟に対応してくださって本当に助かりました。アジャイル開発の良さを実感できたプロジェクトでした。」</blockquote>
-        <figcaption>
-          <span class="avatar" aria-hidden="true">K</span>
-          <div>
-            <p class="voice-name">K 様</p>
-            <p class="voice-company">EC事業 / 経営企画</p>
-          </div>
-        </figcaption>
-      </figure>
-      <figure class="card voice-card">
-        <span class="voice-badge">VOICE</span>
-        <blockquote>「リリース後の運用サポートが手厚く、何かあればすぐに対応してもらえます。社内に専任IT担当者を雇うコストを考えると、本当にコスパが良いと感じます。」</blockquote>
-        <figcaption>
-          <span class="avatar" aria-hidden="true">S</span>
-          <div>
-            <p class="voice-name">S 様</p>
-            <p class="voice-company">物流業 / 取締役</p>
-          </div>
-        </figcaption>
-      </figure>
-      <figure class="card voice-card">
-        <span class="voice-badge">VOICE</span>
-        <blockquote>「DXと言われても何から始めればよいか分からない状態でした。業務の見える化から始めて、段階的にデジタル化を進めてもらい、社内の意識も変わりました。」</blockquote>
-        <figcaption>
-          <span class="avatar" aria-hidden="true">T</span>
-          <div>
-            <p class="voice-name">T 様</p>
-            <p class="voice-company">サービス業 / 代表取締役</p>
-          </div>
-        </figcaption>
-      </figure>
-    </div>
-  </div>
-</section>
-
-<section id="faq" class="section section-dark">
-  <div class="container container-narrow">
-    <header class="section-head">
-      <p class="kicker">FAQ</p>
-      <h2 class="section-title">よくある<span class="gold-text">ご質問</span></h2>
-      <p class="section-lead">プロジェクト開始前に多くお寄せいただくご質問をまとめました。</p>
-    </header>
-    <ul class="faq-list">
-      <li class="faq-item" data-open="true">
-        <button class="faq-q" type="button" aria-expanded="true">
-          <span class="faq-qn">Q01</span>
-          <span class="faq-qt">開発費用の目安を教えてください。</span>
-          <span class="faq-icon" aria-hidden="true">+</span>
-        </button>
-        <div class="faq-a">
-          <p><span class="faq-an">A</span>システム規模・要件によって大きく異なります。ヒアリング後、要件定義に基づいた詳細なお見積もりをご提示します。初回ご相談・概算お見積もりは無料です。</p>
-        </div>
-      </li>
-      <li class="faq-item">
-        <button class="faq-q" type="button" aria-expanded="false">
-          <span class="faq-qn">Q02</span>
-          <span class="faq-qt">開発期間はどれくらいかかりますか？</span>
-          <span class="faq-icon" aria-hidden="true">+</span>
-        </button>
-        <div class="faq-a">
-          <p><span class="faq-an">A</span>業務システムの規模に応じて3ヶ月〜18ヶ月程度。アジャイル開発により小さく早くリリースし、段階的に機能を拡充していくスタイルも選択可能です。</p>
-        </div>
-      </li>
-      <li class="faq-item">
-        <button class="faq-q" type="button" aria-expanded="false">
-          <span class="faq-qn">Q03</span>
-          <span class="faq-qt">既存システムからの移行は対応可能ですか？</span>
-          <span class="faq-icon" aria-hidden="true">+</span>
-        </button>
-        <div class="faq-a">
-          <p><span class="faq-an">A</span>はい、多くのお客様で既存システムからの移行を経験しています。データ移行・並行稼働期間の設計など、ビジネスへの影響を最小限に抑える移行計画をご提案します。</p>
-        </div>
-      </li>
-      <li class="faq-item">
-        <button class="faq-q" type="button" aria-expanded="false">
-          <span class="faq-qn">Q04</span>
-          <span class="faq-qt">リリース後の運用・保守も対応していますか？</span>
-          <span class="faq-icon" aria-hidden="true">+</span>
-        </button>
-        <div class="faq-a">
-          <p><span class="faq-an">A</span>もちろんです。24時間365日の監視・障害対応・機能改修まで、運用フェーズもしっかりサポートします。SLAに応じたプランをご用意しております。</p>
-        </div>
-      </li>
-      <li class="faq-item">
-        <button class="faq-q" type="button" aria-expanded="false">
-          <span class="faq-qn">Q05</span>
-          <span class="faq-qt">セキュリティ面はどのように考慮していますか？</span>
-          <span class="faq-icon" aria-hidden="true">+</span>
-        </button>
-        <div class="faq-a">
-          <p><span class="faq-an">A</span>設計段階からセキュリティを組み込む方針です。脆弱性診断、暗号化、アクセス制御、ログ監視まで、業界標準に沿った対策を実装します。必要に応じてセキュリティ専門チームが対応します。</p>
-        </div>
-      </li>
-      <li class="faq-item">
-        <button class="faq-q" type="button" aria-expanded="false">
-          <span class="faq-qn">Q06</span>
-          <span class="faq-qt">どのような業界に対応できますか？</span>
-          <span class="faq-icon" aria-hidden="true">+</span>
-        </button>
-        <div class="faq-a">
-          <p><span class="faq-an">A</span>製造・小売・物流・サービス・金融まで幅広い業界での開発実績がございます。業界特有の業務知見を持つエンジニアがアサイン可能ですので、まずはご相談ください。</p>
-        </div>
-      </li>
-      <li class="faq-item">
-        <button class="faq-q" type="button" aria-expanded="false">
-          <span class="faq-qn">Q07</span>
-          <span class="faq-qt">お問い合わせから着手までの流れは？</span>
-          <span class="faq-icon" aria-hidden="true">+</span>
-        </button>
-        <div class="faq-a">
-          <p><span class="faq-an">A</span>お問い合わせ→ヒアリング（無料）→要件定義→お見積もり→ご契約→キックオフ、という流れです。初回ご相談から1〜2週間で概算をご提示することが可能です。</p>
-        </div>
-      </li>
-    </ul>
-  </div>
-</section>
-
-<section id="contact" class="section section-cta">
-  <div class="cta-bg" aria-hidden="true">
-    <img src="https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=2000&q=80" alt="" loading="lazy" />
-    <div class="cta-overlay"></div>
-  </div>
-  <div class="container container-narrow" style="position:relative;">
-    <header class="section-head">
-      <p class="kicker">Contact</p>
-      <h2 class="section-title">技術のことなら、<span class="gold-text">お気軽にご相談ください。</span></h2>
-      <p class="section-lead">「こんなことできる？」「相談だけしたい」のひと言から、お気軽にどうぞ。<br />初回ご相談・概算お見積もりは無料です。</p>
-    </header>
-
-    <div class="contact-grid">
-      <div class="contact-card">
-        <p class="label">TEL</p>
-        <p class="value">XXX-XXXX-XXXX</p>
-        <p class="note">平日 9:00 - 18:00</p>
-      </div>
-      <div class="contact-card">
-        <p class="label">LINE</p>
-        <p class="value">お問い合わせ<br />はこちら</p>
-        <p class="note">公式LINEアカウント<br />24時間 受付</p>
-      </div>
-      <div class="contact-card">
-        <p class="label">FORM</p>
-        <p class="value">お問い合わせ<br />はこちら</p>
-        <p class="note">フォーム送信<br />24時間 受付</p>
-      </div>
-    </div>
-
-    <div class="cta-buttons" style="margin-top:36px;">
-      <a href="#" class="btn-line big">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 3C6.477 3 2 6.582 2 11c0 3.957 3.582 7.272 8.4 7.918.328.07.776.215.89.494.103.252.067.648.033.901l-.144.864c-.045.252-.2.99.866.539 1.067-.45 5.748-3.387 7.842-5.798C21.32 14.36 22 12.766 22 11c0-4.418-4.477-8-10-8z"/></svg>
+    <div class="hero-cta">
+      <a href="#contact" class="btn-primary">
         お問い合わせはこちら
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
       </a>
-      <a href="#" class="btn-gold big">
-        お問い合わせフォーム
-      </a>
+      <a href="#services" class="btn-secondary">サービス内容を見る</a>
     </div>
-
-    <p class="cta-microcopy">※ お返事は最短当日・通常24時間以内にいたします。</p>
-
-    <div class="sample-notice">
-      ※本ページはご提案用サンプルとして作成しております。掲載情報は仮の内容を含みます。
+    <div class="hero-stats">
+      <div><p class="hstat-n">300<span>+</span></p><p class="hstat-l">累計プロジェクト</p></div>
+      <div><p class="hstat-n">10<span>年</span></p><p class="hstat-l">業界実績</p></div>
+      <div><p class="hstat-n">98<span>%</span></p><p class="hstat-l">プロジェクト成功率</p></div>
+      <div><p class="hstat-n">24<span>/7</span></p><p class="hstat-l">運用サポート</p></div>
     </div>
   </div>
+</section>
+
+<section id="services" class="section section-soft">
+  <div class="container">
+    <p class="s-eyebrow">Services</p>
+    <h2 class="s-title">あらゆる技術課題に、<br />ワンストップで。</h2>
+    <p class="s-lead">企業のあらゆる技術課題に対し、最適なソリューションを提供します。</p>
+    <div class="svc-grid">
+      <article class="svc">
+        <div class="svc-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg></div>
+        <h3 class="svc-h">受託開発</h3>
+        <p class="svc-desc">業務システム・基幹システム・Webサービスをフルスクラッチで構築。</p>
+      </article>
+      <article class="svc">
+        <div class="svc-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg></div>
+        <h3 class="svc-h">クラウド導入</h3>
+        <p class="svc-desc">AWS / Azure / GCP に精通したエンジニアが移行を設計から支援。</p>
+      </article>
+      <article class="svc">
+        <div class="svc-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><polyline points="7 14 12 9 16 13 21 8"/></svg></div>
+        <h3 class="svc-h">DX推進</h3>
+        <p class="svc-desc">業務の可視化からデジタル化の戦略立案・実行まで一貫支援。</p>
+      </article>
+      <article class="svc">
+        <div class="svc-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/></svg></div>
+        <h3 class="svc-h">SES・常駐</h3>
+        <p class="svc-desc">経験豊富なエンジニアをチームの一員として派遣します。</p>
+      </article>
+      <article class="svc">
+        <div class="svc-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 9h6v6H9z"/></svg></div>
+        <h3 class="svc-h">SaaS導入支援</h3>
+        <p class="svc-desc">業務効率化SaaSの選定〜定着まで運用面までサポート。</p>
+      </article>
+      <article class="svc">
+        <div class="svc-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01"/></svg></div>
+        <h3 class="svc-h">インフラ構築</h3>
+        <p class="svc-desc">サーバー・ネットワーク・コンテナ基盤の設計・運用代行。</p>
+      </article>
+      <article class="svc">
+        <div class="svc-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
+        <h3 class="svc-h">セキュリティ</h3>
+        <p class="svc-desc">脆弱性診断・WAF導入・SOC運用まで総合的に。</p>
+      </article>
+      <article class="svc">
+        <div class="svc-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 0 1 4 10 15 15 0 0 1-4 10 15 15 0 0 1-4-10 15 15 0 0 1 4-10z"/></svg></div>
+        <h3 class="svc-h">AI・データ活用</h3>
+        <p class="svc-desc">機械学習モデル開発・データ分析基盤構築まで。</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section id="results" class="section">
+  <div class="container">
+    <p class="s-eyebrow">Impact</p>
+    <h2 class="s-title">数字で見る、<br />導入の効果。</h2>
+    <p class="s-lead">これまでにご支援したお客様での、典型的な改善効果の事例です。</p>
+    <div class="results-grid">
+      <div class="rcard">
+        <p class="rcard-n">68<span class="mini">%</span></p>
+        <p class="rcard-h">業務時間 削減</p>
+        <p class="rcard-d">基幹システム刷新による業務工数の削減実績。</p>
+      </div>
+      <div class="rcard">
+        <p class="rcard-n">3.2<span class="mini">x</span></p>
+        <p class="rcard-h">処理速度 改善</p>
+        <p class="rcard-d">レガシーシステムからクラウドネイティブへの移行。</p>
+      </div>
+      <div class="rcard">
+        <p class="rcard-n">42<span class="mini">%</span></p>
+        <p class="rcard-h">運用コスト 削減</p>
+        <p class="rcard-d">オンプレからクラウドへの移行による効果。</p>
+      </div>
+      <div class="rcard">
+        <p class="rcard-n">99.9<span class="mini">%</span></p>
+        <p class="rcard-h">システム稼働率</p>
+        <p class="rcard-d">24/365 監視体制によるダウンタイム削減。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="cases" class="section section-soft">
+  <div class="container">
+    <p class="s-eyebrow">Case Studies</p>
+    <h2 class="s-title">導入事例。</h2>
+    <p class="s-lead">様々な業界のお客様に、テクノロジーで課題解決をサポートしてきました。</p>
+    <div class="case-grid">
+      <article class="case">
+        <div class="case-photo">
+          <img src="https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&w=1200&q=80" alt="" />
+          <span class="case-tag">Manufacturing</span>
+        </div>
+        <div class="case-body">
+          <p class="case-cat">製造業 / 従業員500名規模</p>
+          <h3 class="case-h">20年使用したレガシー基幹システムを刷新</h3>
+          <p class="case-m">期間 約14ヶ月 / 開発体制 12名</p>
+          <p class="case-d">クラウドネイティブなアーキテクチャへの全面刷新。業務効率の大幅改善と運用コストの削減を同時実現。</p>
+        </div>
+      </article>
+      <article class="case">
+        <div class="case-photo">
+          <img src="https://images.unsplash.com/photo-1556761175-5973dc0f32e7?auto=format&fit=crop&w=1200&q=80" alt="" />
+          <span class="case-tag">Retail</span>
+        </div>
+        <div class="case-body">
+          <p class="case-cat">小売業 / 全国50店舗</p>
+          <h3 class="case-h">EC構築・基幹システム連携プロジェクト</h3>
+          <p class="case-m">期間 約8ヶ月 / 開発体制 8名</p>
+          <p class="case-d">独自ECサイトを構築し、既存基幹システムとリアルタイム連携。在庫と受注の一元管理を実現。</p>
+        </div>
+      </article>
+      <article class="case">
+        <div class="case-photo">
+          <img src="https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&w=1200&q=80" alt="" />
+          <span class="case-tag">Logistics</span>
+        </div>
+        <div class="case-body">
+          <p class="case-cat">物流業 / 中堅企業</p>
+          <h3 class="case-h">配送ルート最適化システム開発</h3>
+          <p class="case-m">期間 約6ヶ月 / 開発体制 6名</p>
+          <p class="case-d">AIアルゴリズムを活用した配送ルート最適化。配送効率を大幅に改善し、ドライバーの負担も軽減。</p>
+        </div>
+      </article>
+      <article class="case">
+        <div class="case-photo">
+          <img src="https://images.unsplash.com/photo-1497032628192-86f99bcd76bc?auto=format&fit=crop&w=1200&q=80" alt="" />
+          <span class="case-tag">Service</span>
+        </div>
+        <div class="case-body">
+          <p class="case-cat">サービス業 / 全国展開企業</p>
+          <h3 class="case-h">業務システムのクラウド移行</h3>
+          <p class="case-m">期間 約10ヶ月 / 開発体制 10名</p>
+          <p class="case-d">オンプレ環境のシステムをAWSへ移行。運用コスト削減と災害対策を同時に実現しました。</p>
+        </div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section id="support" class="section section-dark">
+  <div class="container">
+    <p class="s-eyebrow">Support</p>
+    <h2 class="s-title">運用後も、<br />安心のサポート体制。</h2>
+    <p class="s-lead">システムは作って終わりではありません。導入後も継続的に価値を生み出すよう、お客様に寄り添います。</p>
+    <div class="support-grid">
+      <div class="sup">
+        <div class="sup-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+        <h3 class="sup-h">24/365 監視</h3>
+        <p class="sup-d">本番稼働システムを24時間365日体制で監視。障害発生時には専任チームが即時対応します。</p>
+        <p class="sup-meta">SLA 99.9% / 一次対応 15分以内</p>
+      </div>
+      <div class="sup">
+        <div class="sup-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="10"/></svg></div>
+        <h3 class="sup-h">継続的な改善</h3>
+        <p class="sup-d">運用データを元に、定期的にシステム改善のご提案。ビジネスの成長に追従するシステムへ。</p>
+        <p class="sup-meta">月次レポート / 四半期改善提案</p>
+      </div>
+      <div class="sup">
+        <div class="sup-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v3M8 22h8"/></svg></div>
+        <h3 class="sup-h">専任ヘルプデスク</h3>
+        <p class="sup-d">エンジニアが直接対応する専用窓口。問い合わせから解決まで最短ルートでサポートします。</p>
+        <p class="sup-meta">平日 9-18時 / メール・電話・チャット</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="why" class="section">
+  <div class="container">
+    <p class="s-eyebrow">Why ITS</p>
+    <h2 class="s-title">選ばれる、6つの理由。</h2>
+    <div class="why-list">
+      <div class="why">
+        <span class="why-no">01</span>
+        <h3 class="why-h">要件定義から運用までの一気通貫</h3>
+        <p class="why-d">ヒアリング・要件定義・設計・開発・テスト・運用まで、自社内で完結。情報共有のロスがなく、品質を担保します。</p>
+      </div>
+      <div class="why">
+        <span class="why-no">02</span>
+        <h3 class="why-h">業界横断の豊富な開発実績</h3>
+        <p class="why-d">製造・小売・物流・サービス・金融まで、多様な業界で経験。業界知見を活かしたご提案が可能です。</p>
+      </div>
+      <div class="why">
+        <span class="why-no">03</span>
+        <h3 class="why-h">アジャイル開発による柔軟性</h3>
+        <p class="why-d">要件の変化を前提とした反復型開発で、市場やビジネスの変化に追従。最小スタートで価値を素早く届けます。</p>
+      </div>
+      <div class="why">
+        <span class="why-no">04</span>
+        <h3 class="why-h">クラウドネイティブ対応</h3>
+        <p class="why-d">AWS / Azure / GCP の主要クラウドに精通。マルチクラウド構成、コンテナ化、サーバーレスまで対応。</p>
+      </div>
+      <div class="why">
+        <span class="why-no">05</span>
+        <h3 class="why-h">国内開発体制で安心</h3>
+        <p class="why-d">すべて日本国内のエンジニアによる開発体制。コミュニケーションの齟齬なく、セキュリティ面でも安心。</p>
+      </div>
+      <div class="why">
+        <span class="why-no">06</span>
+        <h3 class="why-h">24/365 運用サポート</h3>
+        <p class="why-d">本番運用後も、専任チームが24時間365日体制でシステムを監視。即時対応する安心の体制を提供。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="voice" class="section section-soft">
+  <div class="container">
+    <p class="s-eyebrow">Customer's Voice</p>
+    <h2 class="s-title">お客様の声。</h2>
+    <p class="s-lead">プロジェクトをご一緒させていただいたお客様より、お声を頂戴しています。</p>
+    <div class="voice-grid">
+      <figure class="voice">
+        <p class="voice-rate">★★★★★</p>
+        <p class="voice-text">「業界の知見をベースに、業務をよく理解した上で提案してくださいました。要件定義の段階で気付いていない課題まで引き出してくれて本当に助かりました。」</p>
+        <figcaption class="voice-by">
+          <span class="voice-avatar">M</span>
+          <span><span class="voice-name">M 様</span><span class="voice-co">製造業 / 情報システム部</span></span>
+        </figcaption>
+      </figure>
+      <figure class="voice">
+        <p class="voice-rate">★★★★★</p>
+        <p class="voice-text">「途中で仕様変更を希望することが多々ありましたが、柔軟に対応してくださって本当に助かりました。アジャイル開発の良さを実感できたプロジェクトでした。」</p>
+        <figcaption class="voice-by">
+          <span class="voice-avatar">K</span>
+          <span><span class="voice-name">K 様</span><span class="voice-co">EC事業 / 経営企画</span></span>
+        </figcaption>
+      </figure>
+      <figure class="voice">
+        <p class="voice-rate">★★★★★</p>
+        <p class="voice-text">「リリース後の運用サポートが手厚く、何かあればすぐに対応してもらえます。社内に専任IT担当者を雇うコストを考えると、本当にコスパが良いと感じます。」</p>
+        <figcaption class="voice-by">
+          <span class="voice-avatar">S</span>
+          <span><span class="voice-name">S 様</span><span class="voice-co">物流業 / 取締役</span></span>
+        </figcaption>
+      </figure>
+      <figure class="voice">
+        <p class="voice-rate">★★★★★</p>
+        <p class="voice-text">「DXと言われても何から始めればよいか分からない状態でした。業務の見える化から始めて、段階的にデジタル化を進めてもらい、社内の意識も変わりました。」</p>
+        <figcaption class="voice-by">
+          <span class="voice-avatar">T</span>
+          <span><span class="voice-name">T 様</span><span class="voice-co">サービス業 / 代表取締役</span></span>
+        </figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<section id="faq" class="section">
+  <div class="container container-narrow">
+    <p class="s-eyebrow">FAQ</p>
+    <h2 class="s-title">よくある、ご質問。</h2>
+    <div class="faq">
+      <div class="faq-item" data-open="true">
+        <button class="faq-q" type="button" aria-expanded="true"><span class="faq-qt">開発費用の目安を教えてください。</span><span class="faq-icon">+</span></button>
+        <div class="faq-a"><p class="faq-a-inner">システム規模・要件によって異なります。ヒアリング後、要件定義に基づいた詳細なお見積もりをご提示します。初回ご相談・概算お見積もりは無料です。</p></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" type="button" aria-expanded="false"><span class="faq-qt">開発期間はどれくらいかかりますか？</span><span class="faq-icon">+</span></button>
+        <div class="faq-a"><p class="faq-a-inner">業務システムの規模に応じて3ヶ月〜18ヶ月程度。アジャイル開発で小さく早くリリースし、段階的に機能を拡充していくスタイルも選択可能です。</p></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" type="button" aria-expanded="false"><span class="faq-qt">既存システムからの移行は対応可能ですか？</span><span class="faq-icon">+</span></button>
+        <div class="faq-a"><p class="faq-a-inner">はい、多くのお客様で既存システムからの移行を経験しています。データ移行・並行稼働期間の設計など、ビジネスへの影響を最小限に抑える移行計画をご提案します。</p></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" type="button" aria-expanded="false"><span class="faq-qt">運用・保守も対応していますか？</span><span class="faq-icon">+</span></button>
+        <div class="faq-a"><p class="faq-a-inner">はい。24時間365日の監視・障害対応・機能改修まで、運用フェーズをしっかりサポートします。SLAに応じたプランをご用意しております。</p></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" type="button" aria-expanded="false"><span class="faq-qt">セキュリティ面の対策は？</span><span class="faq-icon">+</span></button>
+        <div class="faq-a"><p class="faq-a-inner">設計段階からセキュリティを組み込む方針です。脆弱性診断、暗号化、アクセス制御、ログ監視まで、業界標準に沿った対策を実装します。</p></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" type="button" aria-expanded="false"><span class="faq-qt">対応可能な業界は？</span><span class="faq-icon">+</span></button>
+        <div class="faq-a"><p class="faq-a-inner">製造・小売・物流・サービス・金融まで幅広い業界での開発実績がございます。業界特有の業務知見を持つエンジニアがアサイン可能です。</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section style="padding:0 0 96px">
+  <section id="contact" class="contact">
+    <div class="container container-narrow" style="padding:0 32px">
+      <p class="s-eyebrow">Contact</p>
+      <h2 class="s-title">プロジェクトのご相談、<br />お待ちしております。</h2>
+      <p class="s-lead">「こんなことできる？」のひと言からお気軽にどうぞ。初回ご相談・概算お見積もりは無料です。</p>
+      <div class="contact-cards">
+        <div class="ccard">
+          <p class="ccard-l">TEL</p>
+          <p class="ccard-v">XXX-XXXX-XXXX</p>
+          <p class="ccard-n">平日 9:00 - 18:00</p>
+        </div>
+        <div class="ccard">
+          <p class="ccard-l">LINE</p>
+          <p class="ccard-v">お問い合わせ<br />はこちら</p>
+          <p class="ccard-n">公式LINEアカウント</p>
+        </div>
+        <div class="ccard">
+          <p class="ccard-l">FORM</p>
+          <p class="ccard-v">お問い合わせ<br />はこちら</p>
+          <p class="ccard-n">24時間 受付中</p>
+        </div>
+      </div>
+      <div class="contact-buttons">
+        <a href="#" class="btn-c-line"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3C6.48 3 2 6.58 2 11c0 3.96 3.58 7.27 8.4 7.92.33.07.78.22.89.5.1.25.07.65.03.9l-.14.86c-.05.25-.2.99.87.54s5.75-3.39 7.84-5.8C21.32 14.36 22 12.77 22 11c0-4.42-4.48-8-10-8z"/></svg>お問い合わせはこちら</a>
+        <a href="#" class="btn-c-primary">お問い合わせフォーム <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+      </div>
+      <p class="contact-note">※お返事は最短当日・通常24時間以内にいたします。</p>
+      <div class="sample-mark">※本ページはご提案用サンプルとして作成しております。掲載情報は仮の内容を含みます。</div>
+    </div>
+  </section>
 </section>
 
 </main>
 
 <footer class="site-footer">
   <div class="container footer-inner">
-    <div>
+    <div class="footer-brand">
       <a href="#top" class="brand">
-        <span class="brand-mark" aria-hidden="true">I</span>
-        <span class="brand-name">ITS</span>
+        <span class="brand-mark">I</span>
+        <span class="brand-name">ITS<span class="brand-tld">.</span></span>
       </a>
-      <p class="footer-lead">ITS株式会社<br />技術で、ビジネスを、加速する。<br />システム開発・クラウド・DXを支えるIT企業。</p>
+      <p class="footer-lead">ITS株式会社<br />Technology that accelerates your business.</p>
     </div>
     <div>
-      <p class="footer-head">Menu</p>
-      <ul class="footer-menu">
-        <li><a href="#reason">選ばれる理由</a></li>
-        <li><a href="#services">サービス</a></li>
-        <li><a href="#cases">導入実績</a></li>
-        <li><a href="#voice">お客様の声</a></li>
-        <li><a href="#faq">FAQ</a></li>
-        <li><a href="#contact">お問い合わせ</a></li>
+      <p class="footer-h">Service</p>
+      <ul class="footer-list">
+        <li>受託開発</li><li>クラウド導入</li><li>DX推進</li><li>SES・常駐</li><li>SaaS導入支援</li>
       </ul>
     </div>
     <div>
-      <p class="footer-head">Company</p>
-      <ul class="footer-contact">
-        <li>ITS株式会社</li>
+      <p class="footer-h">Company</p>
+      <ul class="footer-list">
+        <li><a href="#">会社概要</a></li><li><a href="#">代表メッセージ</a></li><li><a href="#">採用情報</a></li>
+      </ul>
+    </div>
+    <div>
+      <p class="footer-h">Contact</p>
+      <ul class="footer-list">
         <li>住所：〇〇県〇〇市〇〇町〇-〇-〇</li>
         <li>TEL：XXX-XXXX-XXXX</li>
         <li>Mail：info@example.com</li>
-        <li>営業時間：平日 9:00〜18:00</li>
       </ul>
     </div>
   </div>
   <div class="footer-bottom">
     <p>© <span id="year"></span> ITS株式会社 All rights reserved.</p>
-    <ul>
-      <li><a href="#">プライバシーポリシー</a></li>
-      <li><a href="#">特定商取引法</a></li>
-      <li><a href="#">運営会社</a></li>
+    <ul style="display:flex;gap:18px;">
+      <li><a href="#">Privacy</a></li><li><a href="#">Terms</a></li>
     </ul>
-  </div>
-  <div class="footer-bottom" style="border-top:none; padding-top:0;">
-    <p style="opacity:.7;">※本ページはご提案用サンプルとして作成しております。掲載情報は仮の内容を含みます。</p>
+    <p class="footer-sample">※本ページはご提案用サンプルとして作成しております。掲載情報は仮の内容を含みます。</p>
   </div>
 </footer>
 
 <script>
   document.querySelectorAll(".faq-item .faq-q").forEach(function(btn){
-    btn.addEventListener("click", function(){
-      var item = btn.closest(".faq-item");
-      var isOpen = item.getAttribute("data-open") === "true";
-      document.querySelectorAll(".faq-item").forEach(function(other){
-        other.setAttribute("data-open", "false");
-        var q = other.querySelector(".faq-q");
-        if(q) q.setAttribute("aria-expanded", "false");
-      });
-      if(!isOpen){
-        item.setAttribute("data-open", "true");
-        btn.setAttribute("aria-expanded", "true");
-      }
+    btn.addEventListener("click",function(){
+      var item=btn.closest(".faq-item");
+      var open=item.getAttribute("data-open")==="true";
+      document.querySelectorAll(".faq-item").forEach(function(o){o.setAttribute("data-open","false");var q=o.querySelector(".faq-q");if(q)q.setAttribute("aria-expanded","false")});
+      if(!open){item.setAttribute("data-open","true");btn.setAttribute("aria-expanded","true")}
     });
   });
-  var toggle = document.getElementById("menu-toggle");
-  var menu = document.getElementById("nav-mobile");
-  if(toggle && menu){
-    toggle.addEventListener("click", function(){
-      var expanded = toggle.getAttribute("aria-expanded") === "true";
-      toggle.setAttribute("aria-expanded", String(!expanded));
-      menu.classList.toggle("is-open");
-    });
-  }
-  var header = document.getElementById("site-header");
-  window.addEventListener("scroll", function(){
-    if(window.scrollY > 32) header.classList.add("is-scrolled");
-    else header.classList.remove("is-scrolled");
-  }, {passive:true});
-  var y = document.getElementById("year");
-  if(y) y.textContent = String(new Date().getFullYear());
+  var t=document.getElementById("menuToggle"),m=document.getElementById("navMobile");
+  if(t&&m){t.addEventListener("click",function(){var e=t.getAttribute("aria-expanded")==="true";t.setAttribute("aria-expanded",String(!e));m.classList.toggle("is-open")});}
+  var h=document.getElementById("header");
+  window.addEventListener("scroll",function(){if(window.scrollY>20)h.classList.add("is-scrolled");else h.classList.remove("is-scrolled")},{passive:true});
+  var y=document.getElementById("year");if(y)y.textContent=String(new Date().getFullYear());
 </script>
 
 </body>
