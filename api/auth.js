@@ -23,15 +23,19 @@ const path = require("path");
 // 運営マスター（どのページにも入れる管理者）
 const MASTER = { user: "admin", pass: "stageup-master-2025" };
 
+// 企業別 LP 共通の Basic 認証情報（全社で統一）
+const SAMPLE_AUTH = { user: "sample", pass: "sample1234" };
+
 // 各 slug 別の Basic 認証情報（業種が判明し、LP制作済みの企業のみ登録）
 const ACCOUNTS = {
-  // 管理画面（運営者専用）
+  // 管理画面（運営者専用・専用パスワード）
   "admin":          MASTER,
 
   // 各社別 提案 LP（業種判明・LP制作済み）
-  "1-aireform":     { user: "aireform", pass: "aireform-2025" },  // リフォーム会社
-  "4-its":          { user: "its",      pass: "its-2025" },        // IT会社
-  "5-aokikensetsu": { user: "aoki",     pass: "aoki-2025" },        // 工務店・建設
+  // ※ 共通の sample / sample1234 を使用。各社個別パスワードは廃止。
+  "1-aireform":     SAMPLE_AUTH,  // リフォーム会社
+  "4-its":          SAMPLE_AUTH,  // IT会社
+  "5-aokikensetsu": SAMPLE_AUTH,  // 工務店・建設
 
   // ─── LP未作成（業種不明・スプレッドシート管理）───
   //   3-aikou:  愛光合同会社 / 業種不明 / 営業優先度 高（?）
