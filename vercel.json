@@ -2,6 +2,18 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "cleanUrls": true,
   "trailingSlash": false,
+  "rewrites": [
+    { "source": "/admin", "destination": "/api/auth?slug=admin" },
+    { "source": "/:slug(\\d+-[a-z0-9-]+)", "destination": "/api/auth?slug=:slug" }
+  ],
+  "redirects": [
+    { "source": "/_proposals/:path*", "destination": "/", "permanent": false }
+  ],
+  "functions": {
+    "api/auth.js": {
+      "includeFiles": "_proposals/**"
+    }
+  },
   "headers": [
     {
       "source": "/(.*)",

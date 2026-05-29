@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5" />
+<meta name="theme-color" content="#050505" />
+<meta name="robots" content="noindex, nofollow" />
+
+<title>営業LP一覧｜STAGE UP 管理画面</title>
+<meta name="description" content="STAGE UP 営業LP管理画面" />
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700;800&family=Shippori+Mincho:wght@500;600;700;800&display=swap" rel="stylesheet" />
+
+<link rel="stylesheet" href="/style.css" />
+
+<style>
+  /* 管理画面専用 上部バー */
+  .admin-bar{
+    position:fixed; top:0; left:0; right:0; z-index:60;
+    background:linear-gradient(135deg,#faf0c8 0%,#d4af37 55%,#b8932d 100%);
+    color:#050505;
+    padding:10px 16px;
+    text-align:center;
+    font-size:12px; font-weight:700; letter-spacing:.15em;
+  }
+  body{ padding-top: 38px; }
+
+  .admin-head{ padding: 80px 0 40px; text-align:center; }
+  .admin-head h1{
+    font-family:"Shippori Mincho", serif;
+    font-size: 32px; line-height:1.4; color:#fff;
+    letter-spacing:.05em;
+  }
+  .admin-head h1 strong{
+    display:block; margin-top:8px;
+    background:linear-gradient(135deg,#faf0c8 0%,#ecce6b 30%,#d4af37 55%,#b8932d 80%,#f3e09b 100%);
+    -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
+  }
+  @media(min-width:768px){ .admin-head h1{ font-size:44px; } }
+  .admin-head p{
+    margin-top:14px; color:rgba(255,255,255,.7); font-size:14px;
+  }
+
+  /* LP一覧グリッド */
+  .lp-grid{
+    display:grid; gap:20px;
+    grid-template-columns:repeat(auto-fill, minmax(280px, 1fr));
+    padding-bottom: 80px;
+  }
+  .lp-card{
+    position:relative;
+    padding:24px;
+    border:1px solid rgba(212,175,55,.25);
+    border-radius:16px;
+    background-color:rgba(10,10,10,.7);
+    background-image:
+      linear-gradient(180deg, rgba(255,255,255,.02), transparent),
+      radial-gradient(circle at top right, rgba(212,175,55,.12), transparent 50%);
+    backdrop-filter: blur(8px);
+    transition: transform .3s ease, border-color .3s ease, box-shadow .3s ease;
+    display:flex; flex-direction:column;
+  }
+  .lp-card:hover{
+    border-color:rgba(212,175,55,.6);
+    transform:translateY(-4px);
+    box-shadow: 0 20px 50px -20px rgba(212,175,55,.35);
+  }
+  .lp-card-no{
+    display:inline-block;
+    font-size:10px; font-weight:700; letter-spacing:.25em; text-transform:uppercase;
+    color:#ecce6b;
+    margin-bottom:10px;
+  }
+  .lp-card-name{
+    font-family:"Shippori Mincho", serif;
+    font-size: 20px; font-weight:700; color:#fff;
+    line-height:1.4;
+  }
+  .lp-card-url{
+    margin-top:14px; font-size:12px;
+    color:rgba(255,255,255,.55);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    word-break:break-all;
+  }
+  .lp-card-actions{
+    margin-top:20px; padding-top:16px;
+    border-top:1px solid rgba(212,175,55,.15);
+    display:flex; gap:8px;
+  }
+  .lp-card-actions a{
+    flex:1; text-align:center;
+    padding:10px 12px; border-radius:10px;
+    font-size:12px; font-weight:700; letter-spacing:.1em;
+    transition: all .2s ease;
+  }
+  .lp-card-open{
+    background: linear-gradient(135deg,#faf0c8 0%,#d4af37 55%,#b8932d 100%);
+    color:#050505;
+  }
+  .lp-card-open:hover{ filter: brightness(1.08); }
+  .lp-card-copy{
+    border:1px solid rgba(212,175,55,.4);
+    color:#ecce6b;
+    background:rgba(17,17,17,.5);
+    cursor:pointer;
+  }
+  .lp-card-copy:hover{ background:rgba(212,175,55,.15); }
+
+  .admin-foot{
+    padding: 24px 0 60px;
+    text-align:center;
+    color:rgba(255,255,255,.5);
+    font-size:11px;
+  }
+  .admin-foot a{ color:#ecce6b; }
+</style>
+</head>
+<body>
+
+<div class="admin-bar">
+  PRIVATE ADMIN — STAGE UP 営業管理画面
+</div>
+
+<main>
+  <div class="container">
+
+    <header class="admin-head">
+      <p class="kicker">Sales LP Admin</p>
+      <h1>
+        営業LP一覧
+        <strong>STAGE UP Admin Dashboard</strong>
+      </h1>
+      <p>各社の提案LPは Basic 認証で保護されています。<br />カードの「LPを開く」ボタンから個別ページに遷移します。</p>
+    </header>
+
+    <div class="lp-grid">
+
+      <article class="lp-card">
+        <span class="lp-card-no">管理番号 01</span>
+        <p class="lp-card-name">株式会社AIリフォーム</p>
+        <p class="lp-card-url">/1-aireform</p>
+        <div class="lp-card-actions">
+          <a href="/1-aireform" target="_blank" rel="noopener" class="lp-card-open">LPを開く</a>
+          <a href="#" class="lp-card-copy" data-copy="https://stage-up-lp.vercel.app/1-aireform">URLをコピー</a>
+        </div>
+      </article>
+
+      <article class="lp-card">
+        <span class="lp-card-no">管理番号 03</span>
+        <p class="lp-card-name">愛光合同会社</p>
+        <p class="lp-card-url">/3-aikou</p>
+        <div class="lp-card-actions">
+          <a href="/3-aikou" target="_blank" rel="noopener" class="lp-card-open">LPを開く</a>
+          <a href="#" class="lp-card-copy" data-copy="https://stage-up-lp.vercel.app/3-aikou">URLをコピー</a>
+        </div>
+      </article>
+
+      <article class="lp-card">
+        <span class="lp-card-no">管理番号 04</span>
+        <p class="lp-card-name">ITS株式会社</p>
+        <p class="lp-card-url">/4-its</p>
+        <div class="lp-card-actions">
+          <a href="/4-its" target="_blank" rel="noopener" class="lp-card-open">LPを開く</a>
+          <a href="#" class="lp-card-copy" data-copy="https://stage-up-lp.vercel.app/4-its">URLをコピー</a>
+        </div>
+      </article>
+
+      <article class="lp-card">
+        <span class="lp-card-no">管理番号 05</span>
+        <p class="lp-card-name">青木建設</p>
+        <p class="lp-card-url">/5-aokikensetsu</p>
+        <div class="lp-card-actions">
+          <a href="/5-aokikensetsu" target="_blank" rel="noopener" class="lp-card-open">LPを開く</a>
+          <a href="#" class="lp-card-copy" data-copy="https://stage-up-lp.vercel.app/5-aokikensetsu">URLをコピー</a>
+        </div>
+      </article>
+
+      <article class="lp-card">
+        <span class="lp-card-no">管理番号 09</span>
+        <p class="lp-card-name">株式会社公文</p>
+        <p class="lp-card-url">/9-kumon</p>
+        <div class="lp-card-actions">
+          <a href="/9-kumon" target="_blank" rel="noopener" class="lp-card-open">LPを開く</a>
+          <a href="#" class="lp-card-copy" data-copy="https://stage-up-lp.vercel.app/9-kumon">URLをコピー</a>
+        </div>
+      </article>
+
+    </div>
+
+    <p class="admin-foot">
+      ※ 各社の Basic 認証情報は <code>api/auth.js</code> の <code>ACCOUNTS</code> で管理。<br />
+      公式LPトップへ戻る → <a href="/">/</a>
+    </p>
+
+  </div>
+</main>
+
+<script>
+  // URL コピー機能
+  document.querySelectorAll(".lp-card-copy").forEach(function(btn){
+    btn.addEventListener("click", function(e){
+      e.preventDefault();
+      var url = btn.getAttribute("data-copy");
+      if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(url).then(function(){
+          var orig = btn.textContent;
+          btn.textContent = "✓ コピー済";
+          setTimeout(function(){ btn.textContent = orig; }, 1500);
+        });
+      } else {
+        prompt("以下のURLをコピーしてください：", url);
+      }
+    });
+  });
+</script>
+
+</body>
+</html>
