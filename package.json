@@ -1,0 +1,6 @@
+{
+  "name": "stage-up-lp",
+  "version": "1.0.0",
+  "private": true,
+  "description": "STAGE UP LP（トップは公開／提案ページはBasic認証）"
+}

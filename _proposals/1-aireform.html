@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5" />
+<meta name="theme-color" content="#050505" />
+<meta name="robots" content="noindex, nofollow" />
+
+<title>株式会社AIリフォーム｜暮らしを、もっと愛おしく。</title>
+<meta name="description" content="株式会社AIリフォームは、地域密着のリフォーム専門会社です。キッチン・浴室・内装・外装・全面リフォームまで、確かな技術と完全自社施工で、あなたの理想の住まいを実現します。完工後10年保証付き。" />
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700;800&family=Shippori+Mincho:wght@500;600;700;800&display=swap" rel="stylesheet" />
+
+<link rel="stylesheet" href="/style.css" />
+
+<style>
+  /* 企業別LP用 微調整 */
+  .sample-bar{
+    position:fixed; top:0; left:0; right:0; z-index:60;
+    background:rgba(5,5,5,.85); backdrop-filter:blur(10px);
+    border-bottom:1px solid rgba(212,175,55,.25);
+    color:#ecce6b;
+    padding:8px 16px; text-align:center;
+    font-size:11px; letter-spacing:.1em;
+  }
+  body{ padding-top: 34px; }
+  .site-header{ top:34px; }
+
+  /* リフォーム会社らしい温かみのある hero 補正 */
+  .hero-name{
+    font-family:"Shippori Mincho", serif;
+    font-size: 22px; letter-spacing:.2em;
+    color:#ecce6b;
+    margin-bottom: 18px;
+  }
+  .hero-region{
+    margin-top: 14px;
+    font-size:13px; letter-spacing:.15em; color:rgba(255,255,255,.65);
+  }
+  .hero-region::before{ content:"〈 "; color:#d4af37; }
+  .hero-region::after{  content:" 〉"; color:#d4af37; }
+
+  /* 連絡用ダミーボタン用 */
+  .contact-grid{
+    display:grid; gap:14px; margin-top:36px;
+  }
+  @media(min-width:768px){
+    .contact-grid{ grid-template-columns:repeat(3, 1fr); }
+  }
+  .contact-card{
+    padding:24px; border-radius:16px;
+    background:rgba(10,10,10,.7);
+    border:1px solid rgba(212,175,55,.25);
+    text-align:center;
+    transition: border-color .3s ease, transform .3s ease;
+  }
+  .contact-card:hover{ border-color:rgba(212,175,55,.55); transform: translateY(-2px); }
+  .contact-card .label{
+    font-size:11px; letter-spacing:.25em; text-transform:uppercase;
+    color:#ecce6b; margin-bottom:10px;
+  }
+  .contact-card .value{
+    font-family:"Shippori Mincho", serif;
+    font-size: 22px; color:#fff; line-height:1.4;
+  }
+  .contact-card .note{
+    margin-top:10px; font-size:12px; color:rgba(255,255,255,.55);
+  }
+
+  /* サンプル注釈 */
+  .sample-notice{
+    margin: 30px auto 0;
+    padding: 12px 18px;
+    border:1px dashed rgba(212,175,55,.35);
+    border-radius: 10px;
+    max-width: 720px;
+    text-align:center;
+    font-size: 11px; line-height: 1.7;
+    color: rgba(255,255,255,.55);
+    background: rgba(10,10,10,.4);
+  }
+</style>
+</head>
+<body>
+
+<div class="sample-bar">
+  ※ご提案用サンプルページ｜本ページは公開されておりません
+</div>
+
+<!-- ======================== HEADER ======================== -->
+<header class="site-header" id="site-header">
+  <div class="container header-inner">
+    <a href="#top" class="brand" aria-label="株式会社AIリフォーム トップへ">
+      <span class="brand-mark" aria-hidden="true">A</span>
+      <span class="brand-name">AI REFORM</span>
+    </a>
+    <nav class="nav-desktop" aria-label="グローバルナビゲーション">
+      <a href="#reason">選ばれる理由</a>
+      <a href="#services">サービス</a>
+      <a href="#cases">施工事例</a>
+      <a href="#voice">お客様の声</a>
+      <a href="#faq">FAQ</a>
+      <a href="#contact">お問い合わせ</a>
+    </nav>
+    <div class="header-cta">
+      <a href="#contact" class="btn-ghost-gold btn-sm hide-mobile">資料請求</a>
+      <a href="#contact" class="btn-line btn-sm">お問い合わせはこちら</a>
+    </div>
+    <button class="menu-toggle" id="menu-toggle" aria-label="メニュー" aria-expanded="false">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+  <div class="nav-mobile" id="nav-mobile" aria-hidden="true">
+    <a href="#reason">選ばれる理由</a>
+    <a href="#services">サービス</a>
+    <a href="#cases">施工事例</a>
+    <a href="#voice">お客様の声</a>
+    <a href="#faq">FAQ</a>
+    <a href="#contact">お問い合わせ</a>
+  </div>
+</header>
+
+<main id="top">
+
+<!-- ======================== HERO ======================== -->
+<section class="hero" aria-label="ファーストビュー">
+  <div class="hero-bg" aria-hidden="true">
+    <img src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=2000&q=80" alt="" loading="eager" />
+    <div class="hero-overlay"></div>
+    <div class="hero-grid"></div>
+  </div>
+  <div class="container hero-inner">
+    <p class="hero-name">株式会社AIリフォーム</p>
+    <h1 class="hero-title">
+      <span class="block gold-text gold-text--lg">暮らしを、</span>
+      <span class="block gold-text gold-text--lg">もっと愛おしく。</span>
+    </h1>
+    <p class="hero-region">東京都新宿区 / 創業20年 / 完全自社施工</p>
+    <p class="hero-sub">
+      キッチン、浴室、内装、外装、全面リフォームまで。<br />
+      ご家族の暮らしに寄り添い、確かな技術と真心で<br class="hide-mobile" />
+      理想の住まいを形にします。
+    </p>
+
+    <ul class="hero-chips" aria-label="主な特徴">
+      <li>完工後 10年保証</li>
+      <li>見積もり無料</li>
+      <li>完全自社施工</li>
+      <li>365日 相談受付</li>
+      <li>施工実績 1,200件超</li>
+    </ul>
+
+    <div class="cta-row">
+      <a href="#contact" class="btn-gold" aria-label="お問い合わせはこちら">
+        <span>お問い合わせはこちら</span>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+      </a>
+      <a href="#contact" class="btn-line" aria-label="LINEで相談">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 3C6.477 3 2 6.582 2 11c0 3.957 3.582 7.272 8.4 7.918.328.07.776.215.89.494.103.252.067.648.033.901l-.144.864c-.045.252-.2.99.866.539 1.067-.45 5.748-3.387 7.842-5.798C21.32 14.36 22 12.766 22 11c0-4.418-4.477-8-10-8z"/></svg>
+        <span>LINEで相談</span>
+      </a>
+      <a href="#cases" class="btn-ghost-gold" aria-label="施工事例を見る">
+        施工事例を見る
+      </a>
+    </div>
+
+    <p class="hero-note">
+      ※ お見積もり・現地調査無料
+      <span class="dot">·</span>　ご相談はお気軽に
+    </p>
+
+    <ul class="hero-stats">
+      <li>
+        <div class="stat-n">20年</div>
+        <div class="stat-l">地域に根ざした実績</div>
+      </li>
+      <li>
+        <div class="stat-n">1,200+</div>
+        <div class="stat-l">累計施工実績</div>
+      </li>
+      <li>
+        <div class="stat-n">10年</div>
+        <div class="stat-l">完工後の品質保証</div>
+      </li>
+    </ul>
+  </div>
+</section>
+
+<!-- ======================== 選ばれる理由 ======================== -->
+<section id="reason" class="section section-dark">
+  <div class="container">
+    <header class="section-head">
+      <p class="kicker">Why Chosen</p>
+      <h2 class="section-title">AIリフォームが<span class="gold-text">選ばれる理由</span></h2>
+      <p class="section-lead">地域のお客様に20年支えていただけたのには、理由があります。</p>
+    </header>
+    <div class="grid grid-3">
+      <article class="card card-num-big">
+        <span class="big-num">01</span>
+        <p class="reason-kicker">Reason 01</p>
+        <h3>創業20年、地域密着の安心感</h3>
+        <p>東京都新宿区を拠点に、地域のお客様の住まいに寄り添ってきました。ご近所での施工実績多数。お顔の見える関係を大切にしています。</p>
+      </article>
+      <article class="card card-num-big">
+        <span class="big-num">02</span>
+        <p class="reason-kicker">Reason 02</p>
+        <h3>完全自社施工で高品質</h3>
+        <p>下請けへの丸投げは一切なし。経験豊富な自社職人が責任を持って施工。中間マージンが発生しないため、品質と価格の両立を実現します。</p>
+      </article>
+      <article class="card card-num-big">
+        <span class="big-num">03</span>
+        <p class="reason-kicker">Reason 03</p>
+        <h3>完工後10年の長期保証</h3>
+        <p>施工箇所には最長10年の品質保証をお付けします。万が一の不具合にも、迅速に対応。長く安心して暮らしていただける家づくりを。</p>
+      </article>
+      <article class="card card-num-big">
+        <span class="big-num">04</span>
+        <p class="reason-kicker">Reason 04</p>
+        <h3>累計施工実績 1,200件以上</h3>
+        <p>水回りから全面リフォームまで、あらゆる住宅の課題に対応。蓄積された経験が、お客様の「理想」を確実な形にします。</p>
+      </article>
+      <article class="card card-num-big">
+        <span class="big-num">05</span>
+        <p class="reason-kicker">Reason 05</p>
+        <h3>完全担当制とアフターサポート</h3>
+        <p>お打ち合わせから施工、完工後のメンテナンスまで、一人の担当者が窓口に。「言った言わない」が起きない安心の体制です。</p>
+      </article>
+      <article class="card card-num-big">
+        <span class="big-num">06</span>
+        <p class="reason-kicker">Reason 06</p>
+        <h3>365日 ご相談・お見積もり無料</h3>
+        <p>「ちょっと聞いてみたい」のひと言から、お気軽にどうぞ。現地調査・お見積もり・ご提案までは全て無料です。</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ======================== サービス内容 ======================== -->
+<section id="services" class="section">
+  <div class="container">
+    <header class="section-head">
+      <p class="kicker">Services</p>
+      <h2 class="section-title">対応する<span class="gold-text">リフォーム内容</span></h2>
+      <p class="section-lead">部分リフォームから全面リフォームまで。住まいに関するあらゆるご相談を承ります。</p>
+    </header>
+    <div class="grid grid-4">
+      <article class="card service-card">
+        <div class="service-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="9" width="18" height="11" rx="2"/><path d="M7 9V5h10v4M7 13h4M14 13h3"/></svg>
+        </div>
+        <p class="service-tag">Service 01</p>
+        <h3>キッチンリフォーム</h3>
+        <p>使いやすさと美しさを両立。システムキッチンの入れ替えから対面式への変更まで。</p>
+      </article>
+      <article class="card service-card">
+        <div class="service-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 11h16v6a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3v-6Z"/><path d="M8 7c0-1.5 1-3 3-3M14 11V8a2 2 0 1 1 4 0v3"/></svg>
+        </div>
+        <p class="service-tag">Service 02</p>
+        <h3>浴室リフォーム</h3>
+        <p>毎日の疲れを癒す上質な空間へ。ユニットバス交換・在来浴室の改修まで対応。</p>
+      </article>
+      <article class="card service-card">
+        <div class="service-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="6" y="4" width="12" height="16" rx="2"/><path d="M10 9h4M10 13h4"/></svg>
+        </div>
+        <p class="service-tag">Service 03</p>
+        <h3>トイレ・洗面リフォーム</h3>
+        <p>清潔感あふれる水回りに刷新。節水型最新便器・収納付き洗面台への入れ替え。</p>
+      </article>
+      <article class="card service-card">
+        <div class="service-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 11 12 4l9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1Z"/></svg>
+        </div>
+        <p class="service-tag">Service 04</p>
+        <h3>内装リフォーム</h3>
+        <p>壁紙・床材・建具の張替えから間取り変更まで。住空間を一新します。</p>
+      </article>
+      <article class="card service-card">
+        <div class="service-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 21h18M5 21V9l7-5 7 5v12M9 21v-6h6v6"/></svg>
+        </div>
+        <p class="service-tag">Service 05</p>
+        <h3>外壁・屋根リフォーム</h3>
+        <p>外壁塗装・屋根塗装・カバー工法まで対応。住まいを永く美しく保ちます。</p>
+      </article>
+      <article class="card service-card">
+        <div class="service-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z"/></svg>
+        </div>
+        <p class="service-tag">Service 06</p>
+        <h3>増改築・間取り変更</h3>
+        <p>家族構成の変化に合わせて住まいを再設計。耐震補強と同時施工も承ります。</p>
+      </article>
+      <article class="card service-card">
+        <div class="service-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 12 12 3l9 9M5 10v10h14V10"/></svg>
+        </div>
+        <p class="service-tag">Service 07</p>
+        <h3>全面リフォーム</h3>
+        <p>戸建てもマンションも、住みながらの全面リノベーションが可能です。</p>
+      </article>
+      <article class="card service-card">
+        <div class="service-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="8" r="3"/><path d="M6 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/></svg>
+        </div>
+        <p class="service-tag">Service 08</p>
+        <h3>バリアフリー対応</h3>
+        <p>段差解消・手すり設置・浴室の改修など、長く安心して暮らせる住まいへ。</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ======================== 施工事例 ======================== -->
+<section id="cases" class="section section-dark">
+  <div class="container">
+    <header class="section-head">
+      <p class="kicker">Works</p>
+      <h2 class="section-title">これまでの<span class="gold-text">施工事例</span></h2>
+      <p class="section-lead">お客様一組ごとの「理想」を、形にしてきた事例の一部をご紹介します。</p>
+    </header>
+    <div class="grid grid-2">
+      <article class="case-card">
+        <div class="case-img">
+          <img src="https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?auto=format&fit=crop&w=1200&q=80" alt="キッチン全面リフォーム" loading="lazy" />
+          <span class="case-tag">Case 01</span>
+        </div>
+        <div class="case-body">
+          <p class="case-company">〇〇市・40代ご夫婦</p>
+          <p class="case-metric gold-text">キッチン全面リフォーム</p>
+          <p class="case-period">工期 約3週間</p>
+          <p>壁付けキッチンを開放的なアイランド型へ。ご夫婦で料理を楽しめる広々空間に生まれ変わりました。</p>
+        </div>
+      </article>
+      <article class="case-card">
+        <div class="case-img">
+          <img src="https://images.unsplash.com/photo-1552321554-5fefe8c9ef14?auto=format&fit=crop&w=1200&q=80" alt="浴室リフォーム" loading="lazy" />
+          <span class="case-tag">Case 02</span>
+        </div>
+        <div class="case-body">
+          <p class="case-company">〇〇市・60代ご夫妻</p>
+          <p class="case-metric gold-text">浴室・洗面所リフォーム</p>
+          <p class="case-period">工期 約10日</p>
+          <p>段差をなくし、手すりを設置したバリアフリー浴室へ。冬場のヒートショック対策も同時に施工。</p>
+        </div>
+      </article>
+      <article class="case-card">
+        <div class="case-img">
+          <img src="https://images.unsplash.com/photo-1586023492125-27b2c045efd7?auto=format&fit=crop&w=1200&q=80" alt="リビング全面改装" loading="lazy" />
+          <span class="case-tag">Case 03</span>
+        </div>
+        <div class="case-body">
+          <p class="case-company">〇〇市・30代ご家族</p>
+          <p class="case-metric gold-text">リビング全面改装</p>
+          <p class="case-period">工期 約4週間</p>
+          <p>2部屋をつなぐ大規模間取り変更。ご家族の時間を共有できる、明るく広いLDKに生まれ変わりました。</p>
+        </div>
+      </article>
+      <article class="case-card">
+        <div class="case-img">
+          <img src="https://images.unsplash.com/photo-1503387762-592deb58ef4e?auto=format&fit=crop&w=1200&q=80" alt="外壁塗装リフォーム" loading="lazy" />
+          <span class="case-tag">Case 04</span>
+        </div>
+        <div class="case-body">
+          <p class="case-company">〇〇市・50代男性</p>
+          <p class="case-metric gold-text">外壁・屋根塗装</p>
+          <p class="case-period">工期 約2週間</p>
+          <p>築20年の住まいを新築同様に。高耐久シリコン塗料で、次のメンテナンスまで安心の住まいへ。</p>
+        </div>
+      </article>
+    </div>
+    <ul class="stat-grid">
+      <li><div class="stat-n">1,200+</div><div class="stat-l">累計施工件数</div></li>
+      <li><div class="stat-n">98%</div><div class="stat-l">お客様満足度</div></li>
+      <li><div class="stat-n">10年</div><div class="stat-l">完工後の品質保証</div></li>
+      <li><div class="stat-n">20年</div><div class="stat-l">地域に根ざした実績</div></li>
+    </ul>
+  </div>
+</section>
+
+<!-- ======================== お客様の声 ======================== -->
+<section id="voice" class="section">
+  <div class="container">
+    <header class="section-head">
+      <p class="kicker">Voice</p>
+      <h2 class="section-title">お客様からの<span class="gold-text">お声</span></h2>
+      <p class="section-lead">実際に施工をお任せいただいたお客様より、嬉しいお言葉を頂戴しています。</p>
+    </header>
+    <div class="grid grid-2">
+      <figure class="card voice-card">
+        <span class="voice-badge">VOICE</span>
+        <blockquote>「築15年でキッチンが古くなり、思い切ってリフォームをお願いしました。打ち合わせから完工まで、担当の方が本当に丁寧に対応してくださって、料理が楽しい毎日に変わりました。」</blockquote>
+        <figcaption>
+          <span class="avatar" aria-hidden="true">M</span>
+          <div>
+            <p class="voice-name">M 様</p>
+            <p class="voice-company">40代 / キッチンリフォーム</p>
+          </div>
+        </figcaption>
+      </figure>
+      <figure class="card voice-card">
+        <span class="voice-badge">VOICE</span>
+        <blockquote>「中古マンションを購入してから全面リフォームをお願いしました。間取りの相談から細かい仕上げまで、こちらの希望を上手に汲み取ってくださり、想像以上の仕上がりに大満足です。」</blockquote>
+        <figcaption>
+          <span class="avatar" aria-hidden="true">K</span>
+          <div>
+            <p class="voice-name">K 様ご夫婦</p>
+            <p class="voice-company">30代 / 全面リフォーム</p>
+          </div>
+        </figcaption>
+      </figure>
+      <figure class="card voice-card">
+        <span class="voice-badge">VOICE</span>
+        <blockquote>「お風呂が寒く、転びそうになることもあったため、バリアフリー浴室にリフォーム。段差もなくなり、毎日のお風呂が安心で快適になりました。職人さんの仕事も丁寧で安心できました。」</blockquote>
+        <figcaption>
+          <span class="avatar" aria-hidden="true">T</span>
+          <div>
+            <p class="voice-name">T 様</p>
+            <p class="voice-company">60代 / 浴室リフォーム</p>
+          </div>
+        </figcaption>
+      </figure>
+      <figure class="card voice-card">
+        <span class="voice-badge">VOICE</span>
+        <blockquote>「外壁塗装をお願いしました。何社か相見積もりを取りましたが、説明が一番分かりやすく、押し売りもなくて好印象。仕上がりも本当に綺麗で、ご近所にも自慢できる家になりました。」</blockquote>
+        <figcaption>
+          <span class="avatar" aria-hidden="true">S</span>
+          <div>
+            <p class="voice-name">S 様</p>
+            <p class="voice-company">50代 / 外壁塗装</p>
+          </div>
+        </figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<!-- ======================== FAQ ======================== -->
+<section id="faq" class="section section-dark">
+  <div class="container container-narrow">
+    <header class="section-head">
+      <p class="kicker">FAQ</p>
+      <h2 class="section-title">よくある<span class="gold-text">ご質問</span></h2>
+      <p class="section-lead">ご相談前に多くお寄せいただくご質問をまとめました。</p>
+    </header>
+    <ul class="faq-list">
+      <li class="faq-item" data-open="true">
+        <button class="faq-q" type="button" aria-expanded="true">
+          <span class="faq-qn">Q01</span>
+          <span class="faq-qt">お見積もりは無料ですか？</span>
+          <span class="faq-icon" aria-hidden="true">+</span>
+        </button>
+        <div class="faq-a">
+          <p><span class="faq-an">A</span>はい、ご相談・現地調査・お見積もりまでは全て無料で承ります。お電話または問い合わせフォームよりお気軽にご連絡ください。</p>
+        </div>
+      </li>
+      <li class="faq-item">
+        <button class="faq-q" type="button" aria-expanded="false">
+          <span class="faq-qn">Q02</span>
+          <span class="faq-qt">工事期間はどれくらいかかりますか？</span>
+          <span class="faq-icon" aria-hidden="true">+</span>
+        </button>
+        <div class="faq-a">
+          <p><span class="faq-an">A</span>工事内容によりますが、トイレや洗面所などの部分リフォームで2〜5日、キッチンや浴室の入れ替えで1〜2週間、全面リフォームで1〜2ヶ月が目安です。事前に詳細な工程表をお渡しします。</p>
+        </div>
+      </li>
+      <li class="faq-item">
+        <button class="faq-q" type="button" aria-expanded="false">
+          <span class="faq-qn">Q03</span>
+          <span class="faq-qt">完工後の保証について教えてください。</span>
+          <span class="faq-icon" aria-hidden="true">+</span>
+        </button>
+        <div class="faq-a">
+          <p><span class="faq-an">A</span>施工箇所には最長10年の品質保証をお付けします。設備機器についてはメーカー保証＋当社独自の保証も適用。万が一の不具合には迅速に対応いたします。</p>
+        </div>
+      </li>
+      <li class="faq-item">
+        <button class="faq-q" type="button" aria-expanded="false">
+          <span class="faq-qn">Q04</span>
+          <span class="faq-qt">支払い方法はどんなものがありますか？</span>
+          <span class="faq-icon" aria-hidden="true">+</span>
+        </button>
+        <div class="faq-a">
+          <p><span class="faq-an">A</span>現金一括・銀行振込・各種ローンに対応しております。提携金融機関のリフォームローンもご紹介可能ですので、ご予算に応じてご相談ください。</p>
+        </div>
+      </li>
+      <li class="faq-item">
+        <button class="faq-q" type="button" aria-expanded="false">
+          <span class="faq-qn">Q05</span>
+          <span class="faq-qt">工事中も家に住み続けられますか？</span>
+          <span class="faq-icon" aria-hidden="true">+</span>
+        </button>
+        <div class="faq-a">
+          <p><span class="faq-an">A</span>多くの場合、住みながらの工事が可能です。部屋ごとに段階的に進めるなど、ご家族の生活への影響を最小限にする工程をご提案します。</p>
+        </div>
+      </li>
+      <li class="faq-item">
+        <button class="faq-q" type="button" aria-expanded="false">
+          <span class="faq-qn">Q06</span>
+          <span class="faq-qt">対応エリアはどこですか？</span>
+          <span class="faq-icon" aria-hidden="true">+</span>
+        </button>
+        <div class="faq-a">
+          <p><span class="faq-an">A</span>東京都新宿区を中心に、近隣の区市町村まで幅広く対応しております。詳しくはお問い合わせください。</p>
+        </div>
+      </li>
+      <li class="faq-item">
+        <button class="faq-q" type="button" aria-expanded="false">
+          <span class="faq-qn">Q07</span>
+          <span class="faq-qt">補助金・助成金は活用できますか？</span>
+          <span class="faq-icon" aria-hidden="true">+</span>
+        </button>
+        <div class="faq-a">
+          <p><span class="faq-an">A</span>省エネリフォーム・バリアフリー工事・耐震補強等は、自治体や国の補助金対象となる場合があります。最新の制度情報も含め、お見積もり時にご案内いたします。</p>
+        </div>
+      </li>
+    </ul>
+  </div>
+</section>
+
+<!-- ======================== お問い合わせ ======================== -->
+<section id="contact" class="section section-cta">
+  <div class="cta-bg" aria-hidden="true">
+    <img src="https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=2000&q=80" alt="" loading="lazy" />
+    <div class="cta-overlay"></div>
+  </div>
+  <div class="container container-narrow" style="position:relative;">
+    <header class="section-head">
+      <p class="kicker">Contact</p>
+      <h2 class="section-title">まずは、<span class="gold-text">お気軽にご相談ください</span></h2>
+      <p class="section-lead">ご相談・現地調査・お見積もりは無料です。<br />「ちょっと聞いてみたい」のひと言から、お気軽にどうぞ。</p>
+    </header>
+
+    <div class="contact-grid">
+      <div class="contact-card">
+        <p class="label">TEL</p>
+        <p class="value">XXX-XXXX-XXXX</p>
+        <p class="note">受付 9:00 - 18:00<br />（定休日：水曜日）</p>
+      </div>
+      <div class="contact-card">
+        <p class="label">LINE</p>
+        <p class="value">お問い合わせ<br />はこちら</p>
+        <p class="note">公式LINEアカウント<br />24時間 受付</p>
+      </div>
+      <div class="contact-card">
+        <p class="label">FORM</p>
+        <p class="value">お問い合わせ<br />はこちら</p>
+        <p class="note">フォーム送信<br />24時間 受付</p>
+      </div>
+    </div>
+
+    <div class="cta-buttons" style="margin-top:36px;">
+      <a href="#" class="btn-line big">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 3C6.477 3 2 6.582 2 11c0 3.957 3.582 7.272 8.4 7.918.328.07.776.215.89.494.103.252.067.648.033.901l-.144.864c-.045.252-.2.99.866.539 1.067-.45 5.748-3.387 7.842-5.798C21.32 14.36 22 12.766 22 11c0-4.418-4.477-8-10-8z"/></svg>
+        お問い合わせはこちら
+      </a>
+      <a href="#" class="btn-gold big">
+        お問い合わせフォーム
+      </a>
+    </div>
+
+    <p class="cta-microcopy">※ お返事は最短当日・通常24時間以内にいたします。</p>
+
+    <div class="sample-notice">
+      ※本ページはご提案用サンプルとして作成しております。掲載情報は仮の内容を含みます。
+    </div>
+  </div>
+</section>
+
+</main>
+
+<!-- ======================== FOOTER ======================== -->
+<footer class="site-footer">
+  <div class="container footer-inner">
+    <div>
+      <a href="#top" class="brand">
+        <span class="brand-mark" aria-hidden="true">A</span>
+        <span class="brand-name">AI REFORM</span>
+      </a>
+      <p class="footer-lead">株式会社AIリフォーム<br />暮らしを、もっと愛おしく。<br />地域に根ざした、リフォーム専門会社。</p>
+    </div>
+    <div>
+      <p class="footer-head">Menu</p>
+      <ul class="footer-menu">
+        <li><a href="#reason">選ばれる理由</a></li>
+        <li><a href="#services">サービス</a></li>
+        <li><a href="#cases">施工事例</a></li>
+        <li><a href="#voice">お客様の声</a></li>
+        <li><a href="#faq">FAQ</a></li>
+        <li><a href="#contact">お問い合わせ</a></li>
+      </ul>
+    </div>
+    <div>
+      <p class="footer-head">Company</p>
+      <ul class="footer-contact">
+        <li>株式会社AIリフォーム</li>
+        <li>住所：〇〇県〇〇市〇〇町〇-〇-〇</li>
+        <li>TEL：XXX-XXXX-XXXX</li>
+        <li>Mail：info@example.com</li>
+        <li>営業時間：9:00〜18:00</li>
+        <li>定休日：水曜日</li>
+      </ul>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <p>© <span id="year"></span> 株式会社AIリフォーム All rights reserved.</p>
+    <ul>
+      <li><a href="#">プライバシーポリシー</a></li>
+      <li><a href="#">特定商取引法</a></li>
+      <li><a href="#">運営会社</a></li>
+    </ul>
+  </div>
+  <div class="footer-bottom" style="border-top:none; padding-top:0;">
+    <p style="opacity:.7;">※本ページはご提案用サンプルとして作成しております。掲載情報は仮の内容を含みます。</p>
+  </div>
+</footer>
+
+<script>
+  // FAQアコーディオン
+  document.querySelectorAll(".faq-item .faq-q").forEach(function(btn){
+    btn.addEventListener("click", function(){
+      var item = btn.closest(".faq-item");
+      var isOpen = item.getAttribute("data-open") === "true";
+      document.querySelectorAll(".faq-item").forEach(function(other){
+        other.setAttribute("data-open", "false");
+        var q = other.querySelector(".faq-q");
+        if(q) q.setAttribute("aria-expanded", "false");
+      });
+      if(!isOpen){
+        item.setAttribute("data-open", "true");
+        btn.setAttribute("aria-expanded", "true");
+      }
+    });
+  });
+  // モバイルメニュー
+  var toggle = document.getElementById("menu-toggle");
+  var menu = document.getElementById("nav-mobile");
+  if(toggle && menu){
+    toggle.addEventListener("click", function(){
+      var expanded = toggle.getAttribute("aria-expanded") === "true";
+      toggle.setAttribute("aria-expanded", String(!expanded));
+      menu.classList.toggle("is-open");
+    });
+  }
+  // ヘッダースクロール
+  var header = document.getElementById("site-header");
+  window.addEventListener("scroll", function(){
+    if(window.scrollY > 32) header.classList.add("is-scrolled");
+    else header.classList.remove("is-scrolled");
+  }, {passive:true});
+  // 年表記
+  var y = document.getElementById("year");
+  if(y) y.textContent = String(new Date().getFullYear());
+</script>
+
+</body>
+</html>

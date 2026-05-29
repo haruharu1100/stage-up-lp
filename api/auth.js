@@ -2,7 +2,7 @@
  * STAGE UP Basic 認証ゲート
  *
  * URL: /admin                  → 営業LP一覧（管理画面）
- *      /1-aireform 他           → 各社別 提案LP
+ *      /1-aireform 他           → 各社別 提案LP（公式サイト風）
  *
  * 認証ロジック：
  *   - 各 slug ごとの user/pass（クライアントに渡す用）
@@ -10,8 +10,11 @@
  *
  * 新規企業追加：
  *   1. ACCOUNTS に { user, pass } を追加
- *   2. _proposals/<slug>.html を作成
+ *   2. _proposals/<slug>.html を作成（業種が判明している場合のみ）
  *   3. push → 自動デプロイ
+ *
+ * ※ 業種不明の企業は LP 作成保留 → スプレッドシート管理（営業優先度：高（?））
+ *    例：愛光合同会社（3-aikou）、株式会社公文（9-kumon）
  */
 
 const fs = require("fs");
@@ -20,17 +23,19 @@ const path = require("path");
 // 運営マスター（どのページにも入れる管理者）
 const MASTER = { user: "admin", pass: "stageup-master-2025" };
 
-// 各 slug 別の Basic 認証情報
+// 各 slug 別の Basic 認証情報（業種が判明し、LP制作済みの企業のみ登録）
 const ACCOUNTS = {
-  // 管理画面：MASTER のみ通す
+  // 管理画面（運営者専用）
   "admin":          MASTER,
 
-  // 各社別 提案 LP
-  "1-aireform":     { user: "aireform", pass: "aireform-2025" },
-  "3-aikou":        { user: "aikou",    pass: "aikou-2025" },
-  "4-its":          { user: "its",      pass: "its-2025" },
-  "5-aokikensetsu": { user: "aoki",     pass: "aoki-2025" },
-  "9-kumon":        { user: "kumon",    pass: "kumon-2025" },
+  // 各社別 提案 LP（業種判明・LP制作済み）
+  "1-aireform":     { user: "aireform", pass: "aireform-2025" },  // リフォーム会社
+  "4-its":          { user: "its",      pass: "its-2025" },        // IT会社
+  "5-aokikensetsu": { user: "aoki",     pass: "aoki-2025" },        // 工務店・建設
+
+  // ─── LP未作成（業種不明・スプレッドシート管理）───
+  //   3-aikou:  愛光合同会社 / 業種不明 / 営業優先度 高（?）
+  //   9-kumon:  株式会社公文 / 業種不明 / 営業優先度 高（?）
 };
 
 // realm を統一しておくと、admin がマスターでログインしたら

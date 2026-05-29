@@ -7,7 +7,6 @@
 <meta name="robots" content="noindex, nofollow" />
 
 <title>営業LP一覧｜STAGE UP 管理画面</title>
-<meta name="description" content="STAGE UP 営業LP管理画面" />
 
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -16,13 +15,11 @@
 <link rel="stylesheet" href="/style.css" />
 
 <style>
-  /* 管理画面専用 上部バー */
   .admin-bar{
     position:fixed; top:0; left:0; right:0; z-index:60;
     background:linear-gradient(135deg,#faf0c8 0%,#d4af37 55%,#b8932d 100%);
     color:#050505;
-    padding:10px 16px;
-    text-align:center;
+    padding:10px 16px; text-align:center;
     font-size:12px; font-weight:700; letter-spacing:.15em;
   }
   body{ padding-top: 38px; }
@@ -39,16 +36,32 @@
     -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
   }
   @media(min-width:768px){ .admin-head h1{ font-size:44px; } }
-  .admin-head p{
-    margin-top:14px; color:rgba(255,255,255,.7); font-size:14px;
-  }
+  .admin-head p{ margin-top:14px; color:rgba(255,255,255,.7); font-size:14px; }
 
-  /* LP一覧グリッド */
+  /* セクションタブ風見出し */
+  .group-head{
+    margin: 40px 0 20px;
+    display:flex; align-items:center; gap:14px;
+  }
+  .group-head h2{
+    font-family:"Shippori Mincho", serif;
+    font-size: 20px; color:#fff; letter-spacing:.08em;
+  }
+  .group-head .badge{
+    display:inline-flex; align-items:center;
+    padding:4px 12px; border-radius:999px;
+    font-size:11px; letter-spacing:.15em; font-weight:700;
+  }
+  .badge-ok{ background:rgba(212,175,55,.15); color:#ecce6b; border:1px solid rgba(212,175,55,.4); }
+  .badge-pending{ background:rgba(220,80,80,.12); color:#f29696; border:1px solid rgba(220,80,80,.4); }
+  .group-head .count{ color:rgba(255,255,255,.5); font-size:12px; margin-left:auto; }
+
   .lp-grid{
     display:grid; gap:20px;
     grid-template-columns:repeat(auto-fill, minmax(280px, 1fr));
-    padding-bottom: 80px;
   }
+
+  /* 通常カード（制作済み） */
   .lp-card{
     position:relative;
     padding:24px;
@@ -70,13 +83,14 @@
   .lp-card-no{
     display:inline-block;
     font-size:10px; font-weight:700; letter-spacing:.25em; text-transform:uppercase;
-    color:#ecce6b;
-    margin-bottom:10px;
+    color:#ecce6b; margin-bottom:10px;
   }
   .lp-card-name{
     font-family:"Shippori Mincho", serif;
-    font-size: 20px; font-weight:700; color:#fff;
-    line-height:1.4;
+    font-size: 20px; font-weight:700; color:#fff; line-height:1.4;
+  }
+  .lp-card-industry{
+    margin-top:8px; font-size:12px; color:rgba(255,255,255,.65);
   }
   .lp-card-url{
     margin-top:14px; font-size:12px;
@@ -108,8 +122,41 @@
   }
   .lp-card-copy:hover{ background:rgba(212,175,55,.15); }
 
+  /* 保留カード（業種不明） */
+  .lp-card-pending{
+    border:1px dashed rgba(220,80,80,.4);
+    background:rgba(20,8,8,.5);
+  }
+  .lp-card-pending:hover{
+    border-color:rgba(220,80,80,.6);
+    transform: none;
+    box-shadow: none;
+  }
+  .lp-card-pending .lp-card-no{ color:#f29696; }
+  .lp-card-pending-status{
+    display:inline-block;
+    margin-top:14px;
+    padding:6px 12px; border-radius:8px;
+    font-size:11px; font-weight:700; letter-spacing:.1em;
+    background:rgba(220,80,80,.15);
+    color:#f29696;
+    border:1px solid rgba(220,80,80,.35);
+  }
+  .lp-card-pending-note{
+    margin-top:14px;
+    font-size:12px; color:rgba(255,255,255,.55);
+    line-height:1.7;
+  }
+  .lp-card-pending-meta{
+    margin-top:14px; padding-top:14px;
+    border-top:1px dashed rgba(220,80,80,.25);
+    font-size:11px; color:rgba(255,255,255,.5);
+    line-height:1.7;
+  }
+  .lp-card-pending-meta strong{ color:#f29696; }
+
   .admin-foot{
-    padding: 24px 0 60px;
+    padding: 40px 0 60px;
     text-align:center;
     color:rgba(255,255,255,.5);
     font-size:11px;
@@ -132,14 +179,22 @@
         営業LP一覧
         <strong>STAGE UP Admin Dashboard</strong>
       </h1>
-      <p>各社の提案LPは Basic 認証で保護されています。<br />カードの「LPを開く」ボタンから個別ページに遷移します。</p>
+      <p>各社の提案LPはBasic認証で保護されています。<br />業種が判明している会社のみLPを制作しています。</p>
     </header>
+
+    <!-- ======================== 制作済み ======================== -->
+    <div class="group-head">
+      <h2>制作済み LP</h2>
+      <span class="badge badge-ok">PUBLISHED</span>
+      <span class="count">3 社</span>
+    </div>
 
     <div class="lp-grid">
 
       <article class="lp-card">
         <span class="lp-card-no">管理番号 01</span>
         <p class="lp-card-name">株式会社AIリフォーム</p>
+        <p class="lp-card-industry">業種：リフォーム会社</p>
         <p class="lp-card-url">/1-aireform</p>
         <div class="lp-card-actions">
           <a href="/1-aireform" target="_blank" rel="noopener" class="lp-card-open">LPを開く</a>
@@ -148,18 +203,9 @@
       </article>
 
       <article class="lp-card">
-        <span class="lp-card-no">管理番号 03</span>
-        <p class="lp-card-name">愛光合同会社</p>
-        <p class="lp-card-url">/3-aikou</p>
-        <div class="lp-card-actions">
-          <a href="/3-aikou" target="_blank" rel="noopener" class="lp-card-open">LPを開く</a>
-          <a href="#" class="lp-card-copy" data-copy="https://stage-up-lp.vercel.app/3-aikou">URLをコピー</a>
-        </div>
-      </article>
-
-      <article class="lp-card">
         <span class="lp-card-no">管理番号 04</span>
         <p class="lp-card-name">ITS株式会社</p>
+        <p class="lp-card-industry">業種：IT会社（推定）</p>
         <p class="lp-card-url">/4-its</p>
         <div class="lp-card-actions">
           <a href="/4-its" target="_blank" rel="noopener" class="lp-card-open">LPを開く</a>
@@ -170,6 +216,7 @@
       <article class="lp-card">
         <span class="lp-card-no">管理番号 05</span>
         <p class="lp-card-name">青木建設</p>
+        <p class="lp-card-industry">業種：工務店・建設</p>
         <p class="lp-card-url">/5-aokikensetsu</p>
         <div class="lp-card-actions">
           <a href="/5-aokikensetsu" target="_blank" rel="noopener" class="lp-card-open">LPを開く</a>
@@ -177,13 +224,42 @@
         </div>
       </article>
 
-      <article class="lp-card">
+    </div>
+
+    <!-- ======================== 業種不明・LP保留 ======================== -->
+    <div class="group-head">
+      <h2>業種不明・LP保留</h2>
+      <span class="badge badge-pending">PENDING</span>
+      <span class="count">2 社</span>
+    </div>
+
+    <div class="lp-grid">
+
+      <article class="lp-card lp-card-pending">
+        <span class="lp-card-no">管理番号 03</span>
+        <p class="lp-card-name">愛光合同会社</p>
+        <span class="lp-card-pending-status">業種不明・LP作成保留</span>
+        <p class="lp-card-pending-note">
+          会社名のみでは業種が判断できないため、無理なLP作成は行わずスプレッドシート管理。
+        </p>
+        <div class="lp-card-pending-meta">
+          <p>業種予測：<strong>不明</strong></p>
+          <p>営業優先度：<strong>高（？）</strong></p>
+          <p>LP URL：—</p>
+        </div>
+      </article>
+
+      <article class="lp-card lp-card-pending">
         <span class="lp-card-no">管理番号 09</span>
         <p class="lp-card-name">株式会社公文</p>
-        <p class="lp-card-url">/9-kumon</p>
-        <div class="lp-card-actions">
-          <a href="/9-kumon" target="_blank" rel="noopener" class="lp-card-open">LPを開く</a>
-          <a href="#" class="lp-card-copy" data-copy="https://stage-up-lp.vercel.app/9-kumon">URLをコピー</a>
+        <span class="lp-card-pending-status">業種不明・LP作成保留</span>
+        <p class="lp-card-pending-note">
+          会社名のみでは業種が判断できないため、無理なLP作成は行わずスプレッドシート管理。
+        </p>
+        <div class="lp-card-pending-meta">
+          <p>業種予測：<strong>不明</strong></p>
+          <p>営業優先度：<strong>高（？）</strong></p>
+          <p>LP URL：—</p>
         </div>
       </article>
 
@@ -191,6 +267,7 @@
 
     <p class="admin-foot">
       ※ 各社の Basic 認証情報は <code>api/auth.js</code> の <code>ACCOUNTS</code> で管理。<br />
+      業種不明の保留社は会社情報判明後にLP制作 → ACCOUNTS追加 → HTMLアップロードで公開。<br />
       公式LPトップへ戻る → <a href="/">/</a>
     </p>
 
