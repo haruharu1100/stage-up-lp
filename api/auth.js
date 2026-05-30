@@ -115,6 +115,71 @@ const ACCOUNTS = {
   "87-itex":          SAMPLE_AUTH,  // 株式会社Itex / 業種不明（近大KINCUBA入居）
   "88-ainekea":       SAMPLE_AUTH,  // 合同会社アイネケア / 業種不明（汎用）
 
+  // ─── 大阪府 62社追加（89-184・3年以内フィルタ通過分）───
+  // ※ 95,96,97,99,107,110,111,112,117,118,127,128,133,139,140,141,148,153,155,161,163,164,165,168,170,171,173,175,177,178,179,181,182,184 は3年フィルタ除外
+  "89-aino-studio":       SAMPLE_AUTH,
+  "90-ai-no-memo":        SAMPLE_AUTH,
+  "91-i-be":              SAMPLE_AUTH,
+  "92-aibii":             SAMPLE_AUTH,
+  "93-ip":                SAMPLE_AUTH,
+  "94-ipc":               SAMPLE_AUTH,
+  "98-islandbase":        SAMPLE_AUTH,
+  "100-ai-link":          SAMPLE_AUTH,
+  "101-avanzare":         SAMPLE_AUTH,
+  "102-avince":           SAMPLE_AUTH,
+  "103-avera":            SAMPLE_AUTH,
+  "104-aura":             SAMPLE_AUTH,
+  "105-aurion-val-tesh":  SAMPLE_AUTH,
+  "106-owlarc":           SAMPLE_AUTH,
+  "108-aoisora-sky":      SAMPLE_AUTH,
+  "109-aohara-create":    SAMPLE_AUTH,
+  "113-akatsuki":         SAMPLE_AUTH,
+  "114-akatsuki-estate":  SAMPLE_AUTH,
+  "115-akari-ltd":        SAMPLE_AUTH,
+  "116-agare":            SAMPLE_AUTH,
+  "119-agin":             SAMPLE_AUTH,
+  "120-akua":             SAMPLE_AUTH,
+  "121-aqua-japan":       SAMPLE_AUTH,
+  "122-aquas-marketing":  SAMPLE_AUTH,
+  "123-aqua-resort":      SAMPLE_AUTH,
+  "124-axia-amami":       SAMPLE_AUTH,
+  "125-axis-time":        SAMPLE_AUTH,
+  "126-axel":             SAMPLE_AUTH,
+  "129-again":            SAMPLE_AUTH,
+  "130-asahi-shoji":      SAMPLE_AUTH,
+  "131-asahi-pharmacy":   SAMPLE_AUTH,  // 薬局・薬剤師
+  "132-asahi-pm":         SAMPLE_AUTH,  // プロパティマネジメント（不動産）
+  "134-azalea":           SAMPLE_AUTH,
+  "135-asia-nougyou":     SAMPLE_AUTH,  // 一般社団法人（亜洲農産業連合促進会）
+  "136-astreva":          SAMPLE_AUTH,
+  "137-az":               SAMPLE_AUTH,
+  "138-assets-care-hd":   SAMPLE_AUTH,  // 持株会社（Assets Care HD）
+  "142-asoto-hotel":      SAMPLE_AUTH,
+  "143-asoviva":          SAMPLE_AUTH,
+  "144-adaxis-japan":     SAMPLE_AUTH,  // 在日フランス商工会議所内
+  "145-adachi-asset":     SAMPLE_AUTH,  // アセットマネジメント
+  "146-adan":             SAMPLE_AUTH,
+  "147-atsukei":          SAMPLE_AUTH,
+  "149-at-end":           SAMPLE_AUTH,
+  "150-atbat":            SAMPLE_AUTH,
+  "151-upper-home":       SAMPLE_AUTH,
+  "152-upwell":           SAMPLE_AUTH,
+  "154-up-lift":          SAMPLE_AUTH,
+  "156-attend":           SAMPLE_AUTH,
+  "157-atom-estate":      SAMPLE_AUTH,  // 不動産系
+  "158-atria":            SAMPLE_AUTH,
+  "159-atelier-kura":     SAMPLE_AUTH,
+  "160-atelier-fusion":   SAMPLE_AUTH,
+  "162-atre-osaka":       SAMPLE_AUTH,
+  "166-adsapo":           SAMPLE_AUTH,
+  "167-advantis":         SAMPLE_AUTH,
+  "169-another-story":    SAMPLE_AUTH,
+  "172-animanode":        SAMPLE_AUTH,
+  "174-anela":            SAMPLE_AUTH,
+  "176-avante":           SAMPLE_AUTH,
+  "180-afritx":           SAMPLE_AUTH,
+  "183-apua":             SAMPLE_AUTH,
+
   // ─── LP作成しない（NPO・宗教・半公的団体）───
   //   10-farm:            ファーム弁天 / 農業（半公的） / 低
   //   21-mahoroba-coop:   まほろば協同組合 / 協同組合 / 低

@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5" />
+<meta name="theme-color" content="#ffffff" />
+<meta name="robots" content="noindex, nofollow" />
+
+<title>株式会社Anela｜地域に根ざしたサービスで、お客様との信頼を築きます。</title>
+<meta name="description" content="株式会社Anelaは、地域に密着した事業を展開し、お客様の課題解決を真摯にサポートしております。長年培った経験と信頼を基に、確かなサービスをお届けします。" />
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;500;600&family=Noto+Sans+JP:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+<style>
+:root{
+  --bg:#ffffff;
+  --bg-soft:#f5f7fa;
+  --bg-2:#e8ecf2;
+  --paper:#ffffff;
+  --ink:#1a2842;
+  --ink-2:#3b4860;
+  --ink-3:#6b7280;
+  --ink-4:#9ca3af;
+  --line:#e5e7eb;
+  --line-2:#d1d5db;
+  --navy:#1e3a5f;
+  --navy-deep:#152a47;
+  --navy-light:#3b5a82;
+  --gold:#b8923a;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%;scroll-padding-top:80px}
+body{font-family:"Noto Sans JP",sans-serif;background:var(--bg);color:var(--ink-2);font-size:15px;line-height:1.9;-webkit-font-smoothing:antialiased}
+img{display:block;max-width:100%;height:auto}
+a{color:inherit;text-decoration:none;transition:color .2s,opacity .2s}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+ul,ol{list-style:none}
+
+.sample-bar{position:fixed;top:0;left:0;right:0;z-index:60;background:var(--navy-deep);color:#cbd5e1;padding:8px 16px;text-align:center;font-size:11px;letter-spacing:.1em}
+body{padding-top:32px}
+.container{width:100%;max-width:1140px;margin:0 auto;padding:0 24px}
+.container-narrow{max-width:820px}
+@media(min-width:768px){.container{padding:0 40px}}
+
+.site-header{position:fixed;top:32px;left:0;right:0;z-index:50;background:rgba(255,255,255,.92);backdrop-filter:blur(14px);border-bottom:1px solid transparent;transition:border-color .3s}
+.site-header.is-scrolled{border-bottom-color:var(--line)}
+.header-inner{display:flex;align-items:center;justify-content:space-between;gap:16px;height:72px}
+.brand{display:flex;align-items:center;gap:12px}
+.brand-mark{width:40px;height:40px;display:grid;place-items:center;background:var(--navy);color:#fff;font-family:"Noto Serif JP",serif;font-weight:600;font-size:18px;border-radius:4px}
+.brand-text{display:flex;flex-direction:column;line-height:1.15}
+.brand-jp{font-family:"Noto Serif JP",serif;font-weight:600;color:var(--ink);font-size:16px;letter-spacing:.08em}
+.brand-en{font-size:9px;color:var(--ink-3);letter-spacing:.2em;margin-top:3px}
+
+.nav-desktop{display:none;gap:30px}
+.nav-desktop a{font-size:13px;color:var(--ink-2);font-weight:500;letter-spacing:.04em}
+.nav-desktop a:hover{color:var(--navy)}
+@media(min-width:1024px){.nav-desktop{display:flex}}
+
+.header-cta{display:flex;align-items:center;gap:12px}
+.header-tel{display:none;font-family:"Noto Serif JP",serif;font-size:16px;color:var(--navy);font-weight:600}
+.header-tel small{display:block;font-size:9px;color:var(--ink-3);letter-spacing:.2em;font-family:"Noto Sans JP",sans-serif;font-weight:400}
+@media(min-width:1024px){.header-tel{display:block}}
+.btn-h-primary{display:inline-flex;align-items:center;gap:8px;padding:11px 20px;background:var(--navy);color:#fff;font-size:13px;font-weight:600;letter-spacing:.05em;border-radius:4px}
+.btn-h-primary:hover{background:var(--navy-deep)}
+
+.menu-toggle{width:42px;height:42px;display:grid;gap:5px;align-content:center;justify-items:center;background:transparent;border:1px solid var(--line-2);border-radius:4px}
+.menu-toggle span{width:18px;height:1.5px;background:var(--ink);transition:transform .3s,opacity .3s}
+.menu-toggle[aria-expanded="true"] span:nth-child(1){transform:translateY(6px) rotate(45deg)}
+.menu-toggle[aria-expanded="true"] span:nth-child(2){opacity:0}
+.menu-toggle[aria-expanded="true"] span:nth-child(3){transform:translateY(-6px) rotate(-45deg)}
+@media(min-width:1024px){.menu-toggle{display:none}}
+.nav-mobile{display:flex;flex-direction:column;max-height:0;overflow:hidden;background:var(--paper);border-top:1px solid var(--line);padding:0 24px;transition:max-height .4s,padding .3s}
+.nav-mobile.is-open{max-height:80vh;padding:8px 24px 24px}
+.nav-mobile a{padding:14px 0;border-bottom:1px solid var(--line);font-size:14px;color:var(--ink-2)}
+
+/* Hero */
+.hero{position:relative;padding:130px 0 100px;background:linear-gradient(180deg,var(--bg) 0%,var(--bg-soft) 100%);overflow:hidden}
+@media(min-width:768px){.hero{padding:170px 0 130px}}
+.hero::before{content:"";position:absolute;inset:0;background-image:radial-gradient(circle at 80% 20%,rgba(30,58,95,.04) 0,transparent 50%)}
+.hero-inner{position:relative;display:grid;gap:48px;align-items:center}
+@media(min-width:980px){.hero-inner{grid-template-columns:1.1fr 1fr;gap:80px}}
+.hero-eyebrow{display:inline-flex;align-items:center;gap:14px;font-family:"Noto Serif JP",serif;font-size:13px;color:var(--navy);letter-spacing:.25em;margin-bottom:28px}
+.hero-eyebrow::before{content:"";display:inline-block;width:32px;height:1px;background:var(--navy)}
+.hero-title{font-family:"Noto Serif JP",serif;font-weight:500;color:var(--ink);font-size:34px;line-height:1.55;letter-spacing:.05em}
+@media(min-width:640px){.hero-title{font-size:42px}}
+@media(min-width:1024px){.hero-title{font-size:50px}}
+.hero-title em{color:var(--navy);font-style:normal}
+.hero-sub{margin-top:32px;color:var(--ink-2);font-size:15px;line-height:2.1;max-width:540px}
+@media(min-width:768px){.hero-sub{font-size:16px}}
+.hero-cta{margin-top:40px;display:flex;flex-wrap:wrap;gap:14px}
+.btn-primary{display:inline-flex;align-items:center;justify-content:center;gap:10px;background:var(--navy);color:#fff;padding:16px 32px;border-radius:4px;font-weight:600;font-size:14px;letter-spacing:.08em}
+.btn-primary:hover{background:var(--navy-deep);transform:translateY(-1px)}
+.btn-secondary{display:inline-flex;align-items:center;justify-content:center;gap:10px;background:transparent;color:var(--ink);padding:16px 32px;border-radius:4px;border:1px solid var(--ink);font-weight:500;font-size:14px;letter-spacing:.08em}
+.btn-secondary:hover{background:var(--ink);color:#fff}
+
+.hero-card{padding:36px 32px;background:var(--paper);border:1px solid var(--line);border-radius:6px;box-shadow:0 30px 60px -30px rgba(26,40,66,.18);position:relative}
+.hero-card::before{content:"";position:absolute;top:0;left:0;width:60px;height:3px;background:var(--navy)}
+.hero-card h3{font-family:"Noto Serif JP",serif;color:var(--navy);font-size:14px;letter-spacing:.15em;margin-bottom:20px}
+.hero-card-list{display:grid;gap:14px}
+.hero-card-row{display:grid;grid-template-columns:120px 1fr;gap:14px;padding:14px 0;border-bottom:1px dashed var(--line);font-size:13px}
+.hero-card-row:last-child{border-bottom:0}
+.hero-card-l{color:var(--ink-3);font-family:"Noto Serif JP",serif;letter-spacing:.1em}
+.hero-card-v{color:var(--ink);font-weight:500}
+
+/* Section base */
+.section{padding:96px 0}
+@media(min-width:768px){.section{padding:130px 0}}
+.section-soft{background:var(--bg-soft)}
+.section-navy{background:var(--navy);color:#fff}
+
+.s-eyebrow{display:inline-flex;align-items:center;gap:14px;font-family:"Noto Serif JP",serif;font-size:13px;color:var(--navy);letter-spacing:.25em;margin-bottom:22px}
+.s-eyebrow::before{content:"";display:inline-block;width:32px;height:1px;background:var(--navy)}
+.section-navy .s-eyebrow{color:#cbd5e1}
+.section-navy .s-eyebrow::before{background:#cbd5e1}
+.s-title{font-family:"Noto Serif JP",serif;font-weight:500;color:var(--ink);font-size:30px;line-height:1.5;letter-spacing:.05em}
+.section-navy .s-title{color:#fff}
+@media(min-width:768px){.s-title{font-size:42px}}
+.s-title em{color:var(--navy);font-style:normal}
+.s-lead{margin-top:24px;color:var(--ink-2);font-size:15px;line-height:2.1;max-width:680px}
+.section-navy .s-lead{color:rgba(255,255,255,.78)}
+
+/* Philosophy */
+.phil{display:grid;gap:48px;align-items:center;margin-top:56px}
+@media(min-width:980px){.phil{grid-template-columns:.85fr 1.15fr;gap:80px}}
+.phil-img{aspect-ratio:5/6;overflow:hidden;background:var(--bg-2);position:relative}
+.phil-img img{width:100%;height:100%;object-fit:cover;filter:saturate(.9)}
+.phil-img::after{content:"";position:absolute;left:-12px;bottom:-12px;width:120px;height:120px;border:1px solid var(--navy)}
+.phil-text p{margin-top:24px;color:var(--ink-2);font-size:15px;line-height:2.15}
+.phil-text p:first-of-type{margin-top:32px}
+.phil-mark{margin-top:40px;padding-top:24px;border-top:1px solid var(--line);font-family:"Noto Serif JP",serif;color:var(--ink);font-size:13px;letter-spacing:.1em}
+.phil-mark strong{display:block;margin-top:8px;font-size:18px}
+
+/* Business */
+.biz-grid{margin-top:56px;display:grid;gap:1px;background:var(--line);border:1px solid var(--line)}
+@media(min-width:768px){.biz-grid{grid-template-columns:repeat(3,1fr)}}
+.biz{background:var(--paper);padding:40px 32px;transition:background-color .3s}
+.biz:hover{background:var(--bg-soft)}
+.biz-no{font-family:"Noto Serif JP",serif;font-size:13px;color:var(--navy);letter-spacing:.2em;margin-bottom:14px}
+.biz-h{font-family:"Noto Serif JP",serif;font-size:20px;color:var(--ink);font-weight:600;line-height:1.5}
+.biz-d{margin-top:14px;font-size:14px;color:var(--ink-2);line-height:1.95}
+
+/* Reason (選ばれる理由) */
+.reason-list{margin-top:56px;display:grid;gap:0;border-top:1px solid var(--line)}
+.reason{padding:36px 0;border-bottom:1px solid var(--line);display:grid;gap:20px}
+@media(min-width:768px){.reason{grid-template-columns:140px 1fr;gap:48px;align-items:start}}
+.reason-no{font-family:"Noto Serif JP",serif;font-size:14px;color:var(--navy);letter-spacing:.2em}
+.reason-no span{display:block;font-size:32px;color:var(--ink);margin-top:6px;font-weight:600}
+.reason-h{font-family:"Noto Serif JP",serif;font-size:20px;color:var(--ink);font-weight:600;line-height:1.5}
+.reason-d{margin-top:14px;color:var(--ink-2);font-size:14px;line-height:2.1}
+
+/* Flow */
+.flow{margin-top:56px;display:grid;gap:18px}
+@media(min-width:768px){.flow{grid-template-columns:repeat(4,1fr)}}
+.fstep{padding:28px 24px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.15);position:relative;border-radius:4px}
+.fstep-n{position:absolute;top:-14px;left:24px;background:#fff;color:var(--navy);padding:5px 14px;font-family:"Noto Serif JP",serif;font-size:11px;letter-spacing:.15em;font-weight:600}
+.fstep-h{margin-top:10px;font-family:"Noto Serif JP",serif;color:#fff;font-size:17px;font-weight:500;line-height:1.5}
+.fstep-d{margin-top:12px;font-size:13px;color:rgba(255,255,255,.75);line-height:1.85}
+
+/* FAQ */
+.faq{margin-top:56px;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.faq-item{border-top:1px solid var(--line)}
+.faq-item:first-child{border-top:0}
+.faq-q{width:100%;text-align:left;padding:24px 0;display:flex;align-items:flex-start;gap:20px}
+.faq-qn{font-family:"Noto Serif JP",serif;color:var(--navy);font-size:15px;flex-shrink:0;width:42px;letter-spacing:.1em;font-weight:600}
+.faq-qt{flex:1;font-family:"Noto Serif JP",serif;color:var(--ink);font-size:16px;font-weight:500;line-height:1.6}
+.faq-icon{flex-shrink:0;font-family:"Noto Serif JP",serif;color:var(--ink);font-size:22px;transition:transform .3s;line-height:1}
+.faq-item[data-open="true"] .faq-icon{transform:rotate(45deg);color:var(--navy)}
+.faq-a{max-height:0;overflow:hidden;transition:max-height .5s}
+.faq-item[data-open="true"] .faq-a{max-height:500px}
+.faq-a-inner{padding:0 0 24px 62px;font-size:14px;color:var(--ink-2);line-height:2}
+
+/* Contact */
+.contact{padding:120px 0;background:var(--bg-soft)}
+@media(min-width:768px){.contact{padding:160px 0}}
+.contact-cards{margin-top:56px;display:grid;gap:0;background:var(--paper);border:1px solid var(--line)}
+@media(min-width:768px){.contact-cards{grid-template-columns:repeat(3,1fr)}}
+.ccard{padding:40px 32px;text-align:center;border-bottom:1px solid var(--line)}
+@media(min-width:768px){.ccard{border-bottom:0;border-right:1px solid var(--line)}}
+.ccard:last-child{border-bottom:0;border-right:0}
+.ccard-l{font-family:"Noto Serif JP",serif;font-size:13px;color:var(--navy);letter-spacing:.25em}
+.ccard-v{margin-top:14px;font-family:"Noto Serif JP",serif;font-size:22px;color:var(--ink);line-height:1.4;font-weight:600}
+.ccard-n{margin-top:12px;font-size:12px;color:var(--ink-3);line-height:1.7}
+.contact-buttons{margin-top:48px;display:flex;flex-direction:column;gap:14px}
+@media(min-width:768px){.contact-buttons{flex-direction:row;justify-content:center}}
+.btn-c-primary{display:inline-flex;align-items:center;justify-content:center;gap:10px;background:var(--navy);color:#fff;padding:18px 36px;border-radius:4px;font-weight:600;font-size:14px;letter-spacing:.1em}
+.btn-c-primary:hover{background:var(--navy-deep)}
+.btn-c-line{display:inline-flex;align-items:center;justify-content:center;gap:10px;background:#06c755;color:#fff;padding:18px 36px;border-radius:4px;font-weight:600;font-size:14px;letter-spacing:.1em}
+.contact-note{margin-top:32px;text-align:center;font-size:12px;color:var(--ink-3)}
+.sample-mark{margin:48px auto 0;max-width:660px;padding:16px 24px;border:1px dashed var(--line-2);background:rgba(255,255,255,.5);text-align:center;font-size:11px;color:var(--ink-3)}
+
+.site-footer{background:var(--navy-deep);color:rgba(255,255,255,.7);padding:64px 0 28px}
+.footer-inner{display:grid;gap:36px}
+@media(min-width:768px){.footer-inner{grid-template-columns:1.4fr 1fr 1fr}}
+.footer-brand .brand-jp{color:#fff}
+.footer-brand .brand-en{color:rgba(255,255,255,.5)}
+.footer-lead{margin-top:16px;font-size:13px;line-height:1.95;color:rgba(255,255,255,.6)}
+.footer-h{font-family:"Noto Serif JP",serif;color:rgba(255,255,255,.85);font-size:13px;letter-spacing:.2em;margin-bottom:16px}
+.footer-list li{margin-bottom:10px;font-size:13px;color:rgba(255,255,255,.6)}
+.footer-list a:hover{color:#fff}
+.footer-bottom{margin-top:48px;padding-top:24px;border-top:1px solid rgba(255,255,255,.12);display:flex;flex-direction:column;gap:10px;font-size:11px;color:rgba(255,255,255,.4)}
+@media(min-width:640px){.footer-bottom{flex-direction:row;justify-content:space-between}}
+.footer-sample{margin-top:10px;text-align:center;width:100%;font-size:10px}
+
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+<div class="sample-bar">※ご提案用サンプルページ｜本ページは公開されておりません</div>
+
+<header class="site-header" id="header">
+  <div class="container header-inner">
+    <a href="#top" class="brand">
+      <span class="brand-mark">A</span>
+      <span class="brand-text"><span class="brand-jp">株式会社Anela</span><span class="brand-en">CORPORATE</span></span>
+    </a>
+    <nav class="nav-desktop">
+      <a href="#phil">企業理念</a><a href="#biz">事業内容</a><a href="#reason">選ばれる理由</a><a href="#flow">ご利用の流れ</a><a href="#faq">FAQ</a><a href="#contact">お問い合わせ</a>
+    </nav>
+    <div class="header-cta">
+      <span class="header-tel">XXX-XXXX-XXXX<small>平日 9:00-18:00</small></span>
+      <a href="#contact" class="btn-h-primary">お問い合わせ</a>
+    </div>
+    <button class="menu-toggle" id="menuToggle" aria-label="メニュー" aria-expanded="false"><span></span><span></span><span></span></button>
+  </div>
+  <div class="nav-mobile" id="navMobile">
+    <a href="#phil">企業理念</a><a href="#biz">事業内容</a><a href="#reason">選ばれる理由</a><a href="#flow">ご利用の流れ</a><a href="#faq">FAQ</a><a href="#contact">お問い合わせ</a>
+  </div>
+</header>
+
+<main id="top">
+
+<section class="hero">
+  <div class="container hero-inner">
+    <div>
+      <p class="hero-eyebrow">— 株式会社Anela —</p>
+      <h1 class="hero-title">地域に根ざした<em>サービス</em>で、<br />お客様との<em>信頼</em>を築きます。</h1>
+      <p class="hero-sub">株式会社Anelaは、地域に密着した事業を通じて、お客様お一人おひとりの課題解決を真摯にサポートしてまいりました。長年培った経験と確かな信頼を基に、これからもお客様の暮らしとビジネスに寄り添ってまいります。</p>
+      <div class="hero-cta">
+        <a href="#contact" class="btn-primary">お問い合わせはこちら</a>
+        <a href="#biz" class="btn-secondary">事業内容を見る</a>
+      </div>
+    </div>
+    <aside class="hero-card">
+      <h3>— Corporate Profile —</h3>
+      <div class="hero-card-list">
+        <div class="hero-card-row"><span class="hero-card-l">商号</span><span class="hero-card-v">株式会社Anela</span></div>
+        <div class="hero-card-row"><span class="hero-card-l">所在地</span><span class="hero-card-v">大阪府大阪市平野区平野南1丁目1番11号</span></div>
+        <div class="hero-card-row"><span class="hero-card-l">電話番号</span><span class="hero-card-v">XXX-XXXX-XXXX</span></div>
+        <div class="hero-card-row"><span class="hero-card-l">事業内容</span><span class="hero-card-v">地域密着事業全般</span></div>
+        <div class="hero-card-row"><span class="hero-card-l">営業時間</span><span class="hero-card-v">平日 9:00 - 18:00</span></div>
+      </div>
+    </aside>
+  </div>
+</section>
+
+<section id="phil" class="section">
+  <div class="container">
+    <div class="phil">
+      <div class="phil-img"><img src="https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=900&q=80" alt="企業理念" /></div>
+      <div class="phil-text">
+        <p class="s-eyebrow">— Our Philosophy —</p>
+        <h2 class="s-title">お客様の<em>信頼</em>に応える、<br />誠実な事業活動を。</h2>
+        <p>私たち株式会社Anelaは、地域社会の一員として、お客様の課題に真摯に向き合い、解決に向けて最善を尽くすことを使命としています。</p>
+        <p>変化の激しい時代だからこそ、変わらない誠実さと、培ってきた信頼関係を大切にしてまいります。お客様一人ひとりとの対話を重ね、長くお付き合いいただける関係を築いていくことが、私たちの何よりの財産です。</p>
+        <p>これからも初心を忘れず、地域とお客様に必要とされる企業であり続けるよう、社員一同努めてまいります。</p>
+        <p class="phil-mark">株式会社Anela<br />代表者<strong>〇〇 〇〇</strong></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="biz" class="section section-soft">
+  <div class="container">
+    <p class="s-eyebrow">— Our Business —</p>
+    <h2 class="s-title">事業<em>内容</em>。</h2>
+    <p class="s-lead">地域のお客様の多様なニーズに、柔軟にお応えできる事業領域でサービスを提供しております。</p>
+    <div class="biz-grid">
+      <article class="biz">
+        <p class="biz-no">— Business 01 —</p>
+        <h3 class="biz-h">地域密着サービス</h3>
+        <p class="biz-d">地域のお客様の暮らしや事業に密着し、お客様一人ひとりの状況に応じたきめ細やかなサービスを提供しております。</p>
+      </article>
+      <article class="biz">
+        <p class="biz-no">— Business 02 —</p>
+        <h3 class="biz-h">課題解決サポート</h3>
+        <p class="biz-d">お客様が抱える様々な課題に対し、これまで培った経験とネットワークを活かして、最適な解決策をご提案いたします。</p>
+      </article>
+      <article class="biz">
+        <p class="biz-no">— Business 03 —</p>
+        <h3 class="biz-h">継続的なご相談対応</h3>
+        <p class="biz-d">一度きりのお取引で終わらない、長期的なパートナーとして、お客様のご相談に継続的にお応えしてまいります。</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section id="reason" class="section">
+  <div class="container">
+    <p class="s-eyebrow">— Why Chosen —</p>
+    <h2 class="s-title">お客様に<em>選ばれる</em>理由。</h2>
+    <p class="s-lead">私たちが多くのお客様にご支持いただいてきた、5つの理由をご紹介します。</p>
+    <div class="reason-list">
+      <article class="reason">
+        <p class="reason-no">Reason<span>01</span></p>
+        <div><h3 class="reason-h">地域に根ざした、確かな信頼</h3><p class="reason-d">地域の皆様と長年お付き合いさせていただく中で築いてきた信頼関係こそが、私たちの最大の財産です。一件一件のお取引を、誠実に積み重ねてまいります。</p></div>
+      </article>
+      <article class="reason">
+        <p class="reason-no">Reason<span>02</span></p>
+        <div><h3 class="reason-h">お客様一人ひとりに、寄り添う対応</h3><p class="reason-d">画一的な対応ではなく、お客様お一人おひとりの状況やご要望に応じた、きめ細やかな対応を心がけております。</p></div>
+      </article>
+      <article class="reason">
+        <p class="reason-no">Reason<span>03</span></p>
+        <div><h3 class="reason-h">経験に基づく、実践的な提案力</h3><p class="reason-d">これまでの豊富な経験と、業務に対する深い知見を活かし、お客様にとって実践的で実行可能なご提案を心がけています。</p></div>
+      </article>
+      <article class="reason">
+        <p class="reason-no">Reason<span>04</span></p>
+        <div><h3 class="reason-h">迅速で、丁寧な対応</h3><p class="reason-d">お問い合わせには可能な限り当日中、遅くとも24時間以内にお返事させていただきます。スピードと丁寧さの両立を大切にしています。</p></div>
+      </article>
+      <article class="reason">
+        <p class="reason-no">Reason<span>05</span></p>
+        <div><h3 class="reason-h">長期的なパートナーシップ</h3><p class="reason-d">一度のお取引で終わらず、お客様の事業や暮らしの成長に長く伴走できる、信頼できるパートナーであることを目指しています。</p></div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section id="flow" class="section-navy section">
+  <div class="container">
+    <p class="s-eyebrow">— Service Flow —</p>
+    <h2 class="s-title">ご利用の<em style="color:#cbd5e1">流れ</em>。</h2>
+    <p class="s-lead">お問い合わせから、サービス提供開始までの基本的な流れをご紹介します。</p>
+    <div class="flow">
+      <div class="fstep"><span class="fstep-n">STEP 01</span><h3 class="fstep-h">お問い合わせ</h3><p class="fstep-d">お電話・LINE・お問い合わせフォームより、お気軽にご連絡ください。</p></div>
+      <div class="fstep"><span class="fstep-n">STEP 02</span><h3 class="fstep-h">ヒアリング</h3><p class="fstep-d">お客様のご要望や現状の課題を、丁寧にお伺いいたします。</p></div>
+      <div class="fstep"><span class="fstep-n">STEP 03</span><h3 class="fstep-h">ご提案・お見積もり</h3><p class="fstep-d">最適なサービス内容と、明確なお見積もりをご提示します。</p></div>
+      <div class="fstep"><span class="fstep-n">STEP 04</span><h3 class="fstep-h">ご契約・開始</h3><p class="fstep-d">ご納得いただいた後にご契約・サービス開始となります。</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="faq" class="section">
+  <div class="container container-narrow">
+    <p class="s-eyebrow">— FAQ —</p>
+    <h2 class="s-title">よくあるご質問。</h2>
+    <div class="faq">
+      <div class="faq-item" data-open="true"><button class="faq-q" type="button" aria-expanded="true"><span class="faq-qn">Q.1</span><span class="faq-qt">初回のご相談に費用はかかりますか？</span><span class="faq-icon">+</span></button><div class="faq-a"><p class="faq-a-inner">初回のご相談・お見積もりは無料で承っております。お気軽にお問い合わせください。</p></div></div>
+      <div class="faq-item"><button class="faq-q" type="button" aria-expanded="false"><span class="faq-qn">Q.2</span><span class="faq-qt">対応エリアはどこですか？</span><span class="faq-icon">+</span></button><div class="faq-a"><p class="faq-a-inner">主に奈良県内を中心とした地域を対応しております。詳細はお問い合わせ時にご確認ください。</p></div></div>
+      <div class="faq-item"><button class="faq-q" type="button" aria-expanded="false"><span class="faq-qn">Q.3</span><span class="faq-qt">どんな内容でも相談できますか？</span><span class="faq-icon">+</span></button><div class="faq-a"><p class="faq-a-inner">事業領域に関連するご相談であれば、お気軽にお問い合わせください。当社で対応が難しい場合も、適切な対応先をご紹介いたします。</p></div></div>
+      <div class="faq-item"><button class="faq-q" type="button" aria-expanded="false"><span class="faq-qn">Q.4</span><span class="faq-qt">お問い合わせ後の返事はどれくらいで来ますか？</span><span class="faq-icon">+</span></button><div class="faq-a"><p class="faq-a-inner">お問い合わせいただいた内容は、可能な限り当日、遅くとも24時間以内（土日祝を除く）にご連絡させていただきます。</p></div></div>
+      <div class="faq-item"><button class="faq-q" type="button" aria-expanded="false"><span class="faq-qn">Q.5</span><span class="faq-qt">遠方からの依頼でも対応可能ですか？</span><span class="faq-icon">+</span></button><div class="faq-a"><p class="faq-a-inner">内容によりますが、まずはお気軽にご相談ください。リモートでのご対応も承っております。</p></div></div>
+      <div class="faq-item"><button class="faq-q" type="button" aria-expanded="false"><span class="faq-qn">Q.6</span><span class="faq-qt">支払い方法は何がありますか？</span><span class="faq-icon">+</span></button><div class="faq-a"><p class="faq-a-inner">銀行振込・現金等、お客様のご都合に合わせた支払い方法をご相談させていただきます。</p></div></div>
+    </div>
+  </div>
+</section>
+
+<section id="contact" class="contact">
+  <div class="container container-narrow">
+    <div style="text-align:center"><p class="s-eyebrow" style="justify-content:center">— Contact —</p><h2 class="s-title">お気軽に、<em>お問い合わせ</em>ください。</h2><p class="s-lead" style="margin-left:auto;margin-right:auto">ご相談・お見積もりは無料です。お電話・LINE・フォーム、どちらからでもどうぞ。</p></div>
+    <div class="contact-cards">
+      <div class="ccard"><p class="ccard-l">TEL</p><p class="ccard-v">XXX-XXXX-XXXX</p><p class="ccard-n">受付 9:00-18:00<br />（土日祝休）</p></div>
+      <div class="ccard"><p class="ccard-l">LINE</p><p class="ccard-v">お問い合わせ<br />はこちら</p><p class="ccard-n">公式LINE<br />24時間 受付</p></div>
+      <div class="ccard"><p class="ccard-l">FORM</p><p class="ccard-v">お問い合わせ<br />はこちら</p><p class="ccard-n">フォーム送信<br />24時間 受付</p></div>
+    </div>
+    <div class="contact-buttons">
+      <a href="#" class="btn-c-line"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3C6.48 3 2 6.58 2 11c0 3.96 3.58 7.27 8.4 7.92.33.07.78.22.89.5.1.25.07.65.03.9l-.14.86c-.05.25-.2.99.87.54s5.75-3.39 7.84-5.8C21.32 14.36 22 12.77 22 11c0-4.42-4.48-8-10-8z"/></svg>お問い合わせはこちら</a>
+      <a href="#" class="btn-c-primary">お問い合わせフォーム</a>
+    </div>
+    <p class="contact-note">※お返事は最短当日・通常24時間以内にいたします。</p>
+    <div class="sample-mark">※本ページはご提案用サンプルとして作成しております。掲載情報は仮の内容を含みます。</div>
+  </div>
+</section>
+
+</main>
+
+<footer class="site-footer">
+  <div class="container footer-inner">
+    <div class="footer-brand">
+      <a href="#top" class="brand"><span class="brand-mark">A</span><span class="brand-text"><span class="brand-jp">株式会社Anela</span><span class="brand-en">CORPORATE</span></span></a>
+      <p class="footer-lead">株式会社Anela<br />地域に根ざしたサービスで、お客様との信頼を築きます。</p>
+    </div>
+    <div><p class="footer-h">— Menu —</p><ul class="footer-list"><li><a href="#phil">企業理念</a></li><li><a href="#biz">事業内容</a></li><li><a href="#reason">選ばれる理由</a></li><li><a href="#flow">ご利用の流れ</a></li><li><a href="#faq">FAQ</a></li><li><a href="#contact">お問い合わせ</a></li></ul></div>
+    <div><p class="footer-h">— Company —</p><ul class="footer-list"><li>住所：大阪府大阪市平野区平野南1丁目1番11号</li><li>TEL：XXX-XXXX-XXXX</li><li>Mail：info@example.com</li><li>営業：平日 9:00〜18:00</li></ul></div>
+  </div>
+  <div class="footer-bottom">
+    <p>© <span id="year"></span> 株式会社Anela All rights reserved.</p>
+    <ul style="display:flex;gap:18px;"><li><a href="#">プライバシーポリシー</a></li><li><a href="#">特定商取引法</a></li></ul>
+    <p class="footer-sample">※本ページはご提案用サンプルとして作成しております。掲載情報は仮の内容を含みます。</p>
+  </div>
+</footer>
+
+<script>
+document.querySelectorAll(".faq-item .faq-q").forEach(function(btn){btn.addEventListener("click",function(){var item=btn.closest(".faq-item");var open=item.getAttribute("data-open")==="true";document.querySelectorAll(".faq-item").forEach(function(o){o.setAttribute("data-open","false");var q=o.querySelector(".faq-q");if(q)q.setAttribute("aria-expanded","false")});if(!open){item.setAttribute("data-open","true");btn.setAttribute("aria-expanded","true")}})});
+var t=document.getElementById("menuToggle"),m=document.getElementById("navMobile");if(t&&m){t.addEventListener("click",function(){var e=t.getAttribute("aria-expanded")==="true";t.setAttribute("aria-expanded",String(!e));m.classList.toggle("is-open")})}
+var h=document.getElementById("header");window.addEventListener("scroll",function(){if(window.scrollY>20)h.classList.add("is-scrolled");else h.classList.remove("is-scrolled")},{passive:true});
+var y=document.getElementById("year");if(y)y.textContent=String(new Date().getFullYear());
+</script>
+</body>
+</html>
