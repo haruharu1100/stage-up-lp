@@ -85,6 +85,36 @@ const ACCOUNTS = {
   "50-ynsystems":     SAMPLE_AUTH,  // 合同会社YNSystems / IT・SaaS（白×ネイビー×シアン）
   "51-wasabilab":     SAMPLE_AUTH,  // 株式会社ワサビラボ / クリエイティブ（白×グリーン×ブラック）
 
+  // ─── 大阪府 27社追加（52-88・3年以内フィルタ通過分）───
+  // ※ 52, 54, 56, 57, 64, 65, 67, 69, 75, 83 は3年フィルタ除外
+  "53-arc-trust":     SAMPLE_AUTH,  // 株式会社ARC TRUST / 業種不明（汎用）
+  "55-aasha-trading": SAMPLE_AUTH,  // Aasha Trading株式会社 / 業種不明（汎用）
+  "58-r-co":          SAMPLE_AUTH,  // R.株式会社 / 業種不明（汎用）
+  "59-rra":           SAMPLE_AUTH,  // 株式会社RRA / 業種不明（汎用）
+  "60-r-asset":       SAMPLE_AUTH,  // R Asset合同会社 / 業種不明（汎用）
+  "61-iwall":         SAMPLE_AUTH,  // 株式会社Iwall / 業種不明（汎用）
+  "62-isf":           SAMPLE_AUTH,  // 株式会社ISF / 業種不明（汎用）
+  "63-in-co":         SAMPLE_AUTH,  // 株式会社in / 業種不明（汎用）
+  "66-ims":           SAMPLE_AUTH,  // IMS合同会社 / 業種不明（汎用）
+  "68-iqt":           SAMPLE_AUTH,  // iQT株式会社 / 業種不明（汎用）
+  "70-rd-intl":       SAMPLE_AUTH,  // 株式会社R&D International Holdings / 業種不明（汎用）
+  "71-rea-japan":     SAMPLE_AUTH,  // REA Japan合同会社 / 業種不明（汎用）
+  "72-rms":           SAMPLE_AUTH,  // 株式会社RMS / 業種不明（汎用）
+  "73-ror":           SAMPLE_AUTH,  // 合同会社ROR / 業種不明（汎用）
+  "74-r-crest-link":  SAMPLE_AUTH,  // 株式会社R Crest Link / 業種不明（汎用）
+  "76-r-dining-plus": SAMPLE_AUTH,  // 合同会社R Dining Plus / 業種不明（汎用）
+  "77-rtr-four":      SAMPLE_AUTH,  // 株式会社RTRFour / 業種不明（汎用）
+  "78-r-denki":       SAMPLE_AUTH,  // アール電気工事株式会社 / 電気工事業
+  "79-r-mode":        SAMPLE_AUTH,  // 株式会社アールモード / 業種不明（汎用）
+  "80-ic":            SAMPLE_AUTH,  // 株式会社IC / 業種不明（汎用）
+  "81-aisia":         SAMPLE_AUTH,  // Aisia合同会社 / 業種不明（汎用）
+  "82-aysh":          SAMPLE_AUTH,  // 株式会社aysh / 業種不明（汎用）
+  "84-aiz":           SAMPLE_AUTH,  // AIZ合同会社 / 業種不明（汎用）
+  "85-aite":          SAMPLE_AUTH,  // 株式会社AITE / 業種不明（汎用）
+  "86-ito":           SAMPLE_AUTH,  // 合同会社ito / 業種不明（汎用）
+  "87-itex":          SAMPLE_AUTH,  // 株式会社Itex / 業種不明（近大KINCUBA入居）
+  "88-ainekea":       SAMPLE_AUTH,  // 合同会社アイネケア / 業種不明（汎用）
+
   // ─── LP作成しない（NPO・宗教・半公的団体）───
   //   10-farm:            ファーム弁天 / 農業（半公的） / 低
   //   21-mahoroba-coop:   まほろば協同組合 / 協同組合 / 低
