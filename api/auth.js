@@ -38,13 +38,23 @@ const ACCOUNTS = {
   "5-aokikensetsu": SAMPLE_AUTH,  // 工務店・建設
   "16-posuten":     SAMPLE_AUTH,  // ポスティング業（株式会社ポスティング角屋）
   "17-postcom":     SAMPLE_AUTH,  // 広告代理店・地域情報誌（ポストコミュニケーション株式会社）
+  "20-matsunagajuku": SAMPLE_AUTH, // 学習塾（株式会社松永塾）
+  "22-maholab":     SAMPLE_AUTH,  // AI/IoT/データ活用（まほろば創研株式会社）
+  "23-manshoudou":  SAMPLE_AUTH,  // 和菓子老舗（合同会社萬勝堂）
 
   // ─── LP未作成（業種不明・スプレッドシート管理）───
-  //   3-aikou:   愛光合同会社 / 業種不明 / 営業優先度 高（?）
-  //   9-kumon:   株式会社公文 / 業種不明 / 営業優先度 高（?）
-  //   10-farm:   農事組合法人ファーム弁天 / 農業（半公的） / 優先度 低
+  //   3-aikou:   愛光合同会社 / 業種不明 / 高（?）
+  //   9-kumon:   株式会社公文 / 業種不明 / 高（?）
+  //   10-farm:   ファーム弁天 / 農業（半公的） / 低
   //   11-fujinexus, 12-freerun, 13-bright, 14-brairy,
-  //   15-progress, 18-marble, 19-machinomori : 業種不明 / 優先度 高（?）
+  //   15-progress, 18-marble, 19-machinomori : 業種不明 / 高（?）
+  //   21-mahoroba-coop:   まほろば協同組合 / 協同組合 / 低
+  //   24-manyo-hd:        MANYOホールディングス / 持株会社・不明 / 高（?）
+  //   25-mitsuhanoki:     みつはのきNPO / NPO / 低
+  //   26-mirai:           株式会社みらい / 同名多数・不明 / 高（?）
+  //   27-mirai-kokusai:   MIRAI KOKUSAI / 不明 / 高（?）
+  //   28-minkawa:         MINKAWA / 新設法人2024.7 / 高（?）
+  //   29-munakata:        宗像神社大頭屋講 / 宗教 / 低
 };
 
 // realm を統一しておくと、admin がマスターでログインしたら

@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5" />
+<meta name="theme-color" content="#f7f2e7" />
+<meta name="robots" content="noindex, nofollow" />
+
+<title>萬勝堂｜奈良の銘菓と、御菓子司の伝統。</title>
+<meta name="description" content="萬勝堂は1890年（明治23年）創業の奈良の老舗御菓子司です。代々受け継がれた製法で、季節の和菓子・銘菓・贈答菓子をお届けしています。" />
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@400;500&display=swap" rel="stylesheet" />
+
+<style>
+:root{
+  --bg:#f7f2e7;
+  --bg-2:#ede4cf;
+  --paper:#fbf8ef;
+  --washi:#f3ead4;
+  --ink:#1f1c14;
+  --ink-2:#3d362a;
+  --ink-3:#6e6553;
+  --ink-4:#9c947f;
+  --line:#d9cfb5;
+  --line-2:#bfb491;
+  --matcha:#4a6741;
+  --matcha-deep:#33492e;
+  --matcha-light:#7b9070;
+  --crimson:#a83232;
+  --crimson-deep:#7e2222;
+  --gold:#b08735;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%;scroll-padding-top:88px}
+body{font-family:"Noto Sans JP",sans-serif;background:var(--bg);color:var(--ink-2);font-size:15px;line-height:2;-webkit-font-smoothing:antialiased}
+img{display:block;max-width:100%;height:auto}
+a{color:inherit;text-decoration:none;transition:color .2s,opacity .2s}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+ul,ol{list-style:none}
+
+.sample-bar{position:fixed;top:0;left:0;right:0;z-index:60;background:rgba(31,28,20,.92);color:#d9cfb5;padding:8px 16px;text-align:center;font-size:11px;letter-spacing:.1em;font-family:"Shippori Mincho",serif}
+body{padding-top:32px}
+.container{width:100%;max-width:1140px;margin:0 auto;padding:0 24px}
+.container-narrow{max-width:820px}
+@media(min-width:768px){.container{padding:0 40px}}
+
+.site-header{position:fixed;top:32px;left:0;right:0;z-index:50;background:rgba(247,242,231,.92);backdrop-filter:blur(14px);border-bottom:1px solid transparent;transition:border-color .3s}
+.site-header.is-scrolled{border-bottom-color:var(--line)}
+.header-inner{display:flex;align-items:center;justify-content:space-between;gap:16px;height:76px}
+.brand{display:flex;align-items:center;gap:14px}
+.brand-mark{width:50px;height:50px;display:grid;place-items:center;background:var(--crimson);color:var(--paper);font-family:"Shippori Mincho",serif;font-weight:700;font-size:24px;border-radius:50%;border:2px double var(--paper);box-shadow:0 0 0 2px var(--crimson)}
+.brand-text{display:flex;flex-direction:column;line-height:1.1}
+.brand-name{font-family:"Shippori Mincho",serif;font-weight:600;color:var(--ink);font-size:20px;letter-spacing:.15em}
+.brand-sub{font-size:10px;color:var(--ink-3);letter-spacing:.3em;margin-top:4px;font-family:"Shippori Mincho",serif}
+
+.nav-desktop{display:none;gap:30px;font-family:"Shippori Mincho",serif}
+.nav-desktop a{font-size:14px;color:var(--ink);font-weight:500;letter-spacing:.1em}
+.nav-desktop a:hover{color:var(--crimson)}
+@media(min-width:1024px){.nav-desktop{display:flex}}
+
+.header-cta{display:flex;align-items:center;gap:14px}
+.header-tel{display:none;font-family:"Shippori Mincho",serif;font-size:17px;color:var(--ink);font-weight:600}
+.header-tel small{display:block;font-size:9px;color:var(--ink-3);letter-spacing:.2em;font-family:"Noto Sans JP",sans-serif;font-weight:400}
+@media(min-width:1024px){.header-tel{display:block}}
+.btn-h-primary{font-family:"Shippori Mincho",serif;display:inline-flex;align-items:center;gap:8px;padding:12px 22px;background:var(--matcha);color:var(--paper);font-size:13px;font-weight:600;letter-spacing:.1em}
+.btn-h-primary:hover{background:var(--matcha-deep)}
+
+.menu-toggle{width:42px;height:42px;display:grid;gap:5px;align-content:center;justify-items:center;background:transparent;border:1px solid var(--line-2)}
+.menu-toggle span{width:18px;height:1.5px;background:var(--ink);transition:transform .3s,opacity .3s}
+.menu-toggle[aria-expanded="true"] span:nth-child(1){transform:translateY(6px) rotate(45deg)}
+.menu-toggle[aria-expanded="true"] span:nth-child(2){opacity:0}
+.menu-toggle[aria-expanded="true"] span:nth-child(3){transform:translateY(-6px) rotate(-45deg)}
+@media(min-width:1024px){.menu-toggle{display:none}}
+.nav-mobile{display:flex;flex-direction:column;max-height:0;overflow:hidden;background:var(--paper);border-top:1px solid var(--line);padding:0 24px;transition:max-height .4s,padding .3s;font-family:"Shippori Mincho",serif}
+.nav-mobile.is-open{max-height:80vh;padding:8px 24px 24px}
+.nav-mobile a{padding:16px 0;border-bottom:1px solid var(--line);font-size:15px;color:var(--ink);letter-spacing:.05em}
+
+/* Hero */
+.hero{position:relative;padding:130px 0 100px;overflow:hidden;background:linear-gradient(180deg,var(--bg) 0%,var(--washi) 100%)}
+@media(min-width:768px){.hero{padding:160px 0 130px}}
+.hero::before{content:"";position:absolute;inset:0;background-image:radial-gradient(circle at 80% 20%,rgba(168,50,50,.06) 0,transparent 35%);pointer-events:none}
+.hero-inner{position:relative;display:grid;gap:48px;align-items:center}
+@media(min-width:980px){.hero-inner{grid-template-columns:1fr 1fr;gap:80px}}
+.hero-found{display:inline-flex;align-items:center;gap:14px;font-family:"Shippori Mincho",serif;font-size:13px;color:var(--crimson);letter-spacing:.3em;margin-bottom:32px}
+.hero-found::before,.hero-found::after{content:"";display:inline-block;width:24px;height:1px;background:var(--crimson)}
+.hero-title{font-family:"Shippori Mincho",serif;font-weight:500;color:var(--ink);font-size:42px;line-height:1.6;letter-spacing:.1em;writing-mode:horizontal-tb}
+@media(min-width:640px){.hero-title{font-size:52px}}
+@media(min-width:1024px){.hero-title{font-size:64px;line-height:1.5}}
+.hero-title .matcha{color:var(--matcha-deep)}
+.hero-title .crimson{color:var(--crimson)}
+.hero-sub{margin-top:36px;color:var(--ink-2);font-size:15px;line-height:2.2;max-width:480px}
+@media(min-width:768px){.hero-sub{font-size:16px}}
+
+.hero-cta{margin-top:40px;display:flex;flex-wrap:wrap;gap:14px}
+.btn-primary{font-family:"Shippori Mincho",serif;display:inline-flex;align-items:center;justify-content:center;gap:12px;background:var(--crimson);color:var(--paper);padding:18px 36px;font-size:15px;font-weight:600;letter-spacing:.15em}
+.btn-primary:hover{background:var(--crimson-deep)}
+.btn-secondary{font-family:"Shippori Mincho",serif;display:inline-flex;align-items:center;justify-content:center;gap:12px;background:transparent;color:var(--ink);padding:18px 36px;border:1px solid var(--ink);font-size:15px;letter-spacing:.15em}
+.btn-secondary:hover{background:var(--ink);color:var(--paper)}
+
+.hero-art{position:relative;aspect-ratio:4/5;overflow:hidden}
+.hero-art img{width:100%;height:100%;object-fit:cover;filter:saturate(.9)}
+.hero-art::after{content:"";position:absolute;inset:12px;border:1px solid rgba(255,255,255,.45);pointer-events:none}
+.hero-art-tag{position:absolute;bottom:28px;left:28px;right:28px;padding:14px 18px;background:rgba(247,242,231,.92);backdrop-filter:blur(6px);font-family:"Shippori Mincho",serif;color:var(--ink);font-size:12px;letter-spacing:.15em}
+.hero-art-tag em{color:var(--crimson);font-style:normal}
+
+/* Section */
+.section{padding:96px 0}
+@media(min-width:768px){.section{padding:130px 0}}
+.section-washi{background:var(--washi)}
+.section-paper{background:var(--paper)}
+.section-matcha{background:var(--matcha);color:var(--paper)}
+
+.s-eyebrow{display:inline-flex;align-items:center;gap:14px;font-family:"Shippori Mincho",serif;font-size:13px;color:var(--crimson);letter-spacing:.3em;margin-bottom:22px}
+.s-eyebrow::before{content:"";display:inline-block;width:32px;height:1px;background:var(--crimson)}
+.section-matcha .s-eyebrow{color:#f3ead4}
+.section-matcha .s-eyebrow::before{background:#f3ead4}
+.s-title{font-family:"Shippori Mincho",serif;font-weight:500;color:var(--ink);font-size:30px;line-height:1.6;letter-spacing:.08em}
+.section-matcha .s-title{color:var(--paper)}
+@media(min-width:768px){.s-title{font-size:42px}}
+.s-title em{color:var(--crimson);font-style:normal}
+.s-title .matcha{color:var(--matcha-deep)}
+.section-matcha .s-title em{color:#f3ead4}
+.s-lead{margin-top:28px;color:var(--ink-2);font-size:15px;line-height:2.2;max-width:680px}
+.section-matcha .s-lead{color:rgba(243,234,212,.8)}
+
+/* Story (ものがたり) */
+.story{display:grid;gap:48px;align-items:start}
+@media(min-width:980px){.story{grid-template-columns:1fr 1.1fr;gap:80px}}
+.story-img{aspect-ratio:5/6;overflow:hidden;position:relative}
+.story-img img{width:100%;height:100%;object-fit:cover;filter:sepia(.1)}
+.story-img::after{content:"";position:absolute;left:-12px;bottom:-12px;width:140px;height:140px;border:1px solid var(--matcha);background:transparent}
+.story-text p{margin-top:24px;color:var(--ink-2);font-size:15px;line-height:2.2}
+.story-text p:first-of-type{margin-top:32px}
+.story-mark{margin-top:40px;padding-top:24px;border-top:1px solid var(--line-2);font-family:"Shippori Mincho",serif;color:var(--ink);font-size:13px;letter-spacing:.1em}
+.story-mark strong{display:block;margin-top:8px;font-size:18px}
+
+/* Sweets (銘菓) */
+.sweets-grid{margin-top:64px;display:grid;gap:48px}
+@media(min-width:768px){.sweets-grid{grid-template-columns:repeat(2,1fr);gap:56px}}
+.sweet-img{position:relative;aspect-ratio:4/3;overflow:hidden;margin-bottom:24px}
+.sweet-img img{width:100%;height:100%;object-fit:cover;transition:transform .8s ease}
+.sweet:hover .sweet-img img{transform:scale(1.05)}
+.sweet-tag{position:absolute;top:16px;left:16px;background:var(--crimson);color:var(--paper);padding:6px 16px;font-family:"Shippori Mincho",serif;font-size:12px;letter-spacing:.15em}
+.sweet-name{font-family:"Shippori Mincho",serif;font-size:24px;color:var(--ink);font-weight:600;line-height:1.5;letter-spacing:.05em}
+.sweet-yomi{margin-top:6px;font-size:11px;color:var(--ink-4);letter-spacing:.3em;font-family:"Shippori Mincho",serif}
+.sweet-desc{margin-top:16px;color:var(--ink-2);font-size:14px;line-height:2.1}
+.sweet-meta{margin-top:18px;padding-top:14px;border-top:1px dashed var(--line);font-size:12px;color:var(--ink-3);font-family:"Shippori Mincho",serif;letter-spacing:.1em;display:flex;flex-wrap:wrap;gap:8px 18px}
+
+/* Season */
+.season-grid{margin-top:56px;display:grid;gap:16px;grid-template-columns:repeat(2,1fr)}
+@media(min-width:768px){.season-grid{grid-template-columns:repeat(4,1fr)}}
+.season{padding:32px 22px;background:rgba(255,255,255,.06);border:1px solid rgba(243,234,212,.2);text-align:center;border-radius:4px}
+.season-kanji{font-family:"Shippori Mincho",serif;font-size:38px;color:#f3ead4;font-weight:500;line-height:1}
+.season-en{margin-top:8px;font-size:10px;color:rgba(243,234,212,.55);letter-spacing:.3em;text-transform:uppercase}
+.season-d{margin-top:18px;font-size:13px;color:rgba(243,234,212,.85);line-height:1.85}
+
+/* Voice */
+.voice-row{margin-top:56px;display:grid;gap:24px}
+@media(min-width:768px){.voice-row{grid-template-columns:repeat(2,1fr)}}
+.voice{background:var(--paper);padding:36px 32px;border:1px solid var(--line);position:relative}
+.voice-mark{position:absolute;top:20px;right:26px;font-family:"Shippori Mincho",serif;font-size:48px;color:var(--line);line-height:1}
+.voice-text{font-family:"Shippori Mincho",serif;color:var(--ink);font-size:15px;line-height:2.2;font-weight:400}
+.voice-by{margin-top:24px;padding-top:18px;border-top:1px solid var(--line);display:flex;align-items:center;gap:14px}
+.voice-avatar{width:42px;height:42px;border-radius:50%;background:var(--matcha);color:var(--paper);display:grid;place-items:center;font-family:"Shippori Mincho",serif;font-weight:600}
+.voice-name{font-family:"Shippori Mincho",serif;color:var(--ink);font-size:14px}
+.voice-co{margin-top:2px;font-size:12px;color:var(--ink-3)}
+
+/* Shop info */
+.shop-grid{margin-top:56px;display:grid;gap:48px}
+@media(min-width:980px){.shop-grid{grid-template-columns:1fr 1fr;gap:64px;align-items:center}}
+.shop-img{aspect-ratio:5/4;overflow:hidden}
+.shop-img img{width:100%;height:100%;object-fit:cover}
+.shop-info dt{font-family:"Shippori Mincho",serif;font-size:12px;color:var(--crimson);letter-spacing:.2em;margin-top:24px;margin-bottom:6px}
+.shop-info dt:first-of-type{margin-top:0}
+.shop-info dd{padding-bottom:18px;border-bottom:1px dashed var(--line-2);font-size:15px;color:var(--ink);line-height:1.8}
+
+/* Gift */
+.gift{margin-top:56px;display:grid;gap:24px}
+@media(min-width:768px){.gift{grid-template-columns:repeat(3,1fr)}}
+.gift-card{background:var(--paper);padding:36px 28px;border:1px solid var(--line);text-align:center}
+.gift-cat{font-family:"Shippori Mincho",serif;font-size:13px;color:var(--crimson);letter-spacing:.2em}
+.gift-h{margin-top:14px;font-family:"Shippori Mincho",serif;font-size:20px;color:var(--ink);font-weight:600;line-height:1.55}
+.gift-d{margin-top:14px;font-size:13px;color:var(--ink-2);line-height:1.95}
+
+/* FAQ */
+.faq{margin-top:56px;border-top:1px solid var(--line-2);border-bottom:1px solid var(--line-2)}
+.faq-item{border-top:1px solid var(--line-2)}
+.faq-item:first-child{border-top:0}
+.faq-q{width:100%;text-align:left;padding:26px 0;display:flex;align-items:flex-start;gap:24px}
+.faq-qn{font-family:"Shippori Mincho",serif;color:var(--crimson);font-size:15px;flex-shrink:0;width:42px;letter-spacing:.1em}
+.faq-qt{flex:1;font-family:"Shippori Mincho",serif;color:var(--ink);font-size:16px;font-weight:500;line-height:1.6}
+.faq-icon{flex-shrink:0;font-family:"Shippori Mincho",serif;color:var(--ink);font-size:22px;transition:transform .3s;line-height:1}
+.faq-item[data-open="true"] .faq-icon{transform:rotate(45deg);color:var(--crimson)}
+.faq-a{max-height:0;overflow:hidden;transition:max-height .5s}
+.faq-item[data-open="true"] .faq-a{max-height:500px}
+.faq-a-inner{padding:0 0 28px 66px;font-size:14px;color:var(--ink-2);line-height:2.1}
+
+/* Contact */
+.contact{padding:120px 0;background:linear-gradient(180deg,var(--washi) 0%,var(--bg) 100%)}
+@media(min-width:768px){.contact{padding:160px 0}}
+.contact-cards{margin-top:56px;display:grid;gap:0;background:var(--paper);border:1px solid var(--line)}
+@media(min-width:768px){.contact-cards{grid-template-columns:repeat(3,1fr)}}
+.ccard{padding:40px 32px;text-align:center;border-bottom:1px solid var(--line)}
+@media(min-width:768px){.ccard{border-bottom:0;border-right:1px solid var(--line)}}
+.ccard:last-child{border-bottom:0;border-right:0}
+.ccard-l{font-family:"Shippori Mincho",serif;font-size:13px;color:var(--crimson);letter-spacing:.3em}
+.ccard-v{margin-top:14px;font-family:"Shippori Mincho",serif;font-size:22px;color:var(--ink);line-height:1.4;font-weight:600}
+.ccard-n{margin-top:12px;font-size:12px;color:var(--ink-3);line-height:1.7}
+.contact-buttons{margin-top:48px;display:flex;flex-direction:column;gap:14px}
+@media(min-width:768px){.contact-buttons{flex-direction:row;justify-content:center}}
+.btn-c-primary{font-family:"Shippori Mincho",serif;display:inline-flex;align-items:center;justify-content:center;gap:12px;background:var(--ink);color:var(--paper);padding:20px 40px;font-size:14px;font-weight:500;letter-spacing:.15em}
+.btn-c-primary:hover{background:var(--crimson)}
+.btn-c-line{font-family:"Shippori Mincho",serif;display:inline-flex;align-items:center;justify-content:center;gap:12px;background:#06c755;color:#fff;padding:20px 40px;font-size:14px;font-weight:500;letter-spacing:.15em}
+.contact-note{margin-top:32px;text-align:center;font-size:12px;color:var(--ink-3)}
+.sample-mark{margin:48px auto 0;max-width:680px;padding:16px 24px;border:1px dashed var(--line-2);background:rgba(255,255,255,.5);text-align:center;font-size:11px;color:var(--ink-3)}
+
+.site-footer{background:var(--ink);color:rgba(247,242,231,.7);padding:72px 0 32px}
+.footer-inner{display:grid;gap:40px}
+@media(min-width:768px){.footer-inner{grid-template-columns:1.2fr 1fr 1fr}}
+.footer-brand .brand-name{color:var(--paper)}
+.footer-brand .brand-sub{color:rgba(247,242,231,.5)}
+.footer-lead{margin-top:18px;font-size:13px;line-height:2;color:rgba(247,242,231,.55)}
+.footer-h{font-family:"Shippori Mincho",serif;color:#d9cfb5;font-size:13px;letter-spacing:.2em;margin-bottom:16px}
+.footer-list li{margin-bottom:10px;font-size:13px;color:rgba(247,242,231,.6)}
+.footer-list a:hover{color:#d9cfb5}
+.footer-bottom{margin-top:56px;padding-top:24px;border-top:1px solid rgba(247,242,231,.1);display:flex;flex-direction:column;gap:10px;font-size:11px;color:rgba(247,242,231,.4)}
+@media(min-width:640px){.footer-bottom{flex-direction:row;justify-content:space-between}}
+.footer-sample{margin-top:10px;text-align:center;width:100%;font-size:10px}
+
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+<div class="sample-bar">※ご提案用サンプルページ｜本ページは公開されておりません</div>
+
+<header class="site-header" id="header">
+  <div class="container header-inner">
+    <a href="#top" class="brand">
+      <span class="brand-mark">萬</span>
+      <span class="brand-text"><span class="brand-name">萬勝堂</span><span class="brand-sub">MANSHOUDOU</span></span>
+    </a>
+    <nav class="nav-desktop">
+      <a href="#story">萬勝堂のものがたり</a>
+      <a href="#sweets">銘菓</a>
+      <a href="#season">季節の和菓子</a>
+      <a href="#voice">お客様の声</a>
+      <a href="#gift">贈答・通販</a>
+      <a href="#shop">店舗案内</a>
+    </nav>
+    <div class="header-cta">
+      <span class="header-tel">XXX-XXXX-XXXX<small>9:00-18:30</small></span>
+      <a href="#contact" class="btn-h-primary">お問い合わせ</a>
+    </div>
+    <button class="menu-toggle" id="menuToggle" aria-label="メニュー" aria-expanded="false"><span></span><span></span><span></span></button>
+  </div>
+  <div class="nav-mobile" id="navMobile">
+    <a href="#story">ものがたり</a><a href="#sweets">銘菓</a><a href="#season">季節の和菓子</a><a href="#voice">お客様の声</a><a href="#gift">贈答・通販</a><a href="#shop">店舗案内</a><a href="#faq">FAQ</a><a href="#contact">お問い合わせ</a>
+  </div>
+</header>
+
+<main id="top">
+
+<section class="hero">
+  <div class="container hero-inner">
+    <div>
+      <p class="hero-found">— 明治二十三年 創業 —</p>
+      <h1 class="hero-title">
+        <span class="matcha">奈良の銘菓と、</span><br />
+        御菓子司の<span class="crimson">伝統。</span>
+      </h1>
+      <p class="hero-sub">代々受け継がれた製法と、四季の素材選びへのこだわり。萬勝堂は、奈良の街に長く愛されてきた御菓子司です。慶事から日常の一杯のお茶まで、丁寧に手作りした和菓子をお届けします。</p>
+      <div class="hero-cta">
+        <a href="#sweets" class="btn-primary">銘菓を見る</a>
+        <a href="#shop" class="btn-secondary">店舗案内</a>
+      </div>
+    </div>
+    <div class="hero-art">
+      <img src="https://images.unsplash.com/photo-1631206753348-db44968fd440?auto=format&fit=crop&w=1100&q=80" alt="季節の和菓子" />
+      <div class="hero-art-tag">— <em>奈良銘菓「青丹よし」</em>　季節の上生菓子</div>
+    </div>
+  </div>
+</section>
+
+<section id="story" class="section section-paper">
+  <div class="container">
+    <div class="story">
+      <div class="story-img"><img src="https://images.unsplash.com/photo-1607330289024-1535c6b4e1c1?auto=format&fit=crop&w=900&q=80" alt="萬勝堂のものがたり" /></div>
+      <div class="story-text">
+        <p class="s-eyebrow">— Our Story —</p>
+        <h2 class="s-title">百三十余年、<br /><em>御菓子司として。</em></h2>
+        <p>萬勝堂の始まりは、明治二十三年。奈良の地で、お茶席に供される干菓子や、お土産菓子を手作りしてきました。爾来、三代、四代と継ぐ間にも、私たちが大切にしてきたものは変わりません。それは、素材の力を引き出すこと、そして手仕事の温度をお菓子に宿すことです。</p>
+        <p>奈良という土地は、お茶の歴史が深く、和菓子文化も豊かに育まれてきました。そんな街に長く商いをさせていただけることは、何よりの誇りです。お茶を一杯、お菓子をひとつ。日々の中の小さな贅沢を、これからもお届けしてまいります。</p>
+        <p>季節の便りのように、贈り物としてのお菓子は、人と人とをつなぐ手紙でもあります。萬勝堂のお菓子が、皆さまの暮らしの中でそんな役割を果たせたなら、これに勝る喜びはございません。</p>
+        <p class="story-mark">御菓子司 萬勝堂<br />四代目<strong>萬勝堂 〇〇</strong></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="sweets" class="section section-washi">
+  <div class="container">
+    <p class="s-eyebrow">— Signature Sweets —</p>
+    <h2 class="s-title">萬勝堂の<em>銘菓</em>。</h2>
+    <p class="s-lead">古くから親しまれている定番の銘菓を、ご紹介いたします。慶事や手土産、日々のお茶うけにお選びください。</p>
+    <div class="sweets-grid">
+      <article class="sweet">
+        <div class="sweet-img">
+          <img src="https://images.unsplash.com/photo-1606471191009-63994c53433b?auto=format&fit=crop&w=1100&q=80" alt="" />
+          <span class="sweet-tag">看板銘菓</span>
+        </div>
+        <h3 class="sweet-name">青丹よし</h3>
+        <p class="sweet-yomi">— あおによし</p>
+        <p class="sweet-desc">和三盆を使った繊細な干菓子。口に入れた瞬間に静かに溶け、ほんのり甘い余韻が残ります。奈良を代表する銘菓です。</p>
+        <p class="sweet-meta"><span>和三盆</span><span>箱入り</span><span>慶弔／手土産</span></p>
+      </article>
+      <article class="sweet">
+        <div class="sweet-img">
+          <img src="https://images.unsplash.com/photo-1606311175902-9f6f6a7ee5bd?auto=format&fit=crop&w=1100&q=80" alt="" />
+          <span class="sweet-tag">人気菓子</span>
+        </div>
+        <h3 class="sweet-name">三笠</h3>
+        <p class="sweet-yomi">— みかさ</p>
+        <p class="sweet-desc">ふっくら焼き上げた皮に、自家炊きのつぶ餡をたっぷり挟みました。お茶請けにも、ちょっとした贈り物にも喜ばれる定番品。</p>
+        <p class="sweet-meta"><span>つぶ餡</span><span>個包装</span><span>手土産／日常用</span></p>
+      </article>
+      <article class="sweet">
+        <div class="sweet-img">
+          <img src="https://images.unsplash.com/photo-1599785209707-a456fc1337e0?auto=format&fit=crop&w=1100&q=80" alt="" />
+          <span class="sweet-tag">季節限定</span>
+        </div>
+        <h3 class="sweet-name">柿羊羹</h3>
+        <p class="sweet-yomi">— かきようかん</p>
+        <p class="sweet-desc">大和の柿を惜しみなく使った、秋限定の羊羹。柿の優しい甘みと羊羹の上品さが調和した、季節を感じる一品です。</p>
+        <p class="sweet-meta"><span>秋限定</span><span>進物用</span><span>贈答／お遣い物</span></p>
+      </article>
+      <article class="sweet">
+        <div class="sweet-img">
+          <img src="https://images.unsplash.com/photo-1612874742237-6526221588e3?auto=format&fit=crop&w=1100&q=80" alt="" />
+          <span class="sweet-tag">茶席菓子</span>
+        </div>
+        <h3 class="sweet-name">奈良饅頭</h3>
+        <p class="sweet-yomi">— ならまんじゅう</p>
+        <p class="sweet-desc">古都奈良に伝わる素朴な薯蕷饅頭。ふくよかな自然薯の香りと、滑らかなこし餡。茶席にも、お遣い物にもふさわしい一品です。</p>
+        <p class="sweet-meta"><span>こし餡</span><span>当日仕上げ</span><span>茶席／法事</span></p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section id="season" class="section-matcha section">
+  <div class="container">
+    <p class="s-eyebrow">— Seasonal Wagashi —</p>
+    <h2 class="s-title">四季を、お菓子に。<br /><em>季節の和菓子</em>。</h2>
+    <p class="s-lead">季節ごとに変わる上生菓子。日本の四季の風景と物語を、ひとつひとつ手で形作っております。</p>
+    <div class="season-grid">
+      <div class="season"><p class="season-kanji">春</p><p class="season-en">— SPRING —</p><p class="season-d">桜・若草・うぐいす<br />春の訪れを写した上生菓子</p></div>
+      <div class="season"><p class="season-kanji">夏</p><p class="season-en">— SUMMER —</p><p class="season-d">水羊羹・葛切り<br />涼を運ぶ夏の菓子</p></div>
+      <div class="season"><p class="season-kanji">秋</p><p class="season-en">— AUTUMN —</p><p class="season-d">紅葉・栗・柿<br />実りと色彩の秋菓子</p></div>
+      <div class="season"><p class="season-kanji">冬</p><p class="season-en">— WINTER —</p><p class="season-d">寒椿・雪餅<br />冬の静けさを写す菓子</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="voice" class="section section-paper">
+  <div class="container">
+    <p class="s-eyebrow">— Customer's Voice —</p>
+    <h2 class="s-title">お客様からの<em>お便り</em>。</h2>
+    <div class="voice-row">
+      <figure class="voice">
+        <span class="voice-mark">"</span>
+        <p class="voice-text">「青丹よし」を初めていただき、その上品な甘さに感動しました。お茶のお稽古にも持参するようになり、お師匠さんからも「これは美味しい」とお褒めいただいています。</p>
+        <figcaption class="voice-by"><span class="voice-avatar">A</span><span><span class="voice-name">A 様</span><span class="voice-co">60代 / 茶道愛好家</span></span></figcaption>
+      </figure>
+      <figure class="voice">
+        <span class="voice-mark">"</span>
+        <p class="voice-text">遠方の方への手土産に、いつも萬勝堂さんを選ばせていただいています。「奈良といえば」と思い出していただける、誇りに思える銘菓です。</p>
+        <figcaption class="voice-by"><span class="voice-avatar">M</span><span><span class="voice-name">M 様</span><span class="voice-co">50代 / 奈良市在住</span></span></figcaption>
+      </figure>
+      <figure class="voice">
+        <span class="voice-mark">"</span>
+        <p class="voice-text">法事の引き物としていつもお世話になっています。包装も丁寧で、何より味が安心。親戚からも「萬勝堂さんね」と言ってもらえます。</p>
+        <figcaption class="voice-by"><span class="voice-avatar">K</span><span><span class="voice-name">K 様</span><span class="voice-co">70代 / 法要施主</span></span></figcaption>
+      </figure>
+      <figure class="voice">
+        <span class="voice-mark">"</span>
+        <p class="voice-text">娘が嫁いだ先のお宅へのご挨拶に、こちらの三笠を選びました。ふっくらとした皮と上品な餡に「これは美味しい」と何度も言っていただきました。</p>
+        <figcaption class="voice-by"><span class="voice-avatar">S</span><span><span class="voice-name">S 様</span><span class="voice-co">50代 / 母としてのご挨拶</span></span></figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<section id="gift" class="section section-washi">
+  <div class="container">
+    <p class="s-eyebrow">— Gift & Mail Order —</p>
+    <h2 class="s-title">贈答・通販の<em>ご案内</em>。</h2>
+    <p class="s-lead">慶事・弔事・季節のご挨拶など、目的に合わせた包装・のし・お遣いものに対応しております。全国発送も承っております。</p>
+    <div class="gift">
+      <div class="gift-card">
+        <p class="gift-cat">— FORMAL</p>
+        <h3 class="gift-h">慶弔の進物</h3>
+        <p class="gift-d">のし・包装・名入れに対応。弔事用の包装も丁寧にご用意いたします。お電話・店頭でご相談ください。</p>
+      </div>
+      <div class="gift-card">
+        <p class="gift-cat">— SEASONAL</p>
+        <h3 class="gift-h">季節のご挨拶</h3>
+        <p class="gift-d">お中元・お歳暮・寒中見舞いなど、季節の贈り物にも萬勝堂のお菓子をお選びいただいています。</p>
+      </div>
+      <div class="gift-card">
+        <p class="gift-cat">— MAIL ORDER</p>
+        <h3 class="gift-h">全国通販対応</h3>
+        <p class="gift-d">全国へのお届けが可能です。法事用の早期発送、遠方のお取り寄せもお気軽にお問い合わせください。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="shop" class="section">
+  <div class="container">
+    <div class="shop-grid">
+      <div class="shop-img"><img src="https://images.unsplash.com/photo-1583425920183-4b0a37c89745?auto=format&fit=crop&w=900&q=80" alt="店舗外観" /></div>
+      <div>
+        <p class="s-eyebrow">— Shop Information —</p>
+        <h2 class="s-title"><em>店舗</em>のご案内。</h2>
+        <p class="s-lead">奈良駅近く、参道沿いに本店を構えております。お近くにお越しの際は、どうぞお気軽にお立ち寄りください。</p>
+        <dl class="shop-info">
+          <dt>店舗名</dt><dd>御菓子司 萬勝堂 本店</dd>
+          <dt>住所</dt><dd>〇〇県〇〇市〇〇町〇-〇-〇</dd>
+          <dt>電話</dt><dd>XXX-XXXX-XXXX</dd>
+          <dt>営業時間</dt><dd>9:00 〜 18:30</dd>
+          <dt>定休日</dt><dd>火曜日（祝日の場合は翌日）</dd>
+          <dt>駐車場</dt><dd>近隣コインパーキングをご利用ください</dd>
+        </dl>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="faq" class="section section-paper">
+  <div class="container container-narrow">
+    <p class="s-eyebrow">— FAQ —</p>
+    <h2 class="s-title">よくあるご質問。</h2>
+    <div class="faq">
+      <div class="faq-item" data-open="true"><button class="faq-q" type="button" aria-expanded="true"><span class="faq-qn">Q.1</span><span class="faq-qt">通販で全国へ送れますか？</span><span class="faq-icon">+</span></button><div class="faq-a"><p class="faq-a-inner">はい、全国発送に対応しております。詰め合わせの内容・冷蔵冷凍便の要否などはお電話またはフォームよりお気軽にご相談ください。</p></div></div>
+      <div class="faq-item"><button class="faq-q" type="button" aria-expanded="false"><span class="faq-qn">Q.2</span><span class="faq-qt">のし・包装にも対応していますか？</span><span class="faq-icon">+</span></button><div class="faq-a"><p class="faq-a-inner">慶事・弔事ともに対応しております。のし種類・水引・名入れまで、用途をお聞かせいただければ最適なご提案をいたします。</p></div></div>
+      <div class="faq-item"><button class="faq-q" type="button" aria-expanded="false"><span class="faq-qn">Q.3</span><span class="faq-qt">大量注文（法人・法事用）はできますか？</span><span class="faq-icon">+</span></button><div class="faq-a"><p class="faq-a-inner">はい、法人ご注文・法事の引き物等のご注文も承ります。早めにご相談いただけますと、十分な準備が可能です。</p></div></div>
+      <div class="faq-item"><button class="faq-q" type="button" aria-expanded="false"><span class="faq-qn">Q.4</span><span class="faq-qt">賞味期限はどのくらい？</span><span class="faq-icon">+</span></button><div class="faq-a"><p class="faq-a-inner">商品により異なります。生菓子はその日のうちにお召し上がりください。干菓子・羊羹は1〜2週間程度。各商品に記載しております。</p></div></div>
+      <div class="faq-item"><button class="faq-q" type="button" aria-expanded="false"><span class="faq-qn">Q.5</span><span class="faq-qt">アレルギー表示はありますか？</span><span class="faq-icon">+</span></button><div class="faq-a"><p class="faq-a-inner">主要なアレルギー物質については商品ラベル・通販ページに表示しております。ご不明な点は店頭またはお電話でご確認ください。</p></div></div>
+      <div class="faq-item"><button class="faq-q" type="button" aria-expanded="false"><span class="faq-qn">Q.6</span><span class="faq-qt">予約注文は可能ですか？</span><span class="faq-icon">+</span></button><div class="faq-a"><p class="faq-a-inner">人気の銘菓・季節限定品は事前のご予約をおすすめしております。お電話またはフォームよりお気軽にお申し付けください。</p></div></div>
+    </div>
+  </div>
+</section>
+
+<section id="contact" class="contact">
+  <div class="container container-narrow">
+    <div style="text-align:center"><p class="s-eyebrow" style="justify-content:center">— Contact —</p><h2 class="s-title">ご注文・お問い合わせ。</h2><p class="s-lead" style="margin-left:auto;margin-right:auto">ご注文・贈答のご相談・全国発送など、お電話・LINE・フォームよりお気軽にお問い合わせください。</p></div>
+    <div class="contact-cards">
+      <div class="ccard"><p class="ccard-l">TEL</p><p class="ccard-v">XXX-XXXX-XXXX</p><p class="ccard-n">9:00-18:30（火曜定休）</p></div>
+      <div class="ccard"><p class="ccard-l">LINE</p><p class="ccard-v">お問い合わせ<br />はこちら</p><p class="ccard-n">公式LINE<br />24時間 受付</p></div>
+      <div class="ccard"><p class="ccard-l">FORM</p><p class="ccard-v">お問い合わせ<br />はこちら</p><p class="ccard-n">通販ご注文<br />24時間 受付</p></div>
+    </div>
+    <div class="contact-buttons">
+      <a href="#" class="btn-c-line"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3C6.48 3 2 6.58 2 11c0 3.96 3.58 7.27 8.4 7.92.33.07.78.22.89.5.1.25.07.65.03.9l-.14.86c-.05.25-.2.99.87.54s5.75-3.39 7.84-5.8C21.32 14.36 22 12.77 22 11c0-4.42-4.48-8-10-8z"/></svg>お問い合わせはこちら</a>
+      <a href="#" class="btn-c-primary">お問い合わせフォーム</a>
+    </div>
+    <p class="contact-note">※お返事は最短当日・通常24時間以内にいたします。</p>
+    <div class="sample-mark">※本ページはご提案用サンプルとして作成しております。掲載情報は仮の内容を含みます。</div>
+  </div>
+</section>
+
+</main>
+
+<footer class="site-footer">
+  <div class="container footer-inner">
+    <div class="footer-brand">
+      <a href="#top" class="brand"><span class="brand-mark">萬</span><span class="brand-text"><span class="brand-name">萬勝堂</span><span class="brand-sub">MANSHOUDOU</span></span></a>
+      <p class="footer-lead">御菓子司 萬勝堂<br />明治二十三年創業 / 奈良の銘菓と御菓子司の伝統。</p>
+    </div>
+    <div><p class="footer-h">— Menu —</p><ul class="footer-list"><li><a href="#story">萬勝堂のものがたり</a></li><li><a href="#sweets">銘菓</a></li><li><a href="#season">季節の和菓子</a></li><li><a href="#gift">贈答・通販</a></li><li><a href="#shop">店舗案内</a></li></ul></div>
+    <div><p class="footer-h">— Shop —</p><ul class="footer-list"><li>住所：〇〇県〇〇市〇〇町〇-〇-〇</li><li>TEL：XXX-XXXX-XXXX</li><li>Mail：info@example.com</li><li>営業：9:00〜18:30</li><li>定休日：火曜日</li></ul></div>
+  </div>
+  <div class="footer-bottom">
+    <p>© <span id="year"></span> 御菓子司 萬勝堂 All rights reserved.</p>
+    <ul style="display:flex;gap:18px;"><li><a href="#">プライバシーポリシー</a></li><li><a href="#">特定商取引法</a></li></ul>
+    <p class="footer-sample">※本ページはご提案用サンプルとして作成しております。掲載情報は仮の内容を含みます。</p>
+  </div>
+</footer>
+
+<script>
+document.querySelectorAll(".faq-item .faq-q").forEach(function(btn){btn.addEventListener("click",function(){var item=btn.closest(".faq-item");var open=item.getAttribute("data-open")==="true";document.querySelectorAll(".faq-item").forEach(function(o){o.setAttribute("data-open","false");var q=o.querySelector(".faq-q");if(q)q.setAttribute("aria-expanded","false")});if(!open){item.setAttribute("data-open","true");btn.setAttribute("aria-expanded","true")}})});
+var t=document.getElementById("menuToggle"),m=document.getElementById("navMobile");if(t&&m){t.addEventListener("click",function(){var e=t.getAttribute("aria-expanded")==="true";t.setAttribute("aria-expanded",String(!e));m.classList.toggle("is-open")})}
+var h=document.getElementById("header");window.addEventListener("scroll",function(){if(window.scrollY>20)h.classList.add("is-scrolled");else h.classList.remove("is-scrolled")},{passive:true});
+var y=document.getElementById("year");if(y)y.textContent=String(new Date().getFullYear());
+</script>
+</body>
+</html>
