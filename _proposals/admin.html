@@ -26,14 +26,14 @@
   .group-head h2{font-family:"Shippori Mincho",serif;font-size:20px;color:#fff;letter-spacing:.08em}
   .group-head .badge{display:inline-flex;align-items:center;padding:4px 12px;border-radius:999px;font-size:11px;letter-spacing:.15em;font-weight:700}
   .badge-ok{background:rgba(212,175,55,.15);color:#ecce6b;border:1px solid rgba(212,175,55,.4)}
-  .badge-pending{background:rgba(220,80,80,.12);color:#f29696;border:1px solid rgba(220,80,80,.4)}
+  .badge-generic{background:rgba(120,180,220,.12);color:#9cc4e4;border:1px solid rgba(120,180,220,.4)}
   .badge-low{background:rgba(120,120,120,.18);color:#bbb;border:1px solid rgba(150,150,150,.35)}
   .group-head .count{color:rgba(255,255,255,.5);font-size:12px;margin-left:auto}
   .lp-grid{display:grid;gap:20px;grid-template-columns:repeat(auto-fill,minmax(280px,1fr))}
   .lp-card{position:relative;padding:24px;border:1px solid rgba(212,175,55,.25);border-radius:16px;background-color:rgba(10,10,10,.7);background-image:linear-gradient(180deg,rgba(255,255,255,.02),transparent),radial-gradient(circle at top right,rgba(212,175,55,.12),transparent 50%);backdrop-filter:blur(8px);transition:transform .3s ease,border-color .3s ease,box-shadow .3s ease;display:flex;flex-direction:column}
   .lp-card:hover{border-color:rgba(212,175,55,.6);transform:translateY(-4px);box-shadow:0 20px 50px -20px rgba(212,175,55,.35)}
   .lp-card-no{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.25em;text-transform:uppercase;color:#ecce6b;margin-bottom:10px}
-  .lp-card-name{font-family:"Shippori Mincho",serif;font-size:18px;font-weight:700;color:#fff;line-height:1.4}
+  .lp-card-name{font-family:"Shippori Mincho",serif;font-size:17px;font-weight:700;color:#fff;line-height:1.4}
   .lp-card-industry{margin-top:8px;font-size:12px;color:rgba(255,255,255,.65)}
   .lp-card-url{margin-top:14px;font-size:12px;color:rgba(255,255,255,.55);font-family:ui-monospace,SFMono-Regular,Menlo,monospace;word-break:break-all}
   .lp-card-actions{margin-top:20px;padding-top:16px;border-top:1px solid rgba(212,175,55,.15);display:flex;gap:8px}
@@ -41,18 +41,18 @@
   .lp-card-open{background:linear-gradient(135deg,#faf0c8 0%,#d4af37 55%,#b8932d 100%);color:#050505}
   .lp-card-copy{border:1px solid rgba(212,175,55,.4);color:#ecce6b;background:rgba(17,17,17,.5);cursor:pointer}
   .lp-card-copy:hover{background:rgba(212,175,55,.15)}
-  .lp-card-pending{border:1px dashed rgba(220,80,80,.4);background:rgba(20,8,8,.5)}
-  .lp-card-pending:hover{border-color:rgba(220,80,80,.6);transform:none;box-shadow:none}
-  .lp-card-pending .lp-card-no{color:#f29696}
+  .lp-card-generic{border:1px solid rgba(120,180,220,.3);background:rgba(8,16,28,.5)}
+  .lp-card-generic .lp-card-no{color:#9cc4e4}
+  .lp-card-generic .lp-card-open{background:linear-gradient(135deg,#cce4f5 0%,#5a8cb8 100%);color:#050505}
+  .lp-card-generic .lp-card-copy{border-color:rgba(120,180,220,.4);color:#9cc4e4}
   .lp-card-low{border:1px dashed rgba(150,150,150,.3);background:rgba(20,20,20,.45)}
   .lp-card-low .lp-card-no{color:#bbb}
   .lp-card-status{display:inline-block;margin-top:14px;padding:6px 12px;border-radius:8px;font-size:11px;font-weight:700;letter-spacing:.1em}
-  .lp-card-status-pending{background:rgba(220,80,80,.15);color:#f29696;border:1px solid rgba(220,80,80,.35)}
   .lp-card-status-low{background:rgba(150,150,150,.15);color:#bbb;border:1px solid rgba(150,150,150,.35)}
+  .lp-card-status-generic{background:rgba(120,180,220,.12);color:#9cc4e4;border:1px solid rgba(120,180,220,.3)}
   .lp-card-note{margin-top:14px;font-size:12px;color:rgba(255,255,255,.55);line-height:1.7}
   .lp-card-meta{margin-top:14px;padding-top:14px;border-top:1px dashed rgba(150,150,150,.2);font-size:11px;color:rgba(255,255,255,.5);line-height:1.7}
-  .lp-card-meta strong{color:#f29696}
-  .lp-card-low .lp-card-meta strong{color:#bbb}
+  .lp-card-meta strong{color:#bbb}
   .admin-foot{padding:40px 0 60px;text-align:center;color:rgba(255,255,255,.5);font-size:11px}
   .admin-foot a{color:#ecce6b}
 </style>
@@ -67,14 +67,14 @@
     <header class="admin-head">
       <p class="kicker">Sales LP Admin</p>
       <h1>営業LP一覧<strong>STAGE UP Admin Dashboard</strong></h1>
-      <p>業種が判明している会社のみLPを制作。<br />業種不明は「業種不明・LP保留」、公的団体寄りは「低優先度」で管理。</p>
+      <p>業種判明社は業種特化型LP・業種不明社は汎用コーポレートサイト型LPを制作。<br />NPO・宗教・半公的団体のみLP作成対象外。</p>
     </header>
 
-    <!-- 制作済み 8社 -->
-    <div class="group-head"><h2>制作済み LP</h2><span class="badge badge-ok">PUBLISHED</span><span class="count">8 社</span></div>
+    <!-- 業種特化型 8社 -->
+    <div class="group-head"><h2>業種特化型 LP</h2><span class="badge badge-ok">SPECIALIZED</span><span class="count">8 社</span></div>
     <div class="lp-grid">
       <article class="lp-card"><span class="lp-card-no">管理番号 01</span><p class="lp-card-name">株式会社AIリフォーム</p><p class="lp-card-industry">リフォーム会社</p><p class="lp-card-url">/1-aireform</p><div class="lp-card-actions"><a href="/1-aireform" target="_blank" rel="noopener" class="lp-card-open">LPを開く</a><a href="#" class="lp-card-copy" data-copy="https://stage-up-lp.vercel.app/1-aireform">URLをコピー</a></div></article>
-      <article class="lp-card"><span class="lp-card-no">管理番号 04</span><p class="lp-card-name">ITS株式会社</p><p class="lp-card-industry">IT会社（推定）</p><p class="lp-card-url">/4-its</p><div class="lp-card-actions"><a href="/4-its" target="_blank" rel="noopener" class="lp-card-open">LPを開く</a><a href="#" class="lp-card-copy" data-copy="https://stage-up-lp.vercel.app/4-its">URLをコピー</a></div></article>
+      <article class="lp-card"><span class="lp-card-no">管理番号 04</span><p class="lp-card-name">ITS株式会社</p><p class="lp-card-industry">IT会社</p><p class="lp-card-url">/4-its</p><div class="lp-card-actions"><a href="/4-its" target="_blank" rel="noopener" class="lp-card-open">LPを開く</a><a href="#" class="lp-card-copy" data-copy="https://stage-up-lp.vercel.app/4-its">URLをコピー</a></div></article>
       <article class="lp-card"><span class="lp-card-no">管理番号 05</span><p class="lp-card-name">青木建設</p><p class="lp-card-industry">工務店・建設</p><p class="lp-card-url">/5-aokikensetsu</p><div class="lp-card-actions"><a href="/5-aokikensetsu" target="_blank" rel="noopener" class="lp-card-open">LPを開く</a><a href="#" class="lp-card-copy" data-copy="https://stage-up-lp.vercel.app/5-aokikensetsu">URLをコピー</a></div></article>
       <article class="lp-card"><span class="lp-card-no">管理番号 16</span><p class="lp-card-name">株式会社ポスティング角屋</p><p class="lp-card-industry">ポスティング業</p><p class="lp-card-url">/16-posuten</p><div class="lp-card-actions"><a href="/16-posuten" target="_blank" rel="noopener" class="lp-card-open">LPを開く</a><a href="#" class="lp-card-copy" data-copy="https://stage-up-lp.vercel.app/16-posuten">URLをコピー</a></div></article>
       <article class="lp-card"><span class="lp-card-no">管理番号 17</span><p class="lp-card-name">ポストコミュニケーション</p><p class="lp-card-industry">広告代理店・情報誌Mint</p><p class="lp-card-url">/17-postcom</p><div class="lp-card-actions"><a href="/17-postcom" target="_blank" rel="noopener" class="lp-card-open">LPを開く</a><a href="#" class="lp-card-copy" data-copy="https://stage-up-lp.vercel.app/17-postcom">URLをコピー</a></div></article>
@@ -83,31 +83,31 @@
       <article class="lp-card"><span class="lp-card-no">管理番号 23</span><p class="lp-card-name">合同会社萬勝堂</p><p class="lp-card-industry">和菓子店（1890年創業）</p><p class="lp-card-url">/23-manshoudou</p><div class="lp-card-actions"><a href="/23-manshoudou" target="_blank" rel="noopener" class="lp-card-open">LPを開く</a><a href="#" class="lp-card-copy" data-copy="https://stage-up-lp.vercel.app/23-manshoudou">URLをコピー</a></div></article>
     </div>
 
-    <!-- 業種不明 13社 -->
-    <div class="group-head"><h2>業種不明・LP保留</h2><span class="badge badge-pending">PENDING</span><span class="count">13 社</span></div>
+    <!-- 汎用コーポレートサイト型 13社 -->
+    <div class="group-head"><h2>汎用コーポレートサイト型 LP</h2><span class="badge badge-generic">GENERIC</span><span class="count">13 社</span></div>
     <div class="lp-grid">
-      <article class="lp-card lp-card-pending"><span class="lp-card-no">管理番号 03</span><p class="lp-card-name">愛光合同会社</p><span class="lp-card-status lp-card-status-pending">業種不明・LP保留</span><div class="lp-card-meta"><p>業種：<strong>不明</strong></p><p>優先度：<strong>高（？）</strong></p></div></article>
-      <article class="lp-card lp-card-pending"><span class="lp-card-no">管理番号 09</span><p class="lp-card-name">株式会社公文</p><span class="lp-card-status lp-card-status-pending">業種不明・LP保留</span><div class="lp-card-meta"><p>業種：<strong>不明</strong></p><p>優先度：<strong>高（？）</strong></p></div></article>
-      <article class="lp-card lp-card-pending"><span class="lp-card-no">管理番号 11</span><p class="lp-card-name">フジネクサス株式会社</p><span class="lp-card-status lp-card-status-pending">業種不明・LP保留</span><div class="lp-card-meta"><p>業種：<strong>不明</strong></p><p>優先度：<strong>高（？）</strong></p></div></article>
-      <article class="lp-card lp-card-pending"><span class="lp-card-no">管理番号 12</span><p class="lp-card-name">株式会社フリーラン</p><span class="lp-card-status lp-card-status-pending">業種不明・LP保留</span><div class="lp-card-meta"><p>業種：<strong>不明</strong></p><p>優先度：<strong>高（？）</strong></p></div></article>
-      <article class="lp-card lp-card-pending"><span class="lp-card-no">管理番号 13</span><p class="lp-card-name">有限会社ブライト奈良</p><span class="lp-card-status lp-card-status-pending">業種不明・LP保留</span><div class="lp-card-meta"><p>業種：<strong>不明</strong></p><p>優先度：<strong>高（？）</strong></p></div></article>
-      <article class="lp-card lp-card-pending"><span class="lp-card-no">管理番号 14</span><p class="lp-card-name">ブレイリー合同会社</p><span class="lp-card-status lp-card-status-pending">業種不明・LP保留</span><div class="lp-card-meta"><p>業種：<strong>不明</strong></p><p>優先度：<strong>高（？）</strong></p></div></article>
-      <article class="lp-card lp-card-pending"><span class="lp-card-no">管理番号 15</span><p class="lp-card-name">プログレス・インターナショナル</p><span class="lp-card-status lp-card-status-pending">業種不明・LP保留</span><div class="lp-card-meta"><p>業種：<strong>不明</strong></p><p>優先度：<strong>高（？）</strong></p></div></article>
-      <article class="lp-card lp-card-pending"><span class="lp-card-no">管理番号 18</span><p class="lp-card-name">合同会社マーブルメイト</p><span class="lp-card-status lp-card-status-pending">業種不明・LP保留</span><div class="lp-card-meta"><p>業種：<strong>不明</strong></p><p>優先度：<strong>高（？）</strong></p></div></article>
-      <article class="lp-card lp-card-pending"><span class="lp-card-no">管理番号 19</span><p class="lp-card-name">株式会社まちのもり</p><span class="lp-card-status lp-card-status-pending">業種不明・LP保留</span><div class="lp-card-meta"><p>業種：<strong>不明</strong></p><p>優先度：<strong>高（？）</strong></p></div></article>
-      <article class="lp-card lp-card-pending"><span class="lp-card-no">管理番号 24</span><p class="lp-card-name">MANYOホールディングス</p><span class="lp-card-status lp-card-status-pending">業種不明・LP保留</span><p class="lp-card-note">持株会社のため実態不明。同名のリフォーム会社あり（別法人）</p><div class="lp-card-meta"><p>業種：<strong>不明（持株会社）</strong></p><p>優先度：<strong>高（？）</strong></p></div></article>
-      <article class="lp-card lp-card-pending"><span class="lp-card-no">管理番号 26</span><p class="lp-card-name">株式会社みらい</p><span class="lp-card-status lp-card-status-pending">業種不明・LP保留</span><p class="lp-card-note">同名多数のため特定困難</p><div class="lp-card-meta"><p>業種：<strong>不明</strong></p><p>優先度：<strong>高（？）</strong></p></div></article>
-      <article class="lp-card lp-card-pending"><span class="lp-card-no">管理番号 27</span><p class="lp-card-name">株式会社MIRAI KOKUSAI</p><span class="lp-card-status lp-card-status-pending">業種不明・LP保留</span><div class="lp-card-meta"><p>業種：<strong>不明</strong></p><p>優先度：<strong>高（？）</strong></p></div></article>
-      <article class="lp-card lp-card-pending"><span class="lp-card-no">管理番号 28</span><p class="lp-card-name">株式会社MINKAWA</p><span class="lp-card-status lp-card-status-pending">業種不明・LP保留</span><p class="lp-card-note">新設法人（2024.7.31）。事業内容未登録</p><div class="lp-card-meta"><p>業種：<strong>不明（新設法人）</strong></p><p>優先度：<strong>高（？）</strong></p></div></article>
+      <article class="lp-card lp-card-generic"><span class="lp-card-no">管理番号 03</span><p class="lp-card-name">愛光合同会社</p><p class="lp-card-industry">業種不明・汎用LP</p><p class="lp-card-url">/3-aikou</p><div class="lp-card-actions"><a href="/3-aikou" target="_blank" rel="noopener" class="lp-card-open">LPを開く</a><a href="#" class="lp-card-copy" data-copy="https://stage-up-lp.vercel.app/3-aikou">URLをコピー</a></div></article>
+      <article class="lp-card lp-card-generic"><span class="lp-card-no">管理番号 09</span><p class="lp-card-name">株式会社公文</p><p class="lp-card-industry">業種不明・汎用LP</p><p class="lp-card-url">/9-kumon</p><div class="lp-card-actions"><a href="/9-kumon" target="_blank" rel="noopener" class="lp-card-open">LPを開く</a><a href="#" class="lp-card-copy" data-copy="https://stage-up-lp.vercel.app/9-kumon">URLをコピー</a></div></article>
+      <article class="lp-card lp-card-generic"><span class="lp-card-no">管理番号 11</span><p class="lp-card-name">フジネクサス株式会社</p><p class="lp-card-industry">業種不明・汎用LP</p><p class="lp-card-url">/11-fujinexus</p><div class="lp-card-actions"><a href="/11-fujinexus" target="_blank" rel="noopener" class="lp-card-open">LPを開く</a><a href="#" class="lp-card-copy" data-copy="https://stage-up-lp.vercel.app/11-fujinexus">URLをコピー</a></div></article>
+      <article class="lp-card lp-card-generic"><span class="lp-card-no">管理番号 12</span><p class="lp-card-name">株式会社フリーラン</p><p class="lp-card-industry">業種不明・汎用LP</p><p class="lp-card-url">/12-freerun</p><div class="lp-card-actions"><a href="/12-freerun" target="_blank" rel="noopener" class="lp-card-open">LPを開く</a><a href="#" class="lp-card-copy" data-copy="https://stage-up-lp.vercel.app/12-freerun">URLをコピー</a></div></article>
+      <article class="lp-card lp-card-generic"><span class="lp-card-no">管理番号 13</span><p class="lp-card-name">有限会社ブライト奈良</p><p class="lp-card-industry">業種不明・汎用LP</p><p class="lp-card-url">/13-bright</p><div class="lp-card-actions"><a href="/13-bright" target="_blank" rel="noopener" class="lp-card-open">LPを開く</a><a href="#" class="lp-card-copy" data-copy="https://stage-up-lp.vercel.app/13-bright">URLをコピー</a></div></article>
+      <article class="lp-card lp-card-generic"><span class="lp-card-no">管理番号 14</span><p class="lp-card-name">ブレイリー合同会社</p><p class="lp-card-industry">業種不明・汎用LP</p><p class="lp-card-url">/14-brairy</p><div class="lp-card-actions"><a href="/14-brairy" target="_blank" rel="noopener" class="lp-card-open">LPを開く</a><a href="#" class="lp-card-copy" data-copy="https://stage-up-lp.vercel.app/14-brairy">URLをコピー</a></div></article>
+      <article class="lp-card lp-card-generic"><span class="lp-card-no">管理番号 15</span><p class="lp-card-name">プログレス・インターナショナル</p><p class="lp-card-industry">業種不明・汎用LP</p><p class="lp-card-url">/15-progress</p><div class="lp-card-actions"><a href="/15-progress" target="_blank" rel="noopener" class="lp-card-open">LPを開く</a><a href="#" class="lp-card-copy" data-copy="https://stage-up-lp.vercel.app/15-progress">URLをコピー</a></div></article>
+      <article class="lp-card lp-card-generic"><span class="lp-card-no">管理番号 18</span><p class="lp-card-name">合同会社マーブルメイト</p><p class="lp-card-industry">業種不明・汎用LP</p><p class="lp-card-url">/18-marble</p><div class="lp-card-actions"><a href="/18-marble" target="_blank" rel="noopener" class="lp-card-open">LPを開く</a><a href="#" class="lp-card-copy" data-copy="https://stage-up-lp.vercel.app/18-marble">URLをコピー</a></div></article>
+      <article class="lp-card lp-card-generic"><span class="lp-card-no">管理番号 19</span><p class="lp-card-name">株式会社まちのもり</p><p class="lp-card-industry">業種不明・汎用LP</p><p class="lp-card-url">/19-machinomori</p><div class="lp-card-actions"><a href="/19-machinomori" target="_blank" rel="noopener" class="lp-card-open">LPを開く</a><a href="#" class="lp-card-copy" data-copy="https://stage-up-lp.vercel.app/19-machinomori">URLをコピー</a></div></article>
+      <article class="lp-card lp-card-generic"><span class="lp-card-no">管理番号 24</span><p class="lp-card-name">MANYOホールディングス</p><p class="lp-card-industry">業種不明（持株会社）・汎用LP</p><p class="lp-card-url">/24-manyo-hd</p><div class="lp-card-actions"><a href="/24-manyo-hd" target="_blank" rel="noopener" class="lp-card-open">LPを開く</a><a href="#" class="lp-card-copy" data-copy="https://stage-up-lp.vercel.app/24-manyo-hd">URLをコピー</a></div></article>
+      <article class="lp-card lp-card-generic"><span class="lp-card-no">管理番号 26</span><p class="lp-card-name">株式会社みらい</p><p class="lp-card-industry">業種不明・汎用LP</p><p class="lp-card-url">/26-mirai</p><div class="lp-card-actions"><a href="/26-mirai" target="_blank" rel="noopener" class="lp-card-open">LPを開く</a><a href="#" class="lp-card-copy" data-copy="https://stage-up-lp.vercel.app/26-mirai">URLをコピー</a></div></article>
+      <article class="lp-card lp-card-generic"><span class="lp-card-no">管理番号 27</span><p class="lp-card-name">株式会社MIRAI KOKUSAI</p><p class="lp-card-industry">業種不明・汎用LP</p><p class="lp-card-url">/27-mirai-kokusai</p><div class="lp-card-actions"><a href="/27-mirai-kokusai" target="_blank" rel="noopener" class="lp-card-open">LPを開く</a><a href="#" class="lp-card-copy" data-copy="https://stage-up-lp.vercel.app/27-mirai-kokusai">URLをコピー</a></div></article>
+      <article class="lp-card lp-card-generic"><span class="lp-card-no">管理番号 28</span><p class="lp-card-name">株式会社MINKAWA</p><p class="lp-card-industry">新設法人・汎用LP</p><p class="lp-card-url">/28-minkawa</p><div class="lp-card-actions"><a href="/28-minkawa" target="_blank" rel="noopener" class="lp-card-open">LPを開く</a><a href="#" class="lp-card-copy" data-copy="https://stage-up-lp.vercel.app/28-minkawa">URLをコピー</a></div></article>
     </div>
 
-    <!-- 低優先度 4社 -->
-    <div class="group-head"><h2>営業優先度 低</h2><span class="badge badge-low">LOW PRIORITY</span><span class="count">4 社</span></div>
+    <!-- 営業対象外 4社 -->
+    <div class="group-head"><h2>営業対象外（NPO・宗教・半公的）</h2><span class="badge badge-low">OUT OF SCOPE</span><span class="count">4 社</span></div>
     <div class="lp-grid">
-      <article class="lp-card lp-card-low"><span class="lp-card-no">管理番号 10</span><p class="lp-card-name">農事組合法人ファーム弁天</p><span class="lp-card-status lp-card-status-low">公的団体寄り・LP対象外</span><p class="lp-card-note">農事組合法人＝半公的団体性質</p><div class="lp-card-meta"><p>業種：<strong>農業（農事組合法人）</strong></p><p>優先度：<strong>低</strong></p></div></article>
-      <article class="lp-card lp-card-low"><span class="lp-card-no">管理番号 21</span><p class="lp-card-name">まほろば協同組合</p><span class="lp-card-status lp-card-status-low">協同組合・LP対象外</span><p class="lp-card-note">外国人技能実習生・特定技能受入機関（協同組合）</p><div class="lp-card-meta"><p>業種：<strong>協同組合</strong></p><p>優先度：<strong>低</strong></p></div></article>
-      <article class="lp-card lp-card-low"><span class="lp-card-no">管理番号 25</span><p class="lp-card-name">特定非営利活動法人みつはのき</p><span class="lp-card-status lp-card-status-low">NPO・LP対象外</span><p class="lp-card-note">NPO法人のため営業対象として優先度低</p><div class="lp-card-meta"><p>業種：<strong>NPO</strong></p><p>優先度：<strong>低</strong></p></div></article>
-      <article class="lp-card lp-card-low"><span class="lp-card-no">管理番号 29</span><p class="lp-card-name">宗像神社大頭屋講</p><span class="lp-card-status lp-card-status-low">宗教団体・LP対象外</span><p class="lp-card-note">桜井市外山の宗像神社の宮座組織</p><div class="lp-card-meta"><p>業種：<strong>宗教（宮座）</strong></p><p>優先度：<strong>低</strong></p></div></article>
+      <article class="lp-card lp-card-low"><span class="lp-card-no">管理番号 10</span><p class="lp-card-name">農事組合法人ファーム弁天</p><span class="lp-card-status lp-card-status-low">半公的・LP対象外</span><div class="lp-card-meta"><p>業種：<strong>農事組合法人</strong></p><p>優先度：<strong>低</strong></p></div></article>
+      <article class="lp-card lp-card-low"><span class="lp-card-no">管理番号 21</span><p class="lp-card-name">まほろば協同組合</p><span class="lp-card-status lp-card-status-low">協同組合・LP対象外</span><div class="lp-card-meta"><p>業種：<strong>協同組合</strong></p><p>優先度：<strong>低</strong></p></div></article>
+      <article class="lp-card lp-card-low"><span class="lp-card-no">管理番号 25</span><p class="lp-card-name">特定非営利活動法人みつはのき</p><span class="lp-card-status lp-card-status-low">NPO・LP対象外</span><div class="lp-card-meta"><p>業種：<strong>NPO</strong></p><p>優先度：<strong>低</strong></p></div></article>
+      <article class="lp-card lp-card-low"><span class="lp-card-no">管理番号 29</span><p class="lp-card-name">宗像神社大頭屋講</p><span class="lp-card-status lp-card-status-low">宗教・LP対象外</span><div class="lp-card-meta"><p>業種：<strong>宗教（宮座）</strong></p><p>優先度：<strong>低</strong></p></div></article>
     </div>
 
     <p class="admin-foot">

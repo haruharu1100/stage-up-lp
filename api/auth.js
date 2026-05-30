@@ -42,18 +42,25 @@ const ACCOUNTS = {
   "22-maholab":     SAMPLE_AUTH,  // AI/IoT/データ活用（まほろば創研株式会社）
   "23-manshoudou":  SAMPLE_AUTH,  // 和菓子老舗（合同会社萬勝堂）
 
-  // ─── LP未作成（業種不明・スプレッドシート管理）───
-  //   3-aikou:   愛光合同会社 / 業種不明 / 高（?）
-  //   9-kumon:   株式会社公文 / 業種不明 / 高（?）
-  //   10-farm:   ファーム弁天 / 農業（半公的） / 低
-  //   11-fujinexus, 12-freerun, 13-bright, 14-brairy,
-  //   15-progress, 18-marble, 19-machinomori : 業種不明 / 高（?）
+  // ─── 汎用コーポレートサイト型 LP（業種不明・新ルール対応）───
+  "3-aikou":        SAMPLE_AUTH,  // 愛光合同会社 / 業種不明
+  "9-kumon":        SAMPLE_AUTH,  // 株式会社公文 / 業種不明
+  "11-fujinexus":   SAMPLE_AUTH,  // フジネクサス株式会社 / 業種不明
+  "12-freerun":     SAMPLE_AUTH,  // 株式会社フリーラン / 業種不明
+  "13-bright":      SAMPLE_AUTH,  // 有限会社ブライト奈良 / 業種不明
+  "14-brairy":      SAMPLE_AUTH,  // ブレイリー合同会社 / 業種不明
+  "15-progress":    SAMPLE_AUTH,  // プログレス・インターナショナル / 業種不明
+  "18-marble":      SAMPLE_AUTH,  // 合同会社マーブルメイト / 業種不明
+  "19-machinomori": SAMPLE_AUTH,  // 株式会社まちのもり / 業種不明
+  "24-manyo-hd":    SAMPLE_AUTH,  // MANYOホールディングス / 業種不明（持株会社）
+  "26-mirai":       SAMPLE_AUTH,  // 株式会社みらい / 業種不明
+  "27-mirai-kokusai": SAMPLE_AUTH,// 株式会社MIRAI KOKUSAI / 業種不明
+  "28-minkawa":     SAMPLE_AUTH,  // 株式会社MINKAWA / 新設法人
+
+  // ─── LP作成しない（NPO・宗教・半公的団体）───
+  //   10-farm:            ファーム弁天 / 農業（半公的） / 低
   //   21-mahoroba-coop:   まほろば協同組合 / 協同組合 / 低
-  //   24-manyo-hd:        MANYOホールディングス / 持株会社・不明 / 高（?）
   //   25-mitsuhanoki:     みつはのきNPO / NPO / 低
-  //   26-mirai:           株式会社みらい / 同名多数・不明 / 高（?）
-  //   27-mirai-kokusai:   MIRAI KOKUSAI / 不明 / 高（?）
-  //   28-minkawa:         MINKAWA / 新設法人2024.7 / 高（?）
   //   29-munakata:        宗像神社大頭屋講 / 宗教 / 低
 };
 
