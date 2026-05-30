@@ -365,8 +365,76 @@ awk -F'\t' 'NR>=8 && ($12!="" || $13!="") {print "NG: "NR" 行 L="$12" M="$13}' 
 
 ### Claude の制約（正直に明記）
 - Google Spreadsheet を直接編集する権限は持たない
-- 「入力」=「貼り付け用データを生成し、運用者が貼り付ける」を意味する
+- 「入力」=「最新データ JSON を生成・push し、運用者がメニューから同期する」を意味する
 - 2シート分のデータを必ず別ブロックで提示する
+
+---
+
+## ⚡ スプレッドシート自動同期方式（2026-05-30 v5・運用フロー固定）
+
+**Apps Script を毎回貼り替える必要は完全になくなりました。**
+
+### アーキテクチャ
+
+```
+[Claude]                    [GitHub]                      [スプレッドシート]
+   │                           │                                │
+   ├─ build_data_json.py ─────▶ data/sales_list.json            │
+   │                           │  (raw URL公開)                  │
+   │                           │                                │
+   │                           │ ◀── UrlFetchApp.fetch ─────────┤
+   │                           │                                │ 「STAGE UP同期」
+   └─ git push ────────────────▶                                │  メニュー実行
+                                                                ▼
+                                                          シート自動更新
+```
+
+### 構成ファイル
+
+| ファイル | 役割 | 更新頻度 |
+|---|---|---|
+| `data/sales_list.json` | 全132社の正規データ（DM長文/短文両方を内包） | データ変更時に毎回 |
+| `scripts/build_data_json.py` | JSON 生成スクリプト（業種判定・DM生成ロジック含む） | 業種テンプレ追加時のみ |
+| `scripts/SyncSalesSheets.gs` | Apps Script 本体（JSON取得→シート反映） | **基本不変・初回1回のみ設置** |
+
+### Claude 側の運用（毎回）
+
+新規会社追加・既存社情報更新時：
+
+```bash
+# 1. LP作成 & auth.js/admin.html更新（既存ルール）
+# 2. JSON 再生成
+python3 scripts/build_data_json.py
+# 3. push
+git add data/sales_list.json scripts/build_data_json.py
+git commit -m "data: 会社追加/更新"
+git push origin main
+```
+
+### 運用者側の運用（毎回）
+
+1. スプレッドシートを開く
+2. メニュー「**STAGE UP同期 → 全シート一括反映（推奨）**」をクリック
+3. 数秒で営業優先シート＋タスク管理シート両方が最新化される
+
+**Apps Script の貼り替え・コピー・修正は不要。**
+
+### 初回セットアップ（一度だけ）
+
+1. スプレッドシート → 拡張機能 → Apps Script
+2. 既存コードを全削除 → `scripts/SyncSalesSheets.gs` 全文を貼り付け → 保存
+3. シートをリロード（F5）→ メニュー「STAGE UP同期」が現れる
+4. 初回実行時のみ承認ダイアログで「許可」
+
+### キャッシュ動作
+
+- GitHub raw コンテンツの CDN キャッシュは最大5分
+- Apps Script は `?t=<タイムスタンプ>` のキャッシュバスター付きで取得するため、push 後すぐ反映される
+- 5分以上経過すれば必ず最新が取得される
+
+### データソース確認方法
+
+メニュー「STAGE UP同期 → データソース情報」をクリックすると、現在の JSON URL・生成日時・会社数が表示される（取得失敗時はエラー詳細）。
 
 ---
 
