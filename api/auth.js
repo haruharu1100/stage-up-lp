@@ -78,6 +78,13 @@ const ACCOUNTS = {
   "45-rits-k-base":   SAMPLE_AUTH,  // 合同会社リッツケイベース / ベンチャー支援（白×ダークグリーン）
   "46-little-blue":   SAMPLE_AUTH,  // 合同会社リトル・ブルー / クリエイティブ（ブルーグラデ）
 
+  // ─── 5社追加（47-51）───
+  "47-remix-lab":     SAMPLE_AUTH,  // 株式会社ReMIX LAB / IT・研究開発（白×ブルー×グレー）
+  "48-ryuhou":        SAMPLE_AUTH,  // 株式会社龍鳳 / 地域密着・和風老舗（赤茶×黒×白）
+  "49-lumina":        SAMPLE_AUTH,  // 合同会社Lumina / 美容・ライフスタイル（白×ベージュ×淡ゴールド）
+  "50-ynsystems":     SAMPLE_AUTH,  // 合同会社YNSystems / IT・SaaS（白×ネイビー×シアン）
+  "51-wasabilab":     SAMPLE_AUTH,  // 株式会社ワサビラボ / クリエイティブ（白×グリーン×ブラック）
+
   // ─── LP作成しない（NPO・宗教・半公的団体）───
   //   10-farm:            ファーム弁天 / 農業（半公的） / 低
   //   21-mahoroba-coop:   まほろば協同組合 / 協同組合 / 低

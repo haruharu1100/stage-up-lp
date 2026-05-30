@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5" />
+<meta name="theme-color" content="#fbf6ef" />
+<meta name="robots" content="noindex, nofollow" />
+<title>合同会社Lumina｜あなたの輝きを、もっと自由に。</title>
+<meta name="description" content="合同会社Luminaは、美容・ライフスタイルを通じてお客様の毎日に光を灯すサービスを提供しています。" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet" />
+<style>
+:root{
+  --bg:#fbf6ef; --bg-2:#f3ebda; --paper:#fffdf8; --cream:#fdf9f1;
+  --ink:#2a221a; --ink-2:#4e4034; --ink-3:#8a7a6a; --ink-4:#bba89a;
+  --line:#ece2cd; --line-2:#dccfb6;
+  --gold:#bda268; --gold-d:#998247; --gold-soft:#e6d4a8;
+  --pink:#d8a8a8; --rose:#c8847e;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%;scroll-padding-top:80px}
+body{font-family:"Noto Sans JP",sans-serif;background:var(--bg);color:var(--ink-2);font-size:15px;line-height:1.95;-webkit-font-smoothing:antialiased;font-weight:400}
+img{display:block;max-width:100%;height:auto}
+a{color:inherit;text-decoration:none;transition:color .2s,opacity .2s}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+ul,ol{list-style:none}
+.sample-bar{position:fixed;top:0;left:0;right:0;z-index:60;background:var(--ink);color:var(--gold-soft);padding:8px 16px;text-align:center;font-size:11px;letter-spacing:.15em;font-family:"Cormorant Garamond",serif;font-style:italic}
+body{padding-top:32px}
+.container{width:100%;max-width:1140px;margin:0 auto;padding:0 24px}
+.container-narrow{max-width:840px}
+@media(min-width:768px){.container{padding:0 40px}}
+.site-header{position:fixed;top:32px;left:0;right:0;z-index:50;background:rgba(251,246,239,.92);backdrop-filter:blur(14px);border-bottom:1px solid transparent;transition:border-color .3s}
+.site-header.is-scrolled{border-bottom-color:var(--line)}
+.header-inner{display:flex;align-items:center;justify-content:space-between;gap:16px;height:72px}
+.brand{display:flex;align-items:center;gap:14px}
+.brand-mark{font-family:"Cormorant Garamond",serif;font-weight:500;font-style:italic;width:44px;height:44px;display:grid;place-items:center;background:transparent;color:var(--gold-d);font-size:32px;border:1px solid var(--gold);border-radius:50%}
+.brand-text{display:flex;flex-direction:column;line-height:1.1}
+.brand-name{font-family:"Cormorant Garamond",serif;font-weight:500;color:var(--ink);font-size:22px;letter-spacing:.05em}
+.brand-sub{font-size:10px;color:var(--gold-d);letter-spacing:.35em;margin-top:4px;font-family:"Cormorant Garamond",serif;font-style:italic;text-transform:uppercase}
+.nav-desktop{display:none;gap:32px;font-family:"Cormorant Garamond",serif;font-style:italic}
+.nav-desktop a{font-size:15px;color:var(--ink);font-weight:500;letter-spacing:.05em}
+.nav-desktop a:hover{color:var(--gold-d)}
+@media(min-width:1024px){.nav-desktop{display:flex}}
+.header-cta a{font-family:"Cormorant Garamond",serif;font-style:italic;display:inline-flex;align-items:center;gap:8px;background:transparent;color:var(--gold-d);padding:11px 22px;border:1px solid var(--gold);border-radius:30px;font-size:13px;font-weight:600;letter-spacing:.1em}
+.header-cta a:hover{background:var(--gold);color:var(--paper)}
+.menu-toggle{width:42px;height:42px;display:grid;gap:5px;align-content:center;justify-items:center;background:transparent;border:1px solid var(--line-2);border-radius:50%}
+.menu-toggle span{width:18px;height:1px;background:var(--ink);transition:transform .3s,opacity .3s}
+.menu-toggle[aria-expanded="true"] span:nth-child(1){transform:translateY(6px) rotate(45deg)}
+.menu-toggle[aria-expanded="true"] span:nth-child(2){opacity:0}
+.menu-toggle[aria-expanded="true"] span:nth-child(3){transform:translateY(-6px) rotate(-45deg)}
+@media(min-width:1024px){.menu-toggle{display:none}}
+.nav-mobile{display:flex;flex-direction:column;max-height:0;overflow:hidden;background:var(--paper);border-top:1px solid var(--line);padding:0 24px;transition:max-height .4s,padding .3s;font-family:"Cormorant Garamond",serif;font-style:italic}
+.nav-mobile.is-open{max-height:80vh;padding:8px 24px 24px}
+.nav-mobile a{padding:16px 0;border-bottom:1px solid var(--line);font-size:16px;color:var(--ink);letter-spacing:.05em}
+.hero{position:relative;padding:140px 0 100px;overflow:hidden;background:linear-gradient(180deg,var(--bg) 0%,var(--bg-2) 100%)}
+@media(min-width:768px){.hero{padding:170px 0 130px}}
+.hero-inner{position:relative;display:grid;gap:48px;align-items:center}
+@media(min-width:980px){.hero-inner{grid-template-columns:1.05fr 1fr;gap:64px}}
+.hero-tag{display:inline-flex;align-items:center;gap:14px;font-family:"Cormorant Garamond",serif;font-style:italic;font-size:14px;color:var(--gold-d);letter-spacing:.3em;margin-bottom:32px}
+.hero-tag::before,.hero-tag::after{content:"";display:inline-block;width:24px;height:1px;background:var(--gold)}
+.hero-title{font-family:"Cormorant Garamond",serif;font-weight:500;color:var(--ink);font-size:46px;line-height:1.2;letter-spacing:.02em}
+@media(min-width:640px){.hero-title{font-size:60px}}
+@media(min-width:1024px){.hero-title{font-size:76px}}
+.hero-title em{font-style:italic;color:var(--gold-d)}
+.hero-jp{margin-top:28px;font-family:"Noto Sans JP",sans-serif;font-weight:500;color:var(--ink);font-size:17px;line-height:1.85;letter-spacing:.06em}
+@media(min-width:768px){.hero-jp{font-size:20px}}
+.hero-sub{margin-top:28px;color:var(--ink-2);font-size:15px;line-height:2.1;max-width:520px}
+@media(min-width:768px){.hero-sub{font-size:16px}}
+.hero-cta{margin-top:40px;display:flex;flex-wrap:wrap;gap:14px}
+.btn-primary{font-family:"Cormorant Garamond",serif;font-style:italic;display:inline-flex;align-items:center;justify-content:center;gap:12px;background:var(--gold);color:var(--paper);padding:18px 36px;border-radius:60px;font-weight:500;font-size:16px;letter-spacing:.15em}
+.btn-primary:hover{background:var(--gold-d);transform:translateY(-1px)}
+.btn-secondary{font-family:"Cormorant Garamond",serif;font-style:italic;display:inline-flex;align-items:center;justify-content:center;gap:12px;background:var(--paper);color:var(--ink);padding:18px 36px;border-radius:60px;border:1px solid var(--line-2);font-weight:500;font-size:16px;letter-spacing:.15em}
+.btn-secondary:hover{border-color:var(--gold-d)}
+.hero-img{aspect-ratio:4/5;overflow:hidden;border-radius:4px;box-shadow:0 40px 80px -40px rgba(189,162,104,.4);position:relative}
+.hero-img img{width:100%;height:100%;object-fit:cover;filter:saturate(.92)}
+.hero-img::before{content:"";position:absolute;inset:14px;border:1px solid rgba(253,253,248,.6);pointer-events:none;z-index:1}
+.section{padding:96px 0}
+@media(min-width:768px){.section{padding:130px 0}}
+.section-cream{background:var(--cream)}
+.section-paper{background:var(--paper)}
+.s-eyebrow{display:inline-flex;align-items:center;gap:14px;font-family:"Cormorant Garamond",serif;font-style:italic;font-size:14px;color:var(--gold-d);letter-spacing:.3em;margin-bottom:22px}
+.s-eyebrow::before{content:"";display:inline-block;width:36px;height:1px;background:var(--gold)}
+.s-title{font-family:"Cormorant Garamond",serif;font-weight:500;color:var(--ink);font-size:32px;line-height:1.35;letter-spacing:.02em}
+@media(min-width:768px){.s-title{font-size:46px}}
+.s-title em{font-style:italic;color:var(--gold-d)}
+.s-lead{margin-top:24px;color:var(--ink-2);font-size:15px;line-height:2.1;max-width:680px}
+.about{margin-top:56px;display:grid;gap:48px;align-items:center}
+@media(min-width:980px){.about{grid-template-columns:.85fr 1.15fr;gap:80px}}
+.about-img{aspect-ratio:5/6;overflow:hidden;border-radius:4px;position:relative}
+.about-img img{width:100%;height:100%;object-fit:cover;filter:saturate(.9)}
+.about-img::after{content:"";position:absolute;left:-14px;bottom:-14px;width:120px;height:120px;border:1px solid var(--gold)}
+.about-text p{margin-top:24px;color:var(--ink-2);font-size:15px;line-height:2.2}
+.about-text p:first-of-type{margin-top:36px}
+.about-mark{margin-top:44px;padding-top:24px;border-top:1px solid var(--line);font-family:"Cormorant Garamond",serif;font-style:italic;color:var(--gold-d);font-size:14px;letter-spacing:.1em}
+.about-mark strong{display:block;margin-top:8px;font-size:20px;color:var(--ink);font-style:normal;font-family:"Noto Sans JP",sans-serif}
+.svc-grid{margin-top:56px;display:grid;gap:24px}
+@media(min-width:768px){.svc-grid{grid-template-columns:repeat(3,1fr)}}
+.svc{background:var(--paper);padding:40px 32px;border:1px solid var(--line);border-radius:4px;transition:border-color .3s,transform .3s;text-align:center}
+.svc:hover{border-color:var(--gold);transform:translateY(-4px)}
+.svc-num{font-family:"Cormorant Garamond",serif;font-style:italic;font-size:48px;color:var(--gold);line-height:1;font-weight:500}
+.svc-h{margin-top:18px;font-family:"Cormorant Garamond",serif;font-size:22px;color:var(--ink);font-weight:500;line-height:1.45;letter-spacing:.02em}
+.svc-h-jp{margin-top:6px;font-size:14px;color:var(--ink);font-weight:500}
+.svc-d{margin-top:16px;font-size:14px;color:var(--ink-2);line-height:2.05}
+.feel{margin-top:56px;display:grid;gap:0;border-top:1px solid var(--line-2);border-bottom:1px solid var(--line-2)}
+.feel-row{padding:32px 0;border-top:1px solid var(--line-2);display:grid;gap:20px}
+.feel-row:first-child{border-top:0}
+@media(min-width:768px){.feel-row{grid-template-columns:120px 1fr;gap:48px;align-items:center}}
+.feel-num{font-family:"Cormorant Garamond",serif;font-style:italic;font-size:42px;color:var(--gold);line-height:1;font-weight:500}
+.feel-h{font-family:"Cormorant Garamond",serif;font-size:22px;color:var(--ink);font-weight:500;line-height:1.45}
+.feel-h-jp{margin-top:6px;font-size:14px;color:var(--ink);font-weight:500}
+.feel-d{margin-top:14px;color:var(--ink-2);font-size:14px;line-height:2.1}
+.voice-grid{margin-top:56px;display:grid;gap:24px}
+@media(min-width:768px){.voice-grid{grid-template-columns:repeat(2,1fr)}}
+.voice{background:var(--paper);padding:36px 32px;border:1px solid var(--line);border-radius:4px;position:relative}
+.voice-mark{position:absolute;top:20px;right:28px;font-family:"Cormorant Garamond",serif;font-style:italic;font-size:54px;color:var(--gold-soft);line-height:1}
+.voice-text{font-family:"Cormorant Garamond",serif;color:var(--ink);font-size:18px;line-height:1.75;font-weight:400;font-style:italic;letter-spacing:.01em}
+.voice-by{margin-top:24px;padding-top:18px;border-top:1px solid var(--line);display:flex;align-items:center;gap:14px}
+.voice-avatar{width:42px;height:42px;border-radius:50%;background:var(--gold-soft);color:var(--gold-d);display:grid;place-items:center;font-family:"Cormorant Garamond",serif;font-style:italic;font-weight:600}
+.voice-name{font-family:"Cormorant Garamond",serif;color:var(--ink);font-size:14px;font-weight:500;letter-spacing:.05em}
+.voice-co{margin-top:2px;font-size:12px;color:var(--ink-3)}
+.flow{margin-top:56px;display:grid;gap:24px}
+@media(min-width:768px){.flow{grid-template-columns:repeat(4,1fr);gap:16px}}
+.fstep{padding:32px 26px;background:var(--paper);border:1px solid var(--line);border-radius:4px;position:relative;text-align:center}
+.fstep-n{font-family:"Cormorant Garamond",serif;font-style:italic;color:var(--gold-d);font-size:14px;letter-spacing:.15em;text-transform:uppercase;font-weight:500}
+.fstep-num{font-family:"Cormorant Garamond",serif;font-style:italic;font-size:42px;color:var(--gold);margin-top:4px;line-height:1;font-weight:500}
+.fstep-h{margin-top:14px;font-family:"Cormorant Garamond",serif;color:var(--ink);font-size:18px;font-weight:500;line-height:1.45}
+.fstep-d{margin-top:12px;font-size:13px;color:var(--ink-2);line-height:1.95}
+.faq{margin-top:56px;border-top:1px solid var(--line-2);border-bottom:1px solid var(--line-2)}
+.faq-item{border-top:1px solid var(--line-2)}
+.faq-item:first-child{border-top:0}
+.faq-q{width:100%;text-align:left;padding:28px 0;display:flex;align-items:flex-start;gap:24px}
+.faq-qn{font-family:"Cormorant Garamond",serif;font-style:italic;color:var(--gold-d);font-size:18px;flex-shrink:0;width:50px;font-weight:500}
+.faq-qt{flex:1;font-family:"Cormorant Garamond",serif;color:var(--ink);font-size:18px;font-weight:500;line-height:1.5;letter-spacing:.02em}
+.faq-icon{flex-shrink:0;font-family:"Cormorant Garamond",serif;color:var(--gold-d);font-size:22px;transition:transform .3s;line-height:1;font-weight:300}
+.faq-item[data-open="true"] .faq-icon{transform:rotate(45deg)}
+.faq-a{max-height:0;overflow:hidden;transition:max-height .5s}
+.faq-item[data-open="true"] .faq-a{max-height:500px}
+.faq-a-inner{padding:0 0 28px 74px;font-size:14px;color:var(--ink-2);line-height:2.1}
+.contact{padding:120px 0;background:linear-gradient(180deg,var(--bg-2) 0%,var(--bg) 100%)}
+@media(min-width:768px){.contact{padding:160px 0}}
+.contact-cards{margin-top:56px;display:grid;gap:0;background:var(--paper);border:1px solid var(--line)}
+@media(min-width:768px){.contact-cards{grid-template-columns:repeat(3,1fr)}}
+.ccard{padding:40px 32px;text-align:center;border-bottom:1px solid var(--line)}
+@media(min-width:768px){.ccard{border-bottom:0;border-right:1px solid var(--line)}}
+.ccard:last-child{border-bottom:0;border-right:0}
+.ccard-l{font-family:"Cormorant Garamond",serif;font-style:italic;font-size:14px;color:var(--gold-d);letter-spacing:.25em}
+.ccard-v{margin-top:14px;font-family:"Cormorant Garamond",serif;font-size:22px;color:var(--ink);line-height:1.4;font-weight:500}
+.ccard-n{margin-top:12px;font-size:12px;color:var(--ink-3);line-height:1.7}
+.contact-buttons{margin-top:48px;display:flex;flex-direction:column;gap:14px}
+@media(min-width:768px){.contact-buttons{flex-direction:row;justify-content:center}}
+.btn-c-primary{font-family:"Cormorant Garamond",serif;font-style:italic;display:inline-flex;align-items:center;justify-content:center;gap:12px;background:var(--ink);color:var(--paper);padding:20px 40px;border-radius:60px;font-weight:500;font-size:15px;letter-spacing:.15em}
+.btn-c-primary:hover{background:var(--gold-d)}
+.btn-c-line{font-family:"Cormorant Garamond",serif;font-style:italic;display:inline-flex;align-items:center;justify-content:center;gap:12px;background:#06c755;color:#fff;padding:20px 40px;border-radius:60px;font-weight:500;font-size:15px;letter-spacing:.15em}
+.contact-note{margin-top:32px;text-align:center;font-size:12px;color:var(--ink-3);font-family:"Cormorant Garamond",serif;font-style:italic}
+.sample-mark{margin:48px auto 0;max-width:660px;padding:16px 24px;border:1px dashed var(--line-2);background:rgba(255,255,255,.5);text-align:center;font-size:11px;color:var(--ink-3)}
+.site-footer{background:var(--ink);color:rgba(253,249,241,.7);padding:64px 0 28px}
+.footer-inner{display:grid;gap:36px}
+@media(min-width:768px){.footer-inner{grid-template-columns:1.4fr 1fr 1fr}}
+.footer-brand .brand-name{color:var(--paper)}
+.footer-brand .brand-sub{color:var(--gold-soft)}
+.footer-lead{margin-top:18px;font-family:"Cormorant Garamond",serif;font-style:italic;font-size:14px;line-height:1.95;color:rgba(253,249,241,.65)}
+.footer-h{font-family:"Cormorant Garamond",serif;font-style:italic;color:var(--gold-soft);font-size:14px;letter-spacing:.2em;margin-bottom:16px}
+.footer-list li{margin-bottom:10px;font-size:13px;color:rgba(253,249,241,.6)}
+.footer-list a:hover{color:var(--gold-soft)}
+.footer-bottom{margin-top:48px;padding-top:24px;border-top:1px solid rgba(253,249,241,.15);display:flex;flex-direction:column;gap:10px;font-size:11px;color:rgba(253,249,241,.5);font-family:"Cormorant Garamond",serif;font-style:italic}
+@media(min-width:640px){.footer-bottom{flex-direction:row;justify-content:space-between}}
+.footer-sample{margin-top:10px;text-align:center;width:100%;font-size:10px;font-family:"Noto Sans JP",sans-serif;font-style:normal}
+</style>
+</head>
+<body>
+<div class="sample-bar">— Sample Proposal · Private Page —</div>
+<header class="site-header" id="header">
+  <div class="container header-inner">
+    <a href="#top" class="brand">
+      <span class="brand-mark">L</span>
+      <span class="brand-text"><span class="brand-name">Lumina</span><span class="brand-sub">— LIGHT YOUR LIFE</span></span>
+    </a>
+    <nav class="nav-desktop">
+      <a href="#about">about</a><a href="#svc">service</a><a href="#feel">why us</a><a href="#voice">voice</a><a href="#flow">flow</a><a href="#faq">faq</a>
+    </nav>
+    <div class="header-cta"><a href="#contact">Contact</a></div>
+    <button class="menu-toggle" id="menuToggle" aria-label="メニュー" aria-expanded="false"><span></span><span></span><span></span></button>
+  </div>
+  <div class="nav-mobile" id="navMobile">
+    <a href="#about">about</a><a href="#svc">service</a><a href="#feel">why us</a><a href="#voice">voice</a><a href="#flow">flow</a><a href="#faq">faq</a><a href="#contact">contact</a>
+  </div>
+</header>
+<main id="top">
+<section class="hero">
+  <div class="container hero-inner">
+    <div>
+      <p class="hero-tag">— Light Your Life —</p>
+      <h1 class="hero-title">あなたの<em>輝き</em>を、<br />もっと<em>自由</em>に。</h1>
+      <p class="hero-jp">Luminaは、あなたの日々に光を灯すサービスを。</p>
+      <p class="hero-sub">合同会社Luminaは、美容・ライフスタイル領域のサービスを通じて、お客様お一人おひとりの毎日に小さな光を灯すことを大切にしています。</p>
+      <div class="hero-cta">
+        <a href="#contact" class="btn-primary">お問い合わせはこちら</a>
+        <a href="#svc" class="btn-secondary">サービスを見る</a>
+      </div>
+    </div>
+    <div class="hero-img"><img src="https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&w=1100&q=80" alt="" /></div>
+  </div>
+</section>
+<section id="about" class="section section-paper">
+  <div class="container">
+    <p class="s-eyebrow">— About us —</p>
+    <h2 class="s-title">毎日の中に、<br /><em>小さな光</em>を。</h2>
+    <p class="s-lead">私たちLuminaが大切にしている、3つの想いをお伝えします。</p>
+    <div class="about">
+      <div class="about-img"><img src="https://images.unsplash.com/photo-1503951914875-452162b0f3f1?auto=format&fit=crop&w=900&q=80" alt="" /></div>
+      <div class="about-text">
+        <p>合同会社Luminaは、美容とライフスタイルを通じて、お客様お一人おひとりの「自分らしい輝き」をサポートする会社です。</p>
+        <p>特別な日のためだけではなく、何でもない日常の中にこそ、自分を大切にする時間があるべきだと考えています。だからこそ、肩肘張らずに通っていただける、心地よいサービスを目指しています。</p>
+        <p>派手な変化ではなく、毎日が少しずつ豊かになるような、そんなお手伝いができれば嬉しいです。</p>
+        <p class="about-mark">Founder<br /><strong>〇〇 〇〇</strong></p>
+      </div>
+    </div>
+  </div>
+</section>
+<section id="svc" class="section section-cream">
+  <div class="container">
+    <p class="s-eyebrow">— Our Services —</p>
+    <h2 class="s-title">3つの<em>サービス</em>。</h2>
+    <p class="s-lead">美容・ライフスタイル領域の3つのサービスをご提供します。</p>
+    <div class="svc-grid">
+      <article class="svc">
+        <p class="svc-num">01</p>
+        <h3 class="svc-h">Beauty</h3>
+        <p class="svc-h-jp">ビューティーサービス</p>
+        <p class="svc-d">お客様の魅力を引き出す、上質なビューティーサービスをご提供します。</p>
+      </article>
+      <article class="svc">
+        <p class="svc-num">02</p>
+        <h3 class="svc-h">Lifestyle</h3>
+        <p class="svc-h-jp">ライフスタイル提案</p>
+        <p class="svc-d">日々の暮らしを豊かにする、ライフスタイルのご提案を行います。</p>
+      </article>
+      <article class="svc">
+        <p class="svc-num">03</p>
+        <h3 class="svc-h">Wellness</h3>
+        <p class="svc-h-jp">ウェルネスサポート</p>
+        <p class="svc-d">心と体の健やかさをサポートする、ウェルネスのご提案を行います。</p>
+      </article>
+    </div>
+  </div>
+</section>
+<section id="feel" class="section">
+  <div class="container">
+    <p class="s-eyebrow">— Why Lumina —</p>
+    <h2 class="s-title">Luminaが選ばれる、<em>4つの理由</em>。</h2>
+    <div class="feel">
+      <article class="feel-row"><p class="feel-num">01</p><div><h3 class="feel-h">Quality<span class="feel-h-jp"> · 上質さへのこだわり</span></h3><p class="feel-d">使用する素材、サービスの細部に至るまで、上質さを追求しています。お客様にご満足いただける品質をお約束します。</p></div></article>
+      <article class="feel-row"><p class="feel-num">02</p><div><h3 class="feel-h">Personalize<span class="feel-h-jp"> · お一人おひとりへの寄り添い</span></h3><p class="feel-d">画一的なサービスではなく、お客様お一人おひとりに合わせた、パーソナルなご提案を行います。</p></div></article>
+      <article class="feel-row"><p class="feel-num">03</p><div><h3 class="feel-h">Comfort<span class="feel-h-jp"> · 心地よい空間と時間</span></h3><p class="feel-d">心からリラックスして過ごしていただける、心地よい空間と時間をご提供しています。</p></div></article>
+      <article class="feel-row"><p class="feel-num">04</p><div><h3 class="feel-h">Continuity<span class="feel-h-jp"> · 長く続けられる関係</span></h3><p class="feel-d">一度きりではなく、長くお付き合いいただける関係性を大切にしています。</p></div></article>
+    </div>
+  </div>
+</section>
+<section id="voice" class="section section-cream">
+  <div class="container">
+    <p class="s-eyebrow">— Customer's Voice —</p>
+    <h2 class="s-title">お客様からの、<em>お便り</em>。</h2>
+    <div class="voice-grid">
+      <figure class="voice"><span class="voice-mark">"</span><p class="voice-text">いつも丁寧に対応してくださって、通うのが本当に楽しみになっています。私の毎日に光を灯してくださっています。</p><figcaption class="voice-by"><span class="voice-avatar">M</span><span><span class="voice-name">M 様</span><span class="voice-co">30代 / 月1ご利用</span></span></figcaption></figure>
+      <figure class="voice"><span class="voice-mark">"</span><p class="voice-text">パーソナルなご提案がとても嬉しくて、自分らしさを大切にしてもらえる感覚があります。</p><figcaption class="voice-by"><span class="voice-avatar">K</span><span><span class="voice-name">K 様</span><span class="voice-co">40代 / 隔月ご利用</span></span></figcaption></figure>
+      <figure class="voice"><span class="voice-mark">"</span><p class="voice-text">空間も気持ちよく、サービスを受けている時間が本当に心地よくて、ご褒美の時間になっています。</p><figcaption class="voice-by"><span class="voice-avatar">A</span><span><span class="voice-name">A 様</span><span class="voice-co">30代 / 月1ご利用</span></span></figcaption></figure>
+      <figure class="voice"><span class="voice-mark">"</span><p class="voice-text">長く通えるお店を探していて、こちらにたどり着けて本当によかったです。毎回新しい気づきがあります。</p><figcaption class="voice-by"><span class="voice-avatar">S</span><span><span class="voice-name">S 様</span><span class="voice-co">50代 / 月2ご利用</span></span></figcaption></figure>
+    </div>
+  </div>
+</section>
+<section id="flow" class="section">
+  <div class="container">
+    <p class="s-eyebrow">— Service Flow —</p>
+    <h2 class="s-title">ご利用の<em>流れ</em>。</h2>
+    <p class="s-lead">初めての方も安心の、4ステップでご案内します。</p>
+    <div class="flow">
+      <div class="fstep"><p class="fstep-n">Step</p><p class="fstep-num">01</p><h3 class="fstep-h">お問い合わせ</h3><p class="fstep-d">電話・LINE・フォームよりお気軽にご連絡ください。</p></div>
+      <div class="fstep"><p class="fstep-n">Step</p><p class="fstep-num">02</p><h3 class="fstep-h">カウンセリング</h3><p class="fstep-d">お客様のご要望を丁寧にお伺いし、最適なご提案をいたします。</p></div>
+      <div class="fstep"><p class="fstep-n">Step</p><p class="fstep-num">03</p><h3 class="fstep-h">サービスご提供</h3><p class="fstep-d">ご納得いただいてから、サービスをご提供させていただきます。</p></div>
+      <div class="fstep"><p class="fstep-n">Step</p><p class="fstep-num">04</p><h3 class="fstep-h">アフターフォロー</h3><p class="fstep-d">継続的なご利用のサポートと、アフターフォローも丁寧に。</p></div>
+    </div>
+  </div>
+</section>
+<section id="faq" class="section section-cream">
+  <div class="container container-narrow">
+    <p class="s-eyebrow">— FAQ —</p>
+    <h2 class="s-title">よくあるご質問。</h2>
+    <div class="faq">
+      <div class="faq-item" data-open="true"><button class="faq-q" type="button" aria-expanded="true"><span class="faq-qn">Q.01</span><span class="faq-qt">初回相談の費用は？</span><span class="faq-icon">+</span></button><div class="faq-a"><p class="faq-a-inner">初回のご相談・カウンセリングは無料で承っております。お気軽にお問い合わせください。</p></div></div>
+      <div class="faq-item"><button class="faq-q" type="button" aria-expanded="false"><span class="faq-qn">Q.02</span><span class="faq-qt">予約は必要ですか？</span><span class="faq-icon">+</span></button><div class="faq-a"><p class="faq-a-inner">完全予約制となっております。お電話・LINE・フォームよりご予約ください。</p></div></div>
+      <div class="faq-item"><button class="faq-q" type="button" aria-expanded="false"><span class="faq-qn">Q.03</span><span class="faq-qt">支払い方法は？</span><span class="faq-icon">+</span></button><div class="faq-a"><p class="faq-a-inner">現金・各種クレジットカード・電子マネーに対応しております。</p></div></div>
+      <div class="faq-item"><button class="faq-q" type="button" aria-expanded="false"><span class="faq-qn">Q.04</span><span class="faq-qt">男性も利用できますか？</span><span class="faq-icon">+</span></button><div class="faq-a"><p class="faq-a-inner">はい、男女問わずどなたでもご利用いただけます。</p></div></div>
+      <div class="faq-item"><button class="faq-q" type="button" aria-expanded="false"><span class="faq-qn">Q.05</span><span class="faq-qt">駐車場はありますか？</span><span class="faq-icon">+</span></button><div class="faq-a"><p class="faq-a-inner">近隣のコインパーキングをご利用ください。詳細はお問い合わせ時にご案内します。</p></div></div>
+      <div class="faq-item"><button class="faq-q" type="button" aria-expanded="false"><span class="faq-qn">Q.06</span><span class="faq-qt">継続的に通う必要はありますか？</span><span class="faq-icon">+</span></button><div class="faq-a"><p class="faq-a-inner">単発利用も継続利用もご自由に選択いただけます。お客様のペースで通っていただけます。</p></div></div>
+    </div>
+  </div>
+</section>
+<section id="contact" class="contact">
+  <div class="container container-narrow">
+    <div style="text-align:center"><p class="s-eyebrow" style="justify-content:center">— Contact —</p><h2 class="s-title">あなたの輝きを、<br /><em>ここから</em>。</h2><p class="s-lead" style="margin-left:auto;margin-right:auto">ご予約・お問い合わせは、お電話・LINE・フォームよりどうぞ。</p></div>
+    <div class="contact-cards">
+      <div class="ccard"><p class="ccard-l">TEL</p><p class="ccard-v">XXX-XXXX-XXXX</p><p class="ccard-n">受付 10:00-19:00<br />（不定休）</p></div>
+      <div class="ccard"><p class="ccard-l">LINE</p><p class="ccard-v">お問い合わせ<br />はこちら</p><p class="ccard-n">公式LINE / 24時間 受付</p></div>
+      <div class="ccard"><p class="ccard-l">FORM</p><p class="ccard-v">お問い合わせ<br />はこちら</p><p class="ccard-n">フォーム / 24時間 受付</p></div>
+    </div>
+    <div class="contact-buttons">
+      <a href="#" class="btn-c-line"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3C6.48 3 2 6.58 2 11c0 3.96 3.58 7.27 8.4 7.92.33.07.78.22.89.5.1.25.07.65.03.9l-.14.86c-.05.25-.2.99.87.54s5.75-3.39 7.84-5.8C21.32 14.36 22 12.77 22 11c0-4.42-4.48-8-10-8z"/></svg>お問い合わせはこちら</a>
+      <a href="#" class="btn-c-primary">お問い合わせフォーム</a>
+    </div>
+    <p class="contact-note">— Reply within 24 hours —</p>
+    <div class="sample-mark">※本ページはご提案用サンプルとして作成しております。掲載情報は仮の内容を含みます。</div>
+  </div>
+</section>
+</main>
+<footer class="site-footer">
+  <div class="container footer-inner">
+    <div class="footer-brand">
+      <a href="#top" class="brand"><span class="brand-mark">L</span><span class="brand-text"><span class="brand-name">Lumina</span><span class="brand-sub">— LIGHT YOUR LIFE</span></span></a>
+      <p class="footer-lead">合同会社Lumina<br />あなたの輝きを、もっと自由に。</p>
+    </div>
+    <div><p class="footer-h">— Menu —</p><ul class="footer-list"><li><a href="#about">about</a></li><li><a href="#svc">service</a></li><li><a href="#feel">why us</a></li><li><a href="#voice">voice</a></li><li><a href="#faq">faq</a></li></ul></div>
+    <div><p class="footer-h">— Contact —</p><ul class="footer-list"><li>住所：〇〇県〇〇市〇〇町〇-〇-〇</li><li>TEL：XXX-XXXX-XXXX</li><li>Mail：info@example.com</li></ul></div>
+  </div>
+  <div class="footer-bottom">
+    <p>© <span id="year"></span> Lumina LLC. All rights reserved.</p>
+    <ul style="display:flex;gap:18px;"><li><a href="#">Privacy</a></li><li><a href="#">Terms</a></li></ul>
+    <p class="footer-sample">※本ページはご提案用サンプルとして作成しております。掲載情報は仮の内容を含みます。</p>
+  </div>
+</footer>
+<script>
+document.querySelectorAll(".faq-item .faq-q").forEach(function(btn){btn.addEventListener("click",function(){var item=btn.closest(".faq-item");var open=item.getAttribute("data-open")==="true";document.querySelectorAll(".faq-item").forEach(function(o){o.setAttribute("data-open","false");var q=o.querySelector(".faq-q");if(q)q.setAttribute("aria-expanded","false")});if(!open){item.setAttribute("data-open","true");btn.setAttribute("aria-expanded","true")}})});
+var t=document.getElementById("menuToggle"),m=document.getElementById("navMobile");if(t&&m){t.addEventListener("click",function(){var e=t.getAttribute("aria-expanded")==="true";t.setAttribute("aria-expanded",String(!e));m.classList.toggle("is-open")})}
+var h=document.getElementById("header");window.addEventListener("scroll",function(){if(window.scrollY>20)h.classList.add("is-scrolled");else h.classList.remove("is-scrolled")},{passive:true});
+var y=document.getElementById("year");if(y)y.textContent=String(new Date().getFullYear());
+</script>
+</body>
+</html>
