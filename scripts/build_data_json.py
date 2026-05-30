@@ -281,16 +281,30 @@ for slug in slugs:
 records.sort(key=lambda x: x["no"])
 
 # ============================================================
-# JSON 出力
+# JSON 出力（schema v1.1: 営業優先17列 + タスク管理16列）
 # ============================================================
+HEADERS_PRIORITY = HEADERS + ['印刷用DM文章']  # 17列
+HEADERS_TASK     = HEADERS                    # 16列
+
+WIDTHS_PRIORITY = [90,60,220,120,300,90,180,60,60,70,140,80,80,260,380,280,420]  # 17
+WIDTHS_TASK     = [90,60,220,120,300,90,180,60,60,70,140,80,80,260,380,280]      # 16
+
 out = {
-    "schema_version": "1.0",
+    "schema_version": "1.1",
     "generated_at": datetime.now().strftime("%Y-%m-%dT%H:%M:%S"),
     "date": DATE,
+    # 後方互換のため旧キーも保持（v5の.gsはこれを参照する）
     "headers": HEADERS,
     "num_cols": 16,
     "row_height_px": 21,
-    "column_widths": [90,60,220,120,300,90,180,60,60,70,140,80,80,260,380,280],
+    "column_widths": WIDTHS_TASK,
+    # v6 新キー
+    "headers_priority": HEADERS_PRIORITY,
+    "headers_task":     HEADERS_TASK,
+    "num_cols_priority": 17,
+    "num_cols_task":     16,
+    "column_widths_priority": WIDTHS_PRIORITY,
+    "column_widths_task":     WIDTHS_TASK,
     "count": len(records),
     "records": records,
 }
