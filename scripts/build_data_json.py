@@ -192,13 +192,29 @@ for path in AGENT_TSVS:
                         new.append(parts[j])
                     parts = new
             while len(parts) < 10: parts.append("")
-            agent_data[no] = {
+            ad = {
                 "hp_url": parts[1].strip(), "hp_yn": parts[2].strip(),
                 "line_yn": parts[3].strip(), "mobile": parts[4].strip(),
                 "industry": parts[5].strip() or "汎用コーポレート",
                 "hojin": parts[6].strip(), "addr": parts[7].strip(),
                 "established": parts[8].strip(), "zip": parts[9].strip(),
             }
+            # ===== 住所/設立日 妥当性補正 =====
+            # 設立日として不正な文字列（〒〜、住所文字列、その他YYYY-MM-DD以外）→ 住所として扱う
+            estab = ad["established"]
+            if estab and not re.match(r"^\d{4}-\d{2}-\d{2}$", estab):
+                if "〒" in estab or "大阪" in estab or "奈良" in estab or "京都" in estab or "兵庫" in estab:
+                    # 住所文字列が設立日列に入っている → 住所に移動
+                    if not ad["addr"]:
+                        ad["addr"] = estab
+                    ad["established"] = ""
+                else:
+                    # その他の不正値 → 空に
+                    ad["established"] = ""
+            # 法人番号が13桁数字でなければ空に
+            if ad["hojin"] and not re.match(r"^\d{13}$", ad["hojin"]):
+                ad["hojin"] = ""
+            agent_data[no] = ad
 
 # ============================================================
 # slug 一覧

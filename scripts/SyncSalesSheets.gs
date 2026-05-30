@@ -164,9 +164,12 @@ function syncSheet_(ss, sheetName, json, useLongDM) {
     sheet.getRange(DATA_START_ROW, 1, lastRow - DATA_START_ROW + 1, sheet.getMaxColumns()).clear();
   }
 
-  // 3. データ整形
+  // 3. データ整形（防御コード厳格化）
   const cleaned = json.records.map(rec => {
-    const out = (rec.row || []).slice(0, NUM_COLS);
+    if (!rec || !Array.isArray(rec.row)) {
+      throw new Error('JSON record の構造が不正です: row 配列がありません。\n対象: ' + JSON.stringify(rec).substring(0, 200));
+    }
+    const out = rec.row.slice(0, NUM_COLS);
     while (out.length < NUM_COLS) out.push('');
     // L/M列 強制空白
     out[11] = '';
@@ -179,10 +182,20 @@ function syncSheet_(ss, sheetName, json, useLongDM) {
       }
     }
     // O列: 営業優先=長文 / タスク管理=短文
-    if (useLongDM && typeof rec.dm_long === 'string' && rec.dm_long) {
-      out[14] = rec.dm_long;  // 改行保持
+    if (useLongDM) {
+      if (typeof rec.dm_long === 'string' && rec.dm_long.length > 100) {
+        out[14] = rec.dm_long;  // 改行保持
+      } else {
+        // 長文DMがJSON側に無い場合は短文で代替（O列に会社名等が入る事故を防止）
+        const fallback = String(out[14] || '').replace(/\r/g, '').replace(/\n/g, ' ').replace(/\\n/g, ' ');
+        out[14] = fallback.length > 50 ? fallback :
+          '【DM文章未生成】 ' + (out[2] || '') + ' / LP URL: ' + (out[15] || '');
+      }
     } else {
-      out[14] = String(out[14] || '').replace(/\r/g, '').replace(/\n/g, ' ').replace(/\\n/g, ' ');
+      const shortDm = String(out[14] || '').replace(/\r/g, '').replace(/\n/g, ' ').replace(/\\n/g, ' ');
+      // O列に会社名が入る事故を防止: DM短文として長さチェック
+      out[14] = shortDm.length > 50 ? shortDm :
+        '【DM文章未生成】 ' + (out[2] || '') + ' / LP URL: ' + (out[15] || '');
     }
     return out;
   });
