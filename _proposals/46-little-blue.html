@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5" />
+<meta name="theme-color" content="#0066ff" />
+<meta name="robots" content="noindex, nofollow" />
+
+<title>合同会社リトル・ブルー｜小さな会社が、大きな印象をつくる。</title>
+<meta name="description" content="合同会社リトル・ブルーは、小さなクリエイティブ会社です。ブランディング・デザイン・コンテンツ制作を中心に、印象に残るアウトプットをお届けします。" />
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Inter:wght@400;500;600;700;800;900&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet" />
+
+<style>
+:root{
+  --bg-1:#0066ff;
+  --bg-2:#00b8ff;
+  --bg-3:#4d8eff;
+  --bg-pale:#f0f6ff;
+  --paper:#ffffff;
+  --ink:#0a1933;
+  --ink-2:#2e3e5a;
+  --ink-3:#6b7d99;
+  --line:#dde6f4;
+  --line-2:#bcc9e0;
+  --accent:#ff4d6d;
+  --accent-2:#ffd166;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%;scroll-padding-top:80px}
+body{font-family:"Inter","Noto Sans JP",sans-serif;background:var(--paper);color:var(--ink-2);font-size:15px;line-height:1.85;-webkit-font-smoothing:antialiased}
+img{display:block;max-width:100%;height:auto}
+a{color:inherit;text-decoration:none;transition:color .2s,opacity .2s}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+ul,ol{list-style:none}
+
+.sample-bar{position:fixed;top:0;left:0;right:0;z-index:60;background:linear-gradient(90deg,var(--bg-1) 0%,var(--bg-2) 100%);color:#fff;padding:8px 16px;text-align:center;font-size:11px;letter-spacing:.1em;font-weight:600}
+body{padding-top:32px}
+.container{width:100%;max-width:1240px;margin:0 auto;padding:0 24px}
+.container-narrow{max-width:880px}
+@media(min-width:768px){.container{padding:0 40px}}
+
+.site-header{position:fixed;top:32px;left:0;right:0;z-index:50;background:rgba(255,255,255,.88);backdrop-filter:blur(20px);border-bottom:1px solid transparent;transition:border-color .3s}
+.site-header.is-scrolled{border-bottom-color:var(--line)}
+.header-inner{display:flex;align-items:center;justify-content:space-between;gap:16px;height:72px}
+.brand{display:flex;align-items:center;gap:12px}
+.brand-mark{width:42px;height:42px;display:grid;place-items:center;background:linear-gradient(135deg,var(--bg-1) 0%,var(--bg-2) 100%);color:#fff;font-family:"DM Serif Display",serif;font-size:24px;border-radius:12px;line-height:1;transform:rotate(-4deg)}
+.brand-text{display:flex;flex-direction:column;line-height:1.1}
+.brand-jp{font-family:"DM Serif Display",serif;color:var(--ink);font-size:20px;letter-spacing:-.01em}
+.brand-jp em{color:var(--bg-1);font-style:normal}
+.brand-en{font-family:"Inter",sans-serif;font-size:10px;color:var(--ink-3);letter-spacing:.25em;margin-top:2px;font-weight:600;text-transform:uppercase}
+
+.nav-desktop{display:none;gap:32px}
+.nav-desktop a{font-family:"Inter",sans-serif;font-size:13px;color:var(--ink-2);font-weight:600;letter-spacing:.02em}
+.nav-desktop a:hover{color:var(--bg-1)}
+@media(min-width:1024px){.nav-desktop{display:flex}}
+
+.header-cta a{font-family:"Inter",sans-serif;display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,var(--bg-1) 0%,var(--bg-2) 100%);color:#fff;padding:11px 22px;font-size:13px;font-weight:700;letter-spacing:.05em;border-radius:30px}
+.header-cta a:hover{transform:translateY(-1px);box-shadow:0 8px 16px -8px rgba(0,102,255,.5)}
+
+.menu-toggle{width:42px;height:42px;display:grid;gap:5px;align-content:center;justify-items:center;background:transparent;border:1px solid var(--line);border-radius:50%}
+.menu-toggle span{width:18px;height:1.5px;background:var(--ink);transition:transform .3s,opacity .3s}
+.menu-toggle[aria-expanded="true"] span:nth-child(1){transform:translateY(6px) rotate(45deg)}
+.menu-toggle[aria-expanded="true"] span:nth-child(2){opacity:0}
+.menu-toggle[aria-expanded="true"] span:nth-child(3){transform:translateY(-6px) rotate(-45deg)}
+@media(min-width:1024px){.menu-toggle{display:none}}
+.nav-mobile{display:flex;flex-direction:column;max-height:0;overflow:hidden;background:var(--paper);border-top:1px solid var(--line);padding:0 24px;transition:max-height .4s,padding .3s}
+.nav-mobile.is-open{max-height:80vh;padding:8px 24px 24px}
+.nav-mobile a{padding:14px 0;border-bottom:1px solid var(--line);font-family:"Inter",sans-serif;font-size:14px;color:var(--ink-2);font-weight:600}
+
+/* Hero - Vivid blue gradient */
+.hero{position:relative;padding:130px 0 120px;overflow:hidden;background:linear-gradient(135deg,var(--bg-1) 0%,var(--bg-2) 50%,var(--bg-3) 100%);color:#fff}
+@media(min-width:768px){.hero{padding:170px 0 160px}}
+.hero::before{content:"";position:absolute;top:-10%;left:-5%;width:600px;height:600px;background:radial-gradient(circle,rgba(255,77,109,.25) 0%,transparent 70%);filter:blur(40px);animation:float1 18s ease-in-out infinite}
+.hero::after{content:"";position:absolute;bottom:-10%;right:-5%;width:500px;height:500px;background:radial-gradient(circle,rgba(255,209,102,.2) 0%,transparent 70%);filter:blur(40px);animation:float2 20s ease-in-out infinite}
+@keyframes float1{0%,100%{transform:translate(0,0)}50%{transform:translate(80px,-40px)}}
+@keyframes float2{0%,100%{transform:translate(0,0)}50%{transform:translate(-60px,30px)}}
+.hero-inner{position:relative;z-index:1;text-align:left}
+.hero-pill{display:inline-flex;align-items:center;gap:10px;padding:8px 18px;background:rgba(255,255,255,.18);backdrop-filter:blur(8px);color:#fff;border-radius:30px;font-size:12px;font-weight:700;letter-spacing:.08em;margin-bottom:32px;border:1px solid rgba(255,255,255,.25)}
+.hero-pill::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--accent-2);box-shadow:0 0 12px var(--accent-2)}
+.hero-title{font-family:"DM Serif Display",serif;color:#fff;font-size:48px;line-height:1.05;letter-spacing:-.02em}
+@media(min-width:640px){.hero-title{font-size:70px}}
+@media(min-width:1024px){.hero-title{font-size:104px}}
+.hero-title em{font-style:italic;color:var(--accent-2)}
+.hero-title-jp{margin-top:28px;font-family:"Noto Sans JP",sans-serif;font-weight:700;color:#fff;font-size:18px;line-height:1.7;letter-spacing:.04em}
+@media(min-width:768px){.hero-title-jp{font-size:22px}}
+.hero-sub{margin-top:28px;color:rgba(255,255,255,.92);font-size:15px;line-height:1.95;max-width:580px;font-weight:500}
+@media(min-width:768px){.hero-sub{font-size:17px}}
+.hero-cta{margin-top:44px;display:flex;flex-wrap:wrap;gap:14px}
+.btn-primary{display:inline-flex;align-items:center;justify-content:center;gap:10px;background:#fff;color:var(--bg-1);padding:18px 36px;border-radius:50px;font-weight:800;font-size:14px;letter-spacing:.05em;font-family:"Inter",sans-serif}
+.btn-primary:hover{background:var(--accent-2);transform:translateY(-2px)}
+.btn-secondary{display:inline-flex;align-items:center;justify-content:center;gap:10px;background:rgba(255,255,255,.12);backdrop-filter:blur(8px);color:#fff;padding:18px 36px;border-radius:50px;border:1.5px solid rgba(255,255,255,.4);font-weight:700;font-size:14px;letter-spacing:.05em;font-family:"Inter",sans-serif}
+.btn-secondary:hover{background:rgba(255,255,255,.22)}
+
+/* Section base */
+.section{padding:96px 0;position:relative}
+@media(min-width:768px){.section{padding:130px 0}}
+.section-pale{background:var(--bg-pale)}
+
+.s-eyebrow{display:inline-block;padding:6px 14px;background:linear-gradient(135deg,var(--bg-1) 0%,var(--bg-2) 100%);color:#fff;border-radius:30px;font-family:"Inter",sans-serif;font-size:11px;letter-spacing:.1em;margin-bottom:24px;font-weight:800;text-transform:uppercase}
+.s-title{font-family:"DM Serif Display",serif;color:var(--ink);font-size:38px;line-height:1.2;letter-spacing:-.01em}
+@media(min-width:768px){.s-title{font-size:56px}}
+.s-title em{font-style:italic;background:linear-gradient(135deg,var(--bg-1) 0%,var(--bg-2) 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.s-lead{margin-top:24px;color:var(--ink-2);font-size:16px;line-height:1.95;max-width:680px;font-weight:500}
+
+/* About */
+.about{margin-top:64px;display:grid;gap:48px;align-items:center}
+@media(min-width:980px){.about{grid-template-columns:1fr 1fr;gap:80px}}
+.about-img{aspect-ratio:1/1;overflow:hidden;border-radius:24px;box-shadow:0 40px 80px -40px rgba(0,102,255,.45)}
+.about-img img{width:100%;height:100%;object-fit:cover}
+.about-text p{margin-top:20px;color:var(--ink-2);font-size:15px;line-height:2;font-weight:500}
+.about-text p:first-of-type{margin-top:32px}
+.about-mark{margin-top:32px;padding-top:20px;border-top:2px dashed var(--line-2);font-family:"DM Serif Display",serif;color:var(--ink);font-size:14px;font-style:italic}
+.about-mark strong{display:block;margin-top:6px;font-size:18px;font-style:normal;font-family:"Noto Sans JP",sans-serif;font-weight:700}
+
+/* Services */
+.svc-grid{margin-top:56px;display:grid;gap:24px}
+@media(min-width:768px){.svc-grid{grid-template-columns:repeat(3,1fr)}}
+.svc{padding:36px 32px;background:var(--paper);border:2px solid var(--line);border-radius:24px;transition:all .3s;position:relative;overflow:hidden}
+.svc::before{content:"";position:absolute;top:-100%;right:-50%;width:200%;height:200%;background:radial-gradient(circle,rgba(0,102,255,.06) 0%,transparent 50%);transition:top .5s}
+.svc:hover{border-color:var(--bg-1);transform:translateY(-6px);box-shadow:0 20px 40px -20px rgba(0,102,255,.3)}
+.svc:hover::before{top:-50%}
+.svc-no{display:inline-block;font-family:"DM Serif Display",serif;font-size:42px;color:var(--bg-1);line-height:1}
+.svc-h{margin-top:14px;font-family:"DM Serif Display",serif;font-size:24px;color:var(--ink);line-height:1.35}
+.svc-d{margin-top:14px;font-size:14px;color:var(--ink-2);line-height:1.95;font-weight:500;position:relative;z-index:1}
+
+/* Works (制作実績) */
+.works-grid{margin-top:56px;display:grid;gap:32px}
+@media(min-width:768px){.works-grid{grid-template-columns:repeat(2,1fr)}}
+.work{position:relative;overflow:hidden;border-radius:24px;aspect-ratio:4/3;cursor:pointer;background:linear-gradient(135deg,var(--bg-1) 0%,var(--bg-3) 100%)}
+.work img{width:100%;height:100%;object-fit:cover;transition:transform .6s ease,filter .3s}
+.work:hover img{transform:scale(1.06);filter:saturate(1.2)}
+.work-overlay{position:absolute;inset:0;background:linear-gradient(180deg,transparent 40%,rgba(10,25,51,.85) 100%);display:flex;flex-direction:column;justify-content:flex-end;padding:32px}
+.work-cat{display:inline-block;padding:5px 14px;background:rgba(255,255,255,.92);color:var(--bg-1);border-radius:20px;font-size:11px;font-weight:800;letter-spacing:.1em;width:fit-content;margin-bottom:14px}
+.work-h{font-family:"DM Serif Display",serif;color:#fff;font-size:22px;line-height:1.35}
+.work-d{margin-top:8px;color:rgba(255,255,255,.85);font-size:13px;font-weight:500}
+
+/* Voice */
+.voice-grid{margin-top:56px;display:grid;gap:24px}
+@media(min-width:768px){.voice-grid{grid-template-columns:repeat(2,1fr)}}
+.voice{padding:36px 32px;background:var(--paper);border:2px solid var(--line);border-radius:24px;position:relative}
+.voice-mark{position:absolute;top:-8px;left:24px;font-family:"DM Serif Display",serif;font-size:80px;color:var(--bg-1);line-height:.8;background:var(--bg-pale);padding:0 8px}
+.voice-text{font-family:"DM Serif Display",serif;color:var(--ink);font-size:18px;line-height:1.7;margin-top:16px}
+.voice-by{margin-top:20px;padding-top:18px;border-top:2px dashed var(--line);display:flex;align-items:center;gap:14px}
+.voice-avatar{width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,var(--bg-1) 0%,var(--bg-2) 100%);color:#fff;display:grid;place-items:center;font-family:"DM Serif Display",serif;font-size:18px}
+.voice-name{font-family:"Inter",sans-serif;color:var(--ink);font-size:14px;font-weight:700}
+.voice-co{margin-top:2px;font-size:12px;color:var(--ink-3);font-weight:500}
+
+/* Process */
+.process-grid{margin-top:56px;display:grid;gap:20px;counter-reset:proc}
+@media(min-width:768px){.process-grid{grid-template-columns:repeat(4,1fr)}}
+.proc{padding:32px 24px;background:var(--paper);border-radius:24px;position:relative;counter-increment:proc;border:2px solid var(--line)}
+.proc::before{content:"0" counter(proc);position:absolute;top:-20px;right:24px;font-family:"DM Serif Display",serif;font-size:60px;color:var(--bg-1);line-height:1;opacity:.25}
+.proc-h{font-family:"DM Serif Display",serif;color:var(--ink);font-size:20px;line-height:1.35}
+.proc-d{margin-top:14px;font-size:13px;color:var(--ink-2);line-height:1.85;font-weight:500}
+
+/* FAQ */
+.faq{margin-top:56px;display:grid;gap:14px}
+.faq-item{background:var(--paper);border:2px solid var(--line);border-radius:18px;overflow:hidden;transition:all .3s}
+.faq-item[data-open="true"]{border-color:var(--bg-1);box-shadow:0 8px 24px -8px rgba(0,102,255,.25)}
+.faq-q{width:100%;text-align:left;padding:24px 28px;display:flex;align-items:center;gap:18px}
+.faq-qn{font-family:"DM Serif Display",serif;color:var(--bg-1);font-size:22px;line-height:1;flex-shrink:0;width:44px}
+.faq-qt{flex:1;font-family:"Inter",sans-serif;font-weight:700;color:var(--ink);font-size:15px;line-height:1.55}
+.faq-icon{flex-shrink:0;width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--bg-1) 0%,var(--bg-2) 100%);color:#fff;display:grid;place-items:center;font-family:"DM Serif Display",serif;font-size:18px;transition:transform .3s}
+.faq-item[data-open="true"] .faq-icon{transform:rotate(45deg)}
+.faq-a{max-height:0;overflow:hidden;transition:max-height .5s}
+.faq-item[data-open="true"] .faq-a{max-height:500px}
+.faq-a-inner{padding:0 28px 28px 90px;font-size:14px;color:var(--ink-2);line-height:1.95;font-weight:500}
+
+/* Contact */
+.contact{padding:120px 0;background:linear-gradient(135deg,var(--bg-1) 0%,var(--bg-2) 50%,var(--bg-3) 100%);color:#fff;position:relative;overflow:hidden}
+.contact::before{content:"";position:absolute;top:-20%;right:-10%;width:600px;height:600px;background:radial-gradient(circle,rgba(255,209,102,.18) 0%,transparent 70%);filter:blur(40px)}
+@media(min-width:768px){.contact{padding:160px 0}}
+.contact .s-eyebrow{background:rgba(255,255,255,.2);color:#fff}
+.contact .s-title{color:#fff}
+.contact .s-title em{background:linear-gradient(135deg,var(--accent-2) 0%,#fff 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.contact .s-lead{color:rgba(255,255,255,.88)}
+.contact-inner{position:relative;z-index:1}
+.contact-cards{margin-top:56px;display:grid;gap:16px}
+@media(min-width:768px){.contact-cards{grid-template-columns:repeat(3,1fr)}}
+.ccard{padding:32px 28px;background:rgba(255,255,255,.12);backdrop-filter:blur(8px);border:1.5px solid rgba(255,255,255,.25);border-radius:24px;text-align:center}
+.ccard-l{font-family:"Inter",sans-serif;font-size:11px;letter-spacing:.15em;color:var(--accent-2);font-weight:800;text-transform:uppercase}
+.ccard-v{margin-top:12px;font-family:"DM Serif Display",serif;color:#fff;font-size:24px;line-height:1.4}
+.ccard-n{margin-top:10px;font-size:12px;color:rgba(255,255,255,.78);font-weight:500}
+
+.contact-buttons{margin-top:44px;display:flex;flex-direction:column;gap:14px}
+@media(min-width:768px){.contact-buttons{flex-direction:row;justify-content:center}}
+.btn-c-primary{display:inline-flex;align-items:center;justify-content:center;gap:10px;background:#fff;color:var(--bg-1);padding:20px 40px;border-radius:50px;font-weight:800;font-size:14px;letter-spacing:.08em;font-family:"Inter",sans-serif}
+.btn-c-primary:hover{background:var(--accent-2);transform:translateY(-2px)}
+.btn-c-line{display:inline-flex;align-items:center;justify-content:center;gap:10px;background:#06c755;color:#fff;padding:20px 40px;border-radius:50px;font-weight:800;font-size:14px;letter-spacing:.08em;font-family:"Inter",sans-serif}
+.contact-note{margin-top:36px;text-align:center;font-size:12px;color:rgba(255,255,255,.7);font-weight:500}
+.sample-mark{margin:48px auto 0;max-width:660px;padding:16px 24px;border:1.5px dashed rgba(255,255,255,.4);border-radius:18px;text-align:center;font-size:11px;color:rgba(255,255,255,.7);font-weight:500}
+
+.site-footer{background:var(--ink);color:rgba(255,255,255,.7);padding:64px 0 28px}
+.footer-inner{display:grid;gap:36px}
+@media(min-width:768px){.footer-inner{grid-template-columns:1.5fr 1fr 1fr}}
+.footer-brand .brand-jp{color:#fff}
+.footer-brand .brand-jp em{color:var(--bg-2)}
+.footer-brand .brand-en{color:rgba(255,255,255,.5)}
+.footer-lead{margin-top:16px;font-size:13px;line-height:1.95;color:rgba(255,255,255,.6);font-weight:500}
+.footer-h{font-family:"Inter",sans-serif;color:var(--bg-2);font-size:11px;letter-spacing:.15em;margin-bottom:16px;font-weight:800;text-transform:uppercase}
+.footer-list li{margin-bottom:10px;font-size:13px;color:rgba(255,255,255,.6);font-weight:500}
+.footer-list a:hover{color:var(--bg-2)}
+.footer-bottom{margin-top:48px;padding-top:24px;border-top:1px solid rgba(255,255,255,.12);display:flex;flex-direction:column;gap:10px;font-size:11px;color:rgba(255,255,255,.4);font-family:"Inter",sans-serif;font-weight:500}
+@media(min-width:640px){.footer-bottom{flex-direction:row;justify-content:space-between}}
+.footer-sample{margin-top:10px;text-align:center;width:100%;font-size:10px;font-family:"Noto Sans JP",sans-serif}
+</style>
+</head>
+<body>
+
+<div class="sample-bar">★ SAMPLE PROPOSAL ・ PRIVATE PAGE ★</div>
+
+<header class="site-header" id="header">
+  <div class="container header-inner">
+    <a href="#top" class="brand">
+      <span class="brand-mark">b</span>
+      <span class="brand-text"><span class="brand-jp">Little<em>·</em>Blue</span><span class="brand-en">Creative Studio</span></span>
+    </a>
+    <nav class="nav-desktop">
+      <a href="#about">About</a><a href="#svc">Service</a><a href="#works">Works</a><a href="#voice">Voice</a><a href="#process">Process</a><a href="#faq">FAQ</a>
+    </nav>
+    <div class="header-cta"><a href="#contact">Contact →</a></div>
+    <button class="menu-toggle" id="menuToggle" aria-label="メニュー" aria-expanded="false"><span></span><span></span><span></span></button>
+  </div>
+  <div class="nav-mobile" id="navMobile">
+    <a href="#about">About</a><a href="#svc">Service</a><a href="#works">Works</a><a href="#voice">Voice</a><a href="#process">Process</a><a href="#faq">FAQ</a><a href="#contact">Contact</a>
+  </div>
+</header>
+
+<main id="top">
+
+<section class="hero">
+  <div class="container hero-inner">
+    <div class="hero-pill">★ Creative Studio in Nara</div>
+    <h1 class="hero-title">Small but,<br /><em>BOLD.</em></h1>
+    <p class="hero-title-jp">小さな会社が、<br />大きな印象をつくる。</p>
+    <p class="hero-sub">合同会社リトル・ブルーは、小さなクリエイティブスタジオです。ブランディング・デザイン・コンテンツ制作で、お客様の事業を印象に残るものに仕立てます。</p>
+    <div class="hero-cta">
+      <a href="#contact" class="btn-primary">Let's talk →</a>
+      <a href="#works" class="btn-secondary">See our works</a>
+    </div>
+  </div>
+</section>
+
+<section id="about" class="section">
+  <div class="container">
+    <p class="s-eyebrow">About Us</p>
+    <h2 class="s-title">Why we love being<br /><em>"little"</em>.</h2>
+    <p class="s-lead">小さなチームだからこそできる、深く、丁寧で、印象に残るクリエイティブ。</p>
+    <div class="about">
+      <div class="about-img"><img src="https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=900&q=80" alt="クリエイティブチーム" /></div>
+      <div class="about-text">
+        <p>私たち合同会社リトル・ブルーは、奈良の小さなクリエイティブスタジオです。大規模な広告代理店にはできない、お客様の事業の本質を理解した上での、深く丁寧なクリエイティブを得意としています。</p>
+        <p>「小さい」ことは弱みではなく、私たちの最大の強みです。チーム全員がお客様の事業を深く理解し、一人ひとりがオーナーシップを持って関わる。だからこそ、印象に残るアウトプットが生まれます。</p>
+        <p>大きな印象は、小さなディテールから生まれます。それを忘れずに、お客様一社一社と向き合っています。</p>
+        <p class="about-mark">Founder<br /><strong>〇〇 〇〇</strong></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="svc" class="section section-pale">
+  <div class="container">
+    <p class="s-eyebrow">Our Services</p>
+    <h2 class="s-title">3 ways we make<br /><em>big impressions</em>.</h2>
+    <div class="svc-grid">
+      <article class="svc">
+        <p class="svc-no">01</p>
+        <h3 class="svc-h">Branding<br />Design</h3>
+        <p class="svc-d">ブランドのコアコンセプトから、ロゴ・ビジュアルアイデンティティ・トーン&マナーまで、一貫したブランディングを設計します。</p>
+      </article>
+      <article class="svc">
+        <p class="svc-no">02</p>
+        <h3 class="svc-h">Web &<br />Graphic</h3>
+        <p class="svc-d">Webサイト・ランディングページ・印刷物・ロゴまで、ブランドの世界観を多様な媒体に展開する制作を行います。</p>
+      </article>
+      <article class="svc">
+        <p class="svc-no">03</p>
+        <h3 class="svc-h">Content<br />Production</h3>
+        <p class="svc-d">取材・ライティング・写真撮影・動画制作まで、ストーリーが伝わるコンテンツをワンストップでお届けします。</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section id="works" class="section">
+  <div class="container">
+    <p class="s-eyebrow">Selected Works</p>
+    <h2 class="s-title">Our recent<br /><em>creative works</em>.</h2>
+    <p class="s-lead">これまでにご一緒したお客様の、クリエイティブの一部をご紹介します。</p>
+    <div class="works-grid">
+      <article class="work"><img src="https://images.unsplash.com/photo-1561070791-2526d30994b8?auto=format&fit=crop&w=1100&q=80" alt="" /><div class="work-overlay"><span class="work-cat">Branding</span><h3 class="work-h">Local Cafe Brand</h3><p class="work-d">奈良のカフェのブランドリニューアル</p></div></article>
+      <article class="work"><img src="https://images.unsplash.com/photo-1559136555-9303baea8ebd?auto=format&fit=crop&w=1100&q=80" alt="" /><div class="work-overlay"><span class="work-cat">Web Design</span><h3 class="work-h">Tech Startup Site</h3><p class="work-d">スタートアップのコーポレートサイト</p></div></article>
+      <article class="work"><img src="https://images.unsplash.com/photo-1626785774573-4b799315345d?auto=format&fit=crop&w=1100&q=80" alt="" /><div class="work-overlay"><span class="work-cat">Photography</span><h3 class="work-h">Product Photoshoot</h3><p class="work-d">プロダクトカタログの撮影&制作</p></div></article>
+      <article class="work"><img src="https://images.unsplash.com/photo-1542744173-8e7e53415bb0?auto=format&fit=crop&w=1100&q=80" alt="" /><div class="work-overlay"><span class="work-cat">Content</span><h3 class="work-h">Brand Storytelling</h3><p class="work-d">老舗企業のブランドストーリー制作</p></div></article>
+    </div>
+  </div>
+</section>
+
+<section id="voice" class="section section-pale">
+  <div class="container">
+    <p class="s-eyebrow">Client Voice</p>
+    <h2 class="s-title">What our clients<br /><em>say about us</em>.</h2>
+    <div class="voice-grid">
+      <figure class="voice"><span class="voice-mark">"</span><p class="voice-text">小さい会社だからこそ、こちらの事業を本当に深く理解して提案してくれます。大きな代理店では絶対に出てこないアイデアでした。</p><figcaption class="voice-by"><span class="voice-avatar">M</span><span><span class="voice-name">M 様</span><span class="voice-co">カフェオーナー / 30代</span></span></figcaption></figure>
+      <figure class="voice"><span class="voice-mark">"</span><p class="voice-text">ロゴからWebサイトまで一貫した世界観を作っていただき、ブランド力が格段に上がりました。お客様の反応も明らかに変わりました。</p><figcaption class="voice-by"><span class="voice-avatar">K</span><span><span class="voice-name">K 様</span><span class="voice-co">スタートアップ / 代表</span></span></figcaption></figure>
+      <figure class="voice"><span class="voice-mark">"</span><p class="voice-text">撮影もデザインもストーリー作りも、全部お任せできるのが本当に助かります。ワンストップなのに、それぞれのクオリティが高い。</p><figcaption class="voice-by"><span class="voice-avatar">T</span><span><span class="voice-name">T 様</span><span class="voice-co">老舗企業 / 三代目</span></span></figcaption></figure>
+      <figure class="voice"><span class="voice-mark">"</span><p class="voice-text">「Small but BOLD.」というスローガン通り、小さな会社さんなのに印象に残るアウトプットを次々と提案してくれます。</p><figcaption class="voice-by"><span class="voice-avatar">S</span><span><span class="voice-name">S 様</span><span class="voice-co">EC事業 / マーケ担当</span></span></figcaption></figure>
+    </div>
+  </div>
+</section>
+
+<section id="process" class="section">
+  <div class="container">
+    <p class="s-eyebrow">Our Process</p>
+    <h2 class="s-title">How we<br /><em>work together</em>.</h2>
+    <p class="s-lead">お問い合わせから納品まで、丁寧で透明な制作プロセスです。</p>
+    <div class="process-grid">
+      <article class="proc"><h3 class="proc-h">Discovery</h3><p class="proc-d">お客様の事業や想いを深くヒアリング。本質を理解することから始まります。</p></article>
+      <article class="proc"><h3 class="proc-h">Concept</h3><p class="proc-d">ヒアリングを元にコンセプト・方向性をご提案。ご納得いただいてから制作へ。</p></article>
+      <article class="proc"><h3 class="proc-h">Create</h3><p class="proc-d">ブランディング・デザイン・コンテンツを一貫して制作。途中も密にご相談。</p></article>
+      <article class="proc"><h3 class="proc-h">Deliver</h3><p class="proc-d">納品後もご活用までフォロー。長期的なクリエイティブパートナーとして。</p></article>
+    </div>
+  </div>
+</section>
+
+<section id="faq" class="section section-pale">
+  <div class="container container-narrow">
+    <p class="s-eyebrow">FAQ</p>
+    <h2 class="s-title">Frequently asked<br /><em>questions</em>.</h2>
+    <div class="faq">
+      <div class="faq-item" data-open="true"><button class="faq-q" type="button" aria-expanded="true"><span class="faq-qn">Q1</span><span class="faq-qt">初回相談の費用は？</span><span class="faq-icon">+</span></button><div class="faq-a"><p class="faq-a-inner">初回ご相談は無料です。お気軽にお問い合わせください。Zoom等オンラインも可能です。</p></div></div>
+      <div class="faq-item"><button class="faq-q" type="button" aria-expanded="false"><span class="faq-qn">Q2</span><span class="faq-qt">制作費の目安は？</span><span class="faq-icon">+</span></button><div class="faq-a"><p class="faq-a-inner">プロジェクトの内容により異なります。お見積もりは無料でご提示します。</p></div></div>
+      <div class="faq-item"><button class="faq-q" type="button" aria-expanded="false"><span class="faq-qn">Q3</span><span class="faq-qt">納期はどれくらい？</span><span class="faq-icon">+</span></button><div class="faq-a"><p class="faq-a-inner">プロジェクトにより1ヶ月〜6ヶ月程度。ブランディングからWebまで一貫対応の場合は2〜4ヶ月が目安。</p></div></div>
+      <div class="faq-item"><button class="faq-q" type="button" aria-expanded="false"><span class="faq-qn">Q4</span><span class="faq-qt">遠方からも依頼できますか？</span><span class="faq-icon">+</span></button><div class="faq-a"><p class="faq-a-inner">もちろんです。全国どこのお客様もオンライン中心でご対応可能です。</p></div></div>
+      <div class="faq-item"><button class="faq-q" type="button" aria-expanded="false"><span class="faq-qn">Q5</span><span class="faq-qt">小さな案件でも対応してくれますか？</span><span class="faq-icon">+</span></button><div class="faq-a"><p class="faq-a-inner">小さなプロジェクトこそ私たちの得意分野です。ロゴ1点からでもお気軽にご相談ください。</p></div></div>
+      <div class="faq-item"><button class="faq-q" type="button" aria-expanded="false"><span class="faq-qn">Q6</span><span class="faq-qt">既存ブランドのリニューアルも対応？</span><span class="faq-icon">+</span></button><div class="faq-a"><p class="faq-a-inner">はい、既存ブランドの強みを活かしながらの再設計・刷新もお任せください。</p></div></div>
+    </div>
+  </div>
+</section>
+
+<section id="contact" class="contact">
+  <div class="container container-narrow contact-inner">
+    <div style="text-align:center"><p class="s-eyebrow">Get in Touch</p><h2 class="s-title">Let's make something<br /><em>BOLD together</em>.</h2><p class="s-lead" style="margin-left:auto;margin-right:auto">クリエイティブのご相談、プロジェクトのお見積もり、お気軽にお問い合わせください。</p></div>
+    <div class="contact-cards">
+      <div class="ccard"><p class="ccard-l">TEL</p><p class="ccard-v">XXX-XXXX-XXXX</p><p class="ccard-n">Weekdays 10:00-19:00</p></div>
+      <div class="ccard"><p class="ccard-l">LINE</p><p class="ccard-v">お問い合わせ<br />はこちら</p><p class="ccard-n">Official LINE / 24h</p></div>
+      <div class="ccard"><p class="ccard-l">FORM</p><p class="ccard-v">お問い合わせ<br />はこちら</p><p class="ccard-n">Web Form / 24h</p></div>
+    </div>
+    <div class="contact-buttons">
+      <a href="#" class="btn-c-line"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3C6.48 3 2 6.58 2 11c0 3.96 3.58 7.27 8.4 7.92.33.07.78.22.89.5.1.25.07.65.03.9l-.14.86c-.05.25-.2.99.87.54s5.75-3.39 7.84-5.8C21.32 14.36 22 12.77 22 11c0-4.42-4.48-8-10-8z"/></svg>お問い合わせはこちら</a>
+      <a href="#" class="btn-c-primary">Send Inquiry →</a>
+    </div>
+    <p class="contact-note">★ We will respond within 24 hours on business days ★</p>
+    <div class="sample-mark">※本ページはご提案用サンプルとして作成しております。掲載情報は仮の内容を含みます。</div>
+  </div>
+</section>
+
+</main>
+
+<footer class="site-footer">
+  <div class="container footer-inner">
+    <div class="footer-brand">
+      <a href="#top" class="brand"><span class="brand-mark">b</span><span class="brand-text"><span class="brand-jp">Little<em>·</em>Blue</span><span class="brand-en">Creative Studio</span></span></a>
+      <p class="footer-lead">合同会社リトル・ブルー<br />Small but BOLD. Creative studio in Nara.</p>
+    </div>
+    <div><p class="footer-h">Menu</p><ul class="footer-list"><li><a href="#about">About</a></li><li><a href="#svc">Service</a></li><li><a href="#works">Works</a></li><li><a href="#process">Process</a></li><li><a href="#faq">FAQ</a></li></ul></div>
+    <div><p class="footer-h">Contact</p><ul class="footer-list"><li>住所：〇〇県〇〇市〇〇町〇-〇-〇</li><li>TEL：XXX-XXXX-XXXX</li><li>Mail：info@example.com</li></ul></div>
+  </div>
+  <div class="footer-bottom">
+    <p>© <span id="year"></span> Little Blue LLC. All rights reserved.</p>
+    <ul style="display:flex;gap:18px;"><li><a href="#">Privacy</a></li><li><a href="#">Terms</a></li></ul>
+    <p class="footer-sample">※本ページはご提案用サンプルとして作成しております。掲載情報は仮の内容を含みます。</p>
+  </div>
+</footer>
+
+<script>
+document.querySelectorAll(".faq-item .faq-q").forEach(function(btn){btn.addEventListener("click",function(){var item=btn.closest(".faq-item");var open=item.getAttribute("data-open")==="true";document.querySelectorAll(".faq-item").forEach(function(o){o.setAttribute("data-open","false");var q=o.querySelector(".faq-q");if(q)q.setAttribute("aria-expanded","false")});if(!open){item.setAttribute("data-open","true");btn.setAttribute("aria-expanded","true")}})});
+var t=document.getElementById("menuToggle"),m=document.getElementById("navMobile");if(t&&m){t.addEventListener("click",function(){var e=t.getAttribute("aria-expanded")==="true";t.setAttribute("aria-expanded",String(!e));m.classList.toggle("is-open")})}
+var h=document.getElementById("header");window.addEventListener("scroll",function(){if(window.scrollY>20)h.classList.add("is-scrolled");else h.classList.remove("is-scrolled")},{passive:true});
+var y=document.getElementById("year");if(y)y.textContent=String(new Date().getFullYear());
+</script>
+</body>
+</html>

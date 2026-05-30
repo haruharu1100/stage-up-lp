@@ -66,6 +66,18 @@ const ACCOUNTS = {
   "35-yamatoliving":      SAMPLE_AUTH,  // 株式会社ヤマトリビング / 住宅・不動産（専門）
   "36-yumi-construction": SAMPLE_AUTH,  // 株式会社優美総合建設 / 総合建設業（専門）
 
+  // ─── 10社追加（37-46）───
+  "37-union":         SAMPLE_AUTH,  // 株式会社ユニオン / 法人サービス（ネイビー×白）
+  "38-yura":          SAMPLE_AUTH,  // 合同会社YURA / 業種不明・汎用（ベージュ×白）
+  "39-yoshino":       SAMPLE_AUTH,  // 有限会社吉野 / 地域密着老舗（深緑×アイボリー）
+  "40-like":          SAMPLE_AUTH,  // 株式会社ライク / IT（ブルー×白）
+  "41-rise-corp":     SAMPLE_AUTH,  // 株式会社RISE CORPORATION / 法人コンサル（ブラック×ゴールド）
+  "42-lighthouse":    SAMPLE_AUTH,  // 株式会社ライトハウス / コンサル（白×ライトブルー）
+  "43-life-koubou":   SAMPLE_AUTH,  // 株式会社らいふ工房 / リフォーム工房（木目×ベージュ）
+  "44-rio":           SAMPLE_AUTH,  // 合同会社RIO / 汎用（グレー×ネイビー）
+  "45-rits-k-base":   SAMPLE_AUTH,  // 合同会社リッツケイベース / ベンチャー支援（白×ダークグリーン）
+  "46-little-blue":   SAMPLE_AUTH,  // 合同会社リトル・ブルー / クリエイティブ（ブルーグラデ）
+
   // ─── LP作成しない（NPO・宗教・半公的団体）───
   //   10-farm:            ファーム弁天 / 農業（半公的） / 低
   //   21-mahoroba-coop:   まほろば協同組合 / 協同組合 / 低
