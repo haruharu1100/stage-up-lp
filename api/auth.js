@@ -57,6 +57,15 @@ const ACCOUNTS = {
   "27-mirai-kokusai": SAMPLE_AUTH,// 株式会社MIRAI KOKUSAI / 業種不明
   "28-minkawa":     SAMPLE_AUTH,  // 株式会社MINKAWA / 新設法人
 
+  // ─── 7社追加（30-36）───
+  "30-melos-family":      SAMPLE_AUTH,  // 有限会社メロスファミリー / 業種不明
+  "31-moku-hd":           SAMPLE_AUTH,  // 株式会社もくホールディングス / 持株会社
+  "32-mot":               SAMPLE_AUTH,  // 株式会社MOT / 業種不明
+  "33-morita":            SAMPLE_AUTH,  // 株式会社モリタ / 業種不明
+  "34-yamase":            SAMPLE_AUTH,  // 株式会社ヤマセ / 業種不明
+  "35-yamatoliving":      SAMPLE_AUTH,  // 株式会社ヤマトリビング / 住宅・不動産（専門）
+  "36-yumi-construction": SAMPLE_AUTH,  // 株式会社優美総合建設 / 総合建設業（専門）
+
   // ─── LP作成しない（NPO・宗教・半公的団体）───
   //   10-farm:            ファーム弁天 / 農業（半公的） / 低
   //   21-mahoroba-coop:   まほろば協同組合 / 協同組合 / 低

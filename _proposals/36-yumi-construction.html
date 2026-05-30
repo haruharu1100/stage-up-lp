@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5" />
+<meta name="theme-color" content="#1f2733" />
+<meta name="robots" content="noindex, nofollow" />
+
+<title>株式会社優美総合建設｜街と暮らしの基盤を、つくる。</title>
+<meta name="description" content="株式会社優美総合建設は、土木・建築・住宅・公共工事まで、地域の社会基盤を支える総合建設会社です。確かな技術と安全管理で、街と暮らしを支えます。" />
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet" />
+
+<style>
+:root{
+  --bg:#1a1d23;
+  --bg-2:#2a2e36;
+  --bg-3:#373c46;
+  --paper:#ffffff;
+  --soft:#f4f5f7;
+  --ink:#0e1116;
+  --ink-2:#3b4250;
+  --ink-3:#6b7280;
+  --ink-4:#9ca3af;
+  --line:#e5e7eb;
+  --line-d:rgba(255,255,255,.12);
+  --orange:#f08029;
+  --orange-deep:#c4651a;
+  --orange-light:#ffa55a;
+  --steel:#5b7188;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%;scroll-padding-top:80px}
+body{font-family:"Noto Sans JP",sans-serif;background:var(--paper);color:var(--ink-2);font-size:15px;line-height:1.85;-webkit-font-smoothing:antialiased}
+img{display:block;max-width:100%;height:auto}
+a{color:inherit;text-decoration:none;transition:color .2s,opacity .2s}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+ul,ol{list-style:none}
+
+.sample-bar{position:fixed;top:0;left:0;right:0;z-index:60;background:var(--ink);color:var(--orange);padding:8px 16px;text-align:center;font-size:11px;letter-spacing:.15em;font-family:"Oswald",sans-serif;font-weight:500}
+body{padding-top:32px}
+.container{width:100%;max-width:1240px;margin:0 auto;padding:0 24px}
+.container-narrow{max-width:860px}
+@media(min-width:768px){.container{padding:0 40px}}
+
+/* Header */
+.site-header{position:fixed;top:32px;left:0;right:0;z-index:50;background:rgba(255,255,255,.95);backdrop-filter:blur(14px);border-bottom:1px solid transparent;transition:border-color .3s}
+.site-header.is-scrolled{border-bottom-color:var(--line)}
+.header-inner{display:flex;align-items:center;justify-content:space-between;gap:16px;height:72px}
+.brand{display:flex;align-items:center;gap:14px}
+.brand-mark{width:48px;height:48px;display:grid;place-items:center;background:var(--ink);color:var(--orange);font-family:"Oswald",sans-serif;font-weight:700;font-size:24px;letter-spacing:.05em;position:relative;border-radius:4px}
+.brand-mark::after{content:"";position:absolute;top:-3px;right:-3px;width:10px;height:10px;background:var(--orange);border-radius:50%}
+.brand-text{display:flex;flex-direction:column;line-height:1.1}
+.brand-jp{font-weight:900;color:var(--ink);font-size:17px;letter-spacing:.05em}
+.brand-en{font-family:"Oswald",sans-serif;font-size:10px;color:var(--ink-3);letter-spacing:.25em;margin-top:3px;font-weight:500}
+
+.nav-desktop{display:none;gap:30px}
+.nav-desktop a{font-family:"Oswald",sans-serif;font-size:14px;color:var(--ink);font-weight:500;letter-spacing:.05em;text-transform:uppercase}
+.nav-desktop a:hover{color:var(--orange)}
+@media(min-width:1024px){.nav-desktop{display:flex}}
+
+.header-cta{display:flex;align-items:center;gap:14px}
+.header-tel{display:none;font-family:"Oswald",sans-serif;font-size:18px;color:var(--ink);font-weight:600;letter-spacing:.03em}
+.header-tel small{display:block;font-size:9px;color:var(--ink-3);letter-spacing:.2em;font-family:"Noto Sans JP",sans-serif;font-weight:400}
+@media(min-width:1024px){.header-tel{display:block}}
+.btn-h-primary{display:inline-flex;align-items:center;gap:8px;padding:12px 22px;background:var(--orange);color:#fff;font-size:13px;font-weight:700;letter-spacing:.05em;border-radius:4px}
+.btn-h-primary:hover{background:var(--orange-deep)}
+
+.menu-toggle{width:42px;height:42px;display:grid;gap:5px;align-content:center;justify-items:center;background:var(--ink);border:0;border-radius:4px}
+.menu-toggle span{width:18px;height:2px;background:var(--orange);transition:transform .3s,opacity .3s}
+.menu-toggle[aria-expanded="true"] span:nth-child(1){transform:translateY(7px) rotate(45deg)}
+.menu-toggle[aria-expanded="true"] span:nth-child(2){opacity:0}
+.menu-toggle[aria-expanded="true"] span:nth-child(3){transform:translateY(-7px) rotate(-45deg)}
+@media(min-width:1024px){.menu-toggle{display:none}}
+.nav-mobile{display:flex;flex-direction:column;max-height:0;overflow:hidden;background:var(--paper);border-top:1px solid var(--line);padding:0 24px;transition:max-height .4s,padding .3s}
+.nav-mobile.is-open{max-height:80vh;padding:8px 24px 24px}
+.nav-mobile a{padding:14px 0;border-bottom:1px solid var(--line);font-family:"Oswald",sans-serif;font-size:14px;color:var(--ink);text-transform:uppercase;letter-spacing:.05em;font-weight:500}
+
+/* Hero */
+.hero{position:relative;padding:130px 0 100px;overflow:hidden;background:var(--bg);color:#fff}
+@media(min-width:768px){.hero{padding:170px 0 130px}}
+.hero::before{content:"";position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.03) 1px,transparent 1px);background-size:48px 48px;mask-image:radial-gradient(ellipse 70% 60% at center,#000 30%,transparent 80%)}
+.hero::after{content:"";position:absolute;left:0;top:0;bottom:0;width:6px;background:var(--orange)}
+.hero-inner{position:relative;display:grid;gap:48px;align-items:center}
+@media(min-width:980px){.hero-inner{grid-template-columns:1.15fr 1fr;gap:64px}}
+.hero-cat{display:inline-flex;align-items:center;gap:10px;padding:6px 14px;background:var(--orange);color:#fff;font-family:"Oswald",sans-serif;font-size:12px;font-weight:600;letter-spacing:.15em;margin-bottom:32px;text-transform:uppercase}
+.hero-cat::before{content:"◆";font-size:8px}
+.hero-title{font-weight:900;color:#fff;font-size:42px;line-height:1.2;letter-spacing:.02em}
+@media(min-width:640px){.hero-title{font-size:54px}}
+@media(min-width:1024px){.hero-title{font-size:68px}}
+.hero-title em{color:var(--orange);font-style:normal}
+.hero-title-en{display:block;margin-top:14px;font-family:"Oswald",sans-serif;font-weight:500;font-size:14px;color:rgba(255,255,255,.45);letter-spacing:.3em;text-transform:uppercase}
+@media(min-width:768px){.hero-title-en{font-size:16px}}
+.hero-sub{margin-top:32px;color:rgba(255,255,255,.78);font-size:15px;line-height:1.95;max-width:560px}
+@media(min-width:768px){.hero-sub{font-size:16px}}
+.hero-cta{margin-top:40px;display:flex;flex-wrap:wrap;gap:14px}
+.btn-primary{display:inline-flex;align-items:center;justify-content:center;gap:10px;background:var(--orange);color:#fff;padding:18px 34px;font-weight:700;font-size:14px;letter-spacing:.08em;border-radius:4px}
+.btn-primary:hover{background:var(--orange-deep);transform:translateY(-1px)}
+.btn-secondary{display:inline-flex;align-items:center;justify-content:center;gap:10px;background:transparent;color:#fff;padding:18px 34px;border:1px solid rgba(255,255,255,.3);font-weight:600;font-size:14px;letter-spacing:.08em;border-radius:4px}
+.btn-secondary:hover{border-color:var(--orange);background:rgba(240,128,41,.08)}
+
+.hero-img{position:relative;aspect-ratio:4/3;overflow:hidden;border-radius:4px}
+.hero-img img{width:100%;height:100%;object-fit:cover;filter:saturate(.85)}
+.hero-img-tag{position:absolute;bottom:0;left:0;right:0;padding:14px 18px;background:rgba(26,29,35,.92);color:var(--orange);font-family:"Oswald",sans-serif;font-size:12px;letter-spacing:.15em;text-transform:uppercase}
+
+.hero-stats{margin-top:64px;padding:32px 0;border-top:1px solid rgba(255,255,255,.12);border-bottom:1px solid rgba(255,255,255,.12);display:grid;gap:24px;grid-template-columns:repeat(2,1fr)}
+@media(min-width:768px){.hero-stats{grid-template-columns:repeat(4,1fr)}}
+.hstat{text-align:center}
+.hstat-n{font-family:"Oswald",sans-serif;font-weight:700;font-size:44px;color:#fff;line-height:1;letter-spacing:.02em}
+.hstat-n small{font-size:.45em;color:var(--orange);margin-left:3px;font-weight:500}
+.hstat-l{margin-top:8px;font-family:"Oswald",sans-serif;font-size:11px;color:rgba(255,255,255,.55);letter-spacing:.15em;text-transform:uppercase}
+
+/* Section base */
+.section{padding:96px 0}
+@media(min-width:768px){.section{padding:130px 0}}
+.section-soft{background:var(--soft)}
+.section-dark{background:var(--bg);color:#fff}
+
+.s-eyebrow{display:inline-flex;align-items:center;gap:14px;font-family:"Oswald",sans-serif;font-size:13px;color:var(--orange);letter-spacing:.2em;margin-bottom:20px;text-transform:uppercase;font-weight:600}
+.s-eyebrow::before{content:"";display:inline-block;width:30px;height:3px;background:var(--orange)}
+.s-title{font-weight:900;color:var(--ink);font-size:32px;line-height:1.25;letter-spacing:.02em}
+.section-dark .s-title{color:#fff}
+@media(min-width:768px){.s-title{font-size:46px}}
+.s-title em{color:var(--orange);font-style:normal}
+.s-lead{margin-top:24px;color:var(--ink-2);font-size:15px;line-height:1.95;max-width:680px}
+.section-dark .s-lead{color:rgba(255,255,255,.75)}
+
+/* Business（4事業領域） */
+.biz-grid{margin-top:56px;display:grid;gap:24px}
+@media(min-width:640px){.biz-grid{grid-template-columns:repeat(2,1fr)}}
+@media(min-width:1024px){.biz-grid{grid-template-columns:repeat(4,1fr);gap:20px}}
+.biz{padding:32px 28px;background:var(--paper);border:1px solid var(--line);border-radius:4px;transition:all .3s;position:relative;overflow:hidden}
+.biz::before{content:"";position:absolute;top:0;left:0;width:100%;height:3px;background:var(--orange);transform:scaleX(0);transform-origin:left;transition:transform .3s}
+.biz:hover{transform:translateY(-6px);box-shadow:0 20px 40px -20px rgba(14,17,22,.25)}
+.biz:hover::before{transform:scaleX(1)}
+.biz-no{font-family:"Oswald",sans-serif;font-size:36px;color:var(--orange);font-weight:700;line-height:1;letter-spacing:.02em}
+.biz-h{margin-top:14px;font-weight:900;color:var(--ink);font-size:18px;line-height:1.45}
+.biz-d{margin-top:12px;font-size:13px;color:var(--ink-2);line-height:1.85}
+.biz-tags{margin-top:18px;padding-top:14px;border-top:1px solid var(--line);display:flex;flex-wrap:wrap;gap:6px}
+.biz-tags li{font-size:11px;padding:3px 8px;background:var(--soft);color:var(--ink-3);font-family:"Oswald",sans-serif;letter-spacing:.05em}
+
+/* Works (施工実績) */
+.works-grid{margin-top:56px;display:grid;gap:32px}
+@media(min-width:768px){.works-grid{grid-template-columns:repeat(2,1fr)}}
+.work{background:#fff;border:1px solid var(--line);border-radius:4px;overflow:hidden;transition:all .3s}
+.work:hover{transform:translateY(-2px);box-shadow:0 20px 40px -20px rgba(14,17,22,.2)}
+.work-img{position:relative;aspect-ratio:16/10;overflow:hidden}
+.work-img img{width:100%;height:100%;object-fit:cover;filter:saturate(.9)}
+.work-tag{position:absolute;top:14px;left:14px;background:var(--ink);color:var(--orange);padding:6px 14px;font-family:"Oswald",sans-serif;font-size:11px;letter-spacing:.15em;text-transform:uppercase}
+.work-body{padding:28px 24px}
+.work-cat{font-family:"Oswald",sans-serif;font-size:11px;color:var(--orange-deep);letter-spacing:.15em;text-transform:uppercase}
+.work-h{margin-top:8px;font-weight:900;color:var(--ink);font-size:20px;line-height:1.4}
+.work-meta{margin-top:10px;font-size:12px;color:var(--ink-3);letter-spacing:.05em}
+.work-d{margin-top:16px;font-size:14px;color:var(--ink-2);line-height:1.85}
+
+/* Tech (技術・体制) */
+.tech-list{margin-top:56px;display:grid;gap:0;border-top:1px solid rgba(255,255,255,.15)}
+.tech{padding:36px 0;border-bottom:1px solid rgba(255,255,255,.15);display:grid;gap:24px}
+@media(min-width:768px){.tech{grid-template-columns:160px 1fr;gap:48px;align-items:start}}
+.tech-no{font-family:"Oswald",sans-serif;color:var(--orange);font-size:14px;letter-spacing:.2em;text-transform:uppercase}
+.tech-no span{display:block;font-weight:700;font-size:36px;color:#fff;margin-top:8px;letter-spacing:.02em}
+.tech-h{font-weight:900;color:#fff;font-size:20px;line-height:1.4}
+.tech-d{margin-top:14px;color:rgba(255,255,255,.78);font-size:14px;line-height:1.95}
+
+/* Safety (安全・品質) */
+.safety{margin-top:56px;display:grid;gap:24px}
+@media(min-width:768px){.safety{grid-template-columns:repeat(3,1fr)}}
+.safe{padding:32px 28px;background:var(--paper);border-top:4px solid var(--orange);border-left:1px solid var(--line);border-right:1px solid var(--line);border-bottom:1px solid var(--line)}
+.safe-h{font-weight:900;color:var(--ink);font-size:18px;line-height:1.45}
+.safe-d{margin-top:14px;font-size:13px;color:var(--ink-2);line-height:1.85}
+.safe-list{margin-top:18px;padding-top:14px;border-top:1px dashed var(--line);font-size:12px;color:var(--ink-3);line-height:1.95}
+.safe-list li{padding-left:18px;position:relative}
+.safe-list li::before{content:"▶";position:absolute;left:0;color:var(--orange);font-size:8px;top:6px}
+
+/* Recruit */
+.recruit{padding:48px 36px;background:var(--ink);color:#fff;border-left:6px solid var(--orange);margin-top:56px;display:grid;gap:24px;align-items:center}
+@media(min-width:768px){.recruit{grid-template-columns:1.2fr 1fr;gap:48px}}
+.recruit-cat{font-family:"Oswald",sans-serif;font-size:12px;color:var(--orange);letter-spacing:.2em;text-transform:uppercase;margin-bottom:14px}
+.recruit-h{font-weight:900;color:#fff;font-size:24px;line-height:1.45}
+.recruit-d{margin-top:14px;color:rgba(255,255,255,.78);font-size:14px;line-height:1.9}
+.recruit-cta{display:flex;flex-direction:column;gap:12px}
+.recruit-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:16px 28px;font-family:"Oswald",sans-serif;font-weight:600;font-size:14px;letter-spacing:.1em;text-transform:uppercase;border-radius:4px}
+.recruit-btn-primary{background:var(--orange);color:#fff}
+.recruit-btn-primary:hover{background:var(--orange-deep)}
+.recruit-btn-secondary{background:transparent;color:#fff;border:1px solid rgba(255,255,255,.3)}
+.recruit-btn-secondary:hover{border-color:var(--orange)}
+
+/* FAQ */
+.faq{margin-top:56px;display:grid;gap:8px}
+.faq-item{background:var(--paper);border:1px solid var(--line);border-radius:4px;overflow:hidden;transition:border-color .3s}
+.faq-item[data-open="true"]{border-color:var(--orange)}
+.faq-q{width:100%;text-align:left;padding:22px 24px;display:flex;align-items:center;gap:16px;font-weight:900;color:var(--ink)}
+.faq-qn{font-family:"Oswald",sans-serif;color:var(--orange);font-size:14px;letter-spacing:.05em}
+.faq-qt{flex:1;font-size:15px;line-height:1.5}
+.faq-icon{flex-shrink:0;width:30px;height:30px;background:var(--soft);color:var(--ink);display:grid;place-items:center;font-family:"Oswald",sans-serif;font-size:16px;transition:transform .3s;font-weight:700}
+.faq-item[data-open="true"] .faq-icon{transform:rotate(45deg);background:var(--orange);color:#fff}
+.faq-a{max-height:0;overflow:hidden;transition:max-height .5s}
+.faq-item[data-open="true"] .faq-a{max-height:500px}
+.faq-a-inner{padding:0 24px 24px;font-size:14px;color:var(--ink-2);line-height:1.95}
+
+/* Contact */
+.contact{padding:120px 0;background:var(--bg);color:#fff;position:relative;overflow:hidden}
+.contact::before{content:"";position:absolute;left:0;top:0;bottom:0;width:6px;background:var(--orange)}
+@media(min-width:768px){.contact{padding:160px 0}}
+.contact-cards{margin-top:56px;display:grid;gap:14px}
+@media(min-width:768px){.contact-cards{grid-template-columns:repeat(3,1fr)}}
+.ccard{padding:32px 24px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);text-align:center;border-radius:4px;border-top:3px solid var(--orange)}
+.ccard-l{font-family:"Oswald",sans-serif;font-size:11px;letter-spacing:.2em;color:var(--orange);text-transform:uppercase;font-weight:600}
+.ccard-v{margin-top:12px;font-weight:900;color:#fff;font-size:22px;line-height:1.4}
+.ccard-n{margin-top:10px;font-size:12px;color:rgba(255,255,255,.55)}
+
+.contact-buttons{margin-top:40px;display:flex;flex-direction:column;gap:12px}
+@media(min-width:768px){.contact-buttons{flex-direction:row;justify-content:center}}
+.btn-c-primary{display:inline-flex;align-items:center;justify-content:center;gap:10px;background:var(--orange);color:#fff;padding:18px 36px;font-weight:700;font-size:14px;letter-spacing:.1em;border-radius:4px;font-family:"Oswald",sans-serif;text-transform:uppercase}
+.btn-c-primary:hover{background:var(--orange-deep)}
+.btn-c-line{display:inline-flex;align-items:center;justify-content:center;gap:10px;background:#06c755;color:#fff;padding:18px 36px;font-weight:700;font-size:14px;letter-spacing:.1em;border-radius:4px}
+.contact-note{margin-top:32px;text-align:center;font-size:12px;color:rgba(255,255,255,.5)}
+.sample-mark{margin:48px auto 0;max-width:660px;padding:14px 22px;border:1px dashed rgba(255,255,255,.25);text-align:center;font-size:11px;color:rgba(255,255,255,.5)}
+
+.site-footer{background:var(--ink);color:rgba(255,255,255,.55);padding:64px 0 28px;border-top:1px solid rgba(255,255,255,.08)}
+.footer-inner{display:grid;gap:36px}
+@media(min-width:768px){.footer-inner{grid-template-columns:1.5fr 1fr 1fr}}
+.footer-brand .brand-jp{color:#fff}
+.footer-brand .brand-en{color:var(--orange-light)}
+.footer-lead{margin-top:16px;font-size:13px;line-height:1.95;color:rgba(255,255,255,.5)}
+.footer-h{font-family:"Oswald",sans-serif;color:var(--orange);font-size:13px;letter-spacing:.15em;margin-bottom:16px;text-transform:uppercase;font-weight:600}
+.footer-list li{margin-bottom:10px;font-size:13px;color:rgba(255,255,255,.5)}
+.footer-list a:hover{color:var(--orange)}
+.footer-bottom{margin-top:48px;padding-top:24px;border-top:1px solid rgba(255,255,255,.1);display:flex;flex-direction:column;gap:10px;font-size:11px;color:rgba(255,255,255,.4);font-family:"Oswald",sans-serif;letter-spacing:.05em}
+@media(min-width:640px){.footer-bottom{flex-direction:row;justify-content:space-between}}
+.footer-sample{margin-top:8px;text-align:center;width:100%;font-size:10px;letter-spacing:.05em;font-family:"Noto Sans JP",sans-serif}
+
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+<div class="sample-bar">// SAMPLE PROPOSAL — PRIVATE PAGE</div>
+
+<header class="site-header" id="header">
+  <div class="container header-inner">
+    <a href="#top" class="brand">
+      <span class="brand-mark">優美</span>
+      <span class="brand-text"><span class="brand-jp">優美総合建設</span><span class="brand-en">YUMI CONSTRUCTION</span></span>
+    </a>
+    <nav class="nav-desktop">
+      <a href="#biz">business</a><a href="#works">works</a><a href="#tech">technology</a><a href="#safety">safety</a><a href="#recruit">recruit</a><a href="#faq">faq</a>
+    </nav>
+    <div class="header-cta">
+      <span class="header-tel">XXX-XXXX-XXXX<small>平日 8:00-17:30</small></span>
+      <a href="#contact" class="btn-h-primary">CONTACT</a>
+    </div>
+    <button class="menu-toggle" id="menuToggle" aria-label="メニュー" aria-expanded="false"><span></span><span></span><span></span></button>
+  </div>
+  <div class="nav-mobile" id="navMobile">
+    <a href="#biz">事業内容</a><a href="#works">施工実績</a><a href="#tech">技術・体制</a><a href="#safety">安全・品質</a><a href="#recruit">採用情報</a><a href="#faq">FAQ</a><a href="#contact">お問い合わせ</a>
+  </div>
+</header>
+
+<main id="top">
+
+<section class="hero">
+  <div class="container hero-inner">
+    <div>
+      <div class="hero-cat">General Contractor</div>
+      <h1 class="hero-title">
+        街と暮らしの<br />
+        基盤を、<em>つくる。</em>
+        <span class="hero-title-en">— Build the foundation of community —</span>
+      </h1>
+      <p class="hero-sub">優美総合建設は、土木・建築・住宅・公共工事まで、地域の社会基盤を支える総合建設会社です。確かな技術と徹底した安全管理で、街と暮らしの基盤を未来へつないでいきます。</p>
+      <div class="hero-cta">
+        <a href="#contact" class="btn-primary">お問い合わせはこちら →</a>
+        <a href="#works" class="btn-secondary">施工実績を見る</a>
+      </div>
+    </div>
+    <div class="hero-img">
+      <img src="https://images.unsplash.com/photo-1541888946425-d81bb19240f5?auto=format&fit=crop&w=1200&q=80" alt="現場のイメージ" />
+      <div class="hero-img-tag">// On-site engineering</div>
+    </div>
+    <div class="hero-stats" style="grid-column:1/-1">
+      <div class="hstat"><p class="hstat-n">40<small>年</small></p><p class="hstat-l">業界実績</p></div>
+      <div class="hstat"><p class="hstat-n">800<small>+</small></p><p class="hstat-l">累計プロジェクト</p></div>
+      <div class="hstat"><p class="hstat-n">120<small>名</small></p><p class="hstat-l">技術者・職人</p></div>
+      <div class="hstat"><p class="hstat-n">98<small>%</small></p><p class="hstat-l">無事故継続率</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="biz" class="section">
+  <div class="container">
+    <p class="s-eyebrow">// Our Business</p>
+    <h2 class="s-title">4つの事業領域で、<br /><em>街を支える。</em></h2>
+    <p class="s-lead">土木・建築・住宅・公共工事まで、総合建設会社として地域社会の基盤づくりに貢献しています。</p>
+    <div class="biz-grid">
+      <article class="biz">
+        <div class="biz-no">01</div>
+        <h3 class="biz-h">土木工事</h3>
+        <p class="biz-d">道路・橋梁・上下水道・河川整備など、生活インフラを支える土木工事を担っています。</p>
+        <ul class="biz-tags"><li>ROAD</li><li>BRIDGE</li><li>WATER</li><li>RIVER</li></ul>
+      </article>
+      <article class="biz">
+        <div class="biz-no">02</div>
+        <h3 class="biz-h">建築工事</h3>
+        <p class="biz-d">オフィス・商業施設・公共建築物・工場まで、確かな施工技術でお応えします。</p>
+        <ul class="biz-tags"><li>OFFICE</li><li>RETAIL</li><li>PUBLIC</li><li>FACTORY</li></ul>
+      </article>
+      <article class="biz">
+        <div class="biz-no">03</div>
+        <h3 class="biz-h">住宅建築</h3>
+        <p class="biz-d">注文住宅・建売住宅・住宅リフォームまで、ご家族の暮らしの場を形にします。</p>
+        <ul class="biz-tags"><li>CUSTOM</li><li>READY</li><li>REFORM</li></ul>
+      </article>
+      <article class="biz">
+        <div class="biz-no">04</div>
+        <h3 class="biz-h">公共工事</h3>
+        <p class="biz-d">官公庁発注の公共工事の施工実績多数。地域インフラの整備にも貢献しています。</p>
+        <ul class="biz-tags"><li>GOVERNMENT</li><li>INFRA</li><li>PUBLIC</li></ul>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section id="works" class="section section-soft">
+  <div class="container">
+    <p class="s-eyebrow">// Works</p>
+    <h2 class="s-title">主な<em>施工実績</em>。</h2>
+    <p class="s-lead">公共工事・民間工事ともに豊富な実績があります。一部をご紹介します。</p>
+    <div class="works-grid">
+      <article class="work">
+        <div class="work-img"><img src="https://images.unsplash.com/photo-1503387762-592deb58ef4e?auto=format&fit=crop&w=1200&q=80" alt="" /><span class="work-tag">PUBLIC</span></div>
+        <div class="work-body">
+          <p class="work-cat">// Civil / Road</p>
+          <h3 class="work-h">県道改良工事 / 県発注公共工事</h3>
+          <p class="work-meta">2024年完工 / 工期 約14ヶ月 / 受注金額 非公開</p>
+          <p class="work-d">県道の拡幅・路面改修工事を、近隣住民の方々への影響を最小限に抑えながら無事故で完工しました。</p>
+        </div>
+      </article>
+      <article class="work">
+        <div class="work-img"><img src="https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=1200&q=80" alt="" /><span class="work-tag">PRIVATE</span></div>
+        <div class="work-body">
+          <p class="work-cat">// Building / Office</p>
+          <h3 class="work-h">物流センター新築工事 / 民間発注</h3>
+          <p class="work-meta">2024年完工 / 延床 8,200㎡ / 工期 約11ヶ月</p>
+          <p class="work-d">最新の物流オペレーションに対応する大規模物流施設の新築工事。設計段階から運用効率を考慮した提案を実施。</p>
+        </div>
+      </article>
+      <article class="work">
+        <div class="work-img"><img src="https://images.unsplash.com/photo-1518780664697-55e3ad937233?auto=format&fit=crop&w=1200&q=80" alt="" /><span class="work-tag">RESIDENCE</span></div>
+        <div class="work-body">
+          <p class="work-cat">// Housing / Custom</p>
+          <h3 class="work-h">高性能注文住宅プロジェクト</h3>
+          <p class="work-meta">延床 38坪 / 耐震等級3 / 工期 約6ヶ月</p>
+          <p class="work-d">高断熱・高気密・耐震等級3を標準とした注文住宅。ご家族の暮らし方に合わせた完全自由設計でお応えしました。</p>
+        </div>
+      </article>
+      <article class="work">
+        <div class="work-img"><img src="https://images.unsplash.com/photo-1581094488379-6c0e6df8a30c?auto=format&fit=crop&w=1200&q=80" alt="" /><span class="work-tag">PUBLIC</span></div>
+        <div class="work-body">
+          <p class="work-cat">// Civil / Water</p>
+          <h3 class="work-h">下水道整備工事 / 市発注公共工事</h3>
+          <p class="work-meta">2023年完工 / 工期 約9ヶ月</p>
+          <p class="work-d">市発注の下水道整備工事を地域の生活への影響を最小化しながら計画通りに完工しました。</p>
+        </div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section id="tech" class="section section-dark">
+  <div class="container">
+    <p class="s-eyebrow">// Technology</p>
+    <h2 class="s-title">確かな<em>技術と体制</em>を、<br />現場に。</h2>
+    <p class="s-lead">技術者・職人・重機・施工管理体制まで、自社で完結する一貫体制を整えています。</p>
+    <div class="tech-list">
+      <article class="tech">
+        <p class="tech-no">SPEC<span>01</span></p>
+        <div><h3 class="tech-h">120名の自社技術者・職人</h3><p class="tech-d">監督・技術者・職人まで自社雇用。下請けに丸投げしない直接施工で、品質と工程を確実にコントロールします。</p></div>
+      </article>
+      <article class="tech">
+        <p class="tech-no">SPEC<span>02</span></p>
+        <div><h3 class="tech-h">大型重機・建機の自社保有</h3><p class="tech-d">バックホー・クレーン・ダンプなど、現場に必要な重機を自社で保有。必要なタイミングで即時対応が可能です。</p></div>
+      </article>
+      <article class="tech">
+        <p class="tech-no">SPEC<span>03</span></p>
+        <div><h3 class="tech-h">ICT施工・3D測量への対応</h3><p class="tech-d">国土交通省推進のICT施工に対応。3D測量・自動操舵建機を活用し、生産性と精度を両立しています。</p></div>
+      </article>
+      <article class="tech">
+        <p class="tech-no">SPEC<span>04</span></p>
+        <div><h3 class="tech-h">一級土木施工管理技士・建築士在籍</h3><p class="tech-d">国家資格を持つ技術者が多数在籍。公共工事から大規模建築まで、責任を持って施工管理を行います。</p></div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section id="safety" class="section">
+  <div class="container">
+    <p class="s-eyebrow">// Safety & Quality</p>
+    <h2 class="s-title">徹底した<em>安全・品質管理</em>。</h2>
+    <p class="s-lead">建設業の最重要事項である「無事故」「高品質」を、システムで担保しています。</p>
+    <div class="safety">
+      <article class="safe">
+        <h3 class="safe-h">安全衛生管理体制</h3>
+        <p class="safe-d">専任の安全衛生管理者を配置し、現場ごとのリスクアセスメントを徹底。無事故継続率98%の実績を維持しています。</p>
+        <ul class="safe-list"><li>毎日の朝礼・KY活動</li><li>定期的な安全パトロール</li><li>新規入場者教育の徹底</li></ul>
+      </article>
+      <article class="safe">
+        <h3 class="safe-h">品質管理</h3>
+        <p class="safe-d">設計図書通りの施工はもちろん、お客様の期待を超える品質を実現するための独自の品質チェック体制を構築しています。</p>
+        <ul class="safe-list"><li>三段階の品質チェック</li><li>第三者検査の活用</li><li>品質記録の文書化</li></ul>
+      </article>
+      <article class="safe">
+        <h3 class="safe-h">環境配慮</h3>
+        <p class="safe-d">建設リサイクル法対応、CO2排出量の削減、近隣環境への配慮など、地域と地球環境への責任を果たします。</p>
+        <ul class="safe-list"><li>建設廃材のリサイクル</li><li>低騒音工法の採用</li><li>近隣住民への事前説明</li></ul>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section id="recruit" class="section">
+  <div class="container">
+    <div class="recruit">
+      <div>
+        <p class="recruit-cat">// Recruit</p>
+        <h3 class="recruit-h">私たちと、<br />街の未来をつくる仲間を募集しています。</h3>
+        <p class="recruit-d">監督・技術者・職人・営業まで、各職種で新卒・中途を募集しています。経験者はもちろん、未経験から技術を身につけたい方も歓迎します。</p>
+      </div>
+      <div class="recruit-cta">
+        <a href="#contact" class="recruit-btn recruit-btn-primary">採用情報を見る →</a>
+        <a href="#contact" class="recruit-btn recruit-btn-secondary">エントリー</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="faq" class="section section-soft">
+  <div class="container container-narrow">
+    <p class="s-eyebrow">// FAQ</p>
+    <h2 class="s-title">よくあるご質問。</h2>
+    <div class="faq">
+      <div class="faq-item" data-open="true"><button class="faq-q" type="button" aria-expanded="true"><span class="faq-qn">Q01</span><span class="faq-qt">小規模工事のご依頼も可能ですか？</span><span class="faq-icon">+</span></button><div class="faq-a"><p class="faq-a-inner">はい、大規模工事はもちろん、小規模なリフォームや住宅工事も対応しております。お気軽にお問い合わせください。</p></div></div>
+      <div class="faq-item"><button class="faq-q" type="button" aria-expanded="false"><span class="faq-qn">Q02</span><span class="faq-qt">対応可能なエリアは？</span><span class="faq-icon">+</span></button><div class="faq-a"><p class="faq-a-inner">主に奈良県内・大阪南部を中心としておりますが、内容によっては他エリアにも対応いたします。</p></div></div>
+      <div class="faq-item"><button class="faq-q" type="button" aria-expanded="false"><span class="faq-qn">Q03</span><span class="faq-qt">概算見積もりは無料ですか？</span><span class="faq-icon">+</span></button><div class="faq-a"><p class="faq-a-inner">概算お見積もりは無料で承ります。詳細設計を要する場合は別途ご相談させていただきます。</p></div></div>
+      <div class="faq-item"><button class="faq-q" type="button" aria-expanded="false"><span class="faq-qn">Q04</span><span class="faq-qt">公共工事の入札参加は可能ですか？</span><span class="faq-icon">+</span></button><div class="faq-a"><p class="faq-a-inner">各種建設業許可・経審を取得しており、公共工事の元請けとしての受注実績も豊富です。</p></div></div>
+      <div class="faq-item"><button class="faq-q" type="button" aria-expanded="false"><span class="faq-qn">Q05</span><span class="faq-qt">採用は新卒・中途どちらも受け付けていますか？</span><span class="faq-icon">+</span></button><div class="faq-a"><p class="faq-a-inner">はい、新卒・中途ともに通年で募集しております。未経験者の方も歓迎しております。</p></div></div>
+      <div class="faq-item"><button class="faq-q" type="button" aria-expanded="false"><span class="faq-qn">Q06</span><span class="faq-qt">緊急対応はしていますか？</span><span class="faq-icon">+</span></button><div class="faq-a"><p class="faq-a-inner">既存お客様の緊急対応は24時間体制で承っております。新規のお客様もまずはお電話ください。</p></div></div>
+    </div>
+  </div>
+</section>
+
+<section id="contact" class="contact">
+  <div class="container container-narrow">
+    <p class="s-eyebrow" style="justify-content:center">// Contact</p>
+    <h2 class="s-title" style="text-align:center">ご相談・お見積もりは、<br /><em>お気軽に。</em></h2>
+    <p class="s-lead" style="margin-left:auto;margin-right:auto;text-align:center">工事のご相談、概算お見積もり、採用エントリーなど、お電話・LINE・フォームよりどうぞ。</p>
+    <div class="contact-cards">
+      <div class="ccard"><p class="ccard-l">TEL</p><p class="ccard-v">XXX-XXXX-XXXX</p><p class="ccard-n">平日 8:00-17:30</p></div>
+      <div class="ccard"><p class="ccard-l">LINE</p><p class="ccard-v">お問い合わせ<br />はこちら</p><p class="ccard-n">24時間 受付中</p></div>
+      <div class="ccard"><p class="ccard-l">FORM</p><p class="ccard-v">お問い合わせ<br />はこちら</p><p class="ccard-n">24時間 受付中</p></div>
+    </div>
+    <div class="contact-buttons">
+      <a href="#" class="btn-c-line"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3C6.48 3 2 6.58 2 11c0 3.96 3.58 7.27 8.4 7.92.33.07.78.22.89.5.1.25.07.65.03.9l-.14.86c-.05.25-.2.99.87.54s5.75-3.39 7.84-5.8C21.32 14.36 22 12.77 22 11c0-4.42-4.48-8-10-8z"/></svg>お問い合わせはこちら</a>
+      <a href="#" class="btn-c-primary">SEND INQUIRY →</a>
+    </div>
+    <p class="contact-note">※お返事は最短当日・通常24時間以内にいたします（土日祝を除く）。</p>
+    <div class="sample-mark">※本ページはご提案用サンプルとして作成しております。掲載情報は仮の内容を含みます。</div>
+  </div>
+</section>
+
+</main>
+
+<footer class="site-footer">
+  <div class="container footer-inner">
+    <div class="footer-brand">
+      <a href="#top" class="brand"><span class="brand-mark">優美</span><span class="brand-text"><span class="brand-jp">優美総合建設</span><span class="brand-en">YUMI CONSTRUCTION</span></span></a>
+      <p class="footer-lead">株式会社優美総合建設<br />街と暮らしの基盤を、つくる。<br />総合建設会社として、地域社会の基盤づくりに貢献します。</p>
+    </div>
+    <div><p class="footer-h">// Business</p><ul class="footer-list"><li>土木工事</li><li>建築工事</li><li>住宅建築</li><li>公共工事</li><li>採用情報</li></ul></div>
+    <div><p class="footer-h">// Company</p><ul class="footer-list"><li>住所：〇〇県〇〇市〇〇町〇-〇-〇</li><li>TEL：XXX-XXXX-XXXX</li><li>Mail：info@example.com</li><li>営業：平日 8:00-17:30</li></ul></div>
+  </div>
+  <div class="footer-bottom">
+    <p>© <span id="year"></span> YUMI CONSTRUCTION Co., Ltd.</p>
+    <ul style="display:flex;gap:18px;"><li><a href="#">PRIVACY POLICY</a></li><li><a href="#">TERMS</a></li></ul>
+    <p class="footer-sample">※本ページはご提案用サンプルとして作成しております。掲載情報は仮の内容を含みます。</p>
+  </div>
+</footer>
+
+<script>
+document.querySelectorAll(".faq-item .faq-q").forEach(function(btn){btn.addEventListener("click",function(){var item=btn.closest(".faq-item");var open=item.getAttribute("data-open")==="true";document.querySelectorAll(".faq-item").forEach(function(o){o.setAttribute("data-open","false");var q=o.querySelector(".faq-q");if(q)q.setAttribute("aria-expanded","false")});if(!open){item.setAttribute("data-open","true");btn.setAttribute("aria-expanded","true")}})});
+var t=document.getElementById("menuToggle"),m=document.getElementById("navMobile");if(t&&m){t.addEventListener("click",function(){var e=t.getAttribute("aria-expanded")==="true";t.setAttribute("aria-expanded",String(!e));m.classList.toggle("is-open")})}
+var h=document.getElementById("header");window.addEventListener("scroll",function(){if(window.scrollY>20)h.classList.add("is-scrolled");else h.classList.remove("is-scrolled")},{passive:true});
+var y=document.getElementById("year");if(y)y.textContent=String(new Date().getFullYear());
+</script>
+</body>
+</html>
