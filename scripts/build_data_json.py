@@ -25,6 +25,10 @@ DATE = "2026-05-30"
 
 os.makedirs(os.path.dirname(OUT), exist_ok=True)
 
+# 送信者名（DM長文内で使用、テンプレ可変）
+SENDER_NAME = "STAGE UP"          # 既存シート用
+SENDER_NAME_NEW = "株式会社MORIKA"  # 新シート用
+
 # ============================================================
 # 業種別 DM 短文（タスク管理用）パーツ
 # ============================================================
@@ -245,7 +249,7 @@ def build_dm_long(name, addr, url, industry, hp_yn, mobile):
         f"{name} 御中\n"
         f"\n"
         f"突然のご連絡失礼いたします。\n"
-        f"STAGE UPと申します。\n"
+        f"{SENDER_NAME}と申します。\n"
         f"\n"
         f"現在、設立から間もない法人様を中心に、\n"
         f"ホームページ・LP制作、問い合わせ導線の整備をご提案しております。\n"
@@ -437,6 +441,8 @@ for slug in slugs:
 
     dm_short = build_dm_short(name, addr if addr else "大阪府", url, industry)
     dm_long = build_dm_long(name, addr if addr else "大阪府", url, industry, hp_yn, mobile)
+    # MORIKA名義版（新シート用）
+    dm_morika = dm_long.replace(SENDER_NAME + "と申します", SENDER_NAME_NEW + "と申します")
 
     if old and old[13]:
         n13 = re.sub(r"業種(不明|推定)：[^／]*", f"業種推定：{industry}", old[13])
@@ -452,10 +458,28 @@ for slug in slugs:
         note.replace("\n", " ").replace("\r", "").replace("\\n", " "),
         dm_short, url,
     ]
+    # 新シート用 11列 行
+    # [管理番号, 会社名, 住所, HP URL, LINE有無, 業種予測, DM送付(空), 面談状況(空), 備考(空), LP URL, DM文章]
+    new_row = [
+        no,                              # A 管理番号
+        name,                            # B 会社名
+        addr,                            # C 郵便番号付き住所
+        hp_url,                          # D HP URL
+        line_yn,                         # E LINE有無
+        industry,                        # F 業種予測
+        "",                              # G DM送付 (空白固定)
+        "",                              # H 面談状況 (空白固定)
+        "",                              # I 備考 (空白固定 - 後で手入力)
+        url,                             # J LP URL
+        # K DM文章 (MORIKA名義の長文・改行あり) はApps Script側でdm_morikaから注入
+    ]
+
     records.append({
         "no": no,
         "row": row,
         "dm_long": dm_long,
+        "new_row": new_row,
+        "dm_morika": dm_morika,
     })
 
 records.sort(key=lambda x: x["no"])
@@ -465,12 +489,18 @@ records.sort(key=lambda x: x["no"])
 # ============================================================
 HEADERS_PRIORITY = HEADERS + ['印刷用DM文章']  # 17列
 HEADERS_TASK     = HEADERS                    # 16列
+# 新シート用 11列
+HEADERS_NEW = [
+    '管理番号','会社名','住所','HP URL','LINE有無','業種予測',
+    'DM送付','面談状況','備考','LP URL','DM文章'
+]
 
 WIDTHS_PRIORITY = [90,60,220,120,300,90,180,60,60,70,140,80,80,260,380,280,420]  # 17
 WIDTHS_TASK     = [90,60,220,120,300,90,180,60,60,70,140,80,80,260,380,280]      # 16
+WIDTHS_NEW      = [60,240,300,200,70,140,80,80,240,280,420]                       # 11
 
 out = {
-    "schema_version": "1.1",
+    "schema_version": "1.2",
     "generated_at": datetime.now().strftime("%Y-%m-%dT%H:%M:%S"),
     "date": DATE,
     # 後方互換のため旧キーも保持（v5の.gsはこれを参照する）
@@ -485,6 +515,12 @@ out = {
     "num_cols_task":     16,
     "column_widths_priority": WIDTHS_PRIORITY,
     "column_widths_task":     WIDTHS_TASK,
+    # v7 新シート用キー
+    "headers_new": HEADERS_NEW,
+    "num_cols_new": 11,
+    "column_widths_new": WIDTHS_NEW,
+    "new_sheet_gid": 2079338722,
+    "sender_name_new": SENDER_NAME_NEW,
     "count": len(records),
     "records": records,
 }
