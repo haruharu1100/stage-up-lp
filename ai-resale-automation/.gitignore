@@ -1,0 +1,26 @@
+# ============================================================
+# Git管理から除外するファイル
+# ============================================================
+
+# 環境変数(APIキーが入るので絶対に上げない)
+.env
+
+# Googleサービスアカウントの鍵
+credentials/
+
+# 出力結果
+data/output/*.csv
+data/output/*.json
+
+# Python関連
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+.pytest_cache/
+
+# OS関連
+.DS_Store
+Thumbs.db
