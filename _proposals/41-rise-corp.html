@@ -3,398 +3,237 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5" />
-<meta name="theme-color" content="#0c0c0e" />
+<meta name="theme-color" content="#8b3a1d" />
 <meta name="robots" content="noindex, nofollow" />
-
-<title>株式会社RISE CORPORATION｜成長を、形に。</title>
-<meta name="description" content="株式会社RISE CORPORATIONは、法人のお客様の事業成長を支える総合コーポレートサービス企業です。" />
-
+<title>株式会社RISE CORPORATION｜おいしさと、くつろぎの時間を。</title>
+<meta name="description" content="株式会社RISE CORPORATIONは素材と調理にこだわり、おいしさとくつろぎの時間をお届けいたします。" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@400;500;600;700&display=swap" rel="stylesheet" />
-
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700&family=Noto+Serif+JP:wght@500;600&display=swap" rel="stylesheet" />
 <style>
 :root{
-  --bg:#0c0c0e;
-  --bg-2:#16161a;
-  --bg-3:#1f1f24;
-  --paper:#fafafa;
-  --ink:#0a0a0c;
-  --line-d:rgba(255,255,255,.08);
-  --line-d2:rgba(255,255,255,.15);
-  --text:#e8e6e0;
-  --text-2:#b5b2a8;
-  --text-3:#807d72;
-  --gold:#c9a14a;
-  --gold-2:#b08735;
-  --gold-soft:#e2c989;
+  --bg: #fdf6ee;
+  --paper: #ffffff;
+  --ink: #2c1810;
+  --muted: #6e4a3a;
+  --primary: #8b3a1d;
+  --accent: #d99a4c;
+  --border: #ebd8c0;
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-html{scroll-behavior:smooth;-webkit-text-size-adjust:100%;scroll-padding-top:80px}
-body{font-family:"Inter","Noto Sans JP",sans-serif;background:var(--bg);color:var(--text-2);font-size:15px;line-height:1.85;-webkit-font-smoothing:antialiased;letter-spacing:.01em}
+html{scroll-behavior:smooth;scroll-padding-top:80px;-webkit-text-size-adjust:100%}
+body{font-family:"Noto Sans JP",sans-serif;background:var(--bg);color:var(--muted);font-size:15px;line-height:1.95;-webkit-font-smoothing:antialiased}
 img{display:block;max-width:100%;height:auto}
 a{color:inherit;text-decoration:none;transition:color .2s,opacity .2s}
 button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 ul,ol{list-style:none}
-
-.sample-bar{position:fixed;top:0;left:0;right:0;z-index:60;background:#000;color:var(--gold);padding:8px 16px;text-align:center;font-size:11px;letter-spacing:.2em;font-family:"Cormorant Garamond",serif;font-style:italic;border-bottom:1px solid var(--gold-2)}
-body{padding-top:32px}
-.container{width:100%;max-width:1240px;margin:0 auto;padding:0 24px}
-.container-narrow{max-width:880px}
+.container{width:100%;max-width:1180px;margin:0 auto;padding:0 24px}
 @media(min-width:768px){.container{padding:0 40px}}
+.sample-bar{position:fixed;top:0;left:0;right:0;z-index:60;background:var(--ink);color:#fff;padding:7px 16px;text-align:center;font-size:11px;letter-spacing:.1em;opacity:.92}
+body{padding-top:30px}
 
 /* Header */
-.site-header{position:fixed;top:32px;left:0;right:0;z-index:50;background:rgba(12,12,14,.78);backdrop-filter:blur(20px);border-bottom:1px solid transparent;transition:border-color .3s}
-.site-header.is-scrolled{border-bottom-color:var(--line-d2)}
-.header-inner{display:flex;align-items:center;justify-content:space-between;gap:16px;height:76px}
-.brand{display:flex;align-items:center;gap:14px}
-.brand-mark{font-family:"Cormorant Garamond",serif;font-weight:600;font-style:italic;width:44px;height:44px;display:grid;place-items:center;background:transparent;color:var(--gold);font-size:32px;border:1px solid var(--gold-2);border-radius:0}
-.brand-text{display:flex;flex-direction:column;line-height:1.1}
-.brand-name{font-family:"Cormorant Garamond",serif;font-weight:600;color:var(--text);font-size:20px;letter-spacing:.2em}
-.brand-sub{font-size:9px;color:var(--gold);letter-spacing:.4em;margin-top:4px;font-family:"Inter",sans-serif;font-weight:500;text-transform:uppercase}
-
-.nav-desktop{display:none;gap:32px}
-.nav-desktop a{font-family:"Cormorant Garamond",serif;font-style:italic;font-size:15px;color:var(--text-2);font-weight:500;letter-spacing:.05em}
-.nav-desktop a:hover{color:var(--gold)}
+.site-header{position:fixed;top:30px;left:0;right:0;z-index:50;background:rgba(255,255,255,.94);backdrop-filter:blur(14px);border-bottom:1px solid transparent;transition:border-color .3s}
+.site-header.is-scrolled{border-bottom-color:var(--border)}
+.header-inner{display:flex;align-items:center;justify-content:space-between;gap:16px;height:70px}
+.brand{display:flex;align-items:center;gap:12px}
+.brand-mark{width:42px;height:42px;display:grid;place-items:center;background:var(--primary);color:#fff;font-family:"Noto Serif JP",serif;font-weight:600;font-size:18px;border-radius:6px}
+.brand-name{font-family:"Noto Serif JP",serif;font-weight:600;color:var(--ink);font-size:16px;letter-spacing:.05em}
+.nav-desktop{display:none;gap:30px}
+.nav-desktop a{font-size:13px;color:var(--muted);font-weight:500;letter-spacing:.04em}
+.nav-desktop a:hover{color:var(--primary)}
 @media(min-width:1024px){.nav-desktop{display:flex}}
-
-.header-cta a{font-family:"Cormorant Garamond",serif;font-style:italic;display:inline-flex;align-items:center;gap:10px;background:transparent;color:var(--gold);padding:10px 20px;border:1px solid var(--gold-2);font-size:13px;font-weight:600;letter-spacing:.1em}
-.header-cta a:hover{background:var(--gold);color:var(--bg)}
-
-.menu-toggle{width:42px;height:42px;display:grid;gap:5px;align-content:center;justify-items:center;background:transparent;border:1px solid var(--line-d2)}
-.menu-toggle span{width:18px;height:1px;background:var(--gold);transition:transform .3s,opacity .3s}
-.menu-toggle[aria-expanded="true"] span:nth-child(1){transform:translateY(6px) rotate(45deg)}
-.menu-toggle[aria-expanded="true"] span:nth-child(2){opacity:0}
-.menu-toggle[aria-expanded="true"] span:nth-child(3){transform:translateY(-6px) rotate(-45deg)}
-@media(min-width:1024px){.menu-toggle{display:none}}
-.nav-mobile{display:flex;flex-direction:column;max-height:0;overflow:hidden;background:var(--bg-2);border-top:1px solid var(--line-d);padding:0 24px;transition:max-height .4s,padding .3s}
-.nav-mobile.is-open{max-height:80vh;padding:8px 24px 24px}
-.nav-mobile a{padding:16px 0;border-bottom:1px solid var(--line-d);font-family:"Cormorant Garamond",serif;font-style:italic;font-size:16px;color:var(--text);letter-spacing:.05em}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;padding:14px 28px;border-radius:6px;font-weight:600;font-size:14px;letter-spacing:.08em;transition:transform .15s,opacity .15s}
+.btn-primary{background:var(--primary);color:#fff}
+.btn-primary:hover{transform:translateY(-1px);opacity:.92}
+.btn-ghost{background:transparent;color:var(--ink);border:1px solid var(--ink)}
+.btn-ghost:hover{background:var(--ink);color:var(--paper)}
+.btn-ghost-light{color:#fff;border-color:#fff}
+.btn-ghost-light:hover{background:#fff;color:var(--ink)}
+.btn-h-primary{padding:11px 22px;background:var(--primary);color:#fff;font-size:13px;font-weight:600;letter-spacing:.05em;border-radius:6px;display:inline-flex;align-items:center;gap:8px}
+.btn-h-primary:hover{opacity:.9}
 
 /* Hero */
-.hero{position:relative;padding:130px 0 100px;overflow:hidden}
-@media(min-width:768px){.hero{padding:170px 0 140px}}
-.hero::before{content:"";position:absolute;inset:0;background:radial-gradient(ellipse 80% 60% at 70% 30%,rgba(201,161,74,.08) 0,transparent 50%),radial-gradient(ellipse 50% 40% at 20% 80%,rgba(201,161,74,.05) 0,transparent 50%)}
-.hero::after{content:"";position:absolute;left:0;top:0;bottom:0;width:1px;background:linear-gradient(180deg,transparent 0%,var(--gold) 50%,transparent 100%)}
-.hero-inner{position:relative;display:grid;gap:64px;align-items:center}
-@media(min-width:980px){.hero-inner{grid-template-columns:1.2fr 1fr;gap:80px}}
-.hero-num{font-family:"Cormorant Garamond",serif;font-style:italic;color:var(--gold);font-size:14px;letter-spacing:.4em;margin-bottom:24px;text-transform:uppercase}
-.hero-num::before{content:"— "}
-.hero-title{font-family:"Cormorant Garamond",serif;font-weight:500;color:var(--text);font-size:50px;line-height:1.05;letter-spacing:.02em}
-@media(min-width:640px){.hero-title{font-size:72px}}
-@media(min-width:1024px){.hero-title{font-size:92px}}
-.hero-title em{font-style:italic;color:var(--gold);font-weight:500}
-.hero-title-jp{margin-top:24px;font-family:"Noto Sans JP",sans-serif;font-weight:500;color:var(--text);font-size:17px;line-height:1.7;letter-spacing:.15em}
-@media(min-width:768px){.hero-title-jp{font-size:20px}}
-.hero-sub{margin-top:32px;color:var(--text-3);font-size:14px;line-height:1.95;max-width:540px}
-@media(min-width:768px){.hero-sub{font-size:15px}}
-.hero-cta{margin-top:48px;display:flex;flex-wrap:wrap;gap:14px}
-.btn-primary{font-family:"Cormorant Garamond",serif;font-style:italic;display:inline-flex;align-items:center;justify-content:center;gap:12px;background:var(--gold);color:var(--bg);padding:18px 36px;font-weight:600;font-size:15px;letter-spacing:.1em}
-.btn-primary:hover{background:var(--gold-soft)}
-.btn-secondary{font-family:"Cormorant Garamond",serif;font-style:italic;display:inline-flex;align-items:center;justify-content:center;gap:12px;background:transparent;color:var(--text);padding:18px 36px;border:1px solid var(--line-d2);font-weight:500;font-size:15px;letter-spacing:.1em}
-.btn-secondary:hover{border-color:var(--gold);color:var(--gold)}
+.hero{padding:130px 0 80px;background:linear-gradient(180deg,var(--bg) 0%,color-mix(in srgb,var(--bg) 85%,var(--primary) 15%) 100%);position:relative;overflow:hidden}
+@media(min-width:768px){.hero{padding:170px 0 110px}}
+.hero-eyebrow{display:inline-flex;align-items:center;gap:12px;font-family:"Noto Serif JP",serif;font-size:13px;color:var(--primary);letter-spacing:.25em;margin-bottom:24px}
+.hero-eyebrow::before{content:"";display:inline-block;width:28px;height:1px;background:var(--accent)}
+.hero-eyebrow-light{color:#fff}
+.hero-eyebrow-light::before{background:#fff}
+.hero-title{font-family:"Noto Serif JP",serif;font-weight:600;color:var(--ink);font-size:34px;line-height:1.45;letter-spacing:.05em}
+@media(min-width:640px){.hero-title{font-size:44px}}
+@media(min-width:1024px){.hero-title{font-size:54px}}
+.hero-title-light{color:#fff;text-shadow:0 2px 12px rgba(0,0,0,.3)}
+.hero-sub{margin-top:28px;color:var(--muted);font-size:15px;line-height:2.05;max-width:560px}
+.hero-sub-light{color:rgba(255,255,255,.92)}
+.hero-cta{margin-top:36px;display:flex;flex-wrap:wrap;gap:14px}
 
-.hero-stats{padding:40px 36px;background:linear-gradient(135deg,rgba(255,255,255,.02) 0%,rgba(255,255,255,.04) 100%);border:1px solid var(--line-d2);position:relative}
-.hero-stats::before{content:"";position:absolute;top:-1px;left:-1px;width:30px;height:30px;border-top:2px solid var(--gold);border-left:2px solid var(--gold)}
-.hero-stats::after{content:"";position:absolute;bottom:-1px;right:-1px;width:30px;height:30px;border-bottom:2px solid var(--gold);border-right:2px solid var(--gold)}
-.hero-stats-h{font-family:"Cormorant Garamond",serif;font-style:italic;color:var(--gold);font-size:14px;letter-spacing:.2em;margin-bottom:24px;text-transform:uppercase}
-.hero-stats-list{display:grid;gap:18px}
-.hero-stats-row{display:grid;grid-template-columns:1fr auto;gap:14px;padding:14px 0;border-bottom:1px solid var(--line-d);align-items:baseline}
-.hero-stats-row:last-child{border-bottom:0}
-.hero-stats-l{font-family:"Inter",sans-serif;font-size:11px;color:var(--text-3);letter-spacing:.15em;text-transform:uppercase}
-.hero-stats-v{font-family:"Cormorant Garamond",serif;font-weight:600;color:var(--gold);font-size:26px;line-height:1}
-.hero-stats-v small{font-size:.5em;margin-left:2px;color:var(--text-2)}
+/* Hero variations */
+.hero-split .hero-grid{display:grid;gap:48px;align-items:center}
+@media(min-width:980px){.hero-split .hero-grid{grid-template-columns:1.1fr 1fr;gap:80px}}
+.hero-split .hero-visual{aspect-ratio:5/4;overflow:hidden;border-radius:8px;background:var(--border)}
+.hero-split .hero-visual img{width:100%;height:100%;object-fit:cover}
 
-/* Section base */
-.section{padding:120px 0;position:relative}
-@media(min-width:768px){.section{padding:160px 0}}
-.section-bg-2{background:var(--bg-2)}
-.section-light{background:var(--paper);color:var(--ink)}
+.hero-center .hero-center-inner{max-width:780px;margin:0 auto;text-align:center}
+.hero-center .hero-eyebrow{justify-content:center}
+.hero-center .hero-sub{margin-left:auto;margin-right:auto}
+.hero-center .hero-cta{justify-content:center}
+.hero-center .hero-strip{margin-top:60px;aspect-ratio:21/9;overflow:hidden}
+.hero-center .hero-strip img{width:100%;height:100%;object-fit:cover}
 
-.s-eyebrow{display:inline-flex;align-items:center;gap:14px;font-family:"Cormorant Garamond",serif;font-style:italic;font-size:14px;color:var(--gold);letter-spacing:.3em;margin-bottom:24px;text-transform:uppercase}
-.s-eyebrow::before{content:"";display:inline-block;width:40px;height:1px;background:var(--gold)}
-.section-light .s-eyebrow{color:var(--gold-2)}
-.section-light .s-eyebrow::before{background:var(--gold-2)}
-.s-title{font-family:"Cormorant Garamond",serif;font-weight:500;color:var(--text);font-size:38px;line-height:1.2;letter-spacing:.02em}
-.section-light .s-title{color:var(--ink)}
-@media(min-width:768px){.s-title{font-size:56px}}
-.s-title em{font-style:italic;color:var(--gold);font-weight:500}
-.s-lead{margin-top:24px;color:var(--text-3);font-size:15px;line-height:1.95;max-width:680px}
-.section-light .s-lead{color:#4a4a4a}
+.hero-fullbg{padding:170px 0 130px;background-size:cover;background-position:center}
+.hero-fullbg .hero-fullbg-inner{max-width:720px}
 
-/* Vision (代表メッセージ) */
-.vision{margin-top:64px;display:grid;gap:64px;align-items:start}
-@media(min-width:980px){.vision{grid-template-columns:.85fr 1.15fr;gap:96px}}
-.vision-img{aspect-ratio:4/5;overflow:hidden;background:var(--bg-2);position:relative}
-.vision-img img{width:100%;height:100%;object-fit:cover;filter:grayscale(.4) contrast(1.05)}
-.vision-img::before{content:"";position:absolute;top:0;right:0;width:100%;height:100%;background:linear-gradient(135deg,transparent 60%,rgba(12,12,14,.6) 100%);pointer-events:none}
-.vision-text p{margin-top:24px;color:var(--text-2);font-size:15px;line-height:2.1;font-weight:400}
-.vision-text p:first-of-type{margin-top:32px}
-.vision-sign{margin-top:40px;padding-top:24px;border-top:1px solid var(--line-d);font-family:"Cormorant Garamond",serif;font-style:italic;color:var(--gold);font-size:13px;letter-spacing:.15em}
-.vision-sign strong{display:block;margin-top:8px;font-size:20px;color:var(--text);font-style:normal;letter-spacing:.1em;font-family:"Noto Sans JP",sans-serif;font-weight:500}
+/* Section */
+.section{padding:90px 0}
+@media(min-width:768px){.section{padding:120px 0}}
+.section-soft{background:color-mix(in srgb,var(--bg) 92%,var(--ink) 8%)}
+.section-primary{background:var(--primary);color:#fff}
+.s-eyebrow{display:inline-flex;align-items:center;gap:12px;font-family:"Noto Serif JP",serif;font-size:13px;color:var(--primary);letter-spacing:.25em;margin-bottom:20px}
+.s-eyebrow::before{content:"";display:inline-block;width:28px;height:1px;background:var(--accent)}
+.section-primary .s-eyebrow{color:#fff}
+.section-primary .s-eyebrow::before{background:#fff}
+.s-title{font-family:"Noto Serif JP",serif;font-weight:600;color:var(--ink);font-size:30px;line-height:1.5;letter-spacing:.05em}
+@media(min-width:768px){.s-title{font-size:40px}}
+.section-primary .s-title{color:#fff}
+.s-lead{margin-top:22px;color:var(--muted);font-size:15px;line-height:2.1;max-width:720px}
+.section-primary .s-lead{color:rgba(255,255,255,.85)}
 
-/* Business */
-.biz-grid{margin-top:64px;display:grid;gap:24px}
+/* Business cards */
+.biz-grid{margin-top:56px;display:grid;gap:22px}
 @media(min-width:768px){.biz-grid{grid-template-columns:repeat(3,1fr)}}
-.biz{padding:40px 32px;background:var(--bg);border:1px solid var(--line-d2);position:relative;transition:all .4s}
-.biz::before{content:"";position:absolute;top:-1px;left:-1px;width:24px;height:24px;border-top:2px solid var(--gold);border-left:2px solid var(--gold);transition:width .3s,height .3s}
-.biz:hover{border-color:var(--gold-2);transform:translateY(-4px)}
-.biz:hover::before{width:40px;height:40px}
-.biz-no{font-family:"Cormorant Garamond",serif;font-style:italic;font-size:42px;color:var(--gold);line-height:1;font-weight:500}
-.biz-h{margin-top:18px;font-family:"Cormorant Garamond",serif;font-weight:500;color:var(--text);font-size:22px;line-height:1.4;letter-spacing:.05em}
-.biz-h-jp{margin-top:8px;font-family:"Noto Sans JP",sans-serif;font-size:14px;color:var(--text);font-weight:500}
-.biz-d{margin-top:16px;font-size:14px;color:var(--text-3);line-height:1.9}
+.biz-card{padding:36px 30px;background:var(--paper);border:1px solid var(--border);border-radius:8px;transition:transform .2s,box-shadow .2s}
+.biz-card:hover{transform:translateY(-3px);box-shadow:0 20px 40px -20px rgba(0,0,0,.15)}
+.biz-no{font-family:"Noto Serif JP",serif;font-size:13px;color:var(--accent);letter-spacing:.2em;font-weight:600}
+.biz-h{margin-top:12px;font-family:"Noto Serif JP",serif;font-size:20px;color:var(--ink);font-weight:600;line-height:1.5}
+.biz-d{margin-top:14px;font-size:14px;color:var(--muted);line-height:2}
 
-/* Pillars (3つの強み) */
-.pillars{margin-top:64px;display:grid;gap:0;border-top:1px solid var(--line-d2)}
-.pillar{padding:48px 0;border-bottom:1px solid var(--line-d2);display:grid;gap:32px}
-@media(min-width:980px){.pillar{grid-template-columns:200px 1fr;gap:64px;align-items:start}}
-.pillar-no{font-family:"Cormorant Garamond",serif;font-style:italic;color:var(--gold);font-size:14px;letter-spacing:.3em;text-transform:uppercase}
-.pillar-no span{display:block;font-weight:500;font-size:54px;color:var(--text);margin-top:12px;font-style:italic;letter-spacing:.02em}
-.pillar-h{font-family:"Cormorant Garamond",serif;font-weight:500;color:var(--text);font-size:26px;line-height:1.4;letter-spacing:.04em}
-.pillar-h-jp{margin-top:8px;font-family:"Noto Sans JP",sans-serif;color:var(--text);font-size:15px;font-weight:500}
-.pillar-d{margin-top:18px;color:var(--text-3);font-size:14px;line-height:2.05}
-
-/* Voice */
-.voice-grid{margin-top:64px;display:grid;gap:32px}
-@media(min-width:768px){.voice-grid{grid-template-columns:repeat(2,1fr)}}
-.voice{padding:40px 36px;background:transparent;border-left:2px solid var(--gold);position:relative}
-.voice-mark{position:absolute;top:8px;right:32px;font-family:"Cormorant Garamond",serif;font-style:italic;font-size:64px;color:var(--gold);line-height:1;opacity:.4}
-.voice-text{font-family:"Cormorant Garamond",serif;color:var(--text);font-size:18px;line-height:1.85;font-weight:400;font-style:italic;letter-spacing:.02em}
-.voice-by{margin-top:24px;padding-top:18px;border-top:1px solid var(--line-d);font-family:"Inter",sans-serif;font-size:13px;color:var(--text-3);letter-spacing:.1em}
-.voice-by strong{color:var(--gold);letter-spacing:.15em;text-transform:uppercase;font-size:11px;display:block;margin-bottom:4px;font-style:normal}
-
-/* FAQ */
-.faq{margin-top:64px;border-top:1px solid var(--line-d2)}
-.faq-item{border-bottom:1px solid var(--line-d2)}
-.faq-q{width:100%;text-align:left;padding:32px 0;display:flex;align-items:flex-start;gap:32px}
-.faq-qn{font-family:"Cormorant Garamond",serif;font-style:italic;color:var(--gold);font-size:18px;flex-shrink:0;width:60px;letter-spacing:.1em}
-.faq-qt{flex:1;font-family:"Cormorant Garamond",serif;font-weight:500;color:var(--text);font-size:18px;line-height:1.55;letter-spacing:.02em}
-.faq-icon{flex-shrink:0;font-family:"Cormorant Garamond",serif;color:var(--gold);font-size:26px;transition:transform .3s;line-height:1;font-weight:300}
-.faq-item[data-open="true"] .faq-icon{transform:rotate(45deg)}
-.faq-a{max-height:0;overflow:hidden;transition:max-height .5s}
-.faq-item[data-open="true"] .faq-a{max-height:500px}
-.faq-a-inner{padding:0 0 32px 92px;font-size:14px;color:var(--text-3);line-height:2.05}
+/* Reasons */
+.reason-list{margin-top:56px;display:grid;gap:0;border-top:1px solid var(--border)}
+.reason{padding:30px 0;border-bottom:1px solid var(--border);display:grid;gap:16px}
+@media(min-width:768px){.reason{grid-template-columns:160px 1fr;gap:40px;align-items:start}}
+.reason-no{font-family:"Noto Serif JP",serif;font-size:13px;color:var(--accent);letter-spacing:.2em;font-weight:600}
+.reason-no span{display:block;font-size:30px;color:var(--ink);margin-top:6px;font-weight:600}
+.reason-h{font-family:"Noto Serif JP",serif;font-size:19px;color:var(--ink);font-weight:600;line-height:1.5}
+.reason-d{margin-top:14px;color:var(--muted);font-size:14px;line-height:2.05}
 
 /* Contact */
-.contact{padding:130px 0;background:var(--bg-2);position:relative}
-.contact::before{content:"";position:absolute;top:0;left:0;width:100%;height:1px;background:linear-gradient(90deg,transparent 0%,var(--gold) 50%,transparent 100%)}
-@media(min-width:768px){.contact{padding:170px 0}}
-.contact-cards{margin-top:64px;display:grid;gap:16px}
+.contact{padding:100px 0 120px;background:color-mix(in srgb,var(--bg) 92%,var(--primary) 8%)}
+.contact-cards{margin-top:50px;display:grid;gap:0;background:var(--paper);border:1px solid var(--border);border-radius:8px;overflow:hidden}
 @media(min-width:768px){.contact-cards{grid-template-columns:repeat(3,1fr)}}
-.ccard{padding:36px 28px;background:var(--bg);border:1px solid var(--line-d2);text-align:center;position:relative}
-.ccard::before{content:"";position:absolute;top:0;left:50%;transform:translateX(-50%);width:40px;height:2px;background:var(--gold)}
-.ccard-l{font-family:"Cormorant Garamond",serif;font-style:italic;font-size:14px;letter-spacing:.2em;color:var(--gold);text-transform:uppercase;margin-top:8px}
-.ccard-v{margin-top:14px;font-family:"Cormorant Garamond",serif;font-weight:500;color:var(--text);font-size:22px;line-height:1.4;letter-spacing:.04em}
-.ccard-n{margin-top:12px;font-size:12px;color:var(--text-3);font-family:"Inter",sans-serif;letter-spacing:.05em}
-
-.contact-buttons{margin-top:48px;display:flex;flex-direction:column;gap:14px}
+.ccard{padding:36px 30px;text-align:center;border-bottom:1px solid var(--border)}
+@media(min-width:768px){.ccard{border-bottom:0;border-right:1px solid var(--border)}.ccard:last-child{border-right:0}}
+.ccard-l{font-family:"Noto Serif JP",serif;font-size:13px;color:var(--accent);letter-spacing:.25em;font-weight:600}
+.ccard-v{margin-top:14px;font-family:"Noto Serif JP",serif;font-size:20px;color:var(--ink);line-height:1.4;font-weight:600}
+.ccard-n{margin-top:10px;font-size:12px;color:var(--muted);line-height:1.7}
+.contact-buttons{margin-top:40px;display:flex;flex-direction:column;gap:14px}
 @media(min-width:768px){.contact-buttons{flex-direction:row;justify-content:center}}
-.btn-c-primary{font-family:"Cormorant Garamond",serif;font-style:italic;display:inline-flex;align-items:center;justify-content:center;gap:12px;background:var(--gold);color:var(--bg);padding:20px 44px;font-weight:600;font-size:15px;letter-spacing:.15em}
-.btn-c-primary:hover{background:var(--gold-soft)}
-.btn-c-line{display:inline-flex;align-items:center;justify-content:center;gap:10px;background:#06c755;color:#fff;padding:20px 44px;font-weight:600;font-size:14px;font-family:"Cormorant Garamond",serif;font-style:italic;letter-spacing:.15em}
-.contact-note{margin-top:36px;text-align:center;font-size:12px;color:var(--text-3);font-family:"Cormorant Garamond",serif;font-style:italic;letter-spacing:.1em}
-.sample-mark{margin:48px auto 0;max-width:660px;padding:16px 24px;border:1px dashed var(--gold-2);text-align:center;font-size:11px;color:var(--text-3);letter-spacing:.05em}
+.btn-line{background:#06c755;color:#fff;padding:18px 38px;border-radius:6px;font-weight:600;font-size:14px;letter-spacing:.1em;display:inline-flex;align-items:center;gap:10px}
 
-.site-footer{background:var(--bg);color:var(--text-3);padding:72px 0 32px;border-top:1px solid var(--line-d)}
+/* Sample mark */
+.sample-mark{margin:36px auto 0;max-width:720px;padding:16px 24px;border:1px dashed var(--border);background:var(--paper);text-align:center;font-size:11px;color:var(--muted);border-radius:6px}
+
+/* Footer */
+.site-footer{background:var(--ink);color:rgba(255,255,255,.7);padding:64px 0 28px}
 .footer-inner{display:grid;gap:36px}
 @media(min-width:768px){.footer-inner{grid-template-columns:1.5fr 1fr 1fr}}
-.footer-lead{margin-top:18px;font-family:"Cormorant Garamond",serif;font-style:italic;font-size:14px;line-height:1.85;color:var(--text-3);letter-spacing:.05em}
-.footer-h{font-family:"Cormorant Garamond",serif;font-style:italic;color:var(--gold);font-size:14px;letter-spacing:.2em;margin-bottom:18px;text-transform:uppercase}
-.footer-list li{margin-bottom:12px;font-size:13px;color:var(--text-3);letter-spacing:.05em}
-.footer-list a:hover{color:var(--gold)}
-.footer-bottom{margin-top:64px;padding-top:24px;border-top:1px solid var(--line-d);display:flex;flex-direction:column;gap:10px;font-size:11px;color:var(--text-3);font-family:"Cormorant Garamond",serif;font-style:italic;letter-spacing:.1em}
-@media(min-width:640px){.footer-bottom{flex-direction:row;justify-content:space-between}}
-.footer-sample{margin-top:10px;text-align:center;width:100%;font-size:10px;font-family:"Noto Sans JP",sans-serif;font-style:normal;letter-spacing:0}
+.footer-name{color:#fff;font-family:"Noto Serif JP",serif;font-weight:600;font-size:17px}
+.footer-lead{margin-top:14px;font-size:13px;line-height:1.95;color:rgba(255,255,255,.65)}
+.footer-h{font-family:"Noto Serif JP",serif;color:rgba(255,255,255,.85);font-size:13px;letter-spacing:.2em;margin-bottom:14px;font-weight:600}
+.footer-list li{margin-bottom:9px;font-size:13px;color:rgba(255,255,255,.65)}
+.footer-bottom{margin-top:48px;padding-top:22px;border-top:1px solid rgba(255,255,255,.12);font-size:11px;color:rgba(255,255,255,.45);text-align:center}
+
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
 <body>
 
-<div class="sample-bar">— SAMPLE PROPOSAL ・ PRIVATE PAGE —</div>
+<div class="sample-bar">※ご提案用サンプルページ｜本ページは公開されておりません</div>
 
 <header class="site-header" id="header">
   <div class="container header-inner">
     <a href="#top" class="brand">
       <span class="brand-mark">R</span>
-      <span class="brand-text"><span class="brand-name">RISE</span><span class="brand-sub">CORPORATION</span></span>
+      <span class="brand-name">株式会社RISE CORPORATION</span>
     </a>
     <nav class="nav-desktop">
-      <a href="#vision">Vision</a><a href="#biz">Business</a><a href="#pillars">Pillars</a><a href="#voice">Clients</a><a href="#faq">FAQ</a>
+      <a href="#biz">事業内容</a>
+      <a href="#reason">選ばれる理由</a>
+      <a href="#contact">お問い合わせ</a>
     </nav>
-    <div class="header-cta"><a href="#contact">Contact us</a></div>
-    <button class="menu-toggle" id="menuToggle" aria-label="メニュー" aria-expanded="false"><span></span><span></span><span></span></button>
-  </div>
-  <div class="nav-mobile" id="navMobile">
-    <a href="#vision">Vision</a><a href="#biz">Business</a><a href="#pillars">Pillars</a><a href="#voice">Clients</a><a href="#faq">FAQ</a><a href="#contact">Contact</a>
+    <a href="#contact" class="btn-h-primary">お問い合わせ</a>
   </div>
 </header>
 
 <main id="top">
 
-<section class="hero">
-  <div class="container hero-inner">
-    <div>
-      <p class="hero-num">No. 001 — RISE CORPORATION</p>
-      <h1 class="hero-title">Rise<br />to <em>your</em><br />next stage.</h1>
-      <p class="hero-title-jp">成長を、形に。<br />企業の次のステージへ。</p>
-      <p class="hero-sub">株式会社RISE CORPORATIONは、法人のお客様の事業成長と次のステージへの飛躍を、戦略・実行・運営の全領域で支える総合コーポレートサービス企業です。</p>
-      <div class="hero-cta">
-        <a href="#contact" class="btn-primary">Schedule a consultation</a>
-        <a href="#biz" class="btn-secondary">View business</a>
-      </div>
-    </div>
-    <aside class="hero-stats">
-      <h3 class="hero-stats-h">— Corporate Profile —</h3>
-      <div class="hero-stats-list">
-        <div class="hero-stats-row"><span class="hero-stats-l">Years of Experience</span><span class="hero-stats-v">10<small>yrs+</small></span></div>
-        <div class="hero-stats-row"><span class="hero-stats-l">Active Projects</span><span class="hero-stats-v">35<small>+</small></span></div>
-        <div class="hero-stats-row"><span class="hero-stats-l">Long-term Clients</span><span class="hero-stats-v">120<small>+</small></span></div>
-        <div class="hero-stats-row"><span class="hero-stats-l">Client Retention</span><span class="hero-stats-v">92<small>%</small></span></div>
-      </div>
-    </aside>
-  </div>
-</section>
 
-<section id="vision" class="section">
-  <div class="container">
-    <p class="s-eyebrow">— Our Vision —</p>
-    <h2 class="s-title">Build the next stage<br /><em>of your business</em>.</h2>
-    <p class="s-lead">企業の「次のステージ」への飛躍を、戦略から実行まで一気通貫でお支えする。それが私たちRISE CORPORATIONの存在意義です。</p>
-    <div class="vision">
-      <div class="vision-img"><img src="https://images.unsplash.com/photo-1559136555-9303baea8ebd?auto=format&fit=crop&w=900&q=80" alt="代表メッセージ" /></div>
-      <div class="vision-text">
-        <p>変化の激しいビジネス環境では、企業が継続的に成長するために「次の一手」を常に問われ続けます。私たちRISE CORPORATIONは、その「次の一手」を企業の経営陣と共に考え、共に実行するパートナーであることを使命としています。</p>
-        <p>戦略の立案だけで終わるコンサルティングではなく、現場に入り込み、結果が出るまで伴走する。これが私たちの差別化の核となっています。</p>
-        <p>クライアントの事業成長を、自分たちの誇りとして共に喜べる関係。それを目指して、私たちは仕事と向き合っています。</p>
-        <p class="vision-sign">CEO Message<br /><strong>〇〇 〇〇</strong></p>
-      </div>
+<section class="hero hero-fullbg" style="background-image:linear-gradient(135deg, rgba(0,0,0,.55), rgba(0,0,0,.3)), url('https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1400&q=70');">
+  <div class="container hero-fullbg-inner">
+    <p class="hero-eyebrow hero-eyebrow-light">— 飲食業 —</p>
+    <h1 class="hero-title hero-title-light">おいしさと、くつろぎの時間を。</h1>
+    <p class="hero-sub hero-sub-light">素材と調理にこだわり、おいしさとくつろぎの時間をお届けいたします。</p>
+    <div class="hero-cta">
+      <a href="#contact" class="btn btn-primary">お問い合わせはこちら</a>
+      <a href="#biz" class="btn btn-ghost btn-ghost-light">事業内容を見る</a>
     </div>
   </div>
 </section>
 
-<section id="biz" class="section section-bg-2">
+<section id="biz" class="section">
   <div class="container">
-    <p class="s-eyebrow">— Business Areas —</p>
-    <h2 class="s-title">Three core <em>business areas</em>.</h2>
-    <p class="s-lead">企業の成長フェーズに合わせた、3つの主軸サービスを提供しています。</p>
-    <div class="biz-grid">
-      <article class="biz">
-        <p class="biz-no">01</p>
-        <h3 class="biz-h">Corporate<br />Strategy</h3>
-        <p class="biz-h-jp">経営戦略</p>
-        <p class="biz-d">中期経営計画策定、新規事業戦略、M&A戦略まで、経営層の意思決定を支援します。データと経験に基づく実践的な戦略提言。</p>
-      </article>
-      <article class="biz">
-        <p class="biz-no">02</p>
-        <h3 class="biz-h">Business<br />Operations</h3>
-        <p class="biz-h-jp">事業オペレーション</p>
-        <p class="biz-d">事業運営の改善・効率化・自動化を、現場に入り込んで支援します。理論ではなく実装で成果を出す事業改善。</p>
-      </article>
-      <article class="biz">
-        <p class="biz-no">03</p>
-        <h3 class="biz-h">Growth<br />Acceleration</h3>
-        <p class="biz-h-jp">成長加速</p>
-        <p class="biz-d">マーケティング戦略・営業組織強化・人材育成まで、企業の成長エンジンを共に作り上げます。</p>
-      </article>
-    </div>
+    <p class="s-eyebrow">— Our Business —</p>
+    <h2 class="s-title">事業<br/>内容</h2>
+    <p class="s-lead">素材と調理にこだわり、おいしさとくつろぎの時間をお届けいたします。</p>
+    <div class="biz-grid"><article class="biz-card"><span class="biz-no">— 01 —</span><h3 class="biz-h">ランチ・ディナー</h3><p class="biz-d">素材を活かしたお料理をご提供いたします。</p></article><article class="biz-card"><span class="biz-no">— 02 —</span><h3 class="biz-h">ご予約・コース</h3><p class="biz-d">各種ご宴会・コースもご用意しております。</p></article><article class="biz-card"><span class="biz-no">— 03 —</span><h3 class="biz-h">テイクアウト</h3><p class="biz-d">お持ち帰り・デリバリーにも対応いたします。</p></article></div>
   </div>
 </section>
 
-<section id="pillars" class="section">
+<section id="reason" class="section section-soft">
   <div class="container">
-    <p class="s-eyebrow">— Three Pillars —</p>
-    <h2 class="s-title">Why <em>RISE</em>.</h2>
-    <p class="s-lead">私たちが選ばれ、長くお付き合いいただいてきた、3つの軸をご紹介します。</p>
-    <div class="pillars">
-      <article class="pillar">
-        <p class="pillar-no">Pillar<span>I</span></p>
+    <p class="s-eyebrow">— Why Chosen —</p>
+    <h2 class="s-title">お客様に選ばれる<br/>3つの理由</h2>
+    <div class="reason-list">
+      <article class="reason">
+        <p class="reason-no">Reason<span>01</span></p>
         <div>
-          <h3 class="pillar-h">Strategy meets execution.</h3>
-          <p class="pillar-h-jp">戦略策定だけで終わらない、実行まで伴走する体制</p>
-          <p class="pillar-d">私たちの最大の特徴は、戦略策定から実行・成果実現までを一気通貫で担えることです。「絵に描いた餅」ではなく、現場で動く施策まで責任を持ってサポートします。クライアントの経営陣と現場の橋渡しとなり、戦略を確実に成果に変えていきます。</p>
+          <h3 class="reason-h">地域を中心に積み重ねてきた信頼</h3>
+          <p class="reason-d">地域でのお客様一件一件と向き合い、丁寧なご対応で築いてきた信頼関係を、これからも大切にしてまいります。</p>
         </div>
       </article>
-      <article class="pillar">
-        <p class="pillar-no">Pillar<span>II</span></p>
+      <article class="reason">
+        <p class="reason-no">Reason<span>02</span></p>
         <div>
-          <h3 class="pillar-h">Industry-agnostic expertise.</h3>
-          <p class="pillar-h-jp">業種を問わない多面的な経験と知見</p>
-          <p class="pillar-d">製造・サービス・小売・IT・金融まで、多様な業種の企業をご支援してきた実績があります。業界に閉じない視点でこそ見える機会と課題があり、それをクライアントの成長機会に転換することが私たちの得意領域です。</p>
+          <h3 class="reason-h">お客様一人ひとりに寄り添うご対応</h3>
+          <p class="reason-d">画一的な対応ではなく、お客様の状況やご要望に応じた、きめ細やかなご対応を心がけております。</p>
         </div>
       </article>
-      <article class="pillar">
-        <p class="pillar-no">Pillar<span>III</span></p>
+      <article class="reason">
+        <p class="reason-no">Reason<span>03</span></p>
         <div>
-          <h3 class="pillar-h">Long-term partnership.</h3>
-          <p class="pillar-h-jp">プロジェクトを超えた長期的パートナーシップ</p>
-          <p class="pillar-d">プロジェクト型のお取引で終わるのではなく、企業の成長と共に長くお付き合いさせていただくことを大切にしています。複数年契約・顧問契約等、長期的な関係性を前提とした多様な契約形態をご用意しています。</p>
+          <h3 class="reason-h">継続的なお取引が可能な体制</h3>
+          <p class="reason-d">一度のお取引で終わらず、お客様の事業や暮らしに長く寄り添える、信頼できるパートナーであることを目指しています。</p>
         </div>
       </article>
-    </div>
-  </div>
-</section>
-
-<section id="voice" class="section section-bg-2">
-  <div class="container">
-    <p class="s-eyebrow">— Client Testimonials —</p>
-    <h2 class="s-title">What our <em>clients</em> say.</h2>
-    <div class="voice-grid">
-      <figure class="voice">
-        <span class="voice-mark">"</span>
-        <p class="voice-text">中期経営計画の策定から実行まで伴走いただきました。戦略を絵に描くだけでなく、現場で動かす力が圧倒的でした。</p>
-        <p class="voice-by"><strong>Mfg. Company</strong>製造業 / 代表取締役 K 様</p>
-      </figure>
-      <figure class="voice">
-        <span class="voice-mark">"</span>
-        <p class="voice-text">事業オペレーション改革をお願いしました。理論先行ではなく現場に入り込んでくださり、本当に成果が出ました。</p>
-        <p class="voice-by"><strong>Service Company</strong>サービス業 / 経営企画 M 様</p>
-      </figure>
-      <figure class="voice">
-        <span class="voice-mark">"</span>
-        <p class="voice-text">新規事業の立ち上げから初期マーケまでご支援いただきました。立ち上げの2年で売上規模が5倍になりました。</p>
-        <p class="voice-by"><strong>Tech Startup</strong>IT企業 / CEO T 様</p>
-      </figure>
-      <figure class="voice">
-        <span class="voice-mark">"</span>
-        <p class="voice-text">複数年で顧問契約をお願いしていますが、その都度の経営判断に的確な助言をいただけて心強い存在です。</p>
-        <p class="voice-by"><strong>Retail Group</strong>小売業 / 取締役 S 様</p>
-      </figure>
-    </div>
-  </div>
-</section>
-
-<section id="faq" class="section">
-  <div class="container container-narrow">
-    <p class="s-eyebrow">— FAQ —</p>
-    <h2 class="s-title">Frequently asked <em>questions</em>.</h2>
-    <div class="faq">
-      <div class="faq-item" data-open="true"><button class="faq-q" type="button" aria-expanded="true"><span class="faq-qn">No. 01</span><span class="faq-qt">初回相談の費用は？</span><span class="faq-icon">+</span></button><div class="faq-a"><p class="faq-a-inner">初回ご相談（90分程度）は無料にて承ります。お気軽にお問い合わせください。</p></div></div>
-      <div class="faq-item"><button class="faq-q" type="button" aria-expanded="false"><span class="faq-qn">No. 02</span><span class="faq-qt">プロジェクト期間の目安は？</span><span class="faq-icon">+</span></button><div class="faq-a"><p class="faq-a-inner">経営戦略系で3〜6ヶ月、業務改善系で2〜4ヶ月が目安です。長期顧問契約も対応可能です。</p></div></div>
-      <div class="faq-item"><button class="faq-q" type="button" aria-expanded="false"><span class="faq-qn">No. 03</span><span class="faq-qt">中堅・中小企業でも対応可能ですか？</span><span class="faq-icon">+</span></button><div class="faq-a"><p class="faq-a-inner">もちろんです。むしろ意思決定の早い中堅・中小企業様こそ私たちの強みが発揮できます。</p></div></div>
-      <div class="faq-item"><button class="faq-q" type="button" aria-expanded="false"><span class="faq-qn">No. 04</span><span class="faq-qt">業種の対応範囲は？</span><span class="faq-icon">+</span></button><div class="faq-a"><p class="faq-a-inner">製造・サービス・小売・IT・金融まで多業種の実績がございます。業種特有の理解も深いです。</p></div></div>
-      <div class="faq-item"><button class="faq-q" type="button" aria-expanded="false"><span class="faq-qn">No. 05</span><span class="faq-qt">成果は保証されますか？</span><span class="faq-icon">+</span></button><div class="faq-a"><p class="faq-a-inner">成果連動型の契約にも対応可能です。プロジェクトの内容に応じてご提案させていただきます。</p></div></div>
-      <div class="faq-item"><button class="faq-q" type="button" aria-expanded="false"><span class="faq-qn">No. 06</span><span class="faq-qt">秘密保持はどう対応していますか？</span><span class="faq-icon">+</span></button><div class="faq-a"><p class="faq-a-inner">NDA締結はもちろん、プロジェクト専用のクローズドな情報管理体制でお取り組みします。</p></div></div>
     </div>
   </div>
 </section>
 
 <section id="contact" class="contact">
-  <div class="container container-narrow">
+  <div class="container">
     <div style="text-align:center">
       <p class="s-eyebrow" style="justify-content:center">— Contact —</p>
-      <h2 class="s-title">Let's build your<br /><em>next stage</em>.</h2>
-      <p class="s-lead" style="margin-left:auto;margin-right:auto">プロジェクトのご相談・顧問契約のご検討まで、お気軽にお問い合わせください。</p>
+      <h2 class="s-title">お気軽に<br/>お問い合わせください</h2>
+      <p class="s-lead" style="margin:22px auto 0">ご相談・お見積もりは無料です。お電話・お問い合わせフォームよりお気軽にどうぞ。</p>
     </div>
     <div class="contact-cards">
-      <div class="ccard"><p class="ccard-l">— TEL —</p><p class="ccard-v">XXX-XXXX-XXXX</p><p class="ccard-n">Weekdays 9:00 - 18:00</p></div>
-      <div class="ccard"><p class="ccard-l">— LINE —</p><p class="ccard-v">お問い合わせ<br />はこちら</p><p class="ccard-n">Official LINE / 24h</p></div>
-      <div class="ccard"><p class="ccard-l">— FORM —</p><p class="ccard-v">お問い合わせ<br />はこちら</p><p class="ccard-n">Web Form / 24h</p></div>
+      <div class="ccard"><p class="ccard-l">TEL</p><p class="ccard-v">XXX-XXXX-XXXX</p><p class="ccard-n">受付 9:00-18:00<br/>（土日祝休）</p></div>
+      <div class="ccard"><p class="ccard-l">MAIL</p><p class="ccard-v">info@example.com</p><p class="ccard-n">24時間 受付<br/>返信は営業日</p></div>
+      <div class="ccard"><p class="ccard-l">FORM</p><p class="ccard-v">お問い合わせ<br/>はこちら</p><p class="ccard-n">フォーム送信<br/>24時間 受付</p></div>
     </div>
     <div class="contact-buttons">
-      <a href="#" class="btn-c-line"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3C6.48 3 2 6.58 2 11c0 3.96 3.58 7.27 8.4 7.92.33.07.78.22.89.5.1.25.07.65.03.9l-.14.86c-.05.25-.2.99.87.54s5.75-3.39 7.84-5.8C21.32 14.36 22 12.77 22 11c0-4.42-4.48-8-10-8z"/></svg>お問い合わせはこちら</a>
-      <a href="#" class="btn-c-primary">Send inquiry</a>
+      <a href="#" class="btn btn-primary">お問い合わせはこちら</a>
     </div>
-    <p class="contact-note">— We will respond within 24 hours on business days —</p>
     <div class="sample-mark">※本ページはご提案用サンプルとして作成しております。掲載情報は仮の内容を含みます。</div>
   </div>
 </section>
@@ -404,24 +243,38 @@ body{padding-top:32px}
 <footer class="site-footer">
   <div class="container footer-inner">
     <div>
-      <a href="#top" class="brand"><span class="brand-mark">R</span><span class="brand-text"><span class="brand-name">RISE</span><span class="brand-sub">CORPORATION</span></span></a>
-      <p class="footer-lead">Rise to your next stage.<br />Building the foundation of corporate growth.</p>
+      <p class="footer-name">株式会社RISE CORPORATION</p>
+      <p class="footer-lead">素材と調理にこだわり、おいしさとくつろぎの時間をお届けいたします。</p>
     </div>
-    <div><p class="footer-h">— Menu —</p><ul class="footer-list"><li><a href="#vision">Vision</a></li><li><a href="#biz">Business</a></li><li><a href="#pillars">Pillars</a></li><li><a href="#voice">Clients</a></li><li><a href="#faq">FAQ</a></li></ul></div>
-    <div><p class="footer-h">— Contact —</p><ul class="footer-list"><li>住所：〇〇県〇〇市〇〇町〇-〇-〇</li><li>TEL：XXX-XXXX-XXXX</li><li>Mail：info@example.com</li></ul></div>
+    <div>
+      <p class="footer-h">— Menu —</p>
+      <ul class="footer-list">
+        <li><a href="#biz">事業内容</a></li>
+        <li><a href="#reason">選ばれる理由</a></li>
+        <li><a href="#contact">お問い合わせ</a></li>
+      </ul>
+    </div>
+    <div>
+      <p class="footer-h">— Company —</p>
+      <ul class="footer-list">
+        <li>所在地：大阪府</li>
+        <li>TEL：XXX-XXXX-XXXX</li>
+        <li>MAIL：info@example.com</li>
+      </ul>
+    </div>
   </div>
   <div class="footer-bottom">
-    <p>© <span id="year"></span> RISE CORPORATION. All rights reserved.</p>
-    <ul style="display:flex;gap:18px;"><li><a href="#">Privacy Policy</a></li><li><a href="#">Terms</a></li></ul>
-    <p class="footer-sample">※本ページはご提案用サンプルとして作成しております。掲載情報は仮の内容を含みます。</p>
+    © 2026 株式会社RISE CORPORATION All rights reserved.&nbsp;｜&nbsp;
+    ※本ページはご提案用サンプルとして作成しております。掲載情報は仮の内容を含みます。
   </div>
 </footer>
 
 <script>
-document.querySelectorAll(".faq-item .faq-q").forEach(function(btn){btn.addEventListener("click",function(){var item=btn.closest(".faq-item");var open=item.getAttribute("data-open")==="true";document.querySelectorAll(".faq-item").forEach(function(o){o.setAttribute("data-open","false");var q=o.querySelector(".faq-q");if(q)q.setAttribute("aria-expanded","false")});if(!open){item.setAttribute("data-open","true");btn.setAttribute("aria-expanded","true")}})});
-var t=document.getElementById("menuToggle"),m=document.getElementById("navMobile");if(t&&m){t.addEventListener("click",function(){var e=t.getAttribute("aria-expanded")==="true";t.setAttribute("aria-expanded",String(!e));m.classList.toggle("is-open")})}
-var h=document.getElementById("header");window.addEventListener("scroll",function(){if(window.scrollY>20)h.classList.add("is-scrolled");else h.classList.remove("is-scrolled")},{passive:true});
-var y=document.getElementById("year");if(y)y.textContent=String(new Date().getFullYear());
+var h=document.getElementById("header");
+window.addEventListener("scroll",function(){
+  if(window.scrollY>20) h.classList.add("is-scrolled");
+  else h.classList.remove("is-scrolled");
+},{passive:true});
 </script>
 </body>
 </html>

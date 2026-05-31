@@ -3,394 +3,145 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5" />
-<meta name="theme-color" content="#1a2942" />
+<meta name="theme-color" content="#2c4a6b" />
 <meta name="robots" content="noindex, nofollow" />
-
-<title>青木建設｜百年、住み継ぐ家を。</title>
-<meta name="description" content="青木建設は、地域に根ざした注文住宅の専門会社です。完全自由設計と自然素材、職人の確かな技術で、世代を超えて住み継げる家をお届けします。" />
-
+<title>青木建設｜現場の品質が、信頼の証になる。</title>
+<meta name="description" content="青木建設は新築・改修・公共/民間案件まで、地域に根ざした施工で確かな実績を積み重ねてまいります。" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@400;500;600;700&family=Noto+Sans+JP:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
-
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700&family=Noto+Serif+JP:wght@500;600&display=swap" rel="stylesheet" />
 <style>
 :root{
-  --navy:#1a2942;
-  --navy-2:#243551;
-  --navy-3:#2c3e60;
-  --cream:#faf7f0;
-  --paper:#ffffff;
-  --offwhite:#f5f1e8;
-  --ink:#1a1a1a;
-  --ink-2:#3d3d3d;
-  --ink-3:#666666;
-  --ink-4:#9b958a;
-  --wood:#a87f55;
-  --wood-2:#8b6839;
-  --wood-soft:#d9c4a5;
-  --green:#3a5f47;
-  --line:#e5dccb;
-  --line-2:#d1c5af;
+  --bg: #eef2f5;
+  --paper: #ffffff;
+  --ink: #1c2d3f;
+  --muted: #4a5868;
+  --primary: #2c4a6b;
+  --accent: #b4843d;
+  --border: #c8d1da;
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-html{scroll-behavior:smooth;-webkit-text-size-adjust:100%;scroll-padding-top:88px}
-body{
-  font-family:"Noto Sans JP","Hiragino Kaku Gothic ProN","Yu Gothic",sans-serif;
-  background:var(--paper);color:var(--ink-2);
-  font-size:15px;line-height:1.95;-webkit-font-smoothing:antialiased;
-}
+html{scroll-behavior:smooth;scroll-padding-top:80px;-webkit-text-size-adjust:100%}
+body{font-family:"Noto Sans JP",sans-serif;background:var(--bg);color:var(--muted);font-size:15px;line-height:1.95;-webkit-font-smoothing:antialiased}
 img{display:block;max-width:100%;height:auto}
-a{color:inherit;text-decoration:none;transition:color .2s ease,opacity .2s ease}
+a{color:inherit;text-decoration:none;transition:color .2s,opacity .2s}
 button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 ul,ol{list-style:none}
-input,textarea,select{font-size:16px}
-
-.sample-bar{
-  position:fixed;top:0;left:0;right:0;z-index:60;
-  background:#0e1828;color:#c4b896;padding:8px 16px;text-align:center;
-  font-size:11px;letter-spacing:.1em;
-}
-body{padding-top:32px}
-
 .container{width:100%;max-width:1180px;margin:0 auto;padding:0 24px}
-.container-narrow{max-width:860px}
 @media(min-width:768px){.container{padding:0 40px}}
+.sample-bar{position:fixed;top:0;left:0;right:0;z-index:60;background:var(--ink);color:#fff;padding:7px 16px;text-align:center;font-size:11px;letter-spacing:.1em;opacity:.92}
+body{padding-top:30px}
 
-/* ── Header ── */
-.site-header{
-  position:fixed;top:32px;left:0;right:0;z-index:50;
-  background:rgba(255,255,255,.92);backdrop-filter:blur(16px);
-  border-bottom:1px solid transparent;transition:all .3s ease;
-}
-.site-header.is-scrolled{border-bottom-color:var(--line)}
-.header-inner{display:flex;align-items:center;justify-content:space-between;gap:16px;height:72px}
-
-.brand{display:inline-flex;align-items:center;gap:14px}
-.brand-mark{
-  width:42px;height:42px;display:grid;place-items:center;
-  background:var(--navy);color:#c4b896;
-  font-family:"Shippori Mincho",serif;font-weight:600;font-size:18px;
-  border-radius:2px;
-}
-.brand-text{display:flex;flex-direction:column;gap:2px}
-.brand-jp{font-family:"Shippori Mincho",serif;font-weight:600;font-size:17px;color:var(--navy);letter-spacing:.15em}
-.brand-en{font-size:9px;color:var(--ink-4);letter-spacing:.3em}
-
-.nav-desktop{display:none;gap:30px;font-family:"Shippori Mincho",serif}
-.nav-desktop a{font-size:14px;color:var(--ink);letter-spacing:.08em}
-.nav-desktop a:hover{color:var(--navy)}
+/* Header */
+.site-header{position:fixed;top:30px;left:0;right:0;z-index:50;background:rgba(255,255,255,.94);backdrop-filter:blur(14px);border-bottom:1px solid transparent;transition:border-color .3s}
+.site-header.is-scrolled{border-bottom-color:var(--border)}
+.header-inner{display:flex;align-items:center;justify-content:space-between;gap:16px;height:70px}
+.brand{display:flex;align-items:center;gap:12px}
+.brand-mark{width:42px;height:42px;display:grid;place-items:center;background:var(--primary);color:#fff;font-family:"Noto Serif JP",serif;font-weight:600;font-size:18px;border-radius:6px}
+.brand-name{font-family:"Noto Serif JP",serif;font-weight:600;color:var(--ink);font-size:16px;letter-spacing:.05em}
+.nav-desktop{display:none;gap:30px}
+.nav-desktop a{font-size:13px;color:var(--muted);font-weight:500;letter-spacing:.04em}
+.nav-desktop a:hover{color:var(--primary)}
 @media(min-width:1024px){.nav-desktop{display:flex}}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;padding:14px 28px;border-radius:6px;font-weight:600;font-size:14px;letter-spacing:.08em;transition:transform .15s,opacity .15s}
+.btn-primary{background:var(--primary);color:#fff}
+.btn-primary:hover{transform:translateY(-1px);opacity:.92}
+.btn-ghost{background:transparent;color:var(--ink);border:1px solid var(--ink)}
+.btn-ghost:hover{background:var(--ink);color:var(--paper)}
+.btn-ghost-light{color:#fff;border-color:#fff}
+.btn-ghost-light:hover{background:#fff;color:var(--ink)}
+.btn-h-primary{padding:11px 22px;background:var(--primary);color:#fff;font-size:13px;font-weight:600;letter-spacing:.05em;border-radius:6px;display:inline-flex;align-items:center;gap:8px}
+.btn-h-primary:hover{opacity:.9}
 
-.header-cta{display:flex;align-items:center;gap:14px}
-.header-tel{display:none;font-family:"Shippori Mincho",serif;font-size:16px;color:var(--navy);font-weight:600}
-.header-tel small{display:block;font-size:9px;color:var(--ink-4);letter-spacing:.2em;font-family:"Noto Sans JP",sans-serif;font-weight:400}
-@media(min-width:1024px){.header-tel{display:block}}
-.btn-h-primary{
-  display:inline-flex;align-items:center;gap:8px;
-  padding:12px 22px;font-family:"Shippori Mincho",serif;font-size:13px;
-  background:var(--navy);color:#fff;letter-spacing:.1em;
-}
-.btn-h-primary:hover{background:var(--navy-2)}
+/* Hero */
+.hero{padding:130px 0 80px;background:linear-gradient(180deg,var(--bg) 0%,color-mix(in srgb,var(--bg) 85%,var(--primary) 15%) 100%);position:relative;overflow:hidden}
+@media(min-width:768px){.hero{padding:170px 0 110px}}
+.hero-eyebrow{display:inline-flex;align-items:center;gap:12px;font-family:"Noto Serif JP",serif;font-size:13px;color:var(--primary);letter-spacing:.25em;margin-bottom:24px}
+.hero-eyebrow::before{content:"";display:inline-block;width:28px;height:1px;background:var(--accent)}
+.hero-eyebrow-light{color:#fff}
+.hero-eyebrow-light::before{background:#fff}
+.hero-title{font-family:"Noto Serif JP",serif;font-weight:600;color:var(--ink);font-size:34px;line-height:1.45;letter-spacing:.05em}
+@media(min-width:640px){.hero-title{font-size:44px}}
+@media(min-width:1024px){.hero-title{font-size:54px}}
+.hero-title-light{color:#fff;text-shadow:0 2px 12px rgba(0,0,0,.3)}
+.hero-sub{margin-top:28px;color:var(--muted);font-size:15px;line-height:2.05;max-width:560px}
+.hero-sub-light{color:rgba(255,255,255,.92)}
+.hero-cta{margin-top:36px;display:flex;flex-wrap:wrap;gap:14px}
 
-.menu-toggle{
-  width:44px;height:44px;display:grid;gap:5px;align-content:center;justify-items:center;
-  background:transparent;border:1px solid var(--line-2);
-}
-.menu-toggle span{width:18px;height:1px;background:var(--navy);transition:transform .3s,opacity .3s}
-.menu-toggle[aria-expanded="true"] span:nth-child(1){transform:translateY(6px) rotate(45deg)}
-.menu-toggle[aria-expanded="true"] span:nth-child(2){opacity:0}
-.menu-toggle[aria-expanded="true"] span:nth-child(3){transform:translateY(-6px) rotate(-45deg)}
-@media(min-width:1024px){.menu-toggle{display:none}}
-.nav-mobile{
-  display:flex;flex-direction:column;max-height:0;overflow:hidden;
-  background:var(--paper);border-top:1px solid var(--line);padding:0 24px;
-  transition:max-height .4s ease,padding .3s ease;
-  font-family:"Shippori Mincho",serif;
-}
-.nav-mobile.is-open{max-height:80vh;padding:8px 24px 24px}
-.nav-mobile a{padding:16px 0;border-bottom:1px solid var(--line);font-size:15px;color:var(--ink);letter-spacing:.05em}
+/* Hero variations */
+.hero-split .hero-grid{display:grid;gap:48px;align-items:center}
+@media(min-width:980px){.hero-split .hero-grid{grid-template-columns:1.1fr 1fr;gap:80px}}
+.hero-split .hero-visual{aspect-ratio:5/4;overflow:hidden;border-radius:8px;background:var(--border)}
+.hero-split .hero-visual img{width:100%;height:100%;object-fit:cover}
 
-/* ── Hero ── */
-.hero{
-  position:relative;min-height:88vh;display:flex;align-items:center;overflow:hidden;
-  background:var(--navy);color:#fff;padding:130px 0 80px;
-}
-@media(min-width:768px){.hero{min-height:92vh;padding:160px 0 100px}}
-.hero-bg{position:absolute;inset:0;z-index:0;overflow:hidden}
-.hero-bg img{width:100%;height:100%;object-fit:cover;opacity:.4}
-.hero-bg::after{
-  content:"";position:absolute;inset:0;
-  background:linear-gradient(180deg,rgba(26,41,66,.85) 0%,rgba(26,41,66,.7) 50%,rgba(26,41,66,.95) 100%);
-}
-.hero-inner{position:relative;z-index:1}
-.hero-eyebrow{
-  display:inline-flex;align-items:center;gap:14px;
-  font-family:"Shippori Mincho",serif;font-size:13px;letter-spacing:.3em;color:#c4b896;
-  margin-bottom:32px;
-}
-.hero-eyebrow::before{content:"";width:32px;height:1px;background:var(--wood)}
-.hero-title{
-  font-family:"Shippori Mincho",serif;font-weight:500;color:#fff;
-  font-size:46px;line-height:1.4;letter-spacing:.06em;
-}
-@media(min-width:640px){.hero-title{font-size:58px}}
-@media(min-width:1024px){.hero-title{font-size:78px}}
-.hero-title .wood{color:#d9c4a5}
-.hero-sub{
-  margin-top:36px;color:rgba(255,255,255,.85);
-  font-size:15px;line-height:2.1;max-width:580px;
-}
-@media(min-width:768px){.hero-sub{font-size:17px}}
-.hero-meta-row{
-  margin-top:48px;padding-top:32px;border-top:1px solid rgba(196,184,150,.25);
-  display:flex;flex-wrap:wrap;gap:36px;
-}
-.hero-meta-row > div{font-family:"Shippori Mincho",serif}
-.hero-meta-n{font-size:32px;color:#d9c4a5;font-weight:500;line-height:1}
-.hero-meta-n small{font-size:.5em;margin-left:4px}
-.hero-meta-l{margin-top:6px;font-size:11px;color:rgba(255,255,255,.65);letter-spacing:.15em;font-family:"Noto Sans JP",sans-serif}
-.hero-cta{margin-top:48px;display:flex;flex-wrap:wrap;gap:14px}
-.btn-primary{
-  display:inline-flex;align-items:center;justify-content:center;gap:12px;
-  background:#c4b896;color:var(--navy);padding:18px 36px;
-  font-family:"Shippori Mincho",serif;font-size:14px;font-weight:600;letter-spacing:.15em;
-}
-.btn-primary:hover{background:#d9c4a5}
-.btn-secondary{
-  display:inline-flex;align-items:center;justify-content:center;gap:12px;
-  background:transparent;color:#fff;padding:18px 36px;
-  border:1px solid rgba(255,255,255,.4);
-  font-family:"Shippori Mincho",serif;font-size:14px;letter-spacing:.15em;
-}
-.btn-secondary:hover{border-color:#c4b896;background:rgba(196,184,150,.08)}
+.hero-center .hero-center-inner{max-width:780px;margin:0 auto;text-align:center}
+.hero-center .hero-eyebrow{justify-content:center}
+.hero-center .hero-sub{margin-left:auto;margin-right:auto}
+.hero-center .hero-cta{justify-content:center}
+.hero-center .hero-strip{margin-top:60px;aspect-ratio:21/9;overflow:hidden}
+.hero-center .hero-strip img{width:100%;height:100%;object-fit:cover}
 
-/* ── Section base ── */
-.section{padding:96px 0}
-@media(min-width:768px){.section{padding:140px 0}}
-.section-cream{background:var(--cream)}
-.section-offwhite{background:var(--offwhite)}
+.hero-fullbg{padding:170px 0 130px;background-size:cover;background-position:center}
+.hero-fullbg .hero-fullbg-inner{max-width:720px}
 
-.s-eyebrow{
-  display:inline-flex;align-items:center;gap:14px;
-  font-family:"Shippori Mincho",serif;font-size:12px;letter-spacing:.3em;
-  color:var(--wood-2);margin-bottom:24px;
-}
-.s-eyebrow::before{content:"";width:32px;height:1px;background:var(--wood)}
-.s-title{
-  font-family:"Shippori Mincho",serif;font-weight:500;color:var(--navy);
-  font-size:32px;line-height:1.5;letter-spacing:.06em;
-}
-@media(min-width:768px){.s-title{font-size:44px}}
-.s-lead{margin-top:28px;color:var(--ink-3);font-size:15px;line-height:2.1;max-width:680px}
+/* Section */
+.section{padding:90px 0}
+@media(min-width:768px){.section{padding:120px 0}}
+.section-soft{background:color-mix(in srgb,var(--bg) 92%,var(--ink) 8%)}
+.section-primary{background:var(--primary);color:#fff}
+.s-eyebrow{display:inline-flex;align-items:center;gap:12px;font-family:"Noto Serif JP",serif;font-size:13px;color:var(--primary);letter-spacing:.25em;margin-bottom:20px}
+.s-eyebrow::before{content:"";display:inline-block;width:28px;height:1px;background:var(--accent)}
+.section-primary .s-eyebrow{color:#fff}
+.section-primary .s-eyebrow::before{background:#fff}
+.s-title{font-family:"Noto Serif JP",serif;font-weight:600;color:var(--ink);font-size:30px;line-height:1.5;letter-spacing:.05em}
+@media(min-width:768px){.s-title{font-size:40px}}
+.section-primary .s-title{color:#fff}
+.s-lead{margin-top:22px;color:var(--muted);font-size:15px;line-height:2.1;max-width:720px}
+.section-primary .s-lead{color:rgba(255,255,255,.85)}
 
-/* ── 想い (philosophy) ── */
-.philosophy{
-  display:grid;gap:60px;align-items:center;
-}
-@media(min-width:980px){.philosophy{grid-template-columns:1fr 1.1fr;gap:80px}}
-.philosophy-img{position:relative;aspect-ratio:4/5;overflow:hidden}
-.philosophy-img img{width:100%;height:100%;object-fit:cover}
-.philosophy-img::after{
-  content:"";position:absolute;left:-12px;bottom:-12px;
-  width:140px;height:140px;border:1px solid var(--wood);
-}
-.philosophy-text p{margin-top:24px;color:var(--ink-2);font-size:15px;line-height:2.15}
-.philosophy-text p:first-of-type{margin-top:36px}
-.philosophy-sign{
-  margin-top:48px;padding-top:28px;border-top:1px solid var(--line-2);
-  font-family:"Shippori Mincho",serif;color:var(--navy);font-size:13px;letter-spacing:.1em;
-}
-.philosophy-sign strong{display:block;font-size:20px;margin-top:8px}
+/* Business cards */
+.biz-grid{margin-top:56px;display:grid;gap:22px}
+@media(min-width:768px){.biz-grid{grid-template-columns:repeat(3,1fr)}}
+.biz-card{padding:36px 30px;background:var(--paper);border:1px solid var(--border);border-radius:8px;transition:transform .2s,box-shadow .2s}
+.biz-card:hover{transform:translateY(-3px);box-shadow:0 20px 40px -20px rgba(0,0,0,.15)}
+.biz-no{font-family:"Noto Serif JP",serif;font-size:13px;color:var(--accent);letter-spacing:.2em;font-weight:600}
+.biz-h{margin-top:12px;font-family:"Noto Serif JP",serif;font-size:20px;color:var(--ink);font-weight:600;line-height:1.5}
+.biz-d{margin-top:14px;font-size:14px;color:var(--muted);line-height:2}
 
-/* ── 施工品質・こだわり ── */
-.quality-grid{display:grid;gap:0;margin-top:64px}
-.quality{
-  padding:48px 0;border-top:1px solid var(--line-2);
-  display:grid;gap:24px;
-}
-@media(min-width:768px){.quality{grid-template-columns:140px 1fr;gap:48px;align-items:start}}
-.quality:last-child{border-bottom:1px solid var(--line-2)}
-.quality-no{
-  font-family:"Shippori Mincho",serif;color:var(--wood-2);
-  font-size:14px;letter-spacing:.2em;
-}
-.quality-no span{display:block;font-size:36px;color:var(--navy);margin-top:8px;font-weight:500}
-.quality-content{display:grid;gap:24px}
-@media(min-width:1024px){.quality-content{grid-template-columns:1.2fr 1fr;gap:48px;align-items:center}}
-.quality-h{font-family:"Shippori Mincho",serif;font-size:22px;color:var(--navy);line-height:1.55;font-weight:500}
-.quality-d{margin-top:16px;color:var(--ink-3);font-size:14px;line-height:2}
-.quality-img{aspect-ratio:4/3;overflow:hidden}
-.quality-img img{width:100%;height:100%;object-fit:cover}
+/* Reasons */
+.reason-list{margin-top:56px;display:grid;gap:0;border-top:1px solid var(--border)}
+.reason{padding:30px 0;border-bottom:1px solid var(--border);display:grid;gap:16px}
+@media(min-width:768px){.reason{grid-template-columns:160px 1fr;gap:40px;align-items:start}}
+.reason-no{font-family:"Noto Serif JP",serif;font-size:13px;color:var(--accent);letter-spacing:.2em;font-weight:600}
+.reason-no span{display:block;font-size:30px;color:var(--ink);margin-top:6px;font-weight:600}
+.reason-h{font-family:"Noto Serif JP",serif;font-size:19px;color:var(--ink);font-weight:600;line-height:1.5}
+.reason-d{margin-top:14px;color:var(--muted);font-size:14px;line-height:2.05}
 
-/* ── 保証・アフター ── */
-.warranty{
-  background:var(--navy);color:#fff;padding:96px 0;
-}
-@media(min-width:768px){.warranty{padding:120px 0}}
-.warranty .s-eyebrow{color:#c4b896}
-.warranty .s-eyebrow::before{background:#c4b896}
-.warranty .s-title{color:#fff}
-.warranty .s-lead{color:rgba(255,255,255,.75)}
-.warranty-grid{
-  margin-top:64px;display:grid;gap:1px;background:rgba(196,184,150,.18);
-  border:1px solid rgba(196,184,150,.18);
-}
-@media(min-width:768px){.warranty-grid{grid-template-columns:repeat(3,1fr)}}
-.wcard{background:var(--navy);padding:40px 28px;text-align:center}
-.wcard-n{
-  font-family:"Shippori Mincho",serif;font-size:48px;
-  color:#d9c4a5;font-weight:500;line-height:1;
-}
-.wcard-n small{font-size:.4em;margin-left:4px}
-.wcard-h{
-  margin-top:18px;font-family:"Shippori Mincho",serif;
-  font-size:18px;color:#fff;font-weight:500;
-}
-.wcard-d{margin-top:14px;font-size:13px;color:rgba(255,255,255,.7);line-height:1.9}
-.warranty-detail{
-  margin-top:48px;padding:28px 32px;background:rgba(255,255,255,.04);
-  border-left:3px solid #c4b896;font-size:14px;color:rgba(255,255,255,.8);line-height:2;
-}
-
-/* ── Cases ── */
-.case-grid{margin-top:64px;display:grid;gap:48px}
-@media(min-width:768px){.case-grid{grid-template-columns:repeat(2,1fr);gap:64px}}
-.case-img{position:relative;aspect-ratio:4/3;overflow:hidden;margin-bottom:24px}
-.case-img img{width:100%;height:100%;object-fit:cover;transition:transform .8s ease}
-.case:hover .case-img img{transform:scale(1.04)}
-.case-tag{
-  position:absolute;top:0;left:0;
-  padding:6px 16px;background:var(--navy);color:#c4b896;
-  font-family:"Shippori Mincho",serif;font-size:12px;letter-spacing:.15em;
-}
-.case-h{font-family:"Shippori Mincho",serif;font-size:22px;color:var(--navy);line-height:1.5;font-weight:500}
-.case-meta{margin-top:10px;font-size:12px;color:var(--ink-4);letter-spacing:.1em;font-family:"Shippori Mincho",serif}
-.case-d{margin-top:18px;color:var(--ink-3);font-size:14px;line-height:2}
-
-/* ── お客様の声 ── */
-.voice-grid{margin-top:64px;display:grid;gap:32px}
-@media(min-width:768px){.voice-grid{grid-template-columns:repeat(2,1fr)}}
-.voice{
-  background:var(--paper);padding:40px 32px;
-  border:1px solid var(--line-2);position:relative;
-}
-.voice-mark{
-  position:absolute;top:24px;right:32px;
-  font-family:"Shippori Mincho",serif;font-size:60px;color:var(--wood-soft);
-  line-height:1;
-}
-.voice-text{font-family:"Shippori Mincho",serif;color:var(--ink);font-size:15px;line-height:2.1;position:relative}
-.voice-by{
-  margin-top:28px;padding-top:20px;border-top:1px solid var(--line);
-  display:flex;align-items:center;gap:16px;
-}
-.voice-avatar{
-  width:44px;height:44px;background:var(--navy);color:#c4b896;
-  display:grid;place-items:center;font-family:"Shippori Mincho",serif;font-weight:600;font-size:18px;
-}
-.voice-name{font-family:"Shippori Mincho",serif;color:var(--navy);font-size:15px}
-.voice-attr{margin-top:3px;font-size:12px;color:var(--ink-3)}
-
-/* ── サービス（対応する家） ── */
-.svc-list{margin-top:56px;display:grid;gap:0}
-.svc{
-  padding:32px 0;border-top:1px solid var(--line-2);
-  display:grid;gap:14px;
-}
-@media(min-width:768px){.svc{grid-template-columns:200px 1fr 220px;align-items:center;gap:40px;padding:36px 0}}
-.svc:last-child{border-bottom:1px solid var(--line-2)}
-.svc-h{font-family:"Shippori Mincho",serif;font-size:20px;color:var(--navy);font-weight:500}
-.svc-h small{display:block;font-size:11px;color:var(--wood-2);letter-spacing:.2em;margin-bottom:6px;font-family:"Noto Sans JP",sans-serif}
-.svc-d{color:var(--ink-3);font-size:14px;line-height:1.9}
-.svc-meta{font-size:12px;color:var(--ink-4);letter-spacing:.1em;font-family:"Shippori Mincho",serif}
-@media(min-width:768px){.svc-meta{text-align:right}}
-
-/* ── FAQ ── */
-.faq{margin-top:56px;display:grid;gap:0;border-top:1px solid var(--line-2);border-bottom:1px solid var(--line-2)}
-.faq-item{border-top:1px solid var(--line-2)}
-.faq-item:first-child{border-top:none}
-.faq-q{
-  width:100%;text-align:left;padding:28px 0;
-  display:flex;align-items:flex-start;gap:24px;
-}
-.faq-qn{
-  flex-shrink:0;font-family:"Shippori Mincho",serif;color:var(--wood-2);
-  font-size:14px;letter-spacing:.1em;width:40px;
-}
-.faq-qt{
-  flex:1;font-family:"Shippori Mincho",serif;color:var(--navy);
-  font-size:17px;font-weight:500;line-height:1.55;
-}
-.faq-icon{
-  flex-shrink:0;width:28px;height:28px;display:grid;place-items:center;
-  border:1px solid var(--line-2);color:var(--navy);
-  font-size:16px;transition:transform .3s ease;
-}
-.faq-item[data-open="true"] .faq-icon{transform:rotate(45deg);background:var(--navy);color:#c4b896;border-color:var(--navy)}
-.faq-a{max-height:0;overflow:hidden;transition:max-height .5s ease}
-.faq-item[data-open="true"] .faq-a{max-height:500px}
-.faq-a-inner{padding:0 0 32px 64px;font-size:14px;color:var(--ink-3);line-height:2}
-
-/* ── Contact ── */
-.contact{padding:120px 0;background:var(--cream);position:relative}
-@media(min-width:768px){.contact{padding:160px 0}}
-.contact-cards{
-  margin-top:56px;display:grid;gap:0;background:var(--paper);
-  border:1px solid var(--line-2);
-}
+/* Contact */
+.contact{padding:100px 0 120px;background:color-mix(in srgb,var(--bg) 92%,var(--primary) 8%)}
+.contact-cards{margin-top:50px;display:grid;gap:0;background:var(--paper);border:1px solid var(--border);border-radius:8px;overflow:hidden}
 @media(min-width:768px){.contact-cards{grid-template-columns:repeat(3,1fr)}}
-.ccard{
-  padding:40px 32px;text-align:center;border-bottom:1px solid var(--line);
-}
-@media(min-width:768px){.ccard{border-bottom:0;border-right:1px solid var(--line)}}
-.ccard:last-child{border-bottom:0;border-right:0}
-.ccard-l{font-family:"Shippori Mincho",serif;font-size:12px;color:var(--wood-2);letter-spacing:.3em}
-.ccard-v{
-  margin-top:16px;font-family:"Shippori Mincho",serif;
-  font-size:22px;color:var(--navy);line-height:1.5;font-weight:500;
-}
-.ccard-n{margin-top:14px;font-size:12px;color:var(--ink-3);line-height:1.7}
-
-.contact-buttons{margin-top:48px;display:flex;flex-direction:column;gap:14px}
+.ccard{padding:36px 30px;text-align:center;border-bottom:1px solid var(--border)}
+@media(min-width:768px){.ccard{border-bottom:0;border-right:1px solid var(--border)}.ccard:last-child{border-right:0}}
+.ccard-l{font-family:"Noto Serif JP",serif;font-size:13px;color:var(--accent);letter-spacing:.25em;font-weight:600}
+.ccard-v{margin-top:14px;font-family:"Noto Serif JP",serif;font-size:20px;color:var(--ink);line-height:1.4;font-weight:600}
+.ccard-n{margin-top:10px;font-size:12px;color:var(--muted);line-height:1.7}
+.contact-buttons{margin-top:40px;display:flex;flex-direction:column;gap:14px}
 @media(min-width:768px){.contact-buttons{flex-direction:row;justify-content:center}}
-.btn-c-primary{
-  display:inline-flex;align-items:center;justify-content:center;gap:12px;
-  background:var(--navy);color:#fff;padding:20px 40px;
-  font-family:"Shippori Mincho",serif;font-size:14px;font-weight:600;letter-spacing:.15em;
-}
-.btn-c-primary:hover{background:var(--navy-2)}
-.btn-c-line{
-  display:inline-flex;align-items:center;justify-content:center;gap:12px;
-  background:#06c755;color:#fff;padding:20px 40px;
-  font-family:"Shippori Mincho",serif;font-size:14px;font-weight:600;letter-spacing:.15em;
-}
-.contact-note{margin-top:32px;text-align:center;font-size:12px;color:var(--ink-4)}
-.sample-mark{
-  margin:56px auto 0;max-width:680px;padding:16px 24px;
-  border:1px dashed var(--line-2);background:rgba(255,255,255,.5);
-  text-align:center;font-size:11px;color:var(--ink-3);
-}
+.btn-line{background:#06c755;color:#fff;padding:18px 38px;border-radius:6px;font-weight:600;font-size:14px;letter-spacing:.1em;display:inline-flex;align-items:center;gap:10px}
 
-/* ── Footer ── */
-.site-footer{background:#0e1828;color:rgba(255,255,255,.7);padding:80px 0 32px}
-.footer-inner{display:grid;gap:48px}
-@media(min-width:768px){.footer-inner{grid-template-columns:1.2fr 1fr 1fr}}
-.footer-brand{display:flex;flex-direction:column;gap:6px}
-.footer-brand .brand{color:#fff}
-.footer-brand .brand-jp{color:#c4b896}
-.footer-lead{margin-top:18px;font-size:13px;line-height:2;color:rgba(255,255,255,.6)}
-.footer-h{
-  font-family:"Shippori Mincho",serif;font-size:13px;color:#c4b896;
-  letter-spacing:.2em;margin-bottom:18px;
-}
-.footer-list li{margin-bottom:12px;font-size:13px;color:rgba(255,255,255,.6)}
-.footer-list a:hover{color:#c4b896}
-.footer-bottom{
-  margin-top:64px;padding-top:24px;border-top:1px solid rgba(255,255,255,.1);
-  display:flex;flex-direction:column;gap:12px;font-size:11px;color:rgba(255,255,255,.4);
-}
-@media(min-width:640px){.footer-bottom{flex-direction:row;justify-content:space-between;align-items:center}}
-.footer-sample{margin-top:10px;text-align:center;width:100%;font-size:10px}
+/* Sample mark */
+.sample-mark{margin:36px auto 0;max-width:720px;padding:16px 24px;border:1px dashed var(--border);background:var(--paper);text-align:center;font-size:11px;color:var(--muted);border-radius:6px}
+
+/* Footer */
+.site-footer{background:var(--ink);color:rgba(255,255,255,.7);padding:64px 0 28px}
+.footer-inner{display:grid;gap:36px}
+@media(min-width:768px){.footer-inner{grid-template-columns:1.5fr 1fr 1fr}}
+.footer-name{color:#fff;font-family:"Noto Serif JP",serif;font-weight:600;font-size:17px}
+.footer-lead{margin-top:14px;font-size:13px;line-height:1.95;color:rgba(255,255,255,.65)}
+.footer-h{font-family:"Noto Serif JP",serif;color:rgba(255,255,255,.85);font-size:13px;letter-spacing:.2em;margin-bottom:14px;font-weight:600}
+.footer-list li{margin-bottom:9px;font-size:13px;color:rgba(255,255,255,.65)}
+.footer-bottom{margin-top:48px;padding-top:22px;border-top:1px solid rgba(255,255,255,.12);font-size:11px;color:rgba(255,255,255,.45);text-align:center}
 
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
@@ -403,394 +154,87 @@ body{padding-top:32px}
   <div class="container header-inner">
     <a href="#top" class="brand">
       <span class="brand-mark">青</span>
-      <span class="brand-text">
-        <span class="brand-jp">青木建設</span>
-        <span class="brand-en">AOKI CONSTRUCTION</span>
-      </span>
+      <span class="brand-name">青木建設</span>
     </a>
     <nav class="nav-desktop">
-      <a href="#philosophy">家づくりの想い</a>
-      <a href="#quality">施工品質</a>
-      <a href="#warranty">保証・アフター</a>
-      <a href="#cases">施工事例</a>
-      <a href="#services">対応する家</a>
-      <a href="#faq">FAQ</a>
+      <a href="#biz">事業内容</a>
+      <a href="#reason">選ばれる理由</a>
+      <a href="#contact">お問い合わせ</a>
     </nav>
-    <div class="header-cta">
-      <span class="header-tel">XXX-XXXX-XXXX<small>9:00-18:00 / 水曜定休</small></span>
-      <a href="#contact" class="btn-h-primary">お問い合わせ</a>
-    </div>
-    <button class="menu-toggle" id="menuToggle" aria-label="メニュー" aria-expanded="false">
-      <span></span><span></span><span></span>
-    </button>
-  </div>
-  <div class="nav-mobile" id="navMobile">
-    <a href="#philosophy">家づくりの想い</a>
-    <a href="#quality">施工品質</a>
-    <a href="#warranty">保証・アフター</a>
-    <a href="#cases">施工事例</a>
-    <a href="#voice">お客様の声</a>
-    <a href="#services">対応する家</a>
-    <a href="#faq">FAQ</a>
-    <a href="#contact">お問い合わせ</a>
+    <a href="#contact" class="btn-h-primary">お問い合わせ</a>
   </div>
 </header>
 
 <main id="top">
 
-<section class="hero">
-  <div class="hero-bg"><img src="https://images.unsplash.com/photo-1518780664697-55e3ad937233?auto=format&fit=crop&w=2000&q=80" alt="" /></div>
-  <div class="container hero-inner">
-    <p class="hero-eyebrow">Aoki Construction — Since Generation</p>
-    <h1 class="hero-title">
-      百年、<br />
-      <span class="wood">住み継ぐ</span>家を。
-    </h1>
-    <p class="hero-sub">
-      地域に根ざした注文住宅の専門会社として、ご家族の暮らしを永く守る家づくりを。
-      完全自由設計と自然素材、そして職人の確かな技術で、世代を超えて住み継いでいただける一棟をお届けします。
-    </p>
-    <div class="hero-meta-row">
-      <div>
-        <div class="hero-meta-n">100<small>%</small></div>
-        <div class="hero-meta-l">完全自由設計</div>
-      </div>
-      <div>
-        <div class="hero-meta-n">35<small>年</small></div>
-        <div class="hero-meta-l">構造躯体 保証</div>
-      </div>
-      <div>
-        <div class="hero-meta-n">耐震<small>3</small></div>
-        <div class="hero-meta-l">標準仕様</div>
-      </div>
-    </div>
+
+<section class="hero hero-center">
+  <div class="container hero-center-inner">
+    <p class="hero-eyebrow">— 建設業 —</p>
+    <h1 class="hero-title">現場の品質が、信頼の証になる。</h1>
+    <p class="hero-sub">新築・改修・公共/民間案件まで、地域に根ざした施工で確かな実績を積み重ねてまいります。</p>
     <div class="hero-cta">
-      <a href="#contact" class="btn-primary">お問い合わせはこちら</a>
-      <a href="#cases" class="btn-secondary">施工事例を見る</a>
+      <a href="#contact" class="btn btn-primary">お問い合わせはこちら</a>
+      <a href="#biz" class="btn btn-ghost">事業内容を見る</a>
     </div>
   </div>
+  <div class="hero-strip"><img src="https://images.unsplash.com/photo-1503387762-592deb58ef4e?auto=format&fit=crop&w=1400&q=70" alt="" loading="lazy"/></div>
 </section>
 
-<section id="philosophy" class="section section-cream">
+<section id="biz" class="section">
   <div class="container">
-    <div class="philosophy">
-      <div class="philosophy-img">
-        <img src="https://images.unsplash.com/photo-1505691938895-1758d7feb511?auto=format&fit=crop&w=900&q=80" alt="家づくりの想い" />
-      </div>
-      <div class="philosophy-text">
-        <p class="s-eyebrow">Our Philosophy</p>
-        <h2 class="s-title">家は、暮らしの<br />「いちばん大切な舞台」。</h2>
-        <p>
-          私たち青木建設は、地域の皆さまの家づくりに寄り添い続けてきた工務店です。
-          流行のデザインを追うのではなく、その土地の気候、ご家族の暮らし、
-          そして「これから先の時間」を見据えた住まいを、誠実に建ててまいりました。
-        </p>
-        <p>
-          家は、建てて終わりではありません。
-          ご家族が暮らし始めてからこそ、本当の物語が始まります。
-          だからこそ、見えない部分の構造や素材選びまで、決して妥協はしません。
-          世代を超えて住み継がれる家を、一棟一棟、心を込めて。
-        </p>
-        <p>
-          皆さまの暮らしに、長く寄り添わせてください。
-        </p>
-        <p class="philosophy-sign">
-          青木建設<br />
-          代表取締役 <strong>青木 〇〇</strong>
-        </p>
-      </div>
-    </div>
+    <p class="s-eyebrow">— Our Business —</p>
+    <h2 class="s-title">事業<br/>内容</h2>
+    <p class="s-lead">新築・改修・公共/民間案件まで、地域に根ざした施工で確かな実績を積み重ねてまいります。</p>
+    <div class="biz-grid"><article class="biz-card"><span class="biz-no">— 01 —</span><h3 class="biz-h">施工管理</h3><p class="biz-d">新築・改修を問わず、品質と工程を一貫管理いたします。</p></article><article class="biz-card"><span class="biz-no">— 02 —</span><h3 class="biz-h">公共・民間案件</h3><p class="biz-d">規模を問わず安全第一で対応いたします。</p></article><article class="biz-card"><span class="biz-no">— 03 —</span><h3 class="biz-h">アフターサポート</h3><p class="biz-d">引き渡し後の保守・点検まで対応いたします。</p></article></div>
   </div>
 </section>
 
-<section id="quality" class="section">
+<section id="reason" class="section section-soft">
   <div class="container">
-    <div style="max-width:680px;">
-      <p class="s-eyebrow">Construction Quality</p>
-      <h2 class="s-title">永く住める家のための、<br />施工品質。</h2>
-      <p class="s-lead">見えない部分にこそ、家の本当の価値があります。私たちが大切にしている家づくりのこだわりです。</p>
-    </div>
-    <div class="quality-grid">
-      <article class="quality">
-        <p class="quality-no">Quality<span>01</span></p>
-        <div class="quality-content">
-          <div>
-            <h3 class="quality-h">耐震等級3を標準とした<br />堅牢な構造設計</h3>
-            <p class="quality-d">建築基準法の1.5倍の耐震性能となる「耐震等級3」を全棟標準仕様。構造計算により、大地震にも倒壊しない安心の住まいを設計します。</p>
-          </div>
-          <div class="quality-img">
-            <img src="https://images.unsplash.com/photo-1503387762-592deb58ef4e?auto=format&fit=crop&w=900&q=80" alt="" />
-          </div>
+    <p class="s-eyebrow">— Why Chosen —</p>
+    <h2 class="s-title">お客様に選ばれる<br/>3つの理由</h2>
+    <div class="reason-list">
+      <article class="reason">
+        <p class="reason-no">Reason<span>01</span></p>
+        <div>
+          <h3 class="reason-h">堺市南区を中心に積み重ねてきた信頼</h3>
+          <p class="reason-d">堺市南区でのお客様一件一件と向き合い、丁寧なご対応で築いてきた信頼関係を、これからも大切にしてまいります。</p>
         </div>
       </article>
-      <article class="quality">
-        <p class="quality-no">Quality<span>02</span></p>
-        <div class="quality-content">
-          <div>
-            <h3 class="quality-h">自然素材と無垢材への<br />こだわり</h3>
-            <p class="quality-d">無垢のフローリング、漆喰や珪藻土の塗り壁、和紙クロス。呼吸する素材を選ぶことで、調湿性と空気の質に配慮した、健やかな住まいに。</p>
-          </div>
-          <div class="quality-img">
-            <img src="https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?auto=format&fit=crop&w=900&q=80" alt="" />
-          </div>
+      <article class="reason">
+        <p class="reason-no">Reason<span>02</span></p>
+        <div>
+          <h3 class="reason-h">お客様一人ひとりに寄り添うご対応</h3>
+          <p class="reason-d">画一的な対応ではなく、お客様の状況やご要望に応じた、きめ細やかなご対応を心がけております。</p>
         </div>
       </article>
-      <article class="quality">
-        <p class="quality-no">Quality<span>03</span></p>
-        <div class="quality-content">
-          <div>
-            <h3 class="quality-h">高断熱・高気密の<br />快適性能</h3>
-            <p class="quality-d">夏は涼しく、冬は暖かく。一年を通じて快適な室温を保つ性能設計で、光熱費の負担を抑え、家計にも地球にも優しい家づくり。</p>
-          </div>
-          <div class="quality-img">
-            <img src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=900&q=80" alt="" />
-          </div>
+      <article class="reason">
+        <p class="reason-no">Reason<span>03</span></p>
+        <div>
+          <h3 class="reason-h">継続的なお取引が可能な体制</h3>
+          <p class="reason-d">一度のお取引で終わらず、お客様の事業や暮らしに長く寄り添える、信頼できるパートナーであることを目指しています。</p>
         </div>
       </article>
-      <article class="quality">
-        <p class="quality-no">Quality<span>04</span></p>
-        <div class="quality-content">
-          <div>
-            <h3 class="quality-h">設計から施工まで、<br />一気通貫の体制</h3>
-            <p class="quality-d">設計士・現場監督・職人がワンチームで対応。打ち合わせから引渡しまで、お客様の想いを途切れさせない一貫した家づくりを実現します。</p>
-          </div>
-          <div class="quality-img">
-            <img src="https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=900&q=80" alt="" />
-          </div>
-        </div>
-      </article>
-    </div>
-  </div>
-</section>
-
-<section id="warranty" class="warranty">
-  <div class="container">
-    <p class="s-eyebrow">Warranty & Aftercare</p>
-    <h2 class="s-title">引渡し後、<br />ずっと寄り添う。</h2>
-    <p class="s-lead">家は建てて終わりではありません。世代を超えて住み継いでいただくための、長期保証とアフターサポート体制をご用意しています。</p>
-    <div class="warranty-grid">
-      <div class="wcard">
-        <p class="wcard-n">35<small>年</small></p>
-        <p class="wcard-h">構造躯体の長期保証</p>
-        <p class="wcard-d">建物の根幹である構造躯体には、業界最長クラスの35年保証を標準でお付けします。</p>
-      </div>
-      <div class="wcard">
-        <p class="wcard-n">10<small>回</small></p>
-        <p class="wcard-h">定期点検プログラム</p>
-        <p class="wcard-d">引渡し後6ヶ月・1年・2年・5年…と、節目ごとに合計10回の無料定期点検を実施。</p>
-      </div>
-      <div class="wcard">
-        <p class="wcard-n">24<small>時間</small></p>
-        <p class="wcard-h">緊急対応窓口</p>
-        <p class="wcard-d">水漏れ・建具不具合等の緊急時には、専用窓口にて24時間ご相談を受け付けます。</p>
-      </div>
-    </div>
-    <p class="warranty-detail">家を建てたお客様との関係は、引渡しから始まります。お住まいの状態を私たちが継続して見守り、何かあればすぐに駆けつける。一生のお付き合いをお約束します。</p>
-  </div>
-</section>
-
-<section id="cases" class="section section-cream">
-  <div class="container">
-    <p class="s-eyebrow">Works</p>
-    <h2 class="s-title">これまでの<br />施工事例。</h2>
-    <p class="s-lead">お客様一組ごとの「住みたい暮らし」を形にしてきた事例の一部をご紹介します。</p>
-    <div class="case-grid">
-      <article class="case">
-        <div class="case-img">
-          <img src="https://images.unsplash.com/photo-1518780664697-55e3ad937233?auto=format&fit=crop&w=1200&q=80" alt="" />
-          <span class="case-tag">Case 01</span>
-        </div>
-        <h3 class="case-h">木の温もりあふれる平屋</h3>
-        <p class="case-meta">〇〇市・60代ご夫妻 / 延床28坪 / 工期 約5ヶ月</p>
-        <p class="case-d">無垢材の床と漆喰壁が織りなす、四季を感じる住まい。庭と一体になった暮らしを実現しました。</p>
-      </article>
-      <article class="case">
-        <div class="case-img">
-          <img src="https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=1200&q=80" alt="" />
-          <span class="case-tag">Case 02</span>
-        </div>
-        <h3 class="case-h">完全分離型 二世帯住宅</h3>
-        <p class="case-meta">〇〇市・40代ご家族 / 延床52坪 / 工期 約7ヶ月</p>
-        <p class="case-d">玄関も水回りも分けつつ、共有の中庭でつながる二世帯。プライバシーと家族の絆を両立。</p>
-      </article>
-      <article class="case">
-        <div class="case-img">
-          <img src="https://images.unsplash.com/photo-1505691938895-1758d7feb511?auto=format&fit=crop&w=1200&q=80" alt="" />
-          <span class="case-tag">Case 03</span>
-        </div>
-        <h3 class="case-h">古民家リノベーション</h3>
-        <p class="case-meta">〇〇市・50代ご夫妻 / 延床45坪 / 工期 約8ヶ月</p>
-        <p class="case-d">築80年の梁と柱を活かしつつ、現代の暮らしに最適化。温かみと機能性を両立させました。</p>
-      </article>
-      <article class="case">
-        <div class="case-img">
-          <img src="https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&w=1200&q=80" alt="" />
-          <span class="case-tag">Case 04</span>
-        </div>
-        <h3 class="case-h">大屋根のある注文住宅</h3>
-        <p class="case-meta">〇〇市・30代ご夫婦 / 延床36坪 / 工期 約6ヶ月</p>
-        <p class="case-d">勾配天井のリビングが印象的な、開放感あふれるお住まい。素材の質感を活かしたデザイン。</p>
-      </article>
-    </div>
-  </div>
-</section>
-
-<section id="voice" class="section section-offwhite">
-  <div class="container">
-    <p class="s-eyebrow">Customer's Voice</p>
-    <h2 class="s-title">お住まいになった、<br />皆さまの声。</h2>
-    <p class="s-lead">青木建設で家を建てていただいたお客様からのお声をご紹介します。</p>
-    <div class="voice-grid">
-      <figure class="voice">
-        <span class="voice-mark">"</span>
-        <p class="voice-text">家族の理想を全部聞いてくださって、それを設計に落とし込んでくれました。引渡しから3年経ちましたが、毎日帰るのが楽しみになる、本当に大好きな家です。</p>
-        <figcaption class="voice-by">
-          <span class="voice-avatar">N</span>
-          <span><span class="voice-name">N 様ご夫妻</span><span class="voice-attr">30代 / 注文住宅</span></span>
-        </figcaption>
-      </figure>
-      <figure class="voice">
-        <span class="voice-mark">"</span>
-        <p class="voice-text">二世帯住宅は気を遣う設計が難しいと聞いていましたが、お互いの距離感を上手に設計してくださって、両家とも快適に暮らせています。</p>
-        <figcaption class="voice-by">
-          <span class="voice-avatar">Y</span>
-          <span><span class="voice-name">Y 様</span><span class="voice-attr">40代 / 二世帯住宅</span></span>
-        </figcaption>
-      </figure>
-      <figure class="voice">
-        <span class="voice-mark">"</span>
-        <p class="voice-text">祖父母から受け継いだ古民家。壊さずに残したいという想いを汲んでくださり、見事に蘇りました。古さと新しさが調和した、家族の宝物です。</p>
-        <figcaption class="voice-by">
-          <span class="voice-avatar">I</span>
-          <span><span class="voice-name">I 様</span><span class="voice-attr">50代 / 古民家リノベーション</span></span>
-        </figcaption>
-      </figure>
-      <figure class="voice">
-        <span class="voice-mark">"</span>
-        <p class="voice-text">定年後の暮らしを見据えて平屋を建てました。段差がなく、夫婦二人で過ごすのにちょうど良い広さ。提案力に本当に助けられました。</p>
-        <figcaption class="voice-by">
-          <span class="voice-avatar">T</span>
-          <span><span class="voice-name">T 様ご夫妻</span><span class="voice-attr">60代 / 平屋</span></span>
-        </figcaption>
-      </figure>
-    </div>
-  </div>
-</section>
-
-<section id="services" class="section">
-  <div class="container">
-    <p class="s-eyebrow">Services</p>
-    <h2 class="s-title">対応する、家づくり。</h2>
-    <p class="s-lead">注文住宅から二世帯・リノベーションまで、暮らしのすべてに対応いたします。</p>
-    <div class="svc-list">
-      <article class="svc">
-        <div class="svc-h"><small>SERVICE 01</small>注文住宅</div>
-        <p class="svc-d">暮らし方からヒアリングし、完全自由設計でつくる家族のための一棟。土地探しからサポート可能。</p>
-        <p class="svc-meta">工期目安 約5〜7ヶ月</p>
-      </article>
-      <article class="svc">
-        <div class="svc-h"><small>SERVICE 02</small>二世帯住宅</div>
-        <p class="svc-d">世代の距離感を大切にした、家族みんなが心地よく暮らせる二世帯設計。完全分離型から共有型まで。</p>
-        <p class="svc-meta">工期目安 約7〜9ヶ月</p>
-      </article>
-      <article class="svc">
-        <div class="svc-h"><small>SERVICE 03</small>平屋</div>
-        <p class="svc-d">段差のない暮らしの心地よさ。シンプルで美しい平屋住宅の設計・施工。</p>
-        <p class="svc-meta">工期目安 約5〜6ヶ月</p>
-      </article>
-      <article class="svc">
-        <div class="svc-h"><small>SERVICE 04</small>リノベーション</div>
-        <p class="svc-d">古民家・中古住宅を、現代の暮らしに合わせて再生。古き良きを活かした設計が得意です。</p>
-        <p class="svc-meta">工期目安 約6〜10ヶ月</p>
-      </article>
-      <article class="svc">
-        <div class="svc-h"><small>SERVICE 05</small>増改築</div>
-        <p class="svc-d">ご家族の変化に合わせた間取り変更・増築。住み慣れた家を未来へつなぐ施工。</p>
-        <p class="svc-meta">工期目安 約2〜5ヶ月</p>
-      </article>
-      <article class="svc">
-        <div class="svc-h"><small>SERVICE 06</small>店舗・テナント工事</div>
-        <p class="svc-d">お店づくりのための設計・施工。コンセプトを形にする内装設計を承ります。</p>
-        <p class="svc-meta">工期目安 約2〜4ヶ月</p>
-      </article>
-    </div>
-  </div>
-</section>
-
-<section id="faq" class="section section-cream">
-  <div class="container container-narrow">
-    <p class="s-eyebrow">FAQ</p>
-    <h2 class="s-title">よくある、ご質問。</h2>
-    <div class="faq">
-      <div class="faq-item" data-open="true">
-        <button class="faq-q" type="button" aria-expanded="true">
-          <span class="faq-qn">Q.1</span><span class="faq-qt">土地探しからお願いできますか？</span><span class="faq-icon">+</span>
-        </button>
-        <div class="faq-a"><p class="faq-a-inner">はい、提携不動産会社と連携し、ご希望のエリア・予算に合わせた土地探しからサポートいたします。建物と土地を含めたトータルでの資金計画もご提案できます。</p></div>
-      </div>
-      <div class="faq-item">
-        <button class="faq-q" type="button" aria-expanded="false">
-          <span class="faq-qn">Q.2</span><span class="faq-qt">建築期間はどれくらいかかりますか？</span><span class="faq-icon">+</span>
-        </button>
-        <div class="faq-a"><p class="faq-a-inner">規模や仕様により異なりますが、ご契約からプラン確定まで約3〜4ヶ月、着工から完成まで約5〜7ヶ月が目安です。ご相談時に詳しいスケジュールをお伝えします。</p></div>
-      </div>
-      <div class="faq-item">
-        <button class="faq-q" type="button" aria-expanded="false">
-          <span class="faq-qn">Q.3</span><span class="faq-qt">資金計画の相談もできますか？</span><span class="faq-icon">+</span>
-        </button>
-        <div class="faq-a"><p class="faq-a-inner">もちろん可能です。住宅ローンの選定から返済シミュレーションまで、ファイナンシャルプランナー監修の資金計画をご提案します。お客様の人生設計に合わせた無理のないご計画を。</p></div>
-      </div>
-      <div class="faq-item">
-        <button class="faq-q" type="button" aria-expanded="false">
-          <span class="faq-qn">Q.4</span><span class="faq-qt">保証やアフターサービスについて教えてください。</span><span class="faq-icon">+</span>
-        </button>
-        <div class="faq-a"><p class="faq-a-inner">構造躯体には最長35年の長期保証をお付けします。また、引渡し後の定期点検（6ヶ月、1年、2年、5年…）でお住まいを継続的にサポート。何かあればすぐに駆けつけます。</p></div>
-      </div>
-      <div class="faq-item">
-        <button class="faq-q" type="button" aria-expanded="false">
-          <span class="faq-qn">Q.5</span><span class="faq-qt">自然素材って具体的に何を使うのですか？</span><span class="faq-icon">+</span>
-        </button>
-        <div class="faq-a"><p class="faq-a-inner">無垢のフローリング、漆喰や珪藻土の塗り壁、和紙や自然由来のクロスなど、調湿性・吸着性の高い素材を中心にご提案します。化学物質を抑え、ご家族の健康に配慮した家づくりが基本です。</p></div>
-      </div>
-      <div class="faq-item">
-        <button class="faq-q" type="button" aria-expanded="false">
-          <span class="faq-qn">Q.6</span><span class="faq-qt">完成見学会はありますか？</span><span class="faq-icon">+</span>
-        </button>
-        <div class="faq-a"><p class="faq-a-inner">はい、お施主様のご厚意でほぼ毎月開催しております。実際の住まいの空気感や、職人の仕事の中身を見ていただける貴重な機会です。最新の開催情報はお問い合わせください。</p></div>
-      </div>
     </div>
   </div>
 </section>
 
 <section id="contact" class="contact">
-  <div class="container container-narrow">
+  <div class="container">
     <div style="text-align:center">
-      <p class="s-eyebrow" style="justify-content:center">Contact</p>
-      <h2 class="s-title">家づくりの一歩を、<br />ここから。</h2>
-      <p class="s-lead" style="margin-left:auto;margin-right:auto">資料請求・モデルハウス見学・ご相談など、お気軽にお問い合わせください。しつこい営業は一切いたしません。</p>
+      <p class="s-eyebrow" style="justify-content:center">— Contact —</p>
+      <h2 class="s-title">お気軽に<br/>お問い合わせください</h2>
+      <p class="s-lead" style="margin:22px auto 0">ご相談・お見積もりは無料です。お電話・お問い合わせフォームよりお気軽にどうぞ。</p>
     </div>
     <div class="contact-cards">
-      <div class="ccard">
-        <p class="ccard-l">TEL</p>
-        <p class="ccard-v">XXX-XXXX-XXXX</p>
-        <p class="ccard-n">受付 9:00-18:00<br />（水曜定休）</p>
-      </div>
-      <div class="ccard">
-        <p class="ccard-l">LINE</p>
-        <p class="ccard-v">お問い合わせ<br />はこちら</p>
-        <p class="ccard-n">公式LINEアカウント<br />24時間 受付</p>
-      </div>
-      <div class="ccard">
-        <p class="ccard-l">FORM</p>
-        <p class="ccard-v">お問い合わせ<br />はこちら</p>
-        <p class="ccard-n">フォーム送信<br />24時間 受付</p>
-      </div>
+      <div class="ccard"><p class="ccard-l">TEL</p><p class="ccard-v">XXX-XXXX-XXXX</p><p class="ccard-n">受付 9:00-18:00<br/>（土日祝休）</p></div>
+      <div class="ccard"><p class="ccard-l">MAIL</p><p class="ccard-v">info@example.com</p><p class="ccard-n">24時間 受付<br/>返信は営業日</p></div>
+      <div class="ccard"><p class="ccard-l">FORM</p><p class="ccard-v">お問い合わせ<br/>はこちら</p><p class="ccard-n">フォーム送信<br/>24時間 受付</p></div>
     </div>
     <div class="contact-buttons">
-      <a href="#" class="btn-c-line"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3C6.48 3 2 6.58 2 11c0 3.96 3.58 7.27 8.4 7.92.33.07.78.22.89.5.1.25.07.65.03.9l-.14.86c-.05.25-.2.99.87.54s5.75-3.39 7.84-5.8C21.32 14.36 22 12.77 22 11c0-4.42-4.48-8-10-8z"/></svg>お問い合わせはこちら</a>
-      <a href="#" class="btn-c-primary">お問い合わせフォーム</a>
+      <a href="#" class="btn btn-primary">お問い合わせはこちら</a>
     </div>
-    <p class="contact-note">※お返事は最短当日・通常24時間以内にいたします。</p>
     <div class="sample-mark">※本ページはご提案用サンプルとして作成しております。掲載情報は仮の内容を含みます。</div>
   </div>
 </section>
@@ -799,63 +243,39 @@ body{padding-top:32px}
 
 <footer class="site-footer">
   <div class="container footer-inner">
-    <div class="footer-brand">
-      <a href="#top" class="brand">
-        <span class="brand-mark">青</span>
-        <span class="brand-text">
-          <span class="brand-jp">青木建設</span>
-          <span class="brand-en">AOKI CONSTRUCTION</span>
-        </span>
-      </a>
-      <p class="footer-lead">百年、住み継ぐ家を。<br />地域に根ざした、家族の暮らしを守る工務店。</p>
+    <div>
+      <p class="footer-name">青木建設</p>
+      <p class="footer-lead">新築・改修・公共/民間案件まで、地域に根ざした施工で確かな実績を積み重ねてまいります。</p>
     </div>
     <div>
-      <p class="footer-h">Menu</p>
+      <p class="footer-h">— Menu —</p>
       <ul class="footer-list">
-        <li><a href="#philosophy">家づくりの想い</a></li>
-        <li><a href="#quality">施工品質</a></li>
-        <li><a href="#warranty">保証・アフター</a></li>
-        <li><a href="#cases">施工事例</a></li>
-        <li><a href="#services">対応する家</a></li>
-        <li><a href="#faq">FAQ</a></li>
+        <li><a href="#biz">事業内容</a></li>
+        <li><a href="#reason">選ばれる理由</a></li>
+        <li><a href="#contact">お問い合わせ</a></li>
       </ul>
     </div>
     <div>
-      <p class="footer-h">Company</p>
+      <p class="footer-h">— Company —</p>
       <ul class="footer-list">
-        <li>住所：〇〇県〇〇市〇〇町〇-〇-〇</li>
+        <li>所在地：〒590-0141 大阪府堺市南区檜尾3093-7-202</li>
         <li>TEL：XXX-XXXX-XXXX</li>
-        <li>Mail：info@example.com</li>
-        <li>営業時間：9:00〜18:00</li>
-        <li>定休日：水曜日</li>
+        <li>MAIL：info@example.com</li>
       </ul>
     </div>
   </div>
   <div class="footer-bottom">
-    <p>© <span id="year"></span> 青木建設 All rights reserved.</p>
-    <ul style="display:flex;gap:18px;">
-      <li><a href="#">プライバシーポリシー</a></li>
-      <li><a href="#">特定商取引法</a></li>
-    </ul>
-    <p class="footer-sample">※本ページはご提案用サンプルとして作成しております。掲載情報は仮の内容を含みます。</p>
+    © 2026 青木建設 All rights reserved.&nbsp;｜&nbsp;
+    ※本ページはご提案用サンプルとして作成しております。掲載情報は仮の内容を含みます。
   </div>
 </footer>
 
 <script>
-  document.querySelectorAll(".faq-item .faq-q").forEach(function(btn){
-    btn.addEventListener("click",function(){
-      var item=btn.closest(".faq-item");
-      var open=item.getAttribute("data-open")==="true";
-      document.querySelectorAll(".faq-item").forEach(function(o){o.setAttribute("data-open","false");var q=o.querySelector(".faq-q");if(q)q.setAttribute("aria-expanded","false")});
-      if(!open){item.setAttribute("data-open","true");btn.setAttribute("aria-expanded","true")}
-    });
-  });
-  var t=document.getElementById("menuToggle"),m=document.getElementById("navMobile");
-  if(t&&m){t.addEventListener("click",function(){var e=t.getAttribute("aria-expanded")==="true";t.setAttribute("aria-expanded",String(!e));m.classList.toggle("is-open")});}
-  var h=document.getElementById("header");
-  window.addEventListener("scroll",function(){if(window.scrollY>20)h.classList.add("is-scrolled");else h.classList.remove("is-scrolled")},{passive:true});
-  var y=document.getElementById("year");if(y)y.textContent=String(new Date().getFullYear());
+var h=document.getElementById("header");
+window.addEventListener("scroll",function(){
+  if(window.scrollY>20) h.classList.add("is-scrolled");
+  else h.classList.remove("is-scrolled");
+},{passive:true});
 </script>
-
 </body>
 </html>

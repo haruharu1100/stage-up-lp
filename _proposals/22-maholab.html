@@ -3,401 +3,237 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5" />
-<meta name="theme-color" content="#0a0f1e" />
+<meta name="theme-color" content="#3a5132" />
 <meta name="robots" content="noindex, nofollow" />
-
-<title>まほろば創研株式会社｜Redefine the industry, with data.</title>
-<meta name="description" content="まほろば創研株式会社は、AI/IoTとデータサイエンスで社会インフラの未来を切り拓くテック企業です。" />
-
+<title>まほろば創研株式会社｜誠実な事業で、社会に貢献する。</title>
+<meta name="description" content="まほろば創研株式会社はお客様との信頼関係を第一に、誠実な事業活動と継続的な成長を目指してまいります。" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet" />
-
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700&family=Noto+Serif+JP:wght@500;600&display=swap" rel="stylesheet" />
 <style>
 :root{
-  --bg:#0a0f1e;
-  --bg-2:#111827;
-  --bg-3:#1f2937;
-  --paper:#0f172a;
-  --ink:#f1f5f9;
-  --ink-2:#cbd5e1;
-  --ink-3:#94a3b8;
-  --ink-4:#64748b;
-  --line:rgba(148,163,184,.12);
-  --line-2:rgba(148,163,184,.25);
-  --lime:#a3e635;
-  --lime-deep:#65a30d;
-  --cyan:#22d3ee;
-  --purple:#a78bfa;
-  --red:#f87171;
+  --bg: #fafbf6;
+  --paper: #ffffff;
+  --ink: #1e2418;
+  --muted: #4d5544;
+  --primary: #3a5132;
+  --accent: #88a878;
+  --border: #d8dcc8;
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-html{scroll-behavior:smooth;-webkit-text-size-adjust:100%;scroll-padding-top:80px}
-body{font-family:"Space Grotesk","Noto Sans JP",sans-serif;background:var(--bg);color:var(--ink-2);font-size:15px;line-height:1.7;-webkit-font-smoothing:antialiased}
+html{scroll-behavior:smooth;scroll-padding-top:80px;-webkit-text-size-adjust:100%}
+body{font-family:"Noto Sans JP",sans-serif;background:var(--bg);color:var(--muted);font-size:15px;line-height:1.95;-webkit-font-smoothing:antialiased}
 img{display:block;max-width:100%;height:auto}
 a{color:inherit;text-decoration:none;transition:color .2s,opacity .2s}
 button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 ul,ol{list-style:none}
-::selection{background:var(--lime);color:var(--bg)}
-
-.sample-bar{position:fixed;top:0;left:0;right:0;z-index:60;background:var(--bg-2);color:var(--lime);padding:8px 16px;text-align:center;font-size:11px;letter-spacing:.1em;font-family:"JetBrains Mono",monospace;border-bottom:1px solid var(--line)}
-body{padding-top:32px}
-.container{width:100%;max-width:1240px;margin:0 auto;padding:0 24px}
-.container-narrow{max-width:880px}
+.container{width:100%;max-width:1180px;margin:0 auto;padding:0 24px}
 @media(min-width:768px){.container{padding:0 40px}}
+.sample-bar{position:fixed;top:0;left:0;right:0;z-index:60;background:var(--ink);color:#fff;padding:7px 16px;text-align:center;font-size:11px;letter-spacing:.1em;opacity:.92}
+body{padding-top:30px}
 
-.site-header{position:fixed;top:32px;left:0;right:0;z-index:50;background:rgba(10,15,30,.85);backdrop-filter:blur(20px);border-bottom:1px solid transparent;transition:border-color .3s}
-.site-header.is-scrolled{border-bottom-color:var(--line)}
-.header-inner{display:flex;align-items:center;justify-content:space-between;gap:16px;height:68px}
-.brand{display:flex;align-items:center;gap:10px}
-.brand-mark{width:36px;height:36px;display:grid;place-items:center;background:linear-gradient(135deg,var(--lime) 0%,var(--cyan) 100%);color:var(--bg);font-weight:700;font-size:18px;border-radius:8px}
-.brand-text{display:flex;flex-direction:column;line-height:1.1}
-.brand-jp{font-weight:700;color:var(--ink);font-size:14px;letter-spacing:.02em}
-.brand-en{font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--lime);letter-spacing:.05em;margin-top:2px}
-
-.nav-desktop{display:none;gap:32px;margin-left:auto;margin-right:32px}
-.nav-desktop a{font-size:13px;color:var(--ink-2);font-weight:500;font-family:"JetBrains Mono",monospace;letter-spacing:.02em}
-.nav-desktop a:hover{color:var(--lime)}
+/* Header */
+.site-header{position:fixed;top:30px;left:0;right:0;z-index:50;background:rgba(255,255,255,.94);backdrop-filter:blur(14px);border-bottom:1px solid transparent;transition:border-color .3s}
+.site-header.is-scrolled{border-bottom-color:var(--border)}
+.header-inner{display:flex;align-items:center;justify-content:space-between;gap:16px;height:70px}
+.brand{display:flex;align-items:center;gap:12px}
+.brand-mark{width:42px;height:42px;display:grid;place-items:center;background:var(--primary);color:#fff;font-family:"Noto Serif JP",serif;font-weight:600;font-size:18px;border-radius:6px}
+.brand-name{font-family:"Noto Serif JP",serif;font-weight:600;color:var(--ink);font-size:16px;letter-spacing:.05em}
+.nav-desktop{display:none;gap:30px}
+.nav-desktop a{font-size:13px;color:var(--muted);font-weight:500;letter-spacing:.04em}
+.nav-desktop a:hover{color:var(--primary)}
 @media(min-width:1024px){.nav-desktop{display:flex}}
-
-.btn-h-primary{font-family:"JetBrains Mono",monospace;display:inline-flex;align-items:center;gap:8px;padding:10px 18px;background:var(--lime);color:var(--bg);font-weight:600;font-size:12px;letter-spacing:.05em;border-radius:6px}
-.btn-h-primary:hover{background:var(--cyan)}
-
-.menu-toggle{width:42px;height:42px;display:grid;gap:5px;align-content:center;justify-items:center;background:transparent;border:1px solid var(--line-2);border-radius:8px}
-.menu-toggle span{width:18px;height:1.5px;background:var(--ink-2);transition:transform .3s,opacity .3s}
-.menu-toggle[aria-expanded="true"] span:nth-child(1){transform:translateY(6px) rotate(45deg)}
-.menu-toggle[aria-expanded="true"] span:nth-child(2){opacity:0}
-.menu-toggle[aria-expanded="true"] span:nth-child(3){transform:translateY(-6px) rotate(-45deg)}
-@media(min-width:1024px){.menu-toggle{display:none}}
-.nav-mobile{display:flex;flex-direction:column;max-height:0;overflow:hidden;background:var(--bg-2);border-top:1px solid var(--line);padding:0 24px;transition:max-height .4s,padding .3s}
-.nav-mobile.is-open{max-height:80vh;padding:8px 24px 24px}
-.nav-mobile a{padding:14px 0;border-bottom:1px solid var(--line);font-size:14px;color:var(--ink-2);font-family:"JetBrains Mono",monospace}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;padding:14px 28px;border-radius:6px;font-weight:600;font-size:14px;letter-spacing:.08em;transition:transform .15s,opacity .15s}
+.btn-primary{background:var(--primary);color:#fff}
+.btn-primary:hover{transform:translateY(-1px);opacity:.92}
+.btn-ghost{background:transparent;color:var(--ink);border:1px solid var(--ink)}
+.btn-ghost:hover{background:var(--ink);color:var(--paper)}
+.btn-ghost-light{color:#fff;border-color:#fff}
+.btn-ghost-light:hover{background:#fff;color:var(--ink)}
+.btn-h-primary{padding:11px 22px;background:var(--primary);color:#fff;font-size:13px;font-weight:600;letter-spacing:.05em;border-radius:6px;display:inline-flex;align-items:center;gap:8px}
+.btn-h-primary:hover{opacity:.9}
 
 /* Hero */
-.hero{position:relative;padding:130px 0 100px;overflow:hidden}
-@media(min-width:768px){.hero{padding:170px 0 130px}}
-.hero::before{content:"";position:absolute;inset:0;background-image:radial-gradient(ellipse 60% 50% at 20% 20%,rgba(163,230,53,.12) 0,transparent 60%),radial-gradient(ellipse 50% 40% at 80% 80%,rgba(34,211,238,.1) 0,transparent 60%)}
-.hero::after{content:"";position:absolute;inset:0;background-image:linear-gradient(rgba(163,230,53,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(163,230,53,.04) 1px,transparent 1px);background-size:64px 64px;mask-image:radial-gradient(ellipse 60% 50% at center,#000 30%,transparent 80%)}
-.hero-inner{position:relative}
-.hero-tag{display:inline-flex;align-items:center;gap:8px;padding:6px 12px;background:rgba(163,230,53,.1);border:1px solid rgba(163,230,53,.3);border-radius:6px;font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--lime);letter-spacing:.05em;margin-bottom:32px}
-.hero-tag::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--lime);box-shadow:0 0 12px var(--lime)}
-.hero-title{font-weight:700;color:var(--ink);font-size:44px;line-height:1.1;letter-spacing:-.02em}
-@media(min-width:640px){.hero-title{font-size:62px}}
-@media(min-width:1024px){.hero-title{font-size:84px;line-height:1.05}}
-.hero-title .grad{background:linear-gradient(135deg,var(--lime) 0%,var(--cyan) 50%,var(--purple) 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
-.hero-jp{margin-top:20px;font-family:"Noto Sans JP",sans-serif;font-weight:500;color:var(--ink-2);font-size:18px;line-height:1.6;letter-spacing:.02em}
-@media(min-width:768px){.hero-jp{font-size:22px;margin-top:24px}}
-.hero-sub{margin-top:28px;color:var(--ink-3);font-size:15px;line-height:1.85;max-width:640px}
-@media(min-width:768px){.hero-sub{font-size:17px}}
+.hero{padding:130px 0 80px;background:linear-gradient(180deg,var(--bg) 0%,color-mix(in srgb,var(--bg) 85%,var(--primary) 15%) 100%);position:relative;overflow:hidden}
+@media(min-width:768px){.hero{padding:170px 0 110px}}
+.hero-eyebrow{display:inline-flex;align-items:center;gap:12px;font-family:"Noto Serif JP",serif;font-size:13px;color:var(--primary);letter-spacing:.25em;margin-bottom:24px}
+.hero-eyebrow::before{content:"";display:inline-block;width:28px;height:1px;background:var(--accent)}
+.hero-eyebrow-light{color:#fff}
+.hero-eyebrow-light::before{background:#fff}
+.hero-title{font-family:"Noto Serif JP",serif;font-weight:600;color:var(--ink);font-size:34px;line-height:1.45;letter-spacing:.05em}
+@media(min-width:640px){.hero-title{font-size:44px}}
+@media(min-width:1024px){.hero-title{font-size:54px}}
+.hero-title-light{color:#fff;text-shadow:0 2px 12px rgba(0,0,0,.3)}
+.hero-sub{margin-top:28px;color:var(--muted);font-size:15px;line-height:2.05;max-width:560px}
+.hero-sub-light{color:rgba(255,255,255,.92)}
+.hero-cta{margin-top:36px;display:flex;flex-wrap:wrap;gap:14px}
 
-.hero-cta{margin-top:40px;display:flex;flex-wrap:wrap;gap:14px}
-.btn-primary{font-family:"JetBrains Mono",monospace;display:inline-flex;align-items:center;justify-content:center;gap:10px;background:var(--lime);color:var(--bg);padding:14px 24px;border-radius:8px;font-weight:600;font-size:14px;letter-spacing:.03em}
-.btn-primary:hover{background:var(--cyan);box-shadow:0 0 32px rgba(163,230,53,.3)}
-.btn-secondary{font-family:"JetBrains Mono",monospace;display:inline-flex;align-items:center;justify-content:center;gap:10px;background:transparent;color:var(--ink);padding:14px 24px;border-radius:8px;border:1px solid var(--line-2);font-weight:500;font-size:14px;letter-spacing:.03em}
-.btn-secondary:hover{border-color:var(--lime);color:var(--lime)}
+/* Hero variations */
+.hero-split .hero-grid{display:grid;gap:48px;align-items:center}
+@media(min-width:980px){.hero-split .hero-grid{grid-template-columns:1.1fr 1fr;gap:80px}}
+.hero-split .hero-visual{aspect-ratio:5/4;overflow:hidden;border-radius:8px;background:var(--border)}
+.hero-split .hero-visual img{width:100%;height:100%;object-fit:cover}
 
-.hero-stats{margin-top:80px;display:grid;gap:1px;background:var(--line-2);border:1px solid var(--line-2);border-radius:12px;overflow:hidden}
-@media(min-width:768px){.hero-stats{grid-template-columns:repeat(4,1fr)}}
-.hstat{background:var(--bg);padding:28px 24px}
-.hstat-l{font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--ink-4);letter-spacing:.1em;margin-bottom:10px;text-transform:uppercase}
-.hstat-n{font-weight:700;color:var(--ink);font-size:32px;line-height:1;letter-spacing:-.02em}
-.hstat-n .accent{color:var(--lime)}
-.hstat-d{margin-top:8px;font-size:12px;color:var(--ink-3)}
+.hero-center .hero-center-inner{max-width:780px;margin:0 auto;text-align:center}
+.hero-center .hero-eyebrow{justify-content:center}
+.hero-center .hero-sub{margin-left:auto;margin-right:auto}
+.hero-center .hero-cta{justify-content:center}
+.hero-center .hero-strip{margin-top:60px;aspect-ratio:21/9;overflow:hidden}
+.hero-center .hero-strip img{width:100%;height:100%;object-fit:cover}
 
-/* Section base */
-.section{padding:96px 0;position:relative}
-@media(min-width:768px){.section{padding:140px 0}}
-.section-bg-2{background:var(--bg-2)}
-.section-paper{background:var(--paper)}
+.hero-fullbg{padding:170px 0 130px;background-size:cover;background-position:center}
+.hero-fullbg .hero-fullbg-inner{max-width:720px}
 
-.s-eyebrow{display:inline-flex;align-items:center;gap:10px;font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--lime);letter-spacing:.1em;text-transform:uppercase;margin-bottom:20px}
-.s-eyebrow::before{content:"//";color:var(--ink-4)}
-.s-title{font-weight:700;color:var(--ink);font-size:32px;line-height:1.2;letter-spacing:-.02em}
-@media(min-width:768px){.s-title{font-size:48px}}
-.s-title .grad{background:linear-gradient(135deg,var(--lime) 0%,var(--cyan) 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
-.s-lead{margin-top:24px;color:var(--ink-3);font-size:16px;line-height:1.8;max-width:720px}
+/* Section */
+.section{padding:90px 0}
+@media(min-width:768px){.section{padding:120px 0}}
+.section-soft{background:color-mix(in srgb,var(--bg) 92%,var(--ink) 8%)}
+.section-primary{background:var(--primary);color:#fff}
+.s-eyebrow{display:inline-flex;align-items:center;gap:12px;font-family:"Noto Serif JP",serif;font-size:13px;color:var(--primary);letter-spacing:.25em;margin-bottom:20px}
+.s-eyebrow::before{content:"";display:inline-block;width:28px;height:1px;background:var(--accent)}
+.section-primary .s-eyebrow{color:#fff}
+.section-primary .s-eyebrow::before{background:#fff}
+.s-title{font-family:"Noto Serif JP",serif;font-weight:600;color:var(--ink);font-size:30px;line-height:1.5;letter-spacing:.05em}
+@media(min-width:768px){.s-title{font-size:40px}}
+.section-primary .s-title{color:#fff}
+.s-lead{margin-top:22px;color:var(--muted);font-size:15px;line-height:2.1;max-width:720px}
+.section-primary .s-lead{color:rgba(255,255,255,.85)}
 
-/* Mission */
-.mission{padding:48px 36px;border:1px solid var(--line-2);border-radius:16px;background:linear-gradient(135deg,var(--bg-2) 0%,var(--paper) 100%);margin-top:56px;position:relative;overflow:hidden}
-.mission::before{content:"";position:absolute;top:0;right:0;width:200px;height:200px;background:radial-gradient(circle,rgba(163,230,53,.15) 0%,transparent 70%)}
-.mission-h{position:relative;font-weight:600;color:var(--ink);font-size:24px;line-height:1.5;letter-spacing:-.01em}
-@media(min-width:768px){.mission-h{font-size:32px}}
-.mission-h .accent{color:var(--lime)}
-.mission-p{position:relative;margin-top:24px;color:var(--ink-2);font-size:16px;line-height:1.85;max-width:780px}
+/* Business cards */
+.biz-grid{margin-top:56px;display:grid;gap:22px}
+@media(min-width:768px){.biz-grid{grid-template-columns:repeat(3,1fr)}}
+.biz-card{padding:36px 30px;background:var(--paper);border:1px solid var(--border);border-radius:8px;transition:transform .2s,box-shadow .2s}
+.biz-card:hover{transform:translateY(-3px);box-shadow:0 20px 40px -20px rgba(0,0,0,.15)}
+.biz-no{font-family:"Noto Serif JP",serif;font-size:13px;color:var(--accent);letter-spacing:.2em;font-weight:600}
+.biz-h{margin-top:12px;font-family:"Noto Serif JP",serif;font-size:20px;color:var(--ink);font-weight:600;line-height:1.5}
+.biz-d{margin-top:14px;font-size:14px;color:var(--muted);line-height:2}
 
-/* Tech (技術スタック) */
-.tech-grid{margin-top:56px;display:grid;gap:24px}
-@media(min-width:768px){.tech-grid{grid-template-columns:repeat(3,1fr)}}
-.tech{padding:32px;background:var(--bg);border:1px solid var(--line-2);border-radius:14px;transition:all .3s}
-.tech:hover{border-color:var(--lime);transform:translateY(-4px);box-shadow:0 20px 50px -20px rgba(163,230,53,.3)}
-.tech-tag{display:inline-block;padding:4px 10px;background:rgba(163,230,53,.1);border:1px solid rgba(163,230,53,.3);border-radius:4px;font-family:"JetBrains Mono",monospace;font-size:10px;color:var(--lime);letter-spacing:.05em;margin-bottom:18px}
-.tech-h{font-weight:600;color:var(--ink);font-size:20px;line-height:1.4}
-.tech-d{margin-top:14px;font-size:14px;color:var(--ink-3);line-height:1.85}
-.tech-stack{margin-top:20px;padding-top:16px;border-top:1px solid var(--line);font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--ink-4);letter-spacing:.03em;line-height:1.8}
-
-/* Solutions */
-.sol-list{margin-top:56px;display:grid;gap:0;border-top:1px solid var(--line-2)}
-.sol{padding:48px 0;border-bottom:1px solid var(--line-2);display:grid;gap:28px}
-@media(min-width:980px){.sol{grid-template-columns:160px 1.2fr 1fr;gap:48px;align-items:start}}
-.sol-no{font-family:"JetBrains Mono",monospace;color:var(--lime);font-size:14px;letter-spacing:.1em}
-.sol-no span{display:block;font-weight:700;font-size:36px;color:var(--ink);margin-top:4px}
-.sol-h{font-weight:600;color:var(--ink);font-size:22px;line-height:1.4}
-.sol-d{margin-top:14px;color:var(--ink-2);font-size:15px;line-height:1.85}
-.sol-meta{display:grid;gap:12px;padding:24px;background:var(--bg-2);border:1px solid var(--line);border-radius:10px}
-.sol-meta-row{display:flex;justify-content:space-between;gap:14px;font-size:12px;border-bottom:1px solid var(--line);padding-bottom:10px}
-.sol-meta-row:last-child{border-bottom:0;padding-bottom:0}
-.sol-meta-l{color:var(--ink-4);font-family:"JetBrains Mono",monospace;text-transform:uppercase;letter-spacing:.05em}
-.sol-meta-v{color:var(--ink);font-weight:500;text-align:right}
-
-/* R&D */
-.rd-grid{margin-top:56px;display:grid;gap:20px}
-@media(min-width:768px){.rd-grid{grid-template-columns:repeat(2,1fr)}}
-.rd{padding:32px 28px;background:var(--paper);border-left:3px solid var(--lime);border-radius:6px}
-.rd-cat{font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--lime);letter-spacing:.05em;text-transform:uppercase;margin-bottom:14px}
-.rd-h{font-weight:600;color:var(--ink);font-size:18px;line-height:1.4}
-.rd-d{margin-top:12px;font-size:14px;color:var(--ink-3);line-height:1.85}
-.rd-tags{margin-top:16px;display:flex;flex-wrap:wrap;gap:6px}
-.rd-tags li{font-family:"JetBrains Mono",monospace;font-size:10px;padding:3px 8px;background:rgba(163,230,53,.08);border:1px solid rgba(163,230,53,.2);color:var(--ink-2);border-radius:4px}
-
-/* Partners */
-.partner-grid{margin-top:56px;display:grid;gap:1px;background:var(--line-2);border:1px solid var(--line-2);border-radius:12px;overflow:hidden;grid-template-columns:repeat(2,1fr)}
-@media(min-width:768px){.partner-grid{grid-template-columns:repeat(4,1fr)}}
-.partner{background:var(--bg);padding:36px 20px;text-align:center;font-family:"JetBrains Mono",monospace;color:var(--ink-3);font-size:13px;letter-spacing:.05em}
-
-/* FAQ */
-.faq{margin-top:56px;display:grid;gap:12px}
-.faq-item{background:var(--paper);border:1px solid var(--line-2);border-radius:10px;overflow:hidden;transition:border-color .3s}
-.faq-item[data-open="true"]{border-color:var(--lime)}
-.faq-q{width:100%;text-align:left;padding:22px 24px;display:flex;align-items:center;gap:16px;font-weight:600;color:var(--ink)}
-.faq-qn{font-family:"JetBrains Mono",monospace;color:var(--lime);font-size:12px;letter-spacing:.05em}
-.faq-qt{flex:1;font-size:15px;line-height:1.5}
-.faq-icon{flex-shrink:0;width:28px;height:28px;border-radius:6px;display:grid;place-items:center;background:var(--bg-2);color:var(--lime);font-family:"JetBrains Mono",monospace;font-size:16px;transition:transform .3s}
-.faq-item[data-open="true"] .faq-icon{transform:rotate(45deg);background:var(--lime);color:var(--bg)}
-.faq-a{max-height:0;overflow:hidden;transition:max-height .5s}
-.faq-item[data-open="true"] .faq-a{max-height:500px}
-.faq-a-inner{padding:0 24px 24px;font-size:14px;color:var(--ink-3);line-height:1.85}
+/* Reasons */
+.reason-list{margin-top:56px;display:grid;gap:0;border-top:1px solid var(--border)}
+.reason{padding:30px 0;border-bottom:1px solid var(--border);display:grid;gap:16px}
+@media(min-width:768px){.reason{grid-template-columns:160px 1fr;gap:40px;align-items:start}}
+.reason-no{font-family:"Noto Serif JP",serif;font-size:13px;color:var(--accent);letter-spacing:.2em;font-weight:600}
+.reason-no span{display:block;font-size:30px;color:var(--ink);margin-top:6px;font-weight:600}
+.reason-h{font-family:"Noto Serif JP",serif;font-size:19px;color:var(--ink);font-weight:600;line-height:1.5}
+.reason-d{margin-top:14px;color:var(--muted);font-size:14px;line-height:2.05}
 
 /* Contact */
-.contact{padding:120px 0;background:linear-gradient(135deg,var(--bg-2) 0%,var(--paper) 100%);position:relative;overflow:hidden}
-.contact::before{content:"";position:absolute;inset:0;background:radial-gradient(circle at 30% 50%,rgba(163,230,53,.08) 0,transparent 50%)}
-.contact-inner{position:relative}
-.contact-cards{margin-top:48px;display:grid;gap:14px}
+.contact{padding:100px 0 120px;background:color-mix(in srgb,var(--bg) 92%,var(--primary) 8%)}
+.contact-cards{margin-top:50px;display:grid;gap:0;background:var(--paper);border:1px solid var(--border);border-radius:8px;overflow:hidden}
 @media(min-width:768px){.contact-cards{grid-template-columns:repeat(3,1fr)}}
-.ccard{padding:28px;background:var(--bg);border:1px solid var(--line-2);border-radius:14px;text-align:center}
-.ccard-l{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.1em;color:var(--lime);text-transform:uppercase}
-.ccard-v{margin-top:12px;font-weight:600;color:var(--ink);font-size:22px;line-height:1.4}
-.ccard-n{margin-top:8px;font-size:12px;color:var(--ink-4);font-family:"JetBrains Mono",monospace}
-
-.contact-buttons{margin-top:36px;display:flex;flex-direction:column;gap:12px}
+.ccard{padding:36px 30px;text-align:center;border-bottom:1px solid var(--border)}
+@media(min-width:768px){.ccard{border-bottom:0;border-right:1px solid var(--border)}.ccard:last-child{border-right:0}}
+.ccard-l{font-family:"Noto Serif JP",serif;font-size:13px;color:var(--accent);letter-spacing:.25em;font-weight:600}
+.ccard-v{margin-top:14px;font-family:"Noto Serif JP",serif;font-size:20px;color:var(--ink);line-height:1.4;font-weight:600}
+.ccard-n{margin-top:10px;font-size:12px;color:var(--muted);line-height:1.7}
+.contact-buttons{margin-top:40px;display:flex;flex-direction:column;gap:14px}
 @media(min-width:768px){.contact-buttons{flex-direction:row;justify-content:center}}
-.btn-c-primary{font-family:"JetBrains Mono",monospace;display:inline-flex;align-items:center;justify-content:center;gap:8px;background:var(--lime);color:var(--bg);padding:16px 32px;border-radius:10px;font-weight:600;font-size:14px;letter-spacing:.03em}
-.btn-c-primary:hover{background:var(--cyan);box-shadow:0 0 32px rgba(163,230,53,.4)}
-.btn-c-line{display:inline-flex;align-items:center;justify-content:center;gap:8px;background:#06c755;color:#fff;padding:16px 32px;border-radius:10px;font-weight:600;font-size:14px}
+.btn-line{background:#06c755;color:#fff;padding:18px 38px;border-radius:6px;font-weight:600;font-size:14px;letter-spacing:.1em;display:inline-flex;align-items:center;gap:10px}
 
-.contact-note{margin-top:32px;text-align:center;font-size:12px;color:var(--ink-4);font-family:"JetBrains Mono",monospace}
-.sample-mark{margin:48px auto 0;max-width:640px;padding:14px 20px;border:1px dashed var(--line-2);border-radius:10px;text-align:center;font-size:11px;color:var(--ink-4)}
+/* Sample mark */
+.sample-mark{margin:36px auto 0;max-width:720px;padding:16px 24px;border:1px dashed var(--border);background:var(--paper);text-align:center;font-size:11px;color:var(--muted);border-radius:6px}
 
-.site-footer{background:var(--bg-2);color:var(--ink-3);padding:64px 0 28px;border-top:1px solid var(--line)}
+/* Footer */
+.site-footer{background:var(--ink);color:rgba(255,255,255,.7);padding:64px 0 28px}
 .footer-inner{display:grid;gap:36px}
 @media(min-width:768px){.footer-inner{grid-template-columns:1.5fr 1fr 1fr}}
-.footer-lead{margin-top:16px;font-size:13px;line-height:1.85;color:var(--ink-4)}
-.footer-h{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.1em;color:var(--lime);text-transform:uppercase;margin-bottom:16px}
-.footer-list li{margin-bottom:10px;font-size:13px}
-.footer-list a:hover{color:var(--lime)}
-.footer-bottom{margin-top:56px;padding-top:24px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:10px;font-size:11px;color:var(--ink-4);font-family:"JetBrains Mono",monospace}
-@media(min-width:640px){.footer-bottom{flex-direction:row;justify-content:space-between}}
-.footer-sample{margin-top:8px;text-align:center;width:100%;font-size:10px}
+.footer-name{color:#fff;font-family:"Noto Serif JP",serif;font-weight:600;font-size:17px}
+.footer-lead{margin-top:14px;font-size:13px;line-height:1.95;color:rgba(255,255,255,.65)}
+.footer-h{font-family:"Noto Serif JP",serif;color:rgba(255,255,255,.85);font-size:13px;letter-spacing:.2em;margin-bottom:14px;font-weight:600}
+.footer-list li{margin-bottom:9px;font-size:13px;color:rgba(255,255,255,.65)}
+.footer-bottom{margin-top:48px;padding-top:22px;border-top:1px solid rgba(255,255,255,.12);font-size:11px;color:rgba(255,255,255,.45);text-align:center}
+
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
 <body>
 
-<div class="sample-bar">// SAMPLE_PROPOSAL — this page is private</div>
+<div class="sample-bar">※ご提案用サンプルページ｜本ページは公開されておりません</div>
 
 <header class="site-header" id="header">
   <div class="container header-inner">
     <a href="#top" class="brand">
-      <span class="brand-mark">M</span>
-      <span class="brand-text"><span class="brand-jp">まほろば創研</span><span class="brand-en">// maholab.</span></span>
+      <span class="brand-mark">ま</span>
+      <span class="brand-name">まほろば創研株式会社</span>
     </a>
     <nav class="nav-desktop">
-      <a href="#mission">mission</a>
-      <a href="#tech">technology</a>
-      <a href="#solutions">solutions</a>
-      <a href="#rd">r&d</a>
-      <a href="#faq">faq</a>
+      <a href="#biz">事業内容</a>
+      <a href="#reason">選ばれる理由</a>
+      <a href="#contact">お問い合わせ</a>
     </nav>
-    <a href="#contact" class="btn-h-primary">Contact →</a>
-    <button class="menu-toggle" id="menuToggle" aria-label="メニュー" aria-expanded="false"><span></span><span></span><span></span></button>
-  </div>
-  <div class="nav-mobile" id="navMobile">
-    <a href="#mission">mission</a><a href="#tech">technology</a><a href="#solutions">solutions</a><a href="#rd">r&d</a><a href="#faq">faq</a><a href="#contact">contact</a>
+    <a href="#contact" class="btn-h-primary">お問い合わせ</a>
   </div>
 </header>
 
 <main id="top">
 
-<section class="hero">
-  <div class="container hero-inner">
-    <div class="hero-tag">Tech Studio for Industrial Innovation</div>
-    <h1 class="hero-title">Redefine the<br />industry,<br /><span class="grad">with data.</span></h1>
-    <p class="hero-jp">データの力で、<br />既存産業の「当たり前」を、ふたたび定義する。</p>
-    <p class="hero-sub">まほろば創研は、AI・IoT・データサイエンスを軸に、製造・建設・物流・農業など実社会の領域で実装可能なソリューションを設計・開発するテック企業です。</p>
+
+<section class="hero hero-fullbg" style="background-image:linear-gradient(135deg, rgba(0,0,0,.55), rgba(0,0,0,.3)), url('https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&w=1400&q=70');">
+  <div class="container hero-fullbg-inner">
+    <p class="hero-eyebrow hero-eyebrow-light">— 汎用コーポレート —</p>
+    <h1 class="hero-title hero-title-light">誠実な事業で、社会に貢献する。</h1>
+    <p class="hero-sub hero-sub-light">お客様との信頼関係を第一に、誠実な事業活動と継続的な成長を目指してまいります。</p>
     <div class="hero-cta">
-      <a href="#contact" class="btn-primary">Get in touch →</a>
-      <a href="#solutions" class="btn-secondary">View solutions</a>
-    </div>
-    <div class="hero-stats">
-      <div class="hstat"><p class="hstat-l">// projects</p><p class="hstat-n"><span class="accent">120</span>+</p><p class="hstat-d">Cumulative R&D outputs</p></div>
-      <div class="hstat"><p class="hstat-l">// domains</p><p class="hstat-n"><span class="accent">8</span></p><p class="hstat-d">Industries covered</p></div>
-      <div class="hstat"><p class="hstat-l">// engineers</p><p class="hstat-n"><span class="accent">25</span></p><p class="hstat-d">Specialists onboard</p></div>
-      <div class="hstat"><p class="hstat-l">// patents</p><p class="hstat-n"><span class="accent">12</span></p><p class="hstat-d">Filed and approved</p></div>
+      <a href="#contact" class="btn btn-primary">お問い合わせはこちら</a>
+      <a href="#biz" class="btn btn-ghost btn-ghost-light">事業内容を見る</a>
     </div>
   </div>
 </section>
 
-<section id="mission" class="section section-bg-2">
+<section id="biz" class="section">
   <div class="container">
-    <p class="s-eyebrow">our mission</p>
-    <h2 class="s-title">We build <span class="grad">infrastructure</span><br />for the next generation.</h2>
-    <p class="s-lead">テクノロジーは、生活の風景を変える道具です。私たちが向き合うのは、最先端の研究ではなく、現場で「実際に動くもの」を設計し、社会の隅々まで届けること。</p>
-    <div class="mission">
-      <h3 class="mission-h">私たちは、<span class="accent">技術と現場の橋渡し役</span>として、データの可能性を社会のインフラに変換していきます。</h3>
-      <p class="mission-p">研究室で生まれた技術が、現場で使われずに眠ったままになることに、私たちはずっと違和感を持ってきました。だからこそ「現場で本当に役立つ実装」だけを追求し、専門領域に深く入り込み、共に成果を作る姿勢を貫きます。</p>
-    </div>
+    <p class="s-eyebrow">— Our Business —</p>
+    <h2 class="s-title">事業<br/>内容</h2>
+    <p class="s-lead">お客様との信頼関係を第一に、誠実な事業活動と継続的な成長を目指してまいります。</p>
+    <div class="biz-grid"><article class="biz-card"><span class="biz-no">— 01 —</span><h3 class="biz-h">事業のご案内</h3><p class="biz-d">当社事業の詳細をご紹介いたします。</p></article><article class="biz-card"><span class="biz-no">— 02 —</span><h3 class="biz-h">お客様サポート</h3><p class="biz-d">継続的なサポートを行っております。</p></article><article class="biz-card"><span class="biz-no">— 03 —</span><h3 class="biz-h">お問い合わせ</h3><p class="biz-d">お気軽にご相談ください。</p></article></div>
   </div>
 </section>
 
-<section id="tech" class="section">
+<section id="reason" class="section section-soft">
   <div class="container">
-    <p class="s-eyebrow">technology stack</p>
-    <h2 class="s-title">3つの技術領域で、<br /><span class="grad">産業課題を解く。</span></h2>
-    <p class="s-lead">私たちの研究・開発の中核となる3つの技術領域です。</p>
-    <div class="tech-grid">
-      <article class="tech">
-        <span class="tech-tag">// AI / Machine Learning</span>
-        <h3 class="tech-h">機械学習・予測モデル</h3>
-        <p class="tech-d">需要予測・異常検知・画像認識・自然言語処理まで、産業現場のデータから価値を引き出すモデル設計を行います。</p>
-        <p class="tech-stack">PyTorch · TensorFlow · scikit-learn · YOLO · BERT</p>
-      </article>
-      <article class="tech">
-        <span class="tech-tag">// IoT / Edge</span>
-        <h3 class="tech-h">IoT・エッジコンピューティング</h3>
-        <p class="tech-d">センサーデバイスからエッジ推論まで、現場のリアルタイムデータを取得・処理する一気通貫の設計が可能です。</p>
-        <p class="tech-stack">Raspberry Pi · NVIDIA Jetson · LoRaWAN · MQTT · AWS IoT</p>
-      </article>
-      <article class="tech">
-        <span class="tech-tag">// Data Platform</span>
-        <h3 class="tech-h">データプラットフォーム構築</h3>
-        <p class="tech-d">企業内に散在するデータを統合・可視化・分析できる基盤を構築。意思決定の質とスピードを引き上げます。</p>
-        <p class="tech-stack">Snowflake · BigQuery · dbt · Looker · Apache Airflow</p>
-      </article>
-    </div>
-  </div>
-</section>
-
-<section id="solutions" class="section section-bg-2">
-  <div class="container">
-    <p class="s-eyebrow">solutions</p>
-    <h2 class="s-title">業界別の<br /><span class="grad">ソリューション。</span></h2>
-    <p class="s-lead">業界特有の課題に深く入り込み、現場で動く実装を提供します。</p>
-    <div class="sol-list">
-      <article class="sol">
-        <p class="sol-no">// 01<span>製造業</span></p>
+    <p class="s-eyebrow">— Why Chosen —</p>
+    <h2 class="s-title">お客様に選ばれる<br/>3つの理由</h2>
+    <div class="reason-list">
+      <article class="reason">
+        <p class="reason-no">Reason<span>01</span></p>
         <div>
-          <h3 class="sol-h">予知保全 × IoTセンサー基盤</h3>
-          <p class="sol-d">設備の振動・温度・電流データから故障兆候を検知。計画外停止を最大70%削減した実績があります。</p>
+          <h3 class="reason-h">地域を中心に積み重ねてきた信頼</h3>
+          <p class="reason-d">地域でのお客様一件一件と向き合い、丁寧なご対応で築いてきた信頼関係を、これからも大切にしてまいります。</p>
         </div>
-        <div class="sol-meta"><div class="sol-meta-row"><span class="sol-meta-l">domain</span><span class="sol-meta-v">Manufacturing</span></div><div class="sol-meta-row"><span class="sol-meta-l">tech</span><span class="sol-meta-v">IoT · ML · Edge</span></div><div class="sol-meta-row"><span class="sol-meta-l">duration</span><span class="sol-meta-v">3-6 months</span></div></div>
       </article>
-      <article class="sol">
-        <p class="sol-no">// 02<span>建設業</span></p>
+      <article class="reason">
+        <p class="reason-no">Reason<span>02</span></p>
         <div>
-          <h3 class="sol-h">画像認識 × 安全監視システム</h3>
-          <p class="sol-d">現場カメラから危険行動や安全装備の不着用をリアルタイム検知。安全管理者の負担を大幅軽減します。</p>
+          <h3 class="reason-h">お客様一人ひとりに寄り添うご対応</h3>
+          <p class="reason-d">画一的な対応ではなく、お客様の状況やご要望に応じた、きめ細やかなご対応を心がけております。</p>
         </div>
-        <div class="sol-meta"><div class="sol-meta-row"><span class="sol-meta-l">domain</span><span class="sol-meta-v">Construction</span></div><div class="sol-meta-row"><span class="sol-meta-l">tech</span><span class="sol-meta-v">Computer Vision · YOLO</span></div><div class="sol-meta-row"><span class="sol-meta-l">duration</span><span class="sol-meta-v">2-4 months</span></div></div>
       </article>
-      <article class="sol">
-        <p class="sol-no">// 03<span>物流業</span></p>
+      <article class="reason">
+        <p class="reason-no">Reason<span>03</span></p>
         <div>
-          <h3 class="sol-h">需要予測 × 配送最適化</h3>
-          <p class="sol-d">過去の出荷データと外部要因（天候・季節）を組み合わせた需要予測モデル。在庫過多・欠品を同時に削減。</p>
+          <h3 class="reason-h">継続的なお取引が可能な体制</h3>
+          <p class="reason-d">一度のお取引で終わらず、お客様の事業や暮らしに長く寄り添える、信頼できるパートナーであることを目指しています。</p>
         </div>
-        <div class="sol-meta"><div class="sol-meta-row"><span class="sol-meta-l">domain</span><span class="sol-meta-v">Logistics</span></div><div class="sol-meta-row"><span class="sol-meta-l">tech</span><span class="sol-meta-v">Time Series · LightGBM</span></div><div class="sol-meta-row"><span class="sol-meta-l">duration</span><span class="sol-meta-v">3-5 months</span></div></div>
       </article>
-      <article class="sol">
-        <p class="sol-no">// 04<span>農業</span></p>
-        <div>
-          <h3 class="sol-h">スマート農業 × 栽培最適化</h3>
-          <p class="sol-d">圃場の土壌センサーと衛星画像を統合し、収量予測・施肥最適化を支援。担い手不足の地域農業を技術で支えます。</p>
-        </div>
-        <div class="sol-meta"><div class="sol-meta-row"><span class="sol-meta-l">domain</span><span class="sol-meta-v">Agriculture</span></div><div class="sol-meta-row"><span class="sol-meta-l">tech</span><span class="sol-meta-v">Sensor Fusion · Remote Sensing</span></div><div class="sol-meta-row"><span class="sol-meta-l">duration</span><span class="sol-meta-v">6-12 months</span></div></div>
-      </article>
-    </div>
-  </div>
-</section>
-
-<section id="rd" class="section">
-  <div class="container">
-    <p class="s-eyebrow">research & development</p>
-    <h2 class="s-title">R&D 活動。<br /><span class="grad">技術の最前線を、社会へ。</span></h2>
-    <p class="s-lead">大学・研究機関との共同研究、自社プロトタイプ開発、技術書執筆まで、技術コミュニティへの貢献も大切にしています。</p>
-    <div class="rd-grid">
-      <article class="rd"><p class="rd-cat">// joint research</p><h3 class="rd-h">国内大学との共同研究</h3><p class="rd-d">複数の国立大学情報工学系研究室と、機械学習モデルの実装研究を継続実施。</p><ul class="rd-tags"><li>Computer Vision</li><li>NLP</li><li>Time Series</li></ul></article>
-      <article class="rd"><p class="rd-cat">// prototyping</p><h3 class="rd-h">社内プロトタイプ開発</h3><p class="rd-d">月次でR&Dデイを設け、エンジニア主導で先端技術のプロトタイピングを実施。</p><ul class="rd-tags"><li>LLM Agents</li><li>Edge AI</li><li>3D Reconstruction</li></ul></article>
-      <article class="rd"><p class="rd-cat">// publication</p><h3 class="rd-h">技術書・論文の執筆</h3><p class="rd-d">技術書執筆、学会論文発表、技術ブログ運営など、技術の知見を社会へ還元しています。</p><ul class="rd-tags"><li>Books</li><li>Papers</li><li>Tech Blog</li></ul></article>
-      <article class="rd"><p class="rd-cat">// open source</p><h3 class="rd-h">OSS への貢献</h3><p class="rd-d">業務で活用するOSSへのコントリビューションを通じて、技術コミュニティを支えます。</p><ul class="rd-tags"><li>GitHub</li><li>Python</li><li>Rust</li></ul></article>
-    </div>
-  </div>
-</section>
-
-<section class="section section-bg-2">
-  <div class="container">
-    <p class="s-eyebrow">trusted by</p>
-    <h2 class="s-title">様々な業界の<br /><span class="grad">パートナー企業</span>と。</h2>
-    <div class="partner-grid">
-      <div class="partner">// Manufacturing.A</div>
-      <div class="partner">// Construction.B</div>
-      <div class="partner">// Logistics.C</div>
-      <div class="partner">// Agri.D</div>
-      <div class="partner">// Energy.E</div>
-      <div class="partner">// Retail.F</div>
-      <div class="partner">// Healthcare.G</div>
-      <div class="partner">// Public.H</div>
-    </div>
-  </div>
-</section>
-
-<section id="faq" class="section">
-  <div class="container container-narrow">
-    <p class="s-eyebrow">faq</p>
-    <h2 class="s-title">よくあるご質問。</h2>
-    <div class="faq">
-      <div class="faq-item" data-open="true"><button class="faq-q" type="button" aria-expanded="true"><span class="faq-qn">Q01</span><span class="faq-qt">PoC（実証実験）からの開始は可能ですか？</span><span class="faq-icon">+</span></button><div class="faq-a"><p class="faq-a-inner">はい、小規模なPoCから始めて、効果検証の上で本開発に移行するスタイルを推奨しています。初期投資のリスクを抑えながら、確実な成果に繋げます。</p></div></div>
-      <div class="faq-item"><button class="faq-q" type="button" aria-expanded="false"><span class="faq-qn">Q02</span><span class="faq-qt">開発費用の目安は？</span><span class="faq-icon">+</span></button><div class="faq-a"><p class="faq-a-inner">プロジェクトの規模・期間・関与する技術によって大きく異なります。要件をヒアリングの上、詳細なお見積もりをご提案します。</p></div></div>
-      <div class="faq-item"><button class="faq-q" type="button" aria-expanded="false"><span class="faq-qn">Q03</span><span class="faq-qt">開発期間はどれくらい？</span><span class="faq-icon">+</span></button><div class="faq-a"><p class="faq-a-inner">PoCで1〜3ヶ月、本実装で3〜12ヶ月が目安です。アジャイル開発で段階的にリリースする方針です。</p></div></div>
-      <div class="faq-item"><button class="faq-q" type="button" aria-expanded="false"><span class="faq-qn">Q04</span><span class="faq-qt">運用フェーズもサポート可能ですか？</span><span class="faq-icon">+</span></button><div class="faq-a"><p class="faq-a-inner">はい、本番稼働後の運用・モデル再学習・機能拡張まで、長期的にサポート可能です。SLAも別途ご相談ください。</p></div></div>
-      <div class="faq-item"><button class="faq-q" type="button" aria-expanded="false"><span class="faq-qn">Q05</span><span class="faq-qt">データが少なくても対応可能ですか？</span><span class="faq-icon">+</span></button><div class="faq-a"><p class="faq-a-inner">データが限られる場合でも、転移学習・データ拡張・合成データ生成などの手法を組み合わせて対応します。データ収集設計からご一緒します。</p></div></div>
-      <div class="faq-item"><button class="faq-q" type="button" aria-expanded="false"><span class="faq-qn">Q06</span><span class="faq-qt">機密保持の取り扱いは？</span><span class="faq-icon">+</span></button><div class="faq-a"><p class="faq-a-inner">NDA締結はもちろん、プロジェクト専用のクローズドな開発環境・データ管理体制でお取り組みします。詳細は別途ご相談ください。</p></div></div>
     </div>
   </div>
 </section>
 
 <section id="contact" class="contact">
-  <div class="container container-narrow contact-inner">
-    <p class="s-eyebrow">contact</p>
-    <h2 class="s-title">Let's build the<br /><span class="grad">next infrastructure.</span></h2>
-    <p class="s-lead">プロジェクトのご相談・技術選定のご質問、お気軽にお問い合わせください。</p>
+  <div class="container">
+    <div style="text-align:center">
+      <p class="s-eyebrow" style="justify-content:center">— Contact —</p>
+      <h2 class="s-title">お気軽に<br/>お問い合わせください</h2>
+      <p class="s-lead" style="margin:22px auto 0">ご相談・お見積もりは無料です。お電話・お問い合わせフォームよりお気軽にどうぞ。</p>
+    </div>
     <div class="contact-cards">
-      <div class="ccard"><p class="ccard-l">// tel</p><p class="ccard-v">XXX-XXXX-XXXX</p><p class="ccard-n">// 平日 9-18時</p></div>
-      <div class="ccard"><p class="ccard-l">// line</p><p class="ccard-v">お問い合わせ<br />はこちら</p><p class="ccard-n">// 24/7 receivable</p></div>
-      <div class="ccard"><p class="ccard-l">// form</p><p class="ccard-v">お問い合わせ<br />はこちら</p><p class="ccard-n">// 24/7 receivable</p></div>
+      <div class="ccard"><p class="ccard-l">TEL</p><p class="ccard-v">XXX-XXXX-XXXX</p><p class="ccard-n">受付 9:00-18:00<br/>（土日祝休）</p></div>
+      <div class="ccard"><p class="ccard-l">MAIL</p><p class="ccard-v">info@example.com</p><p class="ccard-n">24時間 受付<br/>返信は営業日</p></div>
+      <div class="ccard"><p class="ccard-l">FORM</p><p class="ccard-v">お問い合わせ<br/>はこちら</p><p class="ccard-n">フォーム送信<br/>24時間 受付</p></div>
     </div>
     <div class="contact-buttons">
-      <a href="#" class="btn-c-line"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3C6.48 3 2 6.58 2 11c0 3.96 3.58 7.27 8.4 7.92.33.07.78.22.89.5.1.25.07.65.03.9l-.14.86c-.05.25-.2.99.87.54s5.75-3.39 7.84-5.8C21.32 14.36 22 12.77 22 11c0-4.42-4.48-8-10-8z"/></svg>お問い合わせはこちら</a>
-      <a href="#" class="btn-c-primary">Send inquiry →</a>
+      <a href="#" class="btn btn-primary">お問い合わせはこちら</a>
     </div>
-    <p class="contact-note">// Reply within 24h on business days</p>
     <div class="sample-mark">※本ページはご提案用サンプルとして作成しております。掲載情報は仮の内容を含みます。</div>
   </div>
 </section>
@@ -407,24 +243,38 @@ body{padding-top:32px}
 <footer class="site-footer">
   <div class="container footer-inner">
     <div>
-      <a href="#top" class="brand"><span class="brand-mark">M</span><span class="brand-text"><span class="brand-jp" style="color:#fff">まほろば創研</span><span class="brand-en">// maholab.</span></span></a>
-      <p class="footer-lead">まほろば創研株式会社<br />Redefine the industry, with data.</p>
+      <p class="footer-name">まほろば創研株式会社</p>
+      <p class="footer-lead">お客様との信頼関係を第一に、誠実な事業活動と継続的な成長を目指してまいります。</p>
     </div>
-    <div><p class="footer-h">// menu</p><ul class="footer-list"><li><a href="#mission">mission</a></li><li><a href="#tech">technology</a></li><li><a href="#solutions">solutions</a></li><li><a href="#rd">r&d</a></li><li><a href="#faq">faq</a></li></ul></div>
-    <div><p class="footer-h">// contact</p><ul class="footer-list"><li>住所：〇〇県〇〇市〇〇町〇-〇-〇</li><li>TEL：XXX-XXXX-XXXX</li><li>Mail：info@example.com</li></ul></div>
+    <div>
+      <p class="footer-h">— Menu —</p>
+      <ul class="footer-list">
+        <li><a href="#biz">事業内容</a></li>
+        <li><a href="#reason">選ばれる理由</a></li>
+        <li><a href="#contact">お問い合わせ</a></li>
+      </ul>
+    </div>
+    <div>
+      <p class="footer-h">— Company —</p>
+      <ul class="footer-list">
+        <li>所在地：大阪府</li>
+        <li>TEL：XXX-XXXX-XXXX</li>
+        <li>MAIL：info@example.com</li>
+      </ul>
+    </div>
   </div>
   <div class="footer-bottom">
-    <p>© <span id="year"></span> maholab. All rights reserved.</p>
-    <ul style="display:flex;gap:18px;"><li><a href="#">// privacy</a></li><li><a href="#">// terms</a></li></ul>
-    <p class="footer-sample">※本ページはご提案用サンプルとして作成しております。掲載情報は仮の内容を含みます。</p>
+    © 2026 まほろば創研株式会社 All rights reserved.&nbsp;｜&nbsp;
+    ※本ページはご提案用サンプルとして作成しております。掲載情報は仮の内容を含みます。
   </div>
 </footer>
 
 <script>
-document.querySelectorAll(".faq-item .faq-q").forEach(function(btn){btn.addEventListener("click",function(){var item=btn.closest(".faq-item");var open=item.getAttribute("data-open")==="true";document.querySelectorAll(".faq-item").forEach(function(o){o.setAttribute("data-open","false");var q=o.querySelector(".faq-q");if(q)q.setAttribute("aria-expanded","false")});if(!open){item.setAttribute("data-open","true");btn.setAttribute("aria-expanded","true")}})});
-var t=document.getElementById("menuToggle"),m=document.getElementById("navMobile");if(t&&m){t.addEventListener("click",function(){var e=t.getAttribute("aria-expanded")==="true";t.setAttribute("aria-expanded",String(!e));m.classList.toggle("is-open")})}
-var h=document.getElementById("header");window.addEventListener("scroll",function(){if(window.scrollY>20)h.classList.add("is-scrolled");else h.classList.remove("is-scrolled")},{passive:true});
-var y=document.getElementById("year");if(y)y.textContent=String(new Date().getFullYear());
+var h=document.getElementById("header");
+window.addEventListener("scroll",function(){
+  if(window.scrollY>20) h.classList.add("is-scrolled");
+  else h.classList.remove("is-scrolled");
+},{passive:true});
 </script>
 </body>
 </html>

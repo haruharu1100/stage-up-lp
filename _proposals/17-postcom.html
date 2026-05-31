@@ -3,357 +3,145 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5" />
-<meta name="theme-color" content="#fdf6ed" />
+<meta name="theme-color" content="#7c3aed" />
 <meta name="robots" content="noindex, nofollow" />
-
-<title>ポストコミュニケーション株式会社｜地域情報誌『Mint』。</title>
-<meta name="description" content="ポストコミュニケーション株式会社は、奈良県中和地区の地域情報誌『Mint』を発行する広告代理店です。30〜60代女性へ確実に届く媒体力で、地域ビジネスを応援します。" />
-
+<title>ポストコミュニケーション株式会社｜戦略から実行まで、伴走するパートナー。</title>
+<meta name="description" content="ポストコミュニケーション株式会社は戦略立案から制作・運用まで、クライアントのブランド価値向上を一貫してサポートいたします。" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Noto+Sans+JP:wght@300;400;500;600;700&family=Noto+Serif+JP:wght@400;500;600&display=swap" rel="stylesheet" />
-
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700&family=Noto+Serif+JP:wght@500;600&display=swap" rel="stylesheet" />
 <style>
 :root{
-  --bg:#fdf6ed;
-  --bg-2:#f5e6d3;
-  --paper:#ffffff;
-  --ink:#3a2a20;
-  --ink-2:#5c4a3e;
-  --ink-3:#8a7a6f;
-  --line:#e8d8c4;
-  --line-2:#d4bfa6;
-  --coral:#e07856;
-  --coral-2:#c25a3e;
-  --coral-soft:#f7c2ac;
-  --olive:#7a8a5c;
-  --olive-2:#5a6a3f;
-  --cream:#faf3e7;
+  --bg: #fef9f5;
+  --paper: #ffffff;
+  --ink: #1c1934;
+  --muted: #544f6e;
+  --primary: #7c3aed;
+  --accent: #fb923c;
+  --border: #ece4d8;
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-html{scroll-behavior:smooth;-webkit-text-size-adjust:100%;scroll-padding-top:80px}
-body{
-  font-family:"Noto Sans JP","Hiragino Kaku Gothic ProN",sans-serif;
-  background:var(--bg);color:var(--ink-2);
-  font-size:15px;line-height:1.95;-webkit-font-smoothing:antialiased;
-}
+html{scroll-behavior:smooth;scroll-padding-top:80px;-webkit-text-size-adjust:100%}
+body{font-family:"Noto Sans JP",sans-serif;background:var(--bg);color:var(--muted);font-size:15px;line-height:1.95;-webkit-font-smoothing:antialiased}
 img{display:block;max-width:100%;height:auto}
 a{color:inherit;text-decoration:none;transition:color .2s,opacity .2s}
 button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 ul,ol{list-style:none}
-
-.sample-bar{
-  position:fixed;top:0;left:0;right:0;z-index:60;
-  background:#3a2a20;color:#f5e6d3;padding:8px 16px;text-align:center;
-  font-size:11px;letter-spacing:.1em;
-}
-body{padding-top:32px}
-
-.container{width:100%;max-width:1140px;margin:0 auto;padding:0 24px}
-.container-narrow{max-width:840px}
+.container{width:100%;max-width:1180px;margin:0 auto;padding:0 24px}
 @media(min-width:768px){.container{padding:0 40px}}
+.sample-bar{position:fixed;top:0;left:0;right:0;z-index:60;background:var(--ink);color:#fff;padding:7px 16px;text-align:center;font-size:11px;letter-spacing:.1em;opacity:.92}
+body{padding-top:30px}
 
-/* ── Header ── */
-.site-header{
-  position:fixed;top:32px;left:0;right:0;z-index:50;
-  background:rgba(253,246,237,.94);backdrop-filter:blur(14px);
-  border-bottom:1px solid transparent;transition:border-color .3s;
-}
-.site-header.is-scrolled{border-bottom-color:var(--line)}
-.header-inner{display:flex;align-items:center;justify-content:space-between;gap:16px;height:72px}
-.brand{display:flex;align-items:center;gap:14px}
-.brand-mark{
-  font-family:"Playfair Display",serif;font-weight:700;font-style:italic;
-  width:42px;height:42px;display:grid;place-items:center;
-  background:var(--coral);color:#fff;font-size:24px;border-radius:50%;
-}
-.brand-text{display:flex;flex-direction:column;line-height:1.15}
-.brand-jp{font-family:"Noto Serif JP",serif;font-weight:500;color:var(--ink);font-size:13px;letter-spacing:.1em}
-.brand-en{font-family:"Playfair Display",serif;font-style:italic;font-weight:600;color:var(--coral-2);font-size:20px;letter-spacing:.02em}
-
-.nav-desktop{display:none;gap:30px;font-family:"Playfair Display",serif;font-style:italic}
-.nav-desktop a{font-size:14px;color:var(--ink);font-weight:600;letter-spacing:.02em}
-.nav-desktop a:hover{color:var(--coral)}
+/* Header */
+.site-header{position:fixed;top:30px;left:0;right:0;z-index:50;background:rgba(255,255,255,.94);backdrop-filter:blur(14px);border-bottom:1px solid transparent;transition:border-color .3s}
+.site-header.is-scrolled{border-bottom-color:var(--border)}
+.header-inner{display:flex;align-items:center;justify-content:space-between;gap:16px;height:70px}
+.brand{display:flex;align-items:center;gap:12px}
+.brand-mark{width:42px;height:42px;display:grid;place-items:center;background:var(--primary);color:#fff;font-family:"Noto Serif JP",serif;font-weight:600;font-size:18px;border-radius:6px}
+.brand-name{font-family:"Noto Serif JP",serif;font-weight:600;color:var(--ink);font-size:16px;letter-spacing:.05em}
+.nav-desktop{display:none;gap:30px}
+.nav-desktop a{font-size:13px;color:var(--muted);font-weight:500;letter-spacing:.04em}
+.nav-desktop a:hover{color:var(--primary)}
 @media(min-width:1024px){.nav-desktop{display:flex}}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;padding:14px 28px;border-radius:6px;font-weight:600;font-size:14px;letter-spacing:.08em;transition:transform .15s,opacity .15s}
+.btn-primary{background:var(--primary);color:#fff}
+.btn-primary:hover{transform:translateY(-1px);opacity:.92}
+.btn-ghost{background:transparent;color:var(--ink);border:1px solid var(--ink)}
+.btn-ghost:hover{background:var(--ink);color:var(--paper)}
+.btn-ghost-light{color:#fff;border-color:#fff}
+.btn-ghost-light:hover{background:#fff;color:var(--ink)}
+.btn-h-primary{padding:11px 22px;background:var(--primary);color:#fff;font-size:13px;font-weight:600;letter-spacing:.05em;border-radius:6px;display:inline-flex;align-items:center;gap:8px}
+.btn-h-primary:hover{opacity:.9}
 
-.header-cta a{
-  font-family:"Playfair Display",serif;font-style:italic;
-  display:inline-flex;align-items:center;gap:8px;
-  background:transparent;color:var(--coral-2);padding:11px 22px;
-  border:1.5px solid var(--coral);border-radius:30px;font-size:13px;font-weight:600;
-}
-.header-cta a:hover{background:var(--coral);color:#fff}
+/* Hero */
+.hero{padding:130px 0 80px;background:linear-gradient(180deg,var(--bg) 0%,color-mix(in srgb,var(--bg) 85%,var(--primary) 15%) 100%);position:relative;overflow:hidden}
+@media(min-width:768px){.hero{padding:170px 0 110px}}
+.hero-eyebrow{display:inline-flex;align-items:center;gap:12px;font-family:"Noto Serif JP",serif;font-size:13px;color:var(--primary);letter-spacing:.25em;margin-bottom:24px}
+.hero-eyebrow::before{content:"";display:inline-block;width:28px;height:1px;background:var(--accent)}
+.hero-eyebrow-light{color:#fff}
+.hero-eyebrow-light::before{background:#fff}
+.hero-title{font-family:"Noto Serif JP",serif;font-weight:600;color:var(--ink);font-size:34px;line-height:1.45;letter-spacing:.05em}
+@media(min-width:640px){.hero-title{font-size:44px}}
+@media(min-width:1024px){.hero-title{font-size:54px}}
+.hero-title-light{color:#fff;text-shadow:0 2px 12px rgba(0,0,0,.3)}
+.hero-sub{margin-top:28px;color:var(--muted);font-size:15px;line-height:2.05;max-width:560px}
+.hero-sub-light{color:rgba(255,255,255,.92)}
+.hero-cta{margin-top:36px;display:flex;flex-wrap:wrap;gap:14px}
 
-.menu-toggle{
-  width:42px;height:42px;display:grid;gap:5px;align-content:center;justify-items:center;
-  background:transparent;border:1px solid var(--line-2);border-radius:50%;
-}
-.menu-toggle span{width:18px;height:1px;background:var(--ink);transition:transform .3s,opacity .3s}
-.menu-toggle[aria-expanded="true"] span:nth-child(1){transform:translateY(6px) rotate(45deg)}
-.menu-toggle[aria-expanded="true"] span:nth-child(2){opacity:0}
-.menu-toggle[aria-expanded="true"] span:nth-child(3){transform:translateY(-6px) rotate(-45deg)}
-@media(min-width:1024px){.menu-toggle{display:none}}
-.nav-mobile{
-  display:flex;flex-direction:column;max-height:0;overflow:hidden;
-  background:var(--paper);border-top:1px solid var(--line);padding:0 24px;
-  transition:max-height .4s,padding .3s;
-}
-.nav-mobile.is-open{max-height:80vh;padding:8px 24px 24px}
-.nav-mobile a{padding:16px 0;border-bottom:1px solid var(--line);font-size:14px;color:var(--ink);font-family:"Noto Serif JP",serif}
+/* Hero variations */
+.hero-split .hero-grid{display:grid;gap:48px;align-items:center}
+@media(min-width:980px){.hero-split .hero-grid{grid-template-columns:1.1fr 1fr;gap:80px}}
+.hero-split .hero-visual{aspect-ratio:5/4;overflow:hidden;border-radius:8px;background:var(--border)}
+.hero-split .hero-visual img{width:100%;height:100%;object-fit:cover}
 
-/* ── Hero (Magazine Cover Style) ── */
-.hero{
-  position:relative;padding:140px 0 100px;overflow:hidden;
-}
-@media(min-width:768px){.hero{padding:180px 0 140px}}
-.hero-grid{display:grid;gap:48px;align-items:center}
-@media(min-width:980px){.hero-grid{grid-template-columns:1.05fr .95fr;gap:80px}}
-.hero-issue{
-  display:inline-flex;align-items:center;gap:12px;font-family:"Playfair Display",serif;font-style:italic;
-  font-size:14px;color:var(--coral-2);margin-bottom:24px;letter-spacing:.06em;
-}
-.hero-issue::before,.hero-issue::after{content:"";display:inline-block;width:24px;height:1px;background:var(--coral)}
-.hero-title{
-  font-family:"Noto Serif JP",serif;font-weight:500;color:var(--ink);
-  font-size:40px;line-height:1.5;letter-spacing:.04em;
-}
-@media(min-width:768px){.hero-title{font-size:56px}}
-.hero-title em{font-family:"Playfair Display",serif;font-style:italic;color:var(--coral);font-weight:600}
-.hero-sub{
-  margin-top:32px;color:var(--ink-2);font-size:15px;line-height:2.1;max-width:520px;
-}
-@media(min-width:768px){.hero-sub{font-size:16px}}
+.hero-center .hero-center-inner{max-width:780px;margin:0 auto;text-align:center}
+.hero-center .hero-eyebrow{justify-content:center}
+.hero-center .hero-sub{margin-left:auto;margin-right:auto}
+.hero-center .hero-cta{justify-content:center}
+.hero-center .hero-strip{margin-top:60px;aspect-ratio:21/9;overflow:hidden}
+.hero-center .hero-strip img{width:100%;height:100%;object-fit:cover}
 
-.hero-tags{
-  margin-top:32px;display:flex;flex-wrap:wrap;gap:8px;
-}
-.hero-tags li{
-  padding:6px 14px;background:var(--cream);
-  border:1px solid var(--line-2);border-radius:30px;
-  font-size:12px;color:var(--ink);font-family:"Noto Serif JP",serif;
-}
+.hero-fullbg{padding:170px 0 130px;background-size:cover;background-position:center}
+.hero-fullbg .hero-fullbg-inner{max-width:720px}
 
-.hero-cta{margin-top:40px;display:flex;flex-wrap:wrap;gap:14px}
-.btn-primary{
-  font-family:"Noto Serif JP",serif;font-weight:500;
-  display:inline-flex;align-items:center;justify-content:center;gap:10px;
-  background:var(--coral);color:#fff;padding:18px 36px;border-radius:60px;
-  font-size:15px;letter-spacing:.1em;
-}
-.btn-primary:hover{background:var(--coral-2);transform:translateY(-1px)}
-.btn-secondary{
-  font-family:"Noto Serif JP",serif;font-weight:500;
-  display:inline-flex;align-items:center;justify-content:center;gap:10px;
-  background:var(--paper);color:var(--ink);padding:18px 36px;border-radius:60px;
-  font-size:15px;letter-spacing:.1em;border:1px solid var(--line-2);
-}
-.btn-secondary:hover{border-color:var(--ink)}
+/* Section */
+.section{padding:90px 0}
+@media(min-width:768px){.section{padding:120px 0}}
+.section-soft{background:color-mix(in srgb,var(--bg) 92%,var(--ink) 8%)}
+.section-primary{background:var(--primary);color:#fff}
+.s-eyebrow{display:inline-flex;align-items:center;gap:12px;font-family:"Noto Serif JP",serif;font-size:13px;color:var(--primary);letter-spacing:.25em;margin-bottom:20px}
+.s-eyebrow::before{content:"";display:inline-block;width:28px;height:1px;background:var(--accent)}
+.section-primary .s-eyebrow{color:#fff}
+.section-primary .s-eyebrow::before{background:#fff}
+.s-title{font-family:"Noto Serif JP",serif;font-weight:600;color:var(--ink);font-size:30px;line-height:1.5;letter-spacing:.05em}
+@media(min-width:768px){.s-title{font-size:40px}}
+.section-primary .s-title{color:#fff}
+.s-lead{margin-top:22px;color:var(--muted);font-size:15px;line-height:2.1;max-width:720px}
+.section-primary .s-lead{color:rgba(255,255,255,.85)}
 
-/* Magazine cover mock */
-.cover{
-  position:relative;aspect-ratio:3/4;background:var(--paper);
-  border-radius:6px;box-shadow:0 40px 80px -30px rgba(58,42,32,.4),0 1px 0 0 var(--line);
-  overflow:hidden;display:flex;flex-direction:column;
-  padding:32px 28px;
-}
-.cover-top{display:flex;justify-content:space-between;align-items:flex-start;font-size:11px;color:var(--ink-3);letter-spacing:.15em;font-family:"Playfair Display",serif;font-style:italic;text-transform:uppercase}
-.cover-issue{color:var(--coral);font-weight:700}
-.cover-logo{
-  font-family:"Playfair Display",serif;font-weight:700;font-style:italic;
-  font-size:84px;color:var(--ink);line-height:.85;margin-top:16px;letter-spacing:-.02em;
-}
-@media(min-width:480px){.cover-logo{font-size:104px}}
-.cover-tagline{font-family:"Noto Serif JP",serif;font-size:11px;color:var(--ink-3);letter-spacing:.3em;margin-top:6px;text-transform:uppercase}
-.cover-body{margin-top:auto;display:flex;flex-direction:column;gap:14px}
-.cover-headline{
-  font-family:"Noto Serif JP",serif;font-weight:500;color:var(--ink);font-size:16px;line-height:1.5;
-}
-.cover-headline strong{display:block;font-size:20px;color:var(--coral);font-weight:600;margin-bottom:2px;font-family:"Playfair Display",serif;font-style:italic}
-.cover-articles{display:flex;flex-direction:column;gap:6px;font-size:11px;color:var(--ink-2);font-family:"Noto Serif JP",serif}
-.cover-articles li{display:flex;gap:8px}
-.cover-articles li::before{content:"●";color:var(--coral)}
-.cover-decor{
-  position:absolute;top:50%;right:-30px;transform:translateY(-50%) rotate(-90deg);
-  font-family:"Playfair Display",serif;font-style:italic;font-size:11px;
-  color:var(--ink-3);letter-spacing:.4em;text-transform:uppercase;
-}
+/* Business cards */
+.biz-grid{margin-top:56px;display:grid;gap:22px}
+@media(min-width:768px){.biz-grid{grid-template-columns:repeat(3,1fr)}}
+.biz-card{padding:36px 30px;background:var(--paper);border:1px solid var(--border);border-radius:8px;transition:transform .2s,box-shadow .2s}
+.biz-card:hover{transform:translateY(-3px);box-shadow:0 20px 40px -20px rgba(0,0,0,.15)}
+.biz-no{font-family:"Noto Serif JP",serif;font-size:13px;color:var(--accent);letter-spacing:.2em;font-weight:600}
+.biz-h{margin-top:12px;font-family:"Noto Serif JP",serif;font-size:20px;color:var(--ink);font-weight:600;line-height:1.5}
+.biz-d{margin-top:14px;font-size:14px;color:var(--muted);line-height:2}
 
-/* ── Section base ── */
-.section{padding:96px 0}
-@media(min-width:768px){.section{padding:130px 0}}
-.section-cream{background:var(--cream)}
-.section-paper{background:var(--paper)}
+/* Reasons */
+.reason-list{margin-top:56px;display:grid;gap:0;border-top:1px solid var(--border)}
+.reason{padding:30px 0;border-bottom:1px solid var(--border);display:grid;gap:16px}
+@media(min-width:768px){.reason{grid-template-columns:160px 1fr;gap:40px;align-items:start}}
+.reason-no{font-family:"Noto Serif JP",serif;font-size:13px;color:var(--accent);letter-spacing:.2em;font-weight:600}
+.reason-no span{display:block;font-size:30px;color:var(--ink);margin-top:6px;font-weight:600}
+.reason-h{font-family:"Noto Serif JP",serif;font-size:19px;color:var(--ink);font-weight:600;line-height:1.5}
+.reason-d{margin-top:14px;color:var(--muted);font-size:14px;line-height:2.05}
 
-.s-eyebrow{
-  display:inline-flex;align-items:center;gap:14px;
-  font-family:"Playfair Display",serif;font-style:italic;
-  font-size:14px;color:var(--coral-2);margin-bottom:20px;letter-spacing:.05em;
-}
-.s-eyebrow::before{content:"";display:inline-block;width:36px;height:1px;background:var(--coral)}
-.s-title{
-  font-family:"Noto Serif JP",serif;font-weight:500;color:var(--ink);
-  font-size:30px;line-height:1.5;letter-spacing:.04em;
-}
-@media(min-width:768px){.s-title{font-size:42px}}
-.s-title em{font-family:"Playfair Display",serif;font-style:italic;color:var(--coral);font-weight:600}
-.s-lead{margin-top:24px;color:var(--ink-2);font-size:15px;line-height:2.1;max-width:660px}
-
-/* ── 媒体力（KPI数値）── */
-.kpi-row{
-  margin-top:64px;display:grid;gap:1px;background:var(--line);
-  border:1px solid var(--line);
-}
-@media(min-width:768px){.kpi-row{grid-template-columns:repeat(4,1fr)}}
-.kpi{background:var(--paper);padding:36px 24px;text-align:center}
-.kpi-n{
-  font-family:"Playfair Display",serif;font-style:italic;font-weight:700;
-  font-size:48px;color:var(--coral);line-height:1;
-}
-@media(min-width:768px){.kpi-n{font-size:58px}}
-.kpi-n small{font-size:.5em;color:var(--olive)}
-.kpi-l{margin-top:14px;font-family:"Noto Serif JP",serif;font-size:13px;color:var(--ink);letter-spacing:.05em}
-.kpi-d{margin-top:8px;font-size:11px;color:var(--ink-3);letter-spacing:.05em}
-
-/* ── 掲載エリア ── */
-.area-wrap{margin-top:56px;display:grid;gap:32px}
-@media(min-width:768px){.area-wrap{grid-template-columns:1fr 1.3fr;gap:56px;align-items:center}}
-.area-photo{aspect-ratio:4/5;overflow:hidden;border-radius:4px}
-.area-photo img{width:100%;height:100%;object-fit:cover}
-.area-text h3{font-family:"Noto Serif JP",serif;font-size:22px;color:var(--ink);font-weight:500;line-height:1.6}
-.area-text h3 em{font-family:"Playfair Display",serif;font-style:italic;color:var(--coral)}
-.area-text p{margin-top:18px;color:var(--ink-2);font-size:15px;line-height:2.1}
-.area-cities{
-  margin-top:28px;display:flex;flex-wrap:wrap;gap:10px;
-}
-.area-cities li{
-  padding:6px 14px;background:var(--cream);
-  border:1px solid var(--line-2);
-  font-size:12px;color:var(--ink);font-family:"Noto Serif JP",serif;
-}
-
-/* ── 広告メニュー ── */
-.ads-grid{margin-top:56px;display:grid;gap:24px}
-@media(min-width:768px){.ads-grid{grid-template-columns:repeat(3,1fr)}}
-.ads{
-  background:var(--paper);padding:36px 28px;
-  border:1px solid var(--line);position:relative;
-  transition:transform .3s,border-color .3s;
-}
-.ads:hover{transform:translateY(-4px);border-color:var(--coral)}
-.ads-cat{font-family:"Playfair Display",serif;font-style:italic;font-size:13px;color:var(--coral);margin-bottom:14px}
-.ads-h{font-family:"Noto Serif JP",serif;font-size:22px;color:var(--ink);font-weight:500;line-height:1.5}
-.ads-d{margin-top:14px;font-size:14px;color:var(--ink-2);line-height:1.95}
-.ads-spec{
-  margin-top:24px;padding-top:18px;border-top:1px solid var(--line);
-  display:grid;gap:8px;font-size:12px;color:var(--ink-3);
-}
-.ads-spec strong{color:var(--ink);font-weight:600}
-
-/* ── 掲載事例 ── */
-.case-row{margin-top:64px;display:grid;gap:48px}
-@media(min-width:768px){.case-row{grid-template-columns:repeat(2,1fr);gap:56px}}
-.case-photo{aspect-ratio:4/3;overflow:hidden;border-radius:4px;margin-bottom:20px}
-.case-photo img{width:100%;height:100%;object-fit:cover;transition:transform .8s ease}
-.case:hover .case-photo img{transform:scale(1.04)}
-.case-tag{
-  display:inline-block;font-family:"Playfair Display",serif;font-style:italic;font-size:12px;
-  color:var(--coral);letter-spacing:.05em;
-}
-.case-h{margin-top:8px;font-family:"Noto Serif JP",serif;font-size:22px;color:var(--ink);font-weight:500;line-height:1.55}
-.case-meta{margin-top:10px;font-size:11px;color:var(--ink-3);letter-spacing:.1em}
-.case-d{margin-top:16px;color:var(--ink-2);font-size:14px;line-height:2}
-.case-result{
-  margin-top:18px;padding:14px 18px;background:var(--cream);
-  border-left:3px solid var(--coral);font-size:13px;color:var(--ink);font-family:"Noto Serif JP",serif;
-}
-.case-result strong{color:var(--coral)}
-
-/* ── お客様の声 ── */
-.voice-grid{margin-top:56px;display:grid;gap:24px}
-@media(min-width:768px){.voice-grid{grid-template-columns:repeat(2,1fr)}}
-.voice{
-  background:var(--paper);padding:36px 32px;border-radius:4px;
-  border:1px solid var(--line);position:relative;
-}
-.voice-mark{
-  position:absolute;top:20px;right:28px;font-family:"Playfair Display",serif;font-style:italic;
-  font-size:50px;color:var(--coral-soft);line-height:1;
-}
-.voice-text{font-family:"Noto Serif JP",serif;font-size:15px;color:var(--ink);line-height:2.1;font-weight:400}
-.voice-by{
-  margin-top:24px;padding-top:18px;border-top:1px solid var(--line);
-  display:flex;align-items:center;gap:14px;
-}
-.voice-avatar{
-  width:42px;height:42px;border-radius:50%;
-  background:var(--coral-soft);color:var(--coral-2);
-  display:grid;place-items:center;font-family:"Playfair Display",serif;font-style:italic;font-weight:700;
-}
-.voice-name{font-family:"Noto Serif JP",serif;color:var(--ink);font-size:14px}
-.voice-co{margin-top:2px;font-size:12px;color:var(--ink-3)}
-
-/* ── FAQ ── */
-.faq{margin-top:56px;display:grid;gap:0;border-top:1px solid var(--line)}
-.faq-item{border-bottom:1px solid var(--line)}
-.faq-q{
-  width:100%;text-align:left;padding:26px 0;
-  display:flex;align-items:flex-start;gap:24px;
-}
-.faq-qn{font-family:"Playfair Display",serif;font-style:italic;color:var(--coral);font-size:18px;flex-shrink:0;width:42px;font-weight:700}
-.faq-qt{flex:1;font-family:"Noto Serif JP",serif;color:var(--ink);font-size:16px;font-weight:500;line-height:1.6}
-.faq-icon{flex-shrink:0;font-family:"Playfair Display",serif;color:var(--ink);font-size:22px;transition:transform .3s;line-height:1}
-.faq-item[data-open="true"] .faq-icon{transform:rotate(45deg);color:var(--coral)}
-.faq-a{max-height:0;overflow:hidden;transition:max-height .5s}
-.faq-item[data-open="true"] .faq-a{max-height:500px}
-.faq-a-inner{padding:0 0 28px 66px;font-size:14px;color:var(--ink-2);line-height:2}
-
-/* ── Contact ── */
-.contact{padding:120px 0;background:linear-gradient(180deg,var(--cream) 0%,var(--bg-2) 100%);position:relative}
-@media(min-width:768px){.contact{padding:160px 0}}
-.contact-cards{margin-top:56px;display:grid;gap:0;background:var(--paper);border:1px solid var(--line)}
+/* Contact */
+.contact{padding:100px 0 120px;background:color-mix(in srgb,var(--bg) 92%,var(--primary) 8%)}
+.contact-cards{margin-top:50px;display:grid;gap:0;background:var(--paper);border:1px solid var(--border);border-radius:8px;overflow:hidden}
 @media(min-width:768px){.contact-cards{grid-template-columns:repeat(3,1fr)}}
-.ccard{padding:40px 30px;text-align:center;border-bottom:1px solid var(--line)}
-@media(min-width:768px){.ccard{border-bottom:0;border-right:1px solid var(--line)}}
-.ccard:last-child{border-bottom:0;border-right:0}
-.ccard-l{font-family:"Playfair Display",serif;font-style:italic;color:var(--coral);font-size:13px;letter-spacing:.1em}
-.ccard-v{margin-top:14px;font-family:"Noto Serif JP",serif;font-size:22px;color:var(--ink);line-height:1.4;font-weight:500}
-.ccard-n{margin-top:12px;font-size:12px;color:var(--ink-3);line-height:1.7}
-
-.contact-buttons{margin-top:48px;display:flex;flex-direction:column;gap:14px}
+.ccard{padding:36px 30px;text-align:center;border-bottom:1px solid var(--border)}
+@media(min-width:768px){.ccard{border-bottom:0;border-right:1px solid var(--border)}.ccard:last-child{border-right:0}}
+.ccard-l{font-family:"Noto Serif JP",serif;font-size:13px;color:var(--accent);letter-spacing:.25em;font-weight:600}
+.ccard-v{margin-top:14px;font-family:"Noto Serif JP",serif;font-size:20px;color:var(--ink);line-height:1.4;font-weight:600}
+.ccard-n{margin-top:10px;font-size:12px;color:var(--muted);line-height:1.7}
+.contact-buttons{margin-top:40px;display:flex;flex-direction:column;gap:14px}
 @media(min-width:768px){.contact-buttons{flex-direction:row;justify-content:center}}
-.btn-c-primary{
-  font-family:"Noto Serif JP",serif;
-  display:inline-flex;align-items:center;justify-content:center;gap:12px;
-  background:var(--ink);color:var(--cream);padding:20px 40px;border-radius:60px;
-  font-size:14px;font-weight:500;letter-spacing:.15em;
-}
-.btn-c-primary:hover{background:var(--coral)}
-.btn-c-line{
-  font-family:"Noto Serif JP",serif;
-  display:inline-flex;align-items:center;justify-content:center;gap:12px;
-  background:#06c755;color:#fff;padding:20px 40px;border-radius:60px;
-  font-size:14px;font-weight:500;letter-spacing:.15em;
-}
-.contact-note{margin-top:32px;text-align:center;font-size:12px;color:var(--ink-3)}
-.sample-mark{
-  margin:48px auto 0;max-width:640px;padding:14px 20px;
-  border:1px dashed var(--line-2);background:rgba(255,255,255,.5);
-  text-align:center;font-size:11px;color:var(--ink-3);
-}
+.btn-line{background:#06c755;color:#fff;padding:18px 38px;border-radius:6px;font-weight:600;font-size:14px;letter-spacing:.1em;display:inline-flex;align-items:center;gap:10px}
 
-/* ── Footer ── */
-.site-footer{background:var(--ink);color:rgba(245,230,211,.7);padding:64px 0 28px}
+/* Sample mark */
+.sample-mark{margin:36px auto 0;max-width:720px;padding:16px 24px;border:1px dashed var(--border);background:var(--paper);text-align:center;font-size:11px;color:var(--muted);border-radius:6px}
+
+/* Footer */
+.site-footer{background:var(--ink);color:rgba(255,255,255,.7);padding:64px 0 28px}
 .footer-inner{display:grid;gap:36px}
-@media(min-width:768px){.footer-inner{grid-template-columns:1.3fr 1fr 1fr}}
-.footer-jp{color:#fff}
-.footer-en{color:var(--coral-soft)}
-.footer-lead{margin-top:16px;font-size:13px;line-height:2;color:rgba(245,230,211,.55)}
-.footer-h{font-family:"Playfair Display",serif;font-style:italic;color:var(--coral-soft);font-size:14px;letter-spacing:.05em;margin-bottom:16px}
-.footer-list li{font-size:13px;margin-bottom:10px}
-.footer-list a:hover{color:var(--coral-soft)}
-.footer-bottom{margin-top:48px;padding-top:24px;border-top:1px solid rgba(245,230,211,.15);display:flex;flex-direction:column;gap:10px;font-size:11px;color:rgba(245,230,211,.4)}
-@media(min-width:640px){.footer-bottom{flex-direction:row;justify-content:space-between}}
-.footer-sample{margin-top:10px;text-align:center;width:100%;font-size:10px}
+@media(min-width:768px){.footer-inner{grid-template-columns:1.5fr 1fr 1fr}}
+.footer-name{color:#fff;font-family:"Noto Serif JP",serif;font-weight:600;font-size:17px}
+.footer-lead{margin-top:14px;font-size:13px;line-height:1.95;color:rgba(255,255,255,.65)}
+.footer-h{font-family:"Noto Serif JP",serif;color:rgba(255,255,255,.85);font-size:13px;letter-spacing:.2em;margin-bottom:14px;font-weight:600}
+.footer-list li{margin-bottom:9px;font-size:13px;color:rgba(255,255,255,.65)}
+.footer-bottom{margin-top:48px;padding-top:22px;border-top:1px solid rgba(255,255,255,.12);font-size:11px;color:rgba(255,255,255,.45);text-align:center}
 
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
@@ -365,348 +153,87 @@ body{padding-top:32px}
 <header class="site-header" id="header">
   <div class="container header-inner">
     <a href="#top" class="brand">
-      <span class="brand-mark">M</span>
-      <span class="brand-text">
-        <span class="brand-jp">ポストコミュニケーション</span>
-        <span class="brand-en">Mint Magazine</span>
-      </span>
+      <span class="brand-mark">ポ</span>
+      <span class="brand-name">ポストコミュニケーション株式会社</span>
     </a>
     <nav class="nav-desktop">
-      <a href="#about">『Mint』とは</a>
-      <a href="#media">媒体力</a>
-      <a href="#area">配布エリア</a>
-      <a href="#ads">広告メニュー</a>
-      <a href="#case">掲載事例</a>
-      <a href="#faq">FAQ</a>
+      <a href="#biz">事業内容</a>
+      <a href="#reason">選ばれる理由</a>
+      <a href="#contact">お問い合わせ</a>
     </nav>
-    <div class="header-cta"><a href="#contact">広告掲載のご相談</a></div>
-    <button class="menu-toggle" id="menuToggle" aria-label="メニュー" aria-expanded="false">
-      <span></span><span></span><span></span>
-    </button>
-  </div>
-  <div class="nav-mobile" id="navMobile">
-    <a href="#about">『Mint』とは</a>
-    <a href="#media">媒体力</a>
-    <a href="#area">配布エリア</a>
-    <a href="#ads">広告メニュー</a>
-    <a href="#case">掲載事例</a>
-    <a href="#voice">広告主の声</a>
-    <a href="#faq">FAQ</a>
-    <a href="#contact">お問い合わせ</a>
+    <a href="#contact" class="btn-h-primary">お問い合わせ</a>
   </div>
 </header>
 
 <main id="top">
 
-<section class="hero">
-  <div class="container">
-    <div class="hero-grid">
-      <div>
-        <p class="hero-issue">— Local Magazine for Nara —</p>
-        <h1 class="hero-title">
-          地域に、<br />
-          <em>暮らしの</em>物語を。<br />
-          女性に届く<em>マガジン</em>。
-        </h1>
-        <p class="hero-sub">
-          奈良県中和地区の女性に愛され続ける地域情報誌『Mint』。
-          子育てや自分時間を大切にする30〜60代女性へ、確かな媒体力で広告を届けます。
-        </p>
-        <ul class="hero-tags">
-          <li>地域情報誌「Mint」</li>
-          <li>30-60代女性ターゲット</li>
-          <li>中和地区 6.5万部</li>
-          <li>戸別ポスティング</li>
-        </ul>
-        <div class="hero-cta">
-          <a href="#contact" class="btn-primary">お問い合わせはこちら</a>
-          <a href="#ads" class="btn-secondary">広告メニューを見る</a>
-        </div>
-      </div>
-      <div>
-        <article class="cover">
-          <div class="cover-top">
-            <span>Vol. 145</span>
-            <span class="cover-issue">SPECIAL ISSUE</span>
-          </div>
-          <div class="cover-logo">Mint</div>
-          <p class="cover-tagline">— Living Local, Loving Local —</p>
-          <div class="cover-body">
-            <p class="cover-headline"><strong>暮らしを彩る</strong>奈良の小さなお店、はじめました</p>
-            <ul class="cover-articles">
-              <li>はじめての家族リフォーム特集</li>
-              <li>地元シェフが教える季節レシピ</li>
-              <li>大和高田・橿原のおすすめカフェ12選</li>
-              <li>子育てママの応援企画</li>
-            </ul>
-          </div>
-          <span class="cover-decor">Nara Local Magazine</span>
-        </article>
-      </div>
+
+<section class="hero hero-fullbg" style="background-image:linear-gradient(135deg, rgba(0,0,0,.55), rgba(0,0,0,.3)), url('https://images.unsplash.com/photo-1542744173-8e7e53415bb0?auto=format&fit=crop&w=1400&q=70');">
+  <div class="container hero-fullbg-inner">
+    <p class="hero-eyebrow hero-eyebrow-light">— 広告・マーケティング —</p>
+    <h1 class="hero-title hero-title-light">戦略から実行まで、伴走するパートナー。</h1>
+    <p class="hero-sub hero-sub-light">戦略立案から制作・運用まで、クライアントのブランド価値向上を一貫してサポートいたします。</p>
+    <div class="hero-cta">
+      <a href="#contact" class="btn btn-primary">お問い合わせはこちら</a>
+      <a href="#biz" class="btn btn-ghost btn-ghost-light">事業内容を見る</a>
     </div>
   </div>
 </section>
 
-<section id="about" class="section section-paper">
+<section id="biz" class="section">
   <div class="container">
-    <p class="s-eyebrow">About Mint</p>
-    <h2 class="s-title">『<em>Mint</em>』は、<br />中和地区の暮らしを彩るマガジン。</h2>
-    <p class="s-lead">「自分の時間を大切にしたい」「家族との暮らしを楽しみたい」。そんな想いに応える、奈良県中和地区の地域情報誌です。子育て・グルメ・ライフスタイル・住まいまで、毎号テーマを変えてお届けしています。</p>
-    <div class="area-wrap">
-      <div class="area-photo">
-        <img src="https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?auto=format&fit=crop&w=900&q=80" alt="Mint magazine lifestyle" />
-      </div>
-      <div class="area-text">
-        <h3>読者は <em>30〜60代女性</em>。<br />毎号、家族の食卓に届きます。</h3>
-        <p>
-          子育てや暮らしを大切にする女性が中心の読者層。
-          手配りされた『Mint』はキッチンや玄関に置かれ、ご家族みんなで目にする時間が長いことが特徴です。
-          だからこそ広告効果は、新聞折込やネット広告とは異なる、深く、長く、温かい届き方になります。
-        </p>
-        <ul class="area-cities">
-          <li>橿原市</li>
-          <li>大和高田市</li>
-          <li>広陵町</li>
-          <li>磯城郡</li>
-          <li>葛城市</li>
-          <li>御所市</li>
-        </ul>
-      </div>
-    </div>
+    <p class="s-eyebrow">— Our Business —</p>
+    <h2 class="s-title">事業<br/>内容</h2>
+    <p class="s-lead">戦略立案から制作・運用まで、クライアントのブランド価値向上を一貫してサポートいたします。</p>
+    <div class="biz-grid"><article class="biz-card"><span class="biz-no">— 01 —</span><h3 class="biz-h">広告戦略立案</h3><p class="biz-d">事業フェーズに合わせた最適な戦略をご提案いたします。</p></article><article class="biz-card"><span class="biz-no">— 02 —</span><h3 class="biz-h">クリエイティブ制作</h3><p class="biz-d">ブランドに合わせた表現設計を行います。</p></article><article class="biz-card"><span class="biz-no">— 03 —</span><h3 class="biz-h">運用・効果測定</h3><p class="biz-d">継続的な改善で成果に直結させます。</p></article></div>
   </div>
 </section>
 
-<section id="media" class="section section-cream">
+<section id="reason" class="section section-soft">
   <div class="container">
-    <p class="s-eyebrow">Media Power</p>
-    <h2 class="s-title">数字で見る、<em>媒体力</em>。</h2>
-    <p class="s-lead">『Mint』が地域に根を下ろし、長く愛されてきた媒体力をご紹介します。</p>
-    <div class="kpi-row">
-      <div class="kpi">
-        <p class="kpi-n">65,000<small> 部</small></p>
-        <p class="kpi-l">発行部数</p>
-        <p class="kpi-d">毎号 戸別配布</p>
-      </div>
-      <div class="kpi">
-        <p class="kpi-n">30-60<small> 代</small></p>
-        <p class="kpi-l">メイン読者層</p>
-        <p class="kpi-d">女性が中心</p>
-      </div>
-      <div class="kpi">
-        <p class="kpi-n">6<small> 市町</small></p>
-        <p class="kpi-l">配布エリア</p>
-        <p class="kpi-d">中和地区 全域</p>
-      </div>
-      <div class="kpi">
-        <p class="kpi-n">10<small> 年+</small></p>
-        <p class="kpi-l">継続発行</p>
-        <p class="kpi-d">地域に根ざした実績</p>
-      </div>
-    </div>
-  </div>
-</section>
-
-<section id="ads" class="section">
-  <div class="container">
-    <p class="s-eyebrow">Ads Menu</p>
-    <h2 class="s-title">広告メニュー。</h2>
-    <p class="s-lead">予算と目的に合わせて、3つの掲載プランをご用意しています。すべて編集部による取材原稿付きで掲載可能です。</p>
-    <div class="ads-grid">
-      <article class="ads">
-        <p class="ads-cat">— PLAN A</p>
-        <h3 class="ads-h">特集タイアップ<br />4ページ枠</h3>
-        <p class="ads-d">編集部が貴店を取材し、4ページの特集記事として掲載。ブランディングと集客を両立する一番人気プラン。</p>
-        <div class="ads-spec">
-          <p><strong>掲載枠</strong>　誌面4ページ（取材付き）</p>
-          <p><strong>納期</strong>　ご契約から最短1ヶ月</p>
-          <p><strong>サポート</strong>　取材・撮影・原稿構成すべて編集部対応</p>
+    <p class="s-eyebrow">— Why Chosen —</p>
+    <h2 class="s-title">お客様に選ばれる<br/>3つの理由</h2>
+    <div class="reason-list">
+      <article class="reason">
+        <p class="reason-no">Reason<span>01</span></p>
+        <div>
+          <h3 class="reason-h">磯城郡田原本町を中心に積み重ねてきた信頼</h3>
+          <p class="reason-d">磯城郡田原本町でのお客様一件一件と向き合い、丁寧なご対応で築いてきた信頼関係を、これからも大切にしてまいります。</p>
         </div>
       </article>
-      <article class="ads">
-        <p class="ads-cat">— PLAN B</p>
-        <h3 class="ads-h">1/2ページ<br />広告枠</h3>
-        <p class="ads-d">写真と原稿で構成する1/2ページ枠。新メニューやキャンペーン告知に最適なリーズナブルなプラン。</p>
-        <div class="ads-spec">
-          <p><strong>掲載枠</strong>　誌面1/2ページ</p>
-          <p><strong>納期</strong>　ご契約から最短3週間</p>
-          <p><strong>サポート</strong>　原稿構成・デザインまで対応</p>
+      <article class="reason">
+        <p class="reason-no">Reason<span>02</span></p>
+        <div>
+          <h3 class="reason-h">お客様一人ひとりに寄り添うご対応</h3>
+          <p class="reason-d">画一的な対応ではなく、お客様の状況やご要望に応じた、きめ細やかなご対応を心がけております。</p>
         </div>
       </article>
-      <article class="ads">
-        <p class="ads-cat">— PLAN C</p>
-        <h3 class="ads-h">小枠<br />一覧広告</h3>
-        <p class="ads-d">複数店舗が並ぶカテゴリ別の一覧掲載枠。継続出稿で認知を高めたい店舗様におすすめのプラン。</p>
-        <div class="ads-spec">
-          <p><strong>掲載枠</strong>　誌面1/8〜1/4ページ</p>
-          <p><strong>納期</strong>　ご契約から最短2週間</p>
-          <p><strong>サポート</strong>　簡易デザイン対応</p>
+      <article class="reason">
+        <p class="reason-no">Reason<span>03</span></p>
+        <div>
+          <h3 class="reason-h">継続的なお取引が可能な体制</h3>
+          <p class="reason-d">一度のお取引で終わらず、お客様の事業や暮らしに長く寄り添える、信頼できるパートナーであることを目指しています。</p>
         </div>
       </article>
-    </div>
-  </div>
-</section>
-
-<section id="area" class="section section-cream">
-  <div class="container">
-    <p class="s-eyebrow">Distribution Area</p>
-    <h2 class="s-title">配布エリア。</h2>
-    <p class="s-lead">奈良県中和地区を中心とした、地域密着の戸別配布。新聞折込と異なり、読者の手元にダイレクトに届きます。</p>
-  </div>
-</section>
-
-<section id="case" class="section">
-  <div class="container">
-    <p class="s-eyebrow">Advertorial Cases</p>
-    <h2 class="s-title">掲載<em>事例</em>。</h2>
-    <p class="s-lead">『Mint』に掲載されたお客様の、実際の反響事例の一部をご紹介します。</p>
-    <div class="case-row">
-      <article class="case">
-        <div class="case-photo">
-          <img src="https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?auto=format&fit=crop&w=1100&q=80" alt="" />
-        </div>
-        <p class="case-tag">— Restaurant</p>
-        <h3 class="case-h">地元のカフェ・レストランの取材特集</h3>
-        <p class="case-meta">PLAN A 特集タイアップ 4ページ</p>
-        <p class="case-d">編集部が直接取材し、お店の想いや料理のこだわりまで丁寧に紹介。掲載後1ヶ月で新規ご来店が大幅に増加しました。</p>
-        <p class="case-result"><strong>新規来店 +210%</strong>　掲載月の前後比較で</p>
-      </article>
-      <article class="case">
-        <div class="case-photo">
-          <img src="https://images.unsplash.com/photo-1556761175-5973dc0f32e7?auto=format&fit=crop&w=1100&q=80" alt="" />
-        </div>
-        <p class="case-tag">— Real Estate</p>
-        <h3 class="case-h">新築マンション・住宅展示場のご案内</h3>
-        <p class="case-meta">PLAN A 特集タイアップ 4ページ</p>
-        <p class="case-d">ファミリー世帯の女性読者層に確実に届けることを目的に特集を企画。問い合わせ・来場予約に直結する成果でした。</p>
-        <p class="case-result"><strong>資料請求 78件 / 来場予約 22件</strong></p>
-      </article>
-      <article class="case">
-        <div class="case-photo">
-          <img src="https://images.unsplash.com/photo-1571902943202-507ec2618e8f?auto=format&fit=crop&w=1100&q=80" alt="" />
-        </div>
-        <p class="case-tag">— Medical</p>
-        <h3 class="case-h">小児歯科クリニックの新規開院告知</h3>
-        <p class="case-meta">PLAN B 1/2ページ広告</p>
-        <p class="case-d">「子育てママに届く媒体」として『Mint』を選択。掲載後の新患問い合わせが想定の2倍以上に。</p>
-        <p class="case-result"><strong>新患予約 +180%</strong>　目標を大きく上回る成果</p>
-      </article>
-      <article class="case">
-        <div class="case-photo">
-          <img src="https://images.unsplash.com/photo-1505691938895-1758d7feb511?auto=format&fit=crop&w=1100&q=80" alt="" />
-        </div>
-        <p class="case-tag">— Housing</p>
-        <h3 class="case-h">リフォーム会社の事例紹介</h3>
-        <p class="case-meta">PLAN A 特集タイアップ 4ページ</p>
-        <p class="case-d">実際のお客様邸を取材し、リフォームのビフォーアフターをじっくりご紹介。月10件の問い合わせ獲得。</p>
-        <p class="case-result"><strong>問い合わせ +10件 / 月</strong></p>
-      </article>
-    </div>
-  </div>
-</section>
-
-<section id="voice" class="section section-cream">
-  <div class="container">
-    <p class="s-eyebrow">Advertisers' Voice</p>
-    <h2 class="s-title">広告主様の<em>お声</em>。</h2>
-    <div class="voice-grid">
-      <figure class="voice">
-        <span class="voice-mark">"</span>
-        <p class="voice-text">ネット広告と比べて、掲載後の反応が長く続くのが本当に嬉しいです。お客様が誌面を持ってご来店くださることもよくあります。</p>
-        <figcaption class="voice-by">
-          <span class="voice-avatar">A</span>
-          <span><span class="voice-name">A 様</span><span class="voice-co">カフェオーナー / 大和高田市</span></span>
-        </figcaption>
-      </figure>
-      <figure class="voice">
-        <span class="voice-mark">"</span>
-        <p class="voice-text">編集部の取材が本当に丁寧で、お店の想いまで上手に言語化してくださいました。広告というより、ファンを増やす機会になりました。</p>
-        <figcaption class="voice-by">
-          <span class="voice-avatar">M</span>
-          <span><span class="voice-name">M 様</span><span class="voice-co">和食店店主 / 橿原市</span></span>
-        </figcaption>
-      </figure>
-      <figure class="voice">
-        <span class="voice-mark">"</span>
-        <p class="voice-text">ファミリー層の女性に確実に届けたいという要望に応えてくださり、新規開院から地域に根付くことができました。</p>
-        <figcaption class="voice-by">
-          <span class="voice-avatar">K</span>
-          <span><span class="voice-name">K 様</span><span class="voice-co">歯科クリニック院長 / 橿原市</span></span>
-        </figcaption>
-      </figure>
-      <figure class="voice">
-        <span class="voice-mark">"</span>
-        <p class="voice-text">継続して出稿しているうちに「Mintで見ました」とご来店いただく方が増え、地域の認知が広がりました。</p>
-        <figcaption class="voice-by">
-          <span class="voice-avatar">S</span>
-          <span><span class="voice-name">S 様</span><span class="voice-co">住宅会社 広報担当 / 葛城市</span></span>
-        </figcaption>
-      </figure>
-    </div>
-  </div>
-</section>
-
-<section id="faq" class="section section-paper">
-  <div class="container container-narrow">
-    <p class="s-eyebrow">FAQ</p>
-    <h2 class="s-title">よくあるご質問。</h2>
-    <div class="faq">
-      <div class="faq-item" data-open="true">
-        <button class="faq-q" type="button" aria-expanded="true">
-          <span class="faq-qn">Q1.</span><span class="faq-qt">広告料金の目安を教えてください。</span><span class="faq-icon">+</span>
-        </button>
-        <div class="faq-a"><p class="faq-a-inner">プラン・掲載枠により異なります。詳細はお問い合わせの上、媒体資料とお見積もりをご提示いたします。</p></div>
-      </div>
-      <div class="faq-item">
-        <button class="faq-q" type="button" aria-expanded="false">
-          <span class="faq-qn">Q2.</span><span class="faq-qt">取材原稿を編集部にお任せできますか？</span><span class="faq-icon">+</span>
-        </button>
-        <div class="faq-a"><p class="faq-a-inner">はい、お任せください。編集部が直接取材・撮影・原稿執筆まで一貫してお受けします。掲載前には必ず原稿確認のお時間をいただきます。</p></div>
-      </div>
-      <div class="faq-item">
-        <button class="faq-q" type="button" aria-expanded="false">
-          <span class="faq-qn">Q3.</span><span class="faq-qt">配布部数の証明書は出せますか？</span><span class="faq-icon">+</span>
-        </button>
-        <div class="faq-a"><p class="faq-a-inner">はい、配布実施報告書をご提出します。配布エリアごとの内訳・配布期間を明示し、媒体としての信頼性をご確認いただけます。</p></div>
-      </div>
-      <div class="faq-item">
-        <button class="faq-q" type="button" aria-expanded="false">
-          <span class="faq-qn">Q4.</span><span class="faq-qt">掲載までの納期はどれくらいですか？</span><span class="faq-icon">+</span>
-        </button>
-        <div class="faq-a"><p class="faq-a-inner">プランによりますが、ご契約から最短2〜3週間で掲載可能です。特集タイアップは取材・原稿確認の期間を含め1ヶ月程度となります。</p></div>
-      </div>
-      <div class="faq-item">
-        <button class="faq-q" type="button" aria-expanded="false">
-          <span class="faq-qn">Q5.</span><span class="faq-qt">配布エリアの一部だけ掲載することは可能？</span><span class="faq-icon">+</span>
-        </button>
-        <div class="faq-a"><p class="faq-a-inner">一部エリア限定掲載のプランもご用意しております。商圏に合わせた効率的な広告出稿が可能です。</p></div>
-      </div>
-      <div class="faq-item">
-        <button class="faq-q" type="button" aria-expanded="false">
-          <span class="faq-qn">Q6.</span><span class="faq-qt">媒体資料がほしいです。</span><span class="faq-icon">+</span>
-        </button>
-        <div class="faq-a"><p class="faq-a-inner">最新の媒体資料（読者層データ・配布エリア・広告料金・実績事例集）をお送りいたします。お問い合わせフォームよりご請求ください。</p></div>
-      </div>
     </div>
   </div>
 </section>
 
 <section id="contact" class="contact">
-  <div class="container container-narrow">
+  <div class="container">
     <div style="text-align:center">
-      <p class="s-eyebrow" style="justify-content:center">Contact</p>
-      <h2 class="s-title">広告のご相談、<em>お待ちしています</em>。</h2>
-      <p class="s-lead" style="margin-left:auto;margin-right:auto">媒体資料のご請求・お見積もり・掲載のご相談を承ります。地域の温かい広告を、ぜひご一緒に。</p>
+      <p class="s-eyebrow" style="justify-content:center">— Contact —</p>
+      <h2 class="s-title">お気軽に<br/>お問い合わせください</h2>
+      <p class="s-lead" style="margin:22px auto 0">ご相談・お見積もりは無料です。お電話・お問い合わせフォームよりお気軽にどうぞ。</p>
     </div>
     <div class="contact-cards">
-      <div class="ccard"><p class="ccard-l">TEL</p><p class="ccard-v">XXX-XXXX-XXXX</p><p class="ccard-n">受付 9:00-18:00</p></div>
-      <div class="ccard"><p class="ccard-l">LINE</p><p class="ccard-v">お問い合わせ<br />はこちら</p><p class="ccard-n">公式LINE</p></div>
-      <div class="ccard"><p class="ccard-l">FORM</p><p class="ccard-v">お問い合わせ<br />はこちら</p><p class="ccard-n">24時間 受付中</p></div>
+      <div class="ccard"><p class="ccard-l">TEL</p><p class="ccard-v">XXX-XXXX-XXXX</p><p class="ccard-n">受付 9:00-18:00<br/>（土日祝休）</p></div>
+      <div class="ccard"><p class="ccard-l">MAIL</p><p class="ccard-v">info@example.com</p><p class="ccard-n">24時間 受付<br/>返信は営業日</p></div>
+      <div class="ccard"><p class="ccard-l">FORM</p><p class="ccard-v">お問い合わせ<br/>はこちら</p><p class="ccard-n">フォーム送信<br/>24時間 受付</p></div>
     </div>
     <div class="contact-buttons">
-      <a href="#" class="btn-c-line"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3C6.48 3 2 6.58 2 11c0 3.96 3.58 7.27 8.4 7.92.33.07.78.22.89.5.1.25.07.65.03.9l-.14.86c-.05.25-.2.99.87.54s5.75-3.39 7.84-5.8C21.32 14.36 22 12.77 22 11c0-4.42-4.48-8-10-8z"/></svg>お問い合わせはこちら</a>
-      <a href="#" class="btn-c-primary">お問い合わせフォーム</a>
+      <a href="#" class="btn btn-primary">お問い合わせはこちら</a>
     </div>
-    <p class="contact-note">※お返事は最短当日・通常24時間以内にいたします。</p>
     <div class="sample-mark">※本ページはご提案用サンプルとして作成しております。掲載情報は仮の内容を含みます。</div>
   </div>
 </section>
@@ -716,47 +243,38 @@ body{padding-top:32px}
 <footer class="site-footer">
   <div class="container footer-inner">
     <div>
-      <a href="#top" class="brand">
-        <span class="brand-mark" style="background:var(--coral-soft);color:var(--ink)">M</span>
-        <span class="brand-text"><span class="brand-jp footer-jp">ポストコミュニケーション</span><span class="brand-en footer-en">Mint Magazine</span></span>
-      </a>
-      <p class="footer-lead">ポストコミュニケーション株式会社<br />地域情報誌『Mint』編集・発行。</p>
+      <p class="footer-name">ポストコミュニケーション株式会社</p>
+      <p class="footer-lead">戦略立案から制作・運用まで、クライアントのブランド価値向上を一貫してサポートいたします。</p>
     </div>
     <div>
-      <p class="footer-h">Menu</p>
+      <p class="footer-h">— Menu —</p>
       <ul class="footer-list">
-        <li><a href="#about">『Mint』とは</a></li><li><a href="#media">媒体力</a></li><li><a href="#ads">広告メニュー</a></li><li><a href="#case">掲載事例</a></li><li><a href="#faq">FAQ</a></li>
+        <li><a href="#biz">事業内容</a></li>
+        <li><a href="#reason">選ばれる理由</a></li>
+        <li><a href="#contact">お問い合わせ</a></li>
       </ul>
     </div>
     <div>
-      <p class="footer-h">Company</p>
+      <p class="footer-h">— Company —</p>
       <ul class="footer-list">
-        <li>住所：〇〇県〇〇市〇〇町〇-〇-〇</li><li>TEL：XXX-XXXX-XXXX</li><li>Mail：info@example.com</li>
+        <li>所在地：〒636-0312 奈良県磯城郡田原本町大字唐古507番地の1</li>
+        <li>TEL：XXX-XXXX-XXXX</li>
+        <li>MAIL：info@example.com</li>
       </ul>
     </div>
   </div>
   <div class="footer-bottom">
-    <p>© <span id="year"></span> ポストコミュニケーション株式会社 All rights reserved.</p>
-    <ul style="display:flex;gap:18px;"><li><a href="#">Privacy</a></li><li><a href="#">Terms</a></li></ul>
-    <p class="footer-sample">※本ページはご提案用サンプルとして作成しております。掲載情報は仮の内容を含みます。</p>
+    © 2026 ポストコミュニケーション株式会社 All rights reserved.&nbsp;｜&nbsp;
+    ※本ページはご提案用サンプルとして作成しております。掲載情報は仮の内容を含みます。
   </div>
 </footer>
 
 <script>
-  document.querySelectorAll(".faq-item .faq-q").forEach(function(btn){
-    btn.addEventListener("click",function(){
-      var item=btn.closest(".faq-item");
-      var open=item.getAttribute("data-open")==="true";
-      document.querySelectorAll(".faq-item").forEach(function(o){o.setAttribute("data-open","false");var q=o.querySelector(".faq-q");if(q)q.setAttribute("aria-expanded","false")});
-      if(!open){item.setAttribute("data-open","true");btn.setAttribute("aria-expanded","true")}
-    });
-  });
-  var t=document.getElementById("menuToggle"),m=document.getElementById("navMobile");
-  if(t&&m){t.addEventListener("click",function(){var e=t.getAttribute("aria-expanded")==="true";t.setAttribute("aria-expanded",String(!e));m.classList.toggle("is-open")});}
-  var h=document.getElementById("header");
-  window.addEventListener("scroll",function(){if(window.scrollY>20)h.classList.add("is-scrolled");else h.classList.remove("is-scrolled")},{passive:true});
-  var y=document.getElementById("year");if(y)y.textContent=String(new Date().getFullYear());
+var h=document.getElementById("header");
+window.addEventListener("scroll",function(){
+  if(window.scrollY>20) h.classList.add("is-scrolled");
+  else h.classList.remove("is-scrolled");
+},{passive:true});
 </script>
-
 </body>
 </html>

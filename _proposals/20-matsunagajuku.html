@@ -3,233 +3,145 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5" />
-<meta name="theme-color" content="#fefefa" />
+<meta name="theme-color" content="#1d5fa8" />
 <meta name="robots" content="noindex, nofollow" />
-
-<title>株式会社松永塾｜一人ひとりに、向き合う学びを。</title>
-<meta name="description" content="株式会社松永塾は、地域に根ざした学習塾です。集団・個別指導の双方に対応し、生徒一人ひとりの理解度に合わせた指導で第一志望合格を全力でサポートします。" />
-
+<title>株式会社松永塾｜学びが、未来をつくる。</title>
+<meta name="description" content="株式会社松永塾は受講者一人ひとりの成長に向き合い、確かな指導と学びの場をご提供いたします。" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet" />
-
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700&family=Noto+Serif+JP:wght@500;600&display=swap" rel="stylesheet" />
 <style>
 :root{
-  --bg:#fefefa;
-  --bg-cream:#f7f2e7;
-  --paper:#ffffff;
-  --ink:#0c1f3d;
-  --ink-2:#2e3e5a;
-  --ink-3:#5a6478;
-  --line:#dcd5c2;
-  --line-2:#c5bea8;
-  --navy:#0c1f3d;
-  --navy-2:#1a3258;
-  --crimson:#b8312f;
-  --crimson-2:#962525;
-  --gold:#c9a14a;
-  --gold-soft:#e8d9b5;
+  --bg: #fdfaf4;
+  --paper: #ffffff;
+  --ink: #1c2536;
+  --muted: #465268;
+  --primary: #1d5fa8;
+  --accent: #f59e0b;
+  --border: #ebe4d6;
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-html{scroll-behavior:smooth;-webkit-text-size-adjust:100%;scroll-padding-top:84px}
-body{font-family:"Noto Sans JP",sans-serif;background:var(--bg);color:var(--ink-2);font-size:15px;line-height:1.9;-webkit-font-smoothing:antialiased}
+html{scroll-behavior:smooth;scroll-padding-top:80px;-webkit-text-size-adjust:100%}
+body{font-family:"Noto Sans JP",sans-serif;background:var(--bg);color:var(--muted);font-size:15px;line-height:1.95;-webkit-font-smoothing:antialiased}
 img{display:block;max-width:100%;height:auto}
 a{color:inherit;text-decoration:none;transition:color .2s,opacity .2s}
 button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 ul,ol{list-style:none}
-
-.sample-bar{position:fixed;top:0;left:0;right:0;z-index:60;background:var(--navy);color:var(--gold-soft);padding:8px 16px;text-align:center;font-size:11px;letter-spacing:.1em}
-body{padding-top:32px}
-.container{width:100%;max-width:1140px;margin:0 auto;padding:0 24px}
-.container-narrow{max-width:840px}
+.container{width:100%;max-width:1180px;margin:0 auto;padding:0 24px}
 @media(min-width:768px){.container{padding:0 40px}}
+.sample-bar{position:fixed;top:0;left:0;right:0;z-index:60;background:var(--ink);color:#fff;padding:7px 16px;text-align:center;font-size:11px;letter-spacing:.1em;opacity:.92}
+body{padding-top:30px}
 
-.site-header{position:fixed;top:32px;left:0;right:0;z-index:50;background:rgba(254,254,250,.95);backdrop-filter:blur(14px);border-bottom:1px solid transparent;transition:border-color .3s}
-.site-header.is-scrolled{border-bottom-color:var(--line)}
-.header-inner{display:flex;align-items:center;justify-content:space-between;gap:16px;height:72px}
-.brand{display:flex;align-items:center;gap:14px}
-.brand-mark{width:46px;height:46px;display:grid;place-items:center;background:var(--navy);color:#fff;font-family:"Shippori Mincho",serif;font-weight:600;font-size:24px;border-radius:4px;position:relative}
-.brand-mark::after{content:"";position:absolute;inset:3px;border:1px solid rgba(255,255,255,.2);border-radius:3px}
-.brand-text{display:flex;flex-direction:column;line-height:1.15}
-.brand-jp{font-family:"Shippori Mincho",serif;font-weight:600;color:var(--navy);font-size:18px;letter-spacing:.12em}
-.brand-en{font-size:9px;color:var(--ink-3);letter-spacing:.25em;font-weight:500;margin-top:3px}
-
-.nav-desktop{display:none;gap:30px;font-family:"Shippori Mincho",serif}
-.nav-desktop a{font-size:14px;color:var(--navy);font-weight:500;letter-spacing:.06em}
-.nav-desktop a:hover{color:var(--crimson)}
+/* Header */
+.site-header{position:fixed;top:30px;left:0;right:0;z-index:50;background:rgba(255,255,255,.94);backdrop-filter:blur(14px);border-bottom:1px solid transparent;transition:border-color .3s}
+.site-header.is-scrolled{border-bottom-color:var(--border)}
+.header-inner{display:flex;align-items:center;justify-content:space-between;gap:16px;height:70px}
+.brand{display:flex;align-items:center;gap:12px}
+.brand-mark{width:42px;height:42px;display:grid;place-items:center;background:var(--primary);color:#fff;font-family:"Noto Serif JP",serif;font-weight:600;font-size:18px;border-radius:6px}
+.brand-name{font-family:"Noto Serif JP",serif;font-weight:600;color:var(--ink);font-size:16px;letter-spacing:.05em}
+.nav-desktop{display:none;gap:30px}
+.nav-desktop a{font-size:13px;color:var(--muted);font-weight:500;letter-spacing:.04em}
+.nav-desktop a:hover{color:var(--primary)}
 @media(min-width:1024px){.nav-desktop{display:flex}}
-
-.header-cta{display:flex;align-items:center;gap:12px}
-.header-tel{display:none;font-family:"Shippori Mincho",serif;font-size:18px;color:var(--navy);font-weight:600}
-.header-tel small{display:block;font-size:9px;color:var(--ink-3);letter-spacing:.2em;font-family:"Noto Sans JP",sans-serif;font-weight:400}
-@media(min-width:1024px){.header-tel{display:block}}
-.btn-h-primary{font-family:"Shippori Mincho",serif;display:inline-flex;align-items:center;gap:8px;padding:12px 22px;background:var(--crimson);color:#fff;font-size:13px;font-weight:600;letter-spacing:.1em}
-.btn-h-primary:hover{background:var(--crimson-2)}
-
-.menu-toggle{width:42px;height:42px;display:grid;gap:5px;align-content:center;justify-items:center;background:transparent;border:1px solid var(--line-2)}
-.menu-toggle span{width:18px;height:1.5px;background:var(--navy);transition:transform .3s,opacity .3s}
-.menu-toggle[aria-expanded="true"] span:nth-child(1){transform:translateY(6px) rotate(45deg)}
-.menu-toggle[aria-expanded="true"] span:nth-child(2){opacity:0}
-.menu-toggle[aria-expanded="true"] span:nth-child(3){transform:translateY(-6px) rotate(-45deg)}
-@media(min-width:1024px){.menu-toggle{display:none}}
-.nav-mobile{display:flex;flex-direction:column;max-height:0;overflow:hidden;background:var(--paper);border-top:1px solid var(--line);padding:0 24px;transition:max-height .4s,padding .3s;font-family:"Shippori Mincho",serif}
-.nav-mobile.is-open{max-height:80vh;padding:8px 24px 24px}
-.nav-mobile a{padding:16px 0;border-bottom:1px solid var(--line);font-size:15px;color:var(--navy)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;padding:14px 28px;border-radius:6px;font-weight:600;font-size:14px;letter-spacing:.08em;transition:transform .15s,opacity .15s}
+.btn-primary{background:var(--primary);color:#fff}
+.btn-primary:hover{transform:translateY(-1px);opacity:.92}
+.btn-ghost{background:transparent;color:var(--ink);border:1px solid var(--ink)}
+.btn-ghost:hover{background:var(--ink);color:var(--paper)}
+.btn-ghost-light{color:#fff;border-color:#fff}
+.btn-ghost-light:hover{background:#fff;color:var(--ink)}
+.btn-h-primary{padding:11px 22px;background:var(--primary);color:#fff;font-size:13px;font-weight:600;letter-spacing:.05em;border-radius:6px;display:inline-flex;align-items:center;gap:8px}
+.btn-h-primary:hover{opacity:.9}
 
 /* Hero */
-.hero{position:relative;padding:140px 0 100px;background:linear-gradient(180deg,var(--bg) 0%,var(--bg-cream) 100%);overflow:hidden}
-@media(min-width:768px){.hero{padding:180px 0 130px}}
-.hero::before{content:"";position:absolute;inset:0;background-image:radial-gradient(circle at 90% 10%,rgba(184,49,47,.06) 0,transparent 30%),radial-gradient(circle at 10% 90%,rgba(12,31,61,.05) 0,transparent 30%)}
-.hero-inner{position:relative;display:grid;gap:48px;align-items:center}
-@media(min-width:980px){.hero-inner{grid-template-columns:1.1fr 1fr;gap:80px}}
-.hero-eyebrow{display:inline-flex;align-items:center;gap:14px;font-family:"Shippori Mincho",serif;font-size:13px;color:var(--crimson);letter-spacing:.3em;margin-bottom:28px}
-.hero-eyebrow::before{content:"";display:inline-block;width:32px;height:1px;background:var(--crimson)}
-.hero-title{font-family:"Shippori Mincho",serif;font-weight:500;color:var(--navy);font-size:42px;line-height:1.5;letter-spacing:.05em}
-@media(min-width:640px){.hero-title{font-size:50px}}
-@media(min-width:1024px){.hero-title{font-size:62px}}
-.hero-title em{color:var(--crimson);font-style:normal}
-.hero-sub{margin-top:32px;color:var(--ink-2);font-size:15px;line-height:2.1;max-width:540px}
-@media(min-width:768px){.hero-sub{font-size:17px}}
+.hero{padding:130px 0 80px;background:linear-gradient(180deg,var(--bg) 0%,color-mix(in srgb,var(--bg) 85%,var(--primary) 15%) 100%);position:relative;overflow:hidden}
+@media(min-width:768px){.hero{padding:170px 0 110px}}
+.hero-eyebrow{display:inline-flex;align-items:center;gap:12px;font-family:"Noto Serif JP",serif;font-size:13px;color:var(--primary);letter-spacing:.25em;margin-bottom:24px}
+.hero-eyebrow::before{content:"";display:inline-block;width:28px;height:1px;background:var(--accent)}
+.hero-eyebrow-light{color:#fff}
+.hero-eyebrow-light::before{background:#fff}
+.hero-title{font-family:"Noto Serif JP",serif;font-weight:600;color:var(--ink);font-size:34px;line-height:1.45;letter-spacing:.05em}
+@media(min-width:640px){.hero-title{font-size:44px}}
+@media(min-width:1024px){.hero-title{font-size:54px}}
+.hero-title-light{color:#fff;text-shadow:0 2px 12px rgba(0,0,0,.3)}
+.hero-sub{margin-top:28px;color:var(--muted);font-size:15px;line-height:2.05;max-width:560px}
+.hero-sub-light{color:rgba(255,255,255,.92)}
+.hero-cta{margin-top:36px;display:flex;flex-wrap:wrap;gap:14px}
 
-.hero-cta{margin-top:40px;display:flex;flex-wrap:wrap;gap:14px}
-.btn-primary{font-family:"Shippori Mincho",serif;display:inline-flex;align-items:center;justify-content:center;gap:12px;background:var(--crimson);color:#fff;padding:18px 36px;font-size:15px;font-weight:600;letter-spacing:.15em}
-.btn-primary:hover{background:var(--crimson-2);transform:translateY(-1px)}
-.btn-secondary{font-family:"Shippori Mincho",serif;display:inline-flex;align-items:center;justify-content:center;gap:12px;background:transparent;color:var(--navy);padding:18px 36px;border:1px solid var(--navy);font-size:15px;letter-spacing:.15em}
-.btn-secondary:hover{background:var(--navy);color:#fff}
+/* Hero variations */
+.hero-split .hero-grid{display:grid;gap:48px;align-items:center}
+@media(min-width:980px){.hero-split .hero-grid{grid-template-columns:1.1fr 1fr;gap:80px}}
+.hero-split .hero-visual{aspect-ratio:5/4;overflow:hidden;border-radius:8px;background:var(--border)}
+.hero-split .hero-visual img{width:100%;height:100%;object-fit:cover}
 
-.hero-record{position:relative;background:var(--paper);padding:36px 32px;border:1px solid var(--line-2);box-shadow:0 30px 60px -30px rgba(12,31,61,.25)}
-.hero-record::before{content:"";position:absolute;top:0;left:0;width:100%;height:4px;background:linear-gradient(90deg,var(--navy) 0%,var(--crimson) 100%)}
-.hero-record h3{font-family:"Shippori Mincho",serif;color:var(--navy);font-size:14px;letter-spacing:.2em;margin-bottom:20px}
-.record-list{display:grid;gap:18px}
-.record-item{display:grid;grid-template-columns:1fr auto;gap:14px;padding:14px 0;border-bottom:1px dashed var(--line)}
-.record-item:last-child{border-bottom:0}
-.record-label{font-size:13px;color:var(--ink-2);font-family:"Shippori Mincho",serif}
-.record-value{font-family:"Shippori Mincho",serif;color:var(--crimson);font-weight:600;font-size:22px;line-height:1}
-.record-value small{font-size:.5em;margin-left:2px;color:var(--ink-3)}
+.hero-center .hero-center-inner{max-width:780px;margin:0 auto;text-align:center}
+.hero-center .hero-eyebrow{justify-content:center}
+.hero-center .hero-sub{margin-left:auto;margin-right:auto}
+.hero-center .hero-cta{justify-content:center}
+.hero-center .hero-strip{margin-top:60px;aspect-ratio:21/9;overflow:hidden}
+.hero-center .hero-strip img{width:100%;height:100%;object-fit:cover}
 
-/* Section base */
-.section{padding:96px 0}
-@media(min-width:768px){.section{padding:130px 0}}
-.section-cream{background:var(--bg-cream)}
-.section-paper{background:var(--paper)}
-.section-navy{background:var(--navy);color:#fff}
+.hero-fullbg{padding:170px 0 130px;background-size:cover;background-position:center}
+.hero-fullbg .hero-fullbg-inner{max-width:720px}
 
-.s-eyebrow{display:inline-flex;align-items:center;gap:14px;font-family:"Shippori Mincho",serif;font-size:13px;color:var(--crimson);letter-spacing:.3em;margin-bottom:20px}
-.s-eyebrow::before{content:"";display:inline-block;width:32px;height:1px;background:var(--crimson)}
-.section-navy .s-eyebrow{color:var(--gold)}
-.section-navy .s-eyebrow::before{background:var(--gold)}
-.s-title{font-family:"Shippori Mincho",serif;font-weight:500;color:var(--navy);font-size:30px;line-height:1.5;letter-spacing:.05em}
-.section-navy .s-title{color:#fff}
-@media(min-width:768px){.s-title{font-size:42px}}
-.s-title em{color:var(--crimson);font-style:normal}
-.s-lead{margin-top:24px;color:var(--ink-2);font-size:15px;line-height:2.1;max-width:660px}
-.section-navy .s-lead{color:rgba(255,255,255,.78)}
+/* Section */
+.section{padding:90px 0}
+@media(min-width:768px){.section{padding:120px 0}}
+.section-soft{background:color-mix(in srgb,var(--bg) 92%,var(--ink) 8%)}
+.section-primary{background:var(--primary);color:#fff}
+.s-eyebrow{display:inline-flex;align-items:center;gap:12px;font-family:"Noto Serif JP",serif;font-size:13px;color:var(--primary);letter-spacing:.25em;margin-bottom:20px}
+.s-eyebrow::before{content:"";display:inline-block;width:28px;height:1px;background:var(--accent)}
+.section-primary .s-eyebrow{color:#fff}
+.section-primary .s-eyebrow::before{background:#fff}
+.s-title{font-family:"Noto Serif JP",serif;font-weight:600;color:var(--ink);font-size:30px;line-height:1.5;letter-spacing:.05em}
+@media(min-width:768px){.s-title{font-size:40px}}
+.section-primary .s-title{color:#fff}
+.s-lead{margin-top:22px;color:var(--muted);font-size:15px;line-height:2.1;max-width:720px}
+.section-primary .s-lead{color:rgba(255,255,255,.85)}
 
-/* Greeting */
-.greet{display:grid;gap:48px;align-items:center}
-@media(min-width:980px){.greet{grid-template-columns:.85fr 1.15fr;gap:80px}}
-.greet-img{aspect-ratio:5/6;overflow:hidden;position:relative}
-.greet-img img{width:100%;height:100%;object-fit:cover;filter:grayscale(.2)}
-.greet-img::after{content:"";position:absolute;left:-12px;bottom:-12px;width:120px;height:120px;border:1px solid var(--crimson)}
-.greet-text p{margin-top:24px;color:var(--ink-2);font-size:15px;line-height:2.15}
-.greet-text p:first-of-type{margin-top:32px}
-.greet-sign{margin-top:40px;padding-top:24px;border-top:1px solid var(--line-2);font-family:"Shippori Mincho",serif;color:var(--navy);font-size:13px;letter-spacing:.1em}
-.greet-sign strong{display:block;margin-top:8px;font-size:18px}
+/* Business cards */
+.biz-grid{margin-top:56px;display:grid;gap:22px}
+@media(min-width:768px){.biz-grid{grid-template-columns:repeat(3,1fr)}}
+.biz-card{padding:36px 30px;background:var(--paper);border:1px solid var(--border);border-radius:8px;transition:transform .2s,box-shadow .2s}
+.biz-card:hover{transform:translateY(-3px);box-shadow:0 20px 40px -20px rgba(0,0,0,.15)}
+.biz-no{font-family:"Noto Serif JP",serif;font-size:13px;color:var(--accent);letter-spacing:.2em;font-weight:600}
+.biz-h{margin-top:12px;font-family:"Noto Serif JP",serif;font-size:20px;color:var(--ink);font-weight:600;line-height:1.5}
+.biz-d{margin-top:14px;font-size:14px;color:var(--muted);line-height:2}
 
-/* Achievements (合格実績) */
-.achv-grid{margin-top:56px;display:grid;gap:0;background:var(--line);border:1px solid var(--line)}
-@media(min-width:768px){.achv-grid{grid-template-columns:repeat(3,1fr)}}
-.achv{background:var(--paper);padding:40px 28px;text-align:center;position:relative}
-.achv-cat{font-family:"Shippori Mincho",serif;font-size:13px;color:var(--crimson);letter-spacing:.2em;margin-bottom:20px}
-.achv-n{font-family:"Shippori Mincho",serif;font-weight:600;font-size:54px;color:var(--navy);line-height:1}
-.achv-n small{font-size:.4em;color:var(--ink-3);margin-left:4px;font-weight:400}
-.achv-list{margin-top:24px;padding-top:20px;border-top:1px dashed var(--line);display:grid;gap:8px;font-size:13px;color:var(--ink-2);font-family:"Shippori Mincho",serif}
-
-/* Courses (指導コース) */
-.course-grid{margin-top:56px;display:grid;gap:24px}
-@media(min-width:768px){.course-grid{grid-template-columns:repeat(3,1fr)}}
-.course{background:var(--paper);padding:32px 28px;border:1px solid var(--line-2);transition:border-color .3s,transform .3s}
-.course:hover{border-color:var(--crimson);transform:translateY(-4px)}
-.course-grade{font-family:"Shippori Mincho",serif;font-size:13px;color:var(--crimson);letter-spacing:.2em;margin-bottom:10px}
-.course-h{font-family:"Shippori Mincho",serif;font-size:22px;color:var(--navy);font-weight:600;line-height:1.5}
-.course-d{margin-top:14px;font-size:14px;color:var(--ink-2);line-height:1.95}
-.course-tags{margin-top:20px;padding-top:16px;border-top:1px solid var(--line);display:flex;flex-wrap:wrap;gap:6px}
-.course-tags li{font-size:11px;color:var(--ink-3);padding:4px 10px;background:var(--bg-cream);font-family:"Shippori Mincho",serif}
-
-/* Approach (指導の特徴) */
-.approach{margin-top:56px;display:grid;gap:0;border-top:1px solid var(--line-2);border-bottom:1px solid var(--line-2)}
-.approach-item{padding:36px 0;border-top:1px solid var(--line-2);display:grid;gap:24px}
-.approach-item:first-child{border-top:0}
-@media(min-width:768px){.approach-item{grid-template-columns:160px 1fr;gap:48px;align-items:start}}
-.approach-no{font-family:"Shippori Mincho",serif;font-size:14px;color:var(--crimson);letter-spacing:.2em}
-.approach-no span{display:block;font-size:36px;color:var(--navy);margin-top:8px;font-weight:600}
-.approach-h{font-family:"Shippori Mincho",serif;font-size:22px;color:var(--navy);font-weight:600;line-height:1.5}
-.approach-d{margin-top:14px;color:var(--ink-2);font-size:14px;line-height:2.1}
-
-/* Voice */
-.voice-grid{margin-top:56px;display:grid;gap:32px}
-@media(min-width:768px){.voice-grid{grid-template-columns:repeat(2,1fr)}}
-.voice{background:var(--paper);padding:36px 32px;border:1px solid var(--line-2);position:relative}
-.voice-mark{position:absolute;top:20px;right:24px;font-family:"Shippori Mincho",serif;font-size:48px;color:var(--gold-soft);line-height:1}
-.voice-result{display:inline-block;font-family:"Shippori Mincho",serif;font-size:13px;color:var(--crimson);padding:4px 12px;background:rgba(184,49,47,.08);margin-bottom:14px}
-.voice-text{font-family:"Shippori Mincho",serif;color:var(--navy);font-size:15px;line-height:2.1;font-weight:400}
-.voice-by{margin-top:24px;padding-top:18px;border-top:1px solid var(--line);display:flex;align-items:center;gap:14px}
-.voice-avatar{width:42px;height:42px;background:var(--navy);color:var(--gold-soft);display:grid;place-items:center;font-family:"Shippori Mincho",serif;font-weight:600;border-radius:50%}
-.voice-name{font-family:"Shippori Mincho",serif;color:var(--navy);font-size:14px}
-.voice-co{margin-top:2px;font-size:12px;color:var(--ink-3)}
-
-/* Flow */
-.flow{margin-top:56px;display:grid;gap:18px;counter-reset:flow-counter}
-@media(min-width:768px){.flow{grid-template-columns:repeat(4,1fr)}}
-.fstep{background:rgba(255,255,255,.05);padding:32px 24px;position:relative;border:1px solid rgba(196,184,150,.25);counter-increment:flow-counter}
-.fstep::before{content:"STEP " counter(flow-counter,decimal-leading-zero);position:absolute;top:-12px;left:24px;background:var(--gold);color:var(--navy);padding:4px 12px;font-family:"Shippori Mincho",serif;font-size:11px;letter-spacing:.15em;font-weight:600}
-.fstep-h{margin-top:8px;font-family:"Shippori Mincho",serif;color:#fff;font-size:18px;font-weight:500;line-height:1.5}
-.fstep-d{margin-top:12px;font-size:13px;color:rgba(255,255,255,.7);line-height:1.85}
-
-/* FAQ */
-.faq{margin-top:56px;border-top:1px solid var(--line-2);border-bottom:1px solid var(--line-2)}
-.faq-item{border-top:1px solid var(--line-2)}
-.faq-item:first-child{border-top:0}
-.faq-q{width:100%;text-align:left;padding:26px 0;display:flex;align-items:flex-start;gap:24px}
-.faq-qn{font-family:"Shippori Mincho",serif;color:var(--crimson);font-size:15px;flex-shrink:0;width:42px;letter-spacing:.1em}
-.faq-qt{flex:1;font-family:"Shippori Mincho",serif;color:var(--navy);font-size:16px;font-weight:500;line-height:1.6}
-.faq-icon{flex-shrink:0;font-family:"Shippori Mincho",serif;color:var(--navy);font-size:22px;transition:transform .3s;line-height:1}
-.faq-item[data-open="true"] .faq-icon{transform:rotate(45deg);color:var(--crimson)}
-.faq-a{max-height:0;overflow:hidden;transition:max-height .5s}
-.faq-item[data-open="true"] .faq-a{max-height:500px}
-.faq-a-inner{padding:0 0 28px 66px;font-size:14px;color:var(--ink-2);line-height:2}
+/* Reasons */
+.reason-list{margin-top:56px;display:grid;gap:0;border-top:1px solid var(--border)}
+.reason{padding:30px 0;border-bottom:1px solid var(--border);display:grid;gap:16px}
+@media(min-width:768px){.reason{grid-template-columns:160px 1fr;gap:40px;align-items:start}}
+.reason-no{font-family:"Noto Serif JP",serif;font-size:13px;color:var(--accent);letter-spacing:.2em;font-weight:600}
+.reason-no span{display:block;font-size:30px;color:var(--ink);margin-top:6px;font-weight:600}
+.reason-h{font-family:"Noto Serif JP",serif;font-size:19px;color:var(--ink);font-weight:600;line-height:1.5}
+.reason-d{margin-top:14px;color:var(--muted);font-size:14px;line-height:2.05}
 
 /* Contact */
-.contact{padding:120px 0;background:linear-gradient(180deg,var(--bg-cream) 0%,var(--bg) 100%)}
-@media(min-width:768px){.contact{padding:160px 0}}
-.contact-cards{margin-top:56px;display:grid;gap:0;background:var(--paper);border:1px solid var(--line-2)}
+.contact{padding:100px 0 120px;background:color-mix(in srgb,var(--bg) 92%,var(--primary) 8%)}
+.contact-cards{margin-top:50px;display:grid;gap:0;background:var(--paper);border:1px solid var(--border);border-radius:8px;overflow:hidden}
 @media(min-width:768px){.contact-cards{grid-template-columns:repeat(3,1fr)}}
-.ccard{padding:40px 32px;text-align:center;border-bottom:1px solid var(--line)}
-@media(min-width:768px){.ccard{border-bottom:0;border-right:1px solid var(--line)}}
-.ccard:last-child{border-bottom:0;border-right:0}
-.ccard-l{font-family:"Shippori Mincho",serif;font-size:13px;color:var(--crimson);letter-spacing:.3em}
-.ccard-v{margin-top:14px;font-family:"Shippori Mincho",serif;font-size:22px;color:var(--navy);line-height:1.4;font-weight:600}
-.ccard-n{margin-top:12px;font-size:12px;color:var(--ink-3);line-height:1.7}
-.contact-buttons{margin-top:48px;display:flex;flex-direction:column;gap:14px}
+.ccard{padding:36px 30px;text-align:center;border-bottom:1px solid var(--border)}
+@media(min-width:768px){.ccard{border-bottom:0;border-right:1px solid var(--border)}.ccard:last-child{border-right:0}}
+.ccard-l{font-family:"Noto Serif JP",serif;font-size:13px;color:var(--accent);letter-spacing:.25em;font-weight:600}
+.ccard-v{margin-top:14px;font-family:"Noto Serif JP",serif;font-size:20px;color:var(--ink);line-height:1.4;font-weight:600}
+.ccard-n{margin-top:10px;font-size:12px;color:var(--muted);line-height:1.7}
+.contact-buttons{margin-top:40px;display:flex;flex-direction:column;gap:14px}
 @media(min-width:768px){.contact-buttons{flex-direction:row;justify-content:center}}
-.btn-c-primary{font-family:"Shippori Mincho",serif;display:inline-flex;align-items:center;justify-content:center;gap:12px;background:var(--navy);color:#fff;padding:20px 40px;font-size:14px;font-weight:500;letter-spacing:.15em}
-.btn-c-primary:hover{background:var(--crimson)}
-.btn-c-line{font-family:"Shippori Mincho",serif;display:inline-flex;align-items:center;justify-content:center;gap:12px;background:#06c755;color:#fff;padding:20px 40px;font-size:14px;font-weight:500;letter-spacing:.15em}
-.contact-note{margin-top:32px;text-align:center;font-size:12px;color:var(--ink-3)}
-.sample-mark{margin:48px auto 0;max-width:680px;padding:16px 24px;border:1px dashed var(--line-2);background:rgba(255,255,255,.5);text-align:center;font-size:11px;color:var(--ink-3)}
+.btn-line{background:#06c755;color:#fff;padding:18px 38px;border-radius:6px;font-weight:600;font-size:14px;letter-spacing:.1em;display:inline-flex;align-items:center;gap:10px}
 
-.site-footer{background:var(--navy);color:rgba(255,255,255,.7);padding:72px 0 28px}
+/* Sample mark */
+.sample-mark{margin:36px auto 0;max-width:720px;padding:16px 24px;border:1px dashed var(--border);background:var(--paper);text-align:center;font-size:11px;color:var(--muted);border-radius:6px}
+
+/* Footer */
+.site-footer{background:var(--ink);color:rgba(255,255,255,.7);padding:64px 0 28px}
 .footer-inner{display:grid;gap:36px}
-@media(min-width:768px){.footer-inner{grid-template-columns:1.2fr 1fr 1fr}}
-.footer-brand .brand-jp{color:#fff}
-.footer-brand .brand-en{color:var(--gold-soft)}
-.footer-lead{margin-top:18px;font-size:13px;line-height:2;color:rgba(255,255,255,.6)}
-.footer-h{font-family:"Shippori Mincho",serif;color:var(--gold);font-size:13px;letter-spacing:.2em;margin-bottom:16px}
-.footer-list li{margin-bottom:10px;font-size:13px;color:rgba(255,255,255,.6)}
-.footer-list a:hover{color:var(--gold)}
-.footer-bottom{margin-top:56px;padding-top:24px;border-top:1px solid rgba(255,255,255,.1);display:flex;flex-direction:column;gap:10px;font-size:11px;color:rgba(255,255,255,.4)}
-@media(min-width:640px){.footer-bottom{flex-direction:row;justify-content:space-between}}
-.footer-sample{margin-top:10px;text-align:center;width:100%;font-size:10px}
+@media(min-width:768px){.footer-inner{grid-template-columns:1.5fr 1fr 1fr}}
+.footer-name{color:#fff;font-family:"Noto Serif JP",serif;font-weight:600;font-size:17px}
+.footer-lead{margin-top:14px;font-size:13px;line-height:1.95;color:rgba(255,255,255,.65)}
+.footer-h{font-family:"Noto Serif JP",serif;color:rgba(255,255,255,.85);font-size:13px;letter-spacing:.2em;margin-bottom:14px;font-weight:600}
+.footer-list li{margin-bottom:9px;font-size:13px;color:rgba(255,255,255,.65)}
+.footer-bottom{margin-top:48px;padding-top:22px;border-top:1px solid rgba(255,255,255,.12);font-size:11px;color:rgba(255,255,255,.45);text-align:center}
 
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
@@ -241,234 +153,87 @@ body{padding-top:32px}
 <header class="site-header" id="header">
   <div class="container header-inner">
     <a href="#top" class="brand">
-      <span class="brand-mark">塾</span>
-      <span class="brand-text"><span class="brand-jp">松永塾</span><span class="brand-en">MATSUNAGA SCHOOL</span></span>
+      <span class="brand-mark">株</span>
+      <span class="brand-name">株式会社松永塾</span>
     </a>
     <nav class="nav-desktop">
-      <a href="#greet">塾長挨拶</a>
-      <a href="#record">合格実績</a>
-      <a href="#course">指導コース</a>
-      <a href="#approach">指導の特徴</a>
-      <a href="#voice">在校生の声</a>
-      <a href="#faq">FAQ</a>
+      <a href="#biz">事業内容</a>
+      <a href="#reason">選ばれる理由</a>
+      <a href="#contact">お問い合わせ</a>
     </nav>
-    <div class="header-cta">
-      <span class="header-tel">XXX-XXXX-XXXX<small>受付 14:00-21:00</small></span>
-      <a href="#contact" class="btn-h-primary">お問い合わせ</a>
-    </div>
-    <button class="menu-toggle" id="menuToggle" aria-label="メニュー" aria-expanded="false"><span></span><span></span><span></span></button>
-  </div>
-  <div class="nav-mobile" id="navMobile">
-    <a href="#greet">塾長挨拶</a><a href="#record">合格実績</a><a href="#course">指導コース</a><a href="#approach">指導の特徴</a><a href="#voice">在校生の声</a><a href="#flow">入塾の流れ</a><a href="#faq">FAQ</a><a href="#contact">お問い合わせ</a>
+    <a href="#contact" class="btn-h-primary">お問い合わせ</a>
   </div>
 </header>
 
 <main id="top">
 
-<section class="hero">
-  <div class="container hero-inner">
-    <div>
-      <p class="hero-eyebrow">SINCE FOUNDED — Matsunaga School</p>
-      <h1 class="hero-title">一人ひとりに、<br />向き合う<em>学び</em>を。</h1>
-      <p class="hero-sub">学力も、得意・不得意も、目指す進路も、生徒一人ひとり違います。だからこそ私たちは、画一的な授業ではなく、その子だけの「学びの道」を一緒に描きます。</p>
-      <div class="hero-cta">
-        <a href="#contact" class="btn-primary">無料体験のお申し込み</a>
-        <a href="#course" class="btn-secondary">指導コースを見る</a>
-      </div>
-    </div>
-    <aside class="hero-record">
-      <h3>— 2025年度 合格実績 —</h3>
-      <div class="record-list">
-        <div class="record-item"><span class="record-label">公立高校 合格</span><span class="record-value">98<small>%</small></span></div>
-        <div class="record-item"><span class="record-label">第一志望 合格</span><span class="record-value">82<small>%</small></span></div>
-        <div class="record-item"><span class="record-label">国公立大学 合格</span><span class="record-value">37<small>名</small></span></div>
-        <div class="record-item"><span class="record-label">難関私立大学 合格</span><span class="record-value">68<small>名</small></span></div>
-      </div>
-    </aside>
-  </div>
-</section>
 
-<section id="greet" class="section section-paper">
-  <div class="container">
-    <div class="greet">
-      <div class="greet-img"><img src="https://images.unsplash.com/photo-1577896851231-70ef18881754?auto=format&fit=crop&w=900&q=80" alt="塾長メッセージ" /></div>
-      <div class="greet-text">
-        <p class="s-eyebrow">From the Principal</p>
-        <h2 class="s-title">学ぶことは、<br /><em>「できた」</em>を積み重ねること。</h2>
-        <p>学習の楽しさは、自分の力で問題が解けた、理解できたと実感する瞬間に宿っています。私たち松永塾は、その小さな「できた」を一つひとつ積み重ね、自信と学力を同時に育てていきたいと考えています。</p>
-        <p>成績を上げることは、もちろん大切な目標です。しかしそれ以上に、自分で考え、自分で答えにたどり着く力こそが、生徒たちのこれからを支える本物の財産になると信じています。</p>
-        <p>地域の子どもたち一人ひとりに、誠実に向き合い続けます。どうぞお気軽に、塾の門を叩いてください。</p>
-        <p class="greet-sign">塾長<strong>松永 〇〇</strong></p>
-      </div>
+<section class="hero hero-fullbg" style="background-image:linear-gradient(135deg, rgba(0,0,0,.55), rgba(0,0,0,.3)), url('https://images.unsplash.com/photo-1503676260728-1c00da094a0b?auto=format&fit=crop&w=1400&q=70');">
+  <div class="container hero-fullbg-inner">
+    <p class="hero-eyebrow hero-eyebrow-light">— 教育・スクール —</p>
+    <h1 class="hero-title hero-title-light">学びが、未来をつくる。</h1>
+    <p class="hero-sub hero-sub-light">受講者一人ひとりの成長に向き合い、確かな指導と学びの場をご提供いたします。</p>
+    <div class="hero-cta">
+      <a href="#contact" class="btn btn-primary">お問い合わせはこちら</a>
+      <a href="#biz" class="btn btn-ghost btn-ghost-light">事業内容を見る</a>
     </div>
   </div>
 </section>
 
-<section id="record" class="section section-cream">
+<section id="biz" class="section">
   <div class="container">
-    <p class="s-eyebrow">Achievements</p>
-    <h2 class="s-title">2025年度<em>合格実績</em>。</h2>
-    <p class="s-lead">継続して在籍した生徒の合格率を公表しています。生徒一人ひとりの目標に、最後まで伴走します。</p>
-    <div class="achv-grid">
-      <div class="achv">
-        <p class="achv-cat">— 中学受験</p>
-        <p class="achv-n">42<small>名</small></p>
-        <ul class="achv-list"><li>奈良学園中学</li><li>東大寺学園中学</li><li>西大和学園中学</li><li>奈良女子大附属中学 ほか</li></ul>
-      </div>
-      <div class="achv">
-        <p class="achv-cat">— 高校受験</p>
-        <p class="achv-n">94<small>名</small></p>
-        <ul class="achv-list"><li>奈良高校</li><li>畝傍高校</li><li>郡山高校</li><li>奈良北高校 ほか</li></ul>
-      </div>
-      <div class="achv">
-        <p class="achv-cat">— 大学受験</p>
-        <p class="achv-n">105<small>名</small></p>
-        <ul class="achv-list"><li>京都大学／大阪大学</li><li>神戸大学／奈良女子大学</li><li>同志社／立命館／関西</li><li>関西学院 ほか</li></ul>
-      </div>
-    </div>
+    <p class="s-eyebrow">— Our Business —</p>
+    <h2 class="s-title">事業<br/>内容</h2>
+    <p class="s-lead">受講者一人ひとりの成長に向き合い、確かな指導と学びの場をご提供いたします。</p>
+    <div class="biz-grid"><article class="biz-card"><span class="biz-no">— 01 —</span><h3 class="biz-h">コース案内</h3><p class="biz-d">目的別の各種コースをご用意しております。</p></article><article class="biz-card"><span class="biz-no">— 02 —</span><h3 class="biz-h">無料体験</h3><p class="biz-d">まずは体験授業にお越しください。</p></article><article class="biz-card"><span class="biz-no">— 03 —</span><h3 class="biz-h">実績紹介</h3><p class="biz-d">受講者の声・合格実績を公開しております。</p></article></div>
   </div>
 </section>
 
-<section id="course" class="section">
+<section id="reason" class="section section-soft">
   <div class="container">
-    <p class="s-eyebrow">Courses</p>
-    <h2 class="s-title">学年・目的に合わせた<em>指導コース</em>。</h2>
-    <p class="s-lead">小学生から高校生まで、お子様の学年・志望校に最適なコースをご用意しています。</p>
-    <div class="course-grid">
-      <article class="course">
-        <p class="course-grade">— Elementary</p>
-        <h3 class="course-h">小学生コース</h3>
-        <p class="course-d">基礎学力の徹底と「考える力」の育成。算数・国語を中心に、楽しく学ぶ習慣を身につけます。</p>
-        <ul class="course-tags"><li>中学受験対応</li><li>少人数集団</li><li>個別指導</li></ul>
-      </article>
-      <article class="course">
-        <p class="course-grade">— Junior High</p>
-        <h3 class="course-h">中学生コース</h3>
-        <p class="course-d">定期テスト対策から高校受験まで一貫指導。5教科の総合力と志望校別の戦略指導を両立します。</p>
-        <ul class="course-tags"><li>5教科対応</li><li>定期テスト対策</li><li>高校受験</li><li>個別指導</li></ul>
-      </article>
-      <article class="course">
-        <p class="course-grade">— High School</p>
-        <h3 class="course-h">高校生コース</h3>
-        <p class="course-d">学校進度フォローから国公立・難関私大の二次対策まで。共通テストから記述問題まで対応。</p>
-        <ul class="course-tags"><li>大学受験</li><li>共通テスト対策</li><li>個別指導</li><li>映像授業</li></ul>
-      </article>
-    </div>
-  </div>
-</section>
-
-<section id="approach" class="section section-cream">
-  <div class="container">
-    <p class="s-eyebrow">Our Approach</p>
-    <h2 class="s-title">松永塾の<em>指導の特徴</em>。</h2>
-    <div class="approach">
-      <article class="approach-item">
-        <p class="approach-no">Approach<span>01</span></p>
+    <p class="s-eyebrow">— Why Chosen —</p>
+    <h2 class="s-title">お客様に選ばれる<br/>3つの理由</h2>
+    <div class="reason-list">
+      <article class="reason">
+        <p class="reason-no">Reason<span>01</span></p>
         <div>
-          <h3 class="approach-h">一人ひとり、別の「学習計画書」</h3>
-          <p class="approach-d">入塾時に学力診断を実施し、お子様一人ひとりの理解度・目標に合わせた個別カリキュラムを作成します。集団授業の中でも、生徒ごとに進度を管理する仕組みです。</p>
+          <h3 class="reason-h">奈良市を中心に積み重ねてきた信頼</h3>
+          <p class="reason-d">奈良市でのお客様一件一件と向き合い、丁寧なご対応で築いてきた信頼関係を、これからも大切にしてまいります。</p>
         </div>
       </article>
-      <article class="approach-item">
-        <p class="approach-no">Approach<span>02</span></p>
+      <article class="reason">
+        <p class="reason-no">Reason<span>02</span></p>
         <div>
-          <h3 class="approach-h">プロ講師による少人数指導</h3>
-          <p class="approach-d">学生アルバイトに頼らず、経験豊富なプロ講師が一貫して指導。1クラス最大10名の少人数制で、一人ひとりに目が行き届く学習環境を整えています。</p>
+          <h3 class="reason-h">お客様一人ひとりに寄り添うご対応</h3>
+          <p class="reason-d">画一的な対応ではなく、お客様の状況やご要望に応じた、きめ細やかなご対応を心がけております。</p>
         </div>
       </article>
-      <article class="approach-item">
-        <p class="approach-no">Approach<span>03</span></p>
+      <article class="reason">
+        <p class="reason-no">Reason<span>03</span></p>
         <div>
-          <h3 class="approach-h">家庭との連携を重視</h3>
-          <p class="approach-d">月次の学習レポート、定期面談、保護者会を通じて、ご家庭との情報共有を欠かしません。お子様の学習状況を「見える化」し、一緒に育てる伴走者として支えます。</p>
+          <h3 class="reason-h">継続的なお取引が可能な体制</h3>
+          <p class="reason-d">一度のお取引で終わらず、お客様の事業や暮らしに長く寄り添える、信頼できるパートナーであることを目指しています。</p>
         </div>
       </article>
-      <article class="approach-item">
-        <p class="approach-no">Approach<span>04</span></p>
-        <div>
-          <h3 class="approach-h">自習室24時間体制で支援</h3>
-          <p class="approach-d">授業時間外も、講師が常駐する自習室を自由に利用可能。「分からない」をその場で解決できる環境を、追加料金なしで提供しています。</p>
-        </div>
-      </article>
-    </div>
-  </div>
-</section>
-
-<section id="voice" class="section section-paper">
-  <div class="container">
-    <p class="s-eyebrow">Students' Voice</p>
-    <h2 class="s-title">在校生・卒業生の<em>声</em>。</h2>
-    <div class="voice-grid">
-      <figure class="voice">
-        <span class="voice-mark">"</span>
-        <span class="voice-result">第一志望合格 / 奈良高校</span>
-        <p class="voice-text">先生方が私の苦手を一つひとつ見つけて、解き方を丁寧に教えてくれました。中3の夏まで成績が伸びず不安でしたが、最後まで諦めずに伴走してくれた先生に感謝しています。</p>
-        <figcaption class="voice-by"><span class="voice-avatar">A</span><span><span class="voice-name">A さん</span><span class="voice-co">中学3年生 / 2025年度</span></span></figcaption>
-      </figure>
-      <figure class="voice">
-        <span class="voice-mark">"</span>
-        <span class="voice-result">難関私大合格 / 同志社大学</span>
-        <p class="voice-text">学校の授業についていけず、入塾しました。塾長が学習計画を一緒に立ててくださり、自分のペースで進められたことが本当に大きかったです。自習室も自由に使えてとても助かりました。</p>
-        <figcaption class="voice-by"><span class="voice-avatar">M</span><span><span class="voice-name">M さん</span><span class="voice-co">高校3年生 / 2025年度</span></span></figcaption>
-      </figure>
-      <figure class="voice">
-        <span class="voice-mark">"</span>
-        <span class="voice-result">保護者様より</span>
-        <p class="voice-text">他塾に通わせたこともありましたが、こちらは先生方が我が子のことを本当によく見てくださっていました。月次レポートで進捗が分かるのも安心。親子で信頼できる塾です。</p>
-        <figcaption class="voice-by"><span class="voice-avatar">K</span><span><span class="voice-name">K さん 保護者</span><span class="voice-co">中学2年生 保護者</span></span></figcaption>
-      </figure>
-      <figure class="voice">
-        <span class="voice-mark">"</span>
-        <span class="voice-result">国公立大合格 / 神戸大学</span>
-        <p class="voice-text">高2の春から3年間、お世話になりました。志望校が高く諦めかけたこともありますが、先生が「目標は変えなくていい」と言ってくれたことが今でも忘れられません。心から感謝しています。</p>
-        <figcaption class="voice-by"><span class="voice-avatar">T</span><span><span class="voice-name">T さん</span><span class="voice-co">高校3年生 / 2024年度</span></span></figcaption>
-      </figure>
-    </div>
-  </div>
-</section>
-
-<section id="flow" class="section-navy section">
-  <div class="container">
-    <p class="s-eyebrow">Enrollment Flow</p>
-    <h2 class="s-title">入塾までの<em style="color:var(--gold)">流れ</em>。</h2>
-    <p class="s-lead">無料体験から入塾まで、安心してご検討いただけるステップを用意しています。</p>
-    <div class="flow">
-      <div class="fstep"><h3 class="fstep-h">お問い合わせ</h3><p class="fstep-d">お電話・LINE・フォームより、お気軽にご相談ください。</p></div>
-      <div class="fstep"><h3 class="fstep-h">学習相談・体験授業</h3><p class="fstep-d">現状の学習状況をヒアリングし、無料体験授業を1〜2回ご案内。</p></div>
-      <div class="fstep"><h3 class="fstep-h">学力診断・カリキュラム作成</h3><p class="fstep-d">学力診断テストを実施し、お子様専用の学習計画書を作成。</p></div>
-      <div class="fstep"><h3 class="fstep-h">入塾・指導開始</h3><p class="fstep-d">納得いただいた後にご入塾。月次レポートでフォローも継続。</p></div>
-    </div>
-  </div>
-</section>
-
-<section id="faq" class="section">
-  <div class="container container-narrow">
-    <p class="s-eyebrow">FAQ</p>
-    <h2 class="s-title">よくあるご質問。</h2>
-    <div class="faq">
-      <div class="faq-item" data-open="true"><button class="faq-q" type="button" aria-expanded="true"><span class="faq-qn">Q.1</span><span class="faq-qt">体験授業は無料ですか？</span><span class="faq-icon">+</span></button><div class="faq-a"><p class="faq-a-inner">はい、初回の体験授業は完全無料で承ります。1〜2回受講後、ご家庭でご検討いただけます。しつこい勧誘は一切いたしません。</p></div></div>
-      <div class="faq-item"><button class="faq-q" type="button" aria-expanded="false"><span class="faq-qn">Q.2</span><span class="faq-qt">途中入塾は可能ですか？</span><span class="faq-icon">+</span></button><div class="faq-a"><p class="faq-a-inner">はい、いつでも入塾可能です。入塾時に学力診断を実施し、現状に合わせた個別カリキュラムを作成しますのでご安心ください。</p></div></div>
-      <div class="faq-item"><button class="faq-q" type="button" aria-expanded="false"><span class="faq-qn">Q.3</span><span class="faq-qt">他塾との掛け持ちはできますか？</span><span class="faq-icon">+</span></button><div class="faq-a"><p class="faq-a-inner">可能ですが、お子様の負担を考慮するとあまりお勧めしません。一度ご相談いただければ、最適な学習プランをご提案いたします。</p></div></div>
-      <div class="faq-item"><button class="faq-q" type="button" aria-expanded="false"><span class="faq-qn">Q.4</span><span class="faq-qt">自習室は誰でも使えますか？</span><span class="faq-icon">+</span></button><div class="faq-a"><p class="faq-a-inner">在塾生は授業時間外も自由にご利用いただけます。講師が常駐しているので、質問もその場で解決できます。追加料金は不要です。</p></div></div>
-      <div class="faq-item"><button class="faq-q" type="button" aria-expanded="false"><span class="faq-qn">Q.5</span><span class="faq-qt">保護者面談は実施していますか？</span><span class="faq-icon">+</span></button><div class="faq-a"><p class="faq-a-inner">定期面談を年4回（春・夏・秋・冬）実施しています。学習状況・志望校相談・進路指導まで、丁寧にお話しさせていただきます。</p></div></div>
-      <div class="faq-item"><button class="faq-q" type="button" aria-expanded="false"><span class="faq-qn">Q.6</span><span class="faq-qt">教材費は別途必要ですか？</span><span class="faq-icon">+</span></button><div class="faq-a"><p class="faq-a-inner">使用教材は別途実費にてご案内しますが、無理な販売はいたしません。詳細は無料体験時にご説明いたします。</p></div></div>
     </div>
   </div>
 </section>
 
 <section id="contact" class="contact">
-  <div class="container container-narrow">
-    <div style="text-align:center"><p class="s-eyebrow" style="justify-content:center">Contact</p><h2 class="s-title">無料体験のお申し込みは、<br /><em>こちらから</em>。</h2><p class="s-lead" style="margin-left:auto;margin-right:auto">お電話・LINE・フォーム、どちらからでもお気軽にお問い合わせください。</p></div>
+  <div class="container">
+    <div style="text-align:center">
+      <p class="s-eyebrow" style="justify-content:center">— Contact —</p>
+      <h2 class="s-title">お気軽に<br/>お問い合わせください</h2>
+      <p class="s-lead" style="margin:22px auto 0">ご相談・お見積もりは無料です。お電話・お問い合わせフォームよりお気軽にどうぞ。</p>
+    </div>
     <div class="contact-cards">
-      <div class="ccard"><p class="ccard-l">TEL</p><p class="ccard-v">XXX-XXXX-XXXX</p><p class="ccard-n">受付 14:00-21:00<br />（日曜定休）</p></div>
-      <div class="ccard"><p class="ccard-l">LINE</p><p class="ccard-v">お問い合わせ<br />はこちら</p><p class="ccard-n">公式LINE<br />24時間 受付</p></div>
-      <div class="ccard"><p class="ccard-l">FORM</p><p class="ccard-v">お問い合わせ<br />はこちら</p><p class="ccard-n">フォーム送信<br />24時間 受付</p></div>
+      <div class="ccard"><p class="ccard-l">TEL</p><p class="ccard-v">XXX-XXXX-XXXX</p><p class="ccard-n">受付 9:00-18:00<br/>（土日祝休）</p></div>
+      <div class="ccard"><p class="ccard-l">MAIL</p><p class="ccard-v">info@example.com</p><p class="ccard-n">24時間 受付<br/>返信は営業日</p></div>
+      <div class="ccard"><p class="ccard-l">FORM</p><p class="ccard-v">お問い合わせ<br/>はこちら</p><p class="ccard-n">フォーム送信<br/>24時間 受付</p></div>
     </div>
     <div class="contact-buttons">
-      <a href="#" class="btn-c-line"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3C6.48 3 2 6.58 2 11c0 3.96 3.58 7.27 8.4 7.92.33.07.78.22.89.5.1.25.07.65.03.9l-.14.86c-.05.25-.2.99.87.54s5.75-3.39 7.84-5.8C21.32 14.36 22 12.77 22 11c0-4.42-4.48-8-10-8z"/></svg>お問い合わせはこちら</a>
-      <a href="#" class="btn-c-primary">お問い合わせフォーム</a>
+      <a href="#" class="btn btn-primary">お問い合わせはこちら</a>
     </div>
-    <p class="contact-note">※お返事は最短当日・通常24時間以内にいたします。</p>
     <div class="sample-mark">※本ページはご提案用サンプルとして作成しております。掲載情報は仮の内容を含みます。</div>
   </div>
 </section>
@@ -477,25 +242,39 @@ body{padding-top:32px}
 
 <footer class="site-footer">
   <div class="container footer-inner">
-    <div class="footer-brand">
-      <a href="#top" class="brand"><span class="brand-mark">塾</span><span class="brand-text"><span class="brand-jp">松永塾</span><span class="brand-en">MATSUNAGA SCHOOL</span></span></a>
-      <p class="footer-lead">株式会社松永塾<br />一人ひとりに、向き合う学びを。</p>
+    <div>
+      <p class="footer-name">株式会社松永塾</p>
+      <p class="footer-lead">受講者一人ひとりの成長に向き合い、確かな指導と学びの場をご提供いたします。</p>
     </div>
-    <div><p class="footer-h">Menu</p><ul class="footer-list"><li><a href="#greet">塾長挨拶</a></li><li><a href="#record">合格実績</a></li><li><a href="#course">指導コース</a></li><li><a href="#approach">指導の特徴</a></li><li><a href="#voice">在校生の声</a></li><li><a href="#faq">FAQ</a></li></ul></div>
-    <div><p class="footer-h">Company</p><ul class="footer-list"><li>住所：〇〇県〇〇市〇〇町〇-〇-〇</li><li>TEL：XXX-XXXX-XXXX</li><li>Mail：info@example.com</li><li>受付：14:00〜21:00</li><li>定休日：日曜日</li></ul></div>
+    <div>
+      <p class="footer-h">— Menu —</p>
+      <ul class="footer-list">
+        <li><a href="#biz">事業内容</a></li>
+        <li><a href="#reason">選ばれる理由</a></li>
+        <li><a href="#contact">お問い合わせ</a></li>
+      </ul>
+    </div>
+    <div>
+      <p class="footer-h">— Company —</p>
+      <ul class="footer-list">
+        <li>所在地：〒630-8113 奈良県奈良市法蓮町160番地6</li>
+        <li>TEL：XXX-XXXX-XXXX</li>
+        <li>MAIL：info@example.com</li>
+      </ul>
+    </div>
   </div>
   <div class="footer-bottom">
-    <p>© <span id="year"></span> 株式会社松永塾 All rights reserved.</p>
-    <ul style="display:flex;gap:18px;"><li><a href="#">プライバシーポリシー</a></li><li><a href="#">特定商取引法</a></li></ul>
-    <p class="footer-sample">※本ページはご提案用サンプルとして作成しております。掲載情報は仮の内容を含みます。</p>
+    © 2026 株式会社松永塾 All rights reserved.&nbsp;｜&nbsp;
+    ※本ページはご提案用サンプルとして作成しております。掲載情報は仮の内容を含みます。
   </div>
 </footer>
 
 <script>
-document.querySelectorAll(".faq-item .faq-q").forEach(function(btn){btn.addEventListener("click",function(){var item=btn.closest(".faq-item");var open=item.getAttribute("data-open")==="true";document.querySelectorAll(".faq-item").forEach(function(o){o.setAttribute("data-open","false");var q=o.querySelector(".faq-q");if(q)q.setAttribute("aria-expanded","false")});if(!open){item.setAttribute("data-open","true");btn.setAttribute("aria-expanded","true")}})});
-var t=document.getElementById("menuToggle"),m=document.getElementById("navMobile");if(t&&m){t.addEventListener("click",function(){var e=t.getAttribute("aria-expanded")==="true";t.setAttribute("aria-expanded",String(!e));m.classList.toggle("is-open")})}
-var h=document.getElementById("header");window.addEventListener("scroll",function(){if(window.scrollY>20)h.classList.add("is-scrolled");else h.classList.remove("is-scrolled")},{passive:true});
-var y=document.getElementById("year");if(y)y.textContent=String(new Date().getFullYear());
+var h=document.getElementById("header");
+window.addEventListener("scroll",function(){
+  if(window.scrollY>20) h.classList.add("is-scrolled");
+  else h.classList.remove("is-scrolled");
+},{passive:true});
 </script>
 </body>
 </html>
