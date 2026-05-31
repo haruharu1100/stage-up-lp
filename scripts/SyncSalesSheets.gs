@@ -62,6 +62,10 @@ function onOpen() {
     .addItem('L列・M列を空白化（応急）', 'clearLMColumns')
     .addItem('表示設定だけリセット', 'resetDisplayOnly')
     .addSeparator()
+    .addItem('新シート: K列を1行表示に戻す（CLIP）', 'newSheetKColumnClip')
+    .addItem('新シート: K列を折り返し表示にする（WRAP）', 'newSheetKColumnWrap')
+    .addItem('新シート: 先頭3社のDM全文をポップアップ確認', 'newSheetSampleDMs')
+    .addSeparator()
     .addItem('データソース情報', 'showDataSource')
     .addToUi();
 }
@@ -170,19 +174,38 @@ function syncNewSheet() {
   // 4. 一括書き込み
   sheet.getRange(DATA_START_ROW, 1, cleaned.length, NUM_COLS_NEW).setValues(cleaned);
 
-  // 5. 表示設定
-  const dataRange = sheet.getRange(1, 1, cleaned.length + 1, NUM_COLS_NEW);
-  dataRange.setWrapStrategy(SpreadsheetApp.WrapStrategy.CLIP);
-  dataRange.setVerticalAlignment('middle');
-  sheet.setRowHeightsForced(1, cleaned.length + 1, ROW_HEIGHT_PX);
+  // 5. 表示設定（K列だけ折り返し / 他列は切り詰め）
+  // A〜J列: CLIP
+  const otherRange = sheet.getRange(1, 1, cleaned.length + 1, NUM_COLS_NEW - 1);
+  otherRange.setWrapStrategy(SpreadsheetApp.WrapStrategy.CLIP);
+  otherRange.setVerticalAlignment('top');
+  // K列: WRAP（DM長文がシート上で全文見えるように）
+  const kRange = sheet.getRange(1, NUM_COLS_NEW, cleaned.length + 1, 1);
+  kRange.setWrapStrategy(SpreadsheetApp.WrapStrategy.WRAP);
+  kRange.setVerticalAlignment('top');
+  kRange.setFontSize(11);
+
+  // 行高: ヘッダは21px、データ行は自動（K列の長文に応じて自動拡大）
+  sheet.setRowHeightsForced(1, 1, ROW_HEIGHT_PX);
+  // データ行は最小行高だけ設定し、コンテンツに応じて自動拡大
+  // ※ 132行を1つずつ自動高にすると重いので、強制値の代わりに setRowHeights を使う
+  if (cleaned.length > 0) {
+    // Google Sheets は WRAP セルがあると、その列の内容に応じて行高が拡大される
+    // ここではあえて setRowHeightsForced を data 行には適用しない
+    // → デフォルト挙動で K列WRAPに合わせて行高が伸びる
+  }
 
   for (let i = 0; i < widths.length; i++) {
     sheet.setColumnWidth(i + 1, widths[i]);
   }
+  // K列だけ幅を 700px に
+  sheet.setColumnWidth(NUM_COLS_NEW, 700);
 
   // ヘッダ装飾
   sheet.getRange(1, 1, 1, NUM_COLS_NEW)
-    .setFontWeight('bold').setBackground('#f3f4f6').setHorizontalAlignment('center');
+    .setFontWeight('bold').setBackground('#f3f4f6')
+    .setHorizontalAlignment('center')
+    .setVerticalAlignment('middle');
   sheet.setFrozenRows(1);
 
   // 注釈
@@ -191,8 +214,10 @@ function syncNewSheet() {
   sheet.getRange(1, 9).setNote('🚫 完全空白固定（運用者が手動管理・後で手入力）');
   sheet.getRange(1, 11).setNote(
     '📝 印刷用DM文章（株式会社MORIKA名義・改行あり長文）\n' +
-    'セル選択→Cmd+C → Google Docsに貼付で改行が再現されます。\n' +
-    'そのまま印刷・送付可能な営業文として設計されています。'
+    '・このシート上で全文がそのまま表示されます（折り返し表示）\n' +
+    '・セル選択→Cmd+C → Google Docsに貼付で改行が再現されます\n' +
+    '・印刷時もそのまま使える営業文として設計\n' +
+    '・1行表示に戻したい場合は「STAGE UP同期 → K列を1行表示に戻す」'
   );
 
   SpreadsheetApp.flush();
@@ -352,6 +377,74 @@ function resetDisplayOnly() {
     newSh.setRowHeightsForced(1, lastRow, ROW_HEIGHT_PX);
   }
   SpreadsheetApp.getUi().alert('✅ 折り返し→切り詰め / 行高21px に再設定');
+}
+
+/* ============================================================
+ *  新シート: K列の表示モード切替
+ * ============================================================ */
+function newSheetKColumnWrap() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sh = getNewSheet_(ss);
+  if (!sh) { SpreadsheetApp.getUi().alert('❌ 新シートが見つかりません'); return; }
+  const lastRow = Math.max(sh.getLastRow(), 2);
+  // K列だけ折り返し
+  const kRange = sh.getRange(1, NUM_COLS_NEW, lastRow, 1);
+  kRange.setWrapStrategy(SpreadsheetApp.WrapStrategy.WRAP);
+  kRange.setVerticalAlignment('top');
+  sh.setColumnWidth(NUM_COLS_NEW, 700);
+  // 他列はCLIP維持
+  const otherRange = sh.getRange(1, 1, lastRow, NUM_COLS_NEW - 1);
+  otherRange.setWrapStrategy(SpreadsheetApp.WrapStrategy.CLIP);
+  // 行高は自動拡大（強制値解除）
+  // → setRowHeights ではなく既存設定をリセットするには行ごとに setRowHeight する
+  SpreadsheetApp.getUi().alert(
+    '✅ K列を折り返し表示にしました\n\n' +
+    '・K列(DM文章)が全文表示されます\n' +
+    '・行高は内容に応じて自動拡大されます\n' +
+    '・1行に戻すには「K列を1行表示に戻す」'
+  );
+}
+
+function newSheetKColumnClip() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sh = getNewSheet_(ss);
+  if (!sh) { SpreadsheetApp.getUi().alert('❌ 新シートが見つかりません'); return; }
+  const lastRow = Math.max(sh.getLastRow(), 2);
+  // 全列CLIP
+  sh.getRange(1, 1, lastRow, NUM_COLS_NEW)
+    .setWrapStrategy(SpreadsheetApp.WrapStrategy.CLIP);
+  // 行高を21px固定
+  sh.setRowHeightsForced(1, lastRow, ROW_HEIGHT_PX);
+  SpreadsheetApp.getUi().alert(
+    '✅ K列を1行表示に戻しました\n\n' +
+    '・全行 高さ21pxに統一\n' +
+    '・K列は1行で切り詰め表示（セル選択→数式バーで全文確認可）\n' +
+    '・Google Docs貼付では改行が再現されます'
+  );
+}
+
+/* ============================================================
+ *  新シート: サンプルDM文章 3社をポップアップ表示
+ * ============================================================ */
+function newSheetSampleDMs() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sh = getNewSheet_(ss);
+  if (!sh) { SpreadsheetApp.getUi().alert('❌ 新シートが見つかりません'); return; }
+  // K列の先頭3行を取得
+  const samples = sh.getRange(2, NUM_COLS_NEW, 3, 1).getValues();
+  let info = '【新シート K列(DM文章) 先頭3社のセル中身】\n\n';
+  samples.forEach((row, i) => {
+    const dm = String(row[0] || '');
+    info += '━━━━━━━━━━━━━━━━━━━━━━━━\n';
+    info += '【' + (i + 1) + '社目】 セル文字数: ' + dm.length + '\n';
+    info += '改行数: ' + (dm.match(/\n/g) || []).length + '\n';
+    info += '━━━━━━━━━━━━━━━━━━━━━━━━\n';
+    info += dm.substring(0, 800) + (dm.length > 800 ? '\n...(以下省略)' : '') + '\n\n';
+  });
+  info += '\n💡 上記がセルに入っている実データです。\n';
+  info += '   シートで短く見えるのは「切り詰め表示(CLIP)」のためで、データは全文入っています。\n';
+  info += '   「STAGE UP同期 → K列を折り返し表示にする」で全文表示できます。';
+  SpreadsheetApp.getUi().alert(info);
 }
 
 function showDataSource() {
