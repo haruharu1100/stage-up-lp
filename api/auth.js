@@ -238,6 +238,65 @@ const ACCOUNTS = {
   "m254-event-revolution":               SAMPLE_AUTH,  // 合同会社イベント革命軍 / 汎用コーポレート
   "m255-imu":                            SAMPLE_AUTH,  // 株式会社いむ / 汎用コーポレート
 
+
+  // ─── MORIKA新シート 56社追加 (256-311) ───
+  "m256-aa":                             SAMPLE_AUTH,  // 株式会社AA / 汎用コーポレート
+  "m257-ace":                            SAMPLE_AUTH,  // 株式会社ACE / 汎用コーポレート
+  "m258-ace-art":                        SAMPLE_AUTH,  // エースアート株式会社 / 汎用コーポレート
+  "m259-ace-spo":                        SAMPLE_AUTH,  // 合同会社えーすぽ / 汎用コーポレート
+  "m260-abao":                           SAMPLE_AUTH,  // 株式会社ABAO / 汎用コーポレート
+  "m261-app":                            SAMPLE_AUTH,  // 株式会社APP / 汎用コーポレート
+  "m262-ahome":                          SAMPLE_AUTH,  // 株式会社Ahome総合サービス / 不動産業
+  "m263-auv":                            SAMPLE_AUTH,  // AUV合同会社 / 汎用コーポレート
+  "m264-hrm-woodworks":                  SAMPLE_AUTH,  // 株式会社HRM woodworks / 汎用コーポレート
+  "m265-hm":                             SAMPLE_AUTH,  // HM企画株式会社 / 汎用コーポレート
+  "m266-hl-construction":                SAMPLE_AUTH,  // HL Construction株式会社 / 建設業
+  "m267-hcc":                            SAMPLE_AUTH,  // 株式会社HCC準備会社 / 汎用コーポレート
+  "m268-h2n":                            SAMPLE_AUTH,  // 株式会社H2N / 汎用コーポレート
+  "m269-yale-connect":                   SAMPLE_AUTH,  // 株式会社エールコネクト / 小売・EC
+  "m270-a-works":                        SAMPLE_AUTH,  // 株式会社A-WORKS / 汎用コーポレート
+  "m271-a-1design":                      SAMPLE_AUTH,  // A-1DESIGN合同会社 / 広告・マーケティング
+  "m272-eiichido":                       SAMPLE_AUTH,  // 株式会社永一天堂 / 汎用コーポレート
+  "m273-eichi":                          SAMPLE_AUTH,  // 叡智株式会社 / 汎用コーポレート
+  "m274-equas":                          SAMPLE_AUTH,  // 株式会社Equas / 汎用コーポレート
+  "m275-exoplus":                        SAMPLE_AUTH,  // エクソプラス株式会社 / 汎用コーポレート
+  "m276-ecvo":                           SAMPLE_AUTH,  // 株式会社ECVO / 小売・EC
+  "m277-echoes":                         SAMPLE_AUTH,  // echoes株式会社 / 小売・EC
+  "m278-eco-banchou":                    SAMPLE_AUTH,  // 株式会社エコ番長 / 小売・EC
+  "m279-hd":                             SAMPLE_AUTH,  // 株式会社HDオリジンスタイル / 汎用コーポレート
+  "m280-eitech":                         SAMPLE_AUTH,  // エイテック合同会社 / IT・システム開発
+  "m281-eight":                          SAMPLE_AUTH,  // 株式会社エイト / 汎用コーポレート
+  "m282-eivn":                           SAMPLE_AUTH,  // 株式会社Eivn / 汎用コーポレート
+  "m283-aim":                            SAMPLE_AUTH,  // 株式会社AIM / 汎用コーポレート
+  "m284-everen":                         SAMPLE_AUTH,  // 株式会社Everen / 汎用コーポレート
+  "m285-egao":                           SAMPLE_AUTH,  // 株式会社笑がお / 汎用コーポレート
+  "m286-srm":                            SAMPLE_AUTH,  // 株式会社SRM / 汎用コーポレート
+  "m287-srb":                            SAMPLE_AUTH,  // 株式会社SRB / 汎用コーポレート
+  "m288-s-t":                            SAMPLE_AUTH,  // S&T株式会社 / 汎用コーポレート
+  "m289-s-y":                            SAMPLE_AUTH,  // S&Y株式会社 / 汎用コーポレート
+  "m290-esac":                           SAMPLE_AUTH,  // エスエイシー株式会社 / 汎用コーポレート
+  "m291-s-h":                            SAMPLE_AUTH,  // 合同会社S.H / 汎用コーポレート
+  "m292-sk":                             SAMPLE_AUTH,  // SK株式会社 / 汎用コーポレート
+  "m293-skc":                            SAMPLE_AUTH,  // SKC株式会社 / 汎用コーポレート
+  "m294-sc":                             SAMPLE_AUTH,  // SC特別目的株式会社 / 汎用コーポレート
+  "m295-sc-food":                        SAMPLE_AUTH,  // エスシーフード株式会社 / 汎用コーポレート
+  "m296-swbsecurity":                    SAMPLE_AUTH,  // SWBSECURITY株式会社 / IT・システム開発
+  "m297-st-cargo":                       SAMPLE_AUTH,  // 株式会社ST.cargo / 汎用コーポレート
+  "m298-esnadia":                        SAMPLE_AUTH,  // 株式会社ESNADIA / 汎用コーポレート
+  "m299-splus":                          SAMPLE_AUTH,  // 株式会社SPLUS / 汎用コーポレート
+  "m300-s-plus":                         SAMPLE_AUTH,  // 株式会社エスプラス / 汎用コーポレート
+  "m301-s-property":                     SAMPLE_AUTH,  // 株式会社エスプロパティ / 汎用コーポレート
+  "m302-espoir-links":                   SAMPLE_AUTH,  // 株式会社Espoir Links / 汎用コーポレート
+  "m303-s-ride":                         SAMPLE_AUTH,  // 株式会社エスライド / 汎用コーポレート
+  "m304-srod":                           SAMPLE_AUTH,  // 合同会社SROD / 汎用コーポレート
+  "m305-esora":                          SAMPLE_AUTH,  // エソラ合同会社 / 汎用コーポレート
+  "m306-eternal":                        SAMPLE_AUTH,  // 株式会社Eternal / 汎用コーポレート
+  "m307-any-c":                          SAMPLE_AUTH,  // 株式会社Any C / 汎用コーポレート
+  "m308-en":                             SAMPLE_AUTH,  // 株式会社縁 / 汎用コーポレート
+  "m309-nrh":                            SAMPLE_AUTH,  // 合同会社エヌ・アール・エイチ / 汎用コーポレート
+  "m310-n-n":                            SAMPLE_AUTH,  // N&N株式会社 / 汎用コーポレート
+  "m311-n8group":                        SAMPLE_AUTH,  // 株式会社N8GROUP / 汎用コーポレート
+
   // ─── LP作成しない（NPO・宗教・半公的団体）───
   //   10-farm:            ファーム弁天 / 農業（半公的） / 低
   //   21-mahoroba-coop:   まほろば協同組合 / 協同組合 / 低
