@@ -14,11 +14,12 @@
  */
 
 // ========== 設定 ==========
-const DATA_JSON_URL = 'https://raw.githubusercontent.com/haruharu1100/stage-up-lp/main/data/sales_list.json';
+const DATA_JSON_URL  = 'https://raw.githubusercontent.com/haruharu1100/stage-up-lp/main/data/sales_list.json';
+const MORIKA_JSON_URL = 'https://raw.githubusercontent.com/haruharu1100/stage-up-lp/main/data/morika_list.json';
 const SHEET_PRIORITY = '営業優先シート';
 const SHEET_TASK     = 'タスク管理シート';
-const SHEET_NEW_GID  = 2079338722;     // 新シートのgid
-const SHEET_NEW_FALLBACK_NAME = '新シート';  // 名前で見つからない場合のフォールバック
+const SHEET_NEW_GID  = 2079338722;     // 新シートのgid（MORIKA専用）
+const SHEET_NEW_FALLBACK_NAME = '新シート';
 const ROW_HEIGHT_PX  = 21;
 
 // ========== 内部定数 ==========
@@ -71,8 +72,10 @@ function onOpen() {
 }
 
 /* ============================================================ */
-function fetchSalesList_() {
-  const url = DATA_JSON_URL + '?t=' + Date.now();
+function fetchSalesList_() { return fetchJson_(DATA_JSON_URL); }
+function fetchMorikaList_() { return fetchJson_(MORIKA_JSON_URL); }
+function fetchJson_(baseUrl) {
+  const url = baseUrl + '?t=' + Date.now();
   const res = UrlFetchApp.fetch(url, {
     muteHttpExceptions: true, followRedirects: true,
     headers: { 'Cache-Control': 'no-cache' },
@@ -99,11 +102,12 @@ function getNewSheet_(ss) {
 
 /* ============================================================
  *  メイン: 新シート反映（推奨）
+ *  ※ MORIKA専用JSON (morika_list.json) から取得
  * ============================================================ */
 function syncNewSheet() {
   const t0 = new Date();
   let json;
-  try { json = fetchSalesList_(); }
+  try { json = fetchMorikaList_(); }
   catch (e) { SpreadsheetApp.getUi().alert('❌ ' + e.message); return; }
 
   const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -132,8 +136,11 @@ function syncNewSheet() {
   // 3. データ整形（LP URLがある社のみ採用）
   const cleaned = [];
   json.records.forEach(rec => {
-    if (!rec || !Array.isArray(rec.new_row)) return;
-    const out = rec.new_row.slice(0, NUM_COLS_NEW);
+    // MORIKA JSON は rec.row 形式（11列のうちK列はApps Script側で注入）
+    // 旧スキーマ互換: rec.new_row 形式もサポート
+    const baseRow = Array.isArray(rec.new_row) ? rec.new_row : (Array.isArray(rec.row) ? rec.row : null);
+    if (!rec || !baseRow) return;
+    const out = baseRow.slice(0, NUM_COLS_NEW);
     while (out.length < NUM_COLS_NEW) out.push('');
     // LP URL (J列 = index 9) が https始まりの社のみ
     if (typeof out[9] !== 'string' || out[9].indexOf('https://') !== 0) return;

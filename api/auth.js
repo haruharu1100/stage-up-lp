@@ -180,6 +180,64 @@ const ACCOUNTS = {
   "180-afritx":           SAMPLE_AUTH,
   "183-apua":             SAMPLE_AUTH,
 
+
+  // ─── MORIKA新シート 55社追加 ───
+  "m201-amano-capital":                  SAMPLE_AUTH,  // 株式会社アマノキャピタル / IT・システム開発
+  "m202-am-l":                           SAMPLE_AUTH,  // 株式会社AM-L / 汎用コーポレート
+  "m203-amsk":                           SAMPLE_AUTH,  // 株式会社AMSK / 汎用コーポレート
+  "m204-american-mkt":                   SAMPLE_AUTH,  // アメリカのマーケティング合同会社 / 広告・マーケティング
+  "m205-arakichi":                       SAMPLE_AUTH,  // 株式会社アラキッチ / 飲食業
+  "m206-alesdesign":                     SAMPLE_AUTH,  // 株式会社ALESDESIGN / 広告・マーケティング
+  "m207-allenia":                        SAMPLE_AUTH,  // 株式会社ALLENIA / 汎用コーポレート
+  "m208-aloy":                           SAMPLE_AUTH,  // 株式会社アロイ / 汎用コーポレート
+  "m209-encourage":                      SAMPLE_AUTH,  // 株式会社アンクラージュ / 汎用コーポレート
+  "m210-uncruise":                       SAMPLE_AUTH,  // 合同会社アンクルーズ / 汎用コーポレート
+  "m211-anshin":                         SAMPLE_AUTH,  // 安心株式会社 / 汎用コーポレート
+  "m212-ange":                           SAMPLE_AUTH,  // 株式会社Ange / 汎用コーポレート
+  "m213-ant-style":                      SAMPLE_AUTH,  // 株式会社ANT style / 汎用コーポレート
+  "m214-antrace":                        SAMPLE_AUTH,  // 株式会社アントレース / 汎用コーポレート
+  "m215-allier":                         SAMPLE_AUTH,  // 株式会社ALLIER / 汎用コーポレート
+  "m216-ariendo":                        SAMPLE_AUTH,  // 株式会社アリエンド / 汎用コーポレート
+  "m217-arisawa-zoen":                   SAMPLE_AUTH,  // 株式会社有澤造園土木 / 建設業
+  "m218-argrow":                         SAMPLE_AUTH,  // 株式会社アルグロウ / 汎用コーポレート
+  "m219-archeon":                        SAMPLE_AUTH,  // ARCHEON株式会社 / 汎用コーポレート
+  "m220-ayuto":                          SAMPLE_AUTH,  // 歩人運輸株式会社 / 汎用コーポレート
+  "m221-albus":                          SAMPLE_AUTH,  // 株式会社Albus / 汎用コーポレート
+  "m222-alba-flowers":                   SAMPLE_AUTH,  // 株式会社アルバフローズ / 美容・サロン
+  "m223-andmore":                        SAMPLE_AUTH,  // 株式会社アンドモア / 汎用コーポレート
+  "m224-anmavie":                        SAMPLE_AUTH,  // 株式会社ANMAVIE / 汎用コーポレート
+  "m225-eskk":                           SAMPLE_AUTH,  // 株式会社ESKK / 汎用コーポレート
+  "m226-ex":                             SAMPLE_AUTH,  // 合同会社EX / 汎用コーポレート
+  "m227-en":                             SAMPLE_AUTH,  // 株式会社EN / 汎用コーポレート
+  "m228-eagle-raise":                    SAMPLE_AUTH,  // 株式会社イーグルレイズ / 汎用コーポレート
+  "m229-ec":                             SAMPLE_AUTH,  // 合同会社EC / 小売・EC
+  "m230-easter":                         SAMPLE_AUTH,  // 株式会社Easter / IT・システム開発
+  "m231-e-style":                        SAMPLE_AUTH,  // 株式会社e-style / IT・システム開発
+  "m232-eastnow":                        SAMPLE_AUTH,  // 株式会社イーストノウ / 汎用コーポレート
+  "m233-erotackle":                      SAMPLE_AUTH,  // イーロタックル株式会社 / 汎用コーポレート
+  "m234-ikigai":                         SAMPLE_AUTH,  // 株式会社IKIGAI / IT・システム開発
+  "m235-ikunohouse":                     SAMPLE_AUTH,  // Ikunohouse合同会社 / 汎用コーポレート
+  "m236-ikeda-auto":                     SAMPLE_AUTH,  // 池田自動車株式会社 / 汎用コーポレート
+  "m237-holdingcompany":                 SAMPLE_AUTH,  // 株式会社130HoldingCompany / 総合サービス業
+  "m238-isan-osaka":                     SAMPLE_AUTH,  // 株式会社遺産相続対策大阪パートナー / 不動産業
+  "m239-ishida-bldg":                    SAMPLE_AUTH,  // 石田ビル株式会社 / 不動産業
+  "m240-ikoro":                          SAMPLE_AUTH,  // 衣心株式会社 / 汎用コーポレート
+  "m241-ism":                            SAMPLE_AUTH,  // 株式会社ism / 汎用コーポレート
+  "m242-ism-partners":                   SAMPLE_AUTH,  // 株式会社ism partners / 士業・コンサルティング
+  "m243-isoda":                          SAMPLE_AUTH,  // 株式会社ISODA建工 / 建設業
+  "m244-itadaki":                        SAMPLE_AUTH,  // 合同会社頂 / IT・システム開発
+  "m245-ichigo-ichiyo":                  SAMPLE_AUTH,  // 合同会社一期一葉 / 汎用コーポレート
+  "m246-ichihara":                       SAMPLE_AUTH,  // 株式会社壱原 / 汎用コーポレート
+  "m247-co-032589":                      SAMPLE_AUTH,  // 合同会社1002 / 汎用コーポレート
+  "m248-ichiryo":                        SAMPLE_AUTH,  // 株式会社一了 / 汎用コーポレート
+  "m249-ichikou":                        SAMPLE_AUTH,  // 株式会社一興 / 汎用コーポレート
+  "m250-issei":                          SAMPLE_AUTH,  // 株式会社一成 / 汎用コーポレート
+  "m251-ito-photo":                      SAMPLE_AUTH,  // 株式会社いとう写真 / 広告・マーケティング
+  "m252-inobeed":                        SAMPLE_AUTH,  // 株式会社イノビード / IT・システム開発
+  "m253-inorio":                         SAMPLE_AUTH,  // 株式会社INORIO / 汎用コーポレート
+  "m254-event-revolution":               SAMPLE_AUTH,  // 合同会社イベント革命軍 / 汎用コーポレート
+  "m255-imu":                            SAMPLE_AUTH,  // 株式会社いむ / 汎用コーポレート
+
   // ─── LP作成しない（NPO・宗教・半公的団体）───
   //   10-farm:            ファーム弁天 / 農業（半公的） / 低
   //   21-mahoroba-coop:   まほろば協同組合 / 協同組合 / 低
