@@ -247,20 +247,32 @@ ZIP_PREFIX = {
 }
 
 def add_zip(addr, zmap):
-    """住所に郵便番号を付与"""
+    """住所に郵便番号を付与（厳密版）
+
+    重要ルール（ユーザー指示 2026-06-02）:
+    - AI推測の郵便番号を絶対に入れない
+    - 「市区町村だけで近い番号」も禁止
+    - 確実に分かっている町名→郵便番号マッピング（zmap）にヒットした場合のみ付与
+    - それ以外は郵便番号を付けず、住所そのものを返す（後工程で日本郵便公式検索を実施する前提）
+    """
     if not addr: return addr
-    if addr.startswith("〒"): return addr  # 既に付いている
-    # 既存JSONの町名マッピングで一致するか
+    if addr.startswith("〒"):
+        # 既に "〒NNN-0000 ..." のような推測値が付いている場合は外してプレーンな住所に戻す
+        m = re.match(r"〒(\d{3})-(\d{4})\s*(.+)$", addr)
+        if m and m.group(2) == "0000":
+            return m.group(3)
+        return addr  # 正規の郵便番号（下4桁が0でない）はそのまま
+    # 既存JSONの町名マッピング（過去に日本郵便で確認済みの実値）にヒットした場合のみ付与
     m = re.search(r"大阪府([^\s\d０-９]+?)([^\s\d０-９]+?)[\d０-９]", addr)
     if m:
         key = m.group(1) + m.group(2)
         if key in zmap:
-            return f"〒{zmap[key]} {addr}"
-    # 市区プレフィックスで推定
-    for region, prefix in ZIP_PREFIX.items():
-        if region in addr:
-            return f"〒{prefix}-0000 {addr}"  # 下4桁は0000で仮置
-    return f"〒000-0000 {addr}"
+            zip_code = zmap[key]
+            # zmap の値は "NNN-NNNN" 形式（build_zip_map参照）。下4桁が0000のものは推測値として除外
+            if isinstance(zip_code, str) and re.match(r"^\d{3}-\d{4}$", zip_code) and not zip_code.endswith("-0000"):
+                return f"〒{zip_code} {addr}"
+    # 推測禁止：郵便番号が確認できない場合は付けずに住所のみ返す
+    return addr
 
 # ============================================================
 # DM長文生成
