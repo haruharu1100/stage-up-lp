@@ -297,6 +297,66 @@ const ACCOUNTS = {
   "m310-n-n":                            SAMPLE_AUTH,  // N&N株式会社 / 汎用コーポレート
   "m311-n8group":                        SAMPLE_AUTH,  // 株式会社N8GROUP / 汎用コーポレート
 
+
+  // ─── MORIKA第3弾 57社追加 (312-368) ───
+  "m312-nku":                            SAMPLE_AUTH,  // 合同会社NKUホーム / 汎用コーポレート
+  "m313-nvg":                            SAMPLE_AUTH,  // 合同会社NVG / 汎用コーポレート
+  "m314-effectory":                      SAMPLE_AUTH,  // 株式会社EFFECTORY / 小売・EC
+  "m315-m-a":                            SAMPLE_AUTH,  // 合同会社M&Aグループ / 汎用コーポレート
+  "m316-mak-works":                      SAMPLE_AUTH,  // 株式会社MaK WORKS / 汎用コーポレート
+  "m317-m":                              SAMPLE_AUTH,  // 株式会社エムケイピー / 汎用コーポレート
+  "m318-m":                              SAMPLE_AUTH,  // 合同会社エムルーツ / 汎用コーポレート
+  "m319-area27":                         SAMPLE_AUTH,  // 合同会社Area27 / 汎用コーポレート
+  "m320-lhh":                            SAMPLE_AUTH,  // 株式会社LHH / 汎用コーポレート
+  "m321-el-via":                         SAMPLE_AUTH,  // 株式会社EL VIA / 汎用コーポレート
+  "m322-enflow":                         SAMPLE_AUTH,  // 株式会社エンフロー / 汎用コーポレート
+  "m323-ovit":                           SAMPLE_AUTH,  // 株式会社オーヴィット / IT・システム開発
+  "m324-omo":                            SAMPLE_AUTH,  // 合同会社OMO / 汎用コーポレート
+  "m325-autumn":                         SAMPLE_AUTH,  // 株式会社オータム / 汎用コーポレート
+  "m326-n-modern":                       SAMPLE_AUTH,  // 株式会社N.MODERN / 汎用コーポレート
+  "m327-ff":                             SAMPLE_AUTH,  // FFベルキャピタル合同会社 / 資産運用・金融
+  "m328-m-h-capital-partners":           SAMPLE_AUTH,  // M&H Capital Partners株式会社 / IT・システム開発
+  "m329-m":                              SAMPLE_AUTH,  // 株式会社エムエスコーポレーション / 汎用コーポレート
+  "m330-m-style-works":                  SAMPLE_AUTH,  // 株式会社M-STYLE WORKS / 汎用コーポレート
+  "m331-mtf":                            SAMPLE_AUTH,  // 株式会社MTF / 汎用コーポレート
+  "m332-m":                              SAMPLE_AUTH,  // 株式会社エムテック / 汎用コーポレート
+  "m333-myk-plus":                       SAMPLE_AUTH,  // 合同会社MYK-Plus / 汎用コーポレート
+  "m334-l":                              SAMPLE_AUTH,  // 合同会社エルアール / 汎用コーポレート
+  "m335-l-equus":                        SAMPLE_AUTH,  // 株式会社L-Equus / 汎用コーポレート
+  "m336-lc":                             SAMPLE_AUTH,  // 株式会社LC / 汎用コーポレート
+  "m337-l":                              SAMPLE_AUTH,  // エルピスアベイロン株式会社 / 汎用コーポレート
+  "m338-encurrent":                      SAMPLE_AUTH,  // 株式会社エンカレント / 汎用コーポレート
+  "m339-enbridge":                       SAMPLE_AUTH,  // エンブリッジ・ジャパン合同会社 / 総合サービス業
+  "m340-n":                              SAMPLE_AUTH,  // Nトラスト株式会社 / 汎用コーポレート
+  "m341-n-lab":                          SAMPLE_AUTH,  // 合同会社N-lab / IT・システム開発
+  "m342-epiphany":                       SAMPLE_AUTH,  // 株式会社Epiphany / 汎用コーポレート
+  "m343-m-k-energy":                     SAMPLE_AUTH,  // 合同会社M&K Energy / 汎用コーポレート
+  "m344-m-s":                            SAMPLE_AUTH,  // 株式会社M's / 汎用コーポレート
+  "m345-m-t-o":                          SAMPLE_AUTH,  // 株式会社M・T・O / 汎用コーポレート
+  "m346-mb":                             SAMPLE_AUTH,  // 株式会社MB管理 / 汎用コーポレート
+  "m347-my":                             SAMPLE_AUTH,  // 株式会社MYスマイルコーポレーション / 汎用コーポレート
+  "m348-lig":                            SAMPLE_AUTH,  // 株式会社LIG / 汎用コーポレート
+  "m349-ls-consulting":                  SAMPLE_AUTH,  // 株式会社LS Consulting / 士業・コンサルティング
+  "m350-el":                             SAMPLE_AUTH,  // 株式会社ELシステム / 汎用コーポレート
+  "m351-l":                              SAMPLE_AUTH,  // 株式会社エル・フューズ / 汎用コーポレート
+  "m352-en-dress":                       SAMPLE_AUTH,  // 株式会社en&dress / 汎用コーポレート
+  "m353-enlink":                         SAMPLE_AUTH,  // エンリンク株式会社 / 汎用コーポレート
+  "m354-oaks":                           SAMPLE_AUTH,  // 合同会社オークス事務所 / 汎用コーポレート
+  "m355-oco":                            SAMPLE_AUTH,  // 株式会社OCO / 汎用コーポレート
+  "m356-ndk-union":                      SAMPLE_AUTH,  // NDK Union合同会社 / 汎用コーポレート
+  "m357-eno":                            SAMPLE_AUTH,  // 合同会社ENO / 汎用コーポレート
+  "m358-f-h-base-resort":                SAMPLE_AUTH,  // F&H BASE RESORT株式会社 / 汎用コーポレート
+  "m359-mam":                            SAMPLE_AUTH,  // 合同会社MAM / 汎用コーポレート
+  "m360-m":                              SAMPLE_AUTH,  // 株式会社エムズライフ / 汎用コーポレート
+  "m361-mt-support":                     SAMPLE_AUTH,  // 合同会社MT support / 汎用コーポレート
+  "m362-m-maketh":                       SAMPLE_AUTH,  // 株式会社M-Maketh / 汎用コーポレート
+  "m363-l-m-japan":                      SAMPLE_AUTH,  // L&M Japan株式会社 / 総合サービス業
+  "m364-ltl":                            SAMPLE_AUTH,  // 株式会社LTL / 汎用コーポレート
+  "m365-l":                              SAMPLE_AUTH,  // エルリープ株式会社 / 汎用コーポレート
+  "m366-ember-queen":                    SAMPLE_AUTH,  // 株式会社EMBER QUEEN / 汎用コーポレート
+  "m367-ora":                            SAMPLE_AUTH,  // ORA合同会社 / 汎用コーポレート
+  "m368-ok":                             SAMPLE_AUTH,  // OK合同会社 / 汎用コーポレート
+
   // ─── LP作成しない（NPO・宗教・半公的団体）───
   //   10-farm:            ファーム弁天 / 農業（半公的） / 低
   //   21-mahoroba-coop:   まほろば協同組合 / 協同組合 / 低
