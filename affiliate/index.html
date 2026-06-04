@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5" />
+<meta name="theme-color" content="#0066cc" />
+<meta name="robots" content="noindex, nofollow" />
+<title>通信比較ナビ｜WiFi・光回線・格安SIMの最適プラン比較</title>
+<meta name="description" content="ホームルーター・ポケットWiFi・光回線・格安SIMを目的別に比較。一人暮らし・テレワーク・家族・引越し・ゲーム用途別に最適プランをご紹介。" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet" />
+<style>
+:root{
+  --primary:#0066cc;
+  --accent:#ff7a00;
+  --bg:#f6f8fb;
+  --ink:#0f1830;
+  --muted:#5a6478;
+  --paper:#fff;
+  --border:#e5e8ef;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+body{font-family:"Noto Sans JP",sans-serif;background:var(--bg);color:var(--ink);font-size:15px;line-height:1.85;-webkit-font-smoothing:antialiased}
+img{display:block;max-width:100%;height:auto}
+a{color:inherit;text-decoration:none}
+.container{width:100%;max-width:1100px;margin:0 auto;padding:0 20px}
+
+/* Header */
+.header{background:#fff;border-bottom:1px solid var(--border);padding:14px 0;position:sticky;top:0;z-index:50;backdrop-filter:blur(10px);background:rgba(255,255,255,.95)}
+.header-inner{display:flex;align-items:center;justify-content:space-between}
+.brand{display:flex;align-items:center;gap:10px;font-weight:900;font-size:18px;color:var(--primary)}
+.brand-mark{width:36px;height:36px;background:var(--primary);color:#fff;border-radius:8px;display:grid;place-items:center;font-weight:900;font-size:16px}
+.nav{display:none;gap:24px}
+@media(min-width:768px){.nav{display:flex}}
+.nav a{font-size:13px;color:var(--muted);font-weight:700}
+.nav a:hover{color:var(--primary)}
+
+/* Hero */
+.hero{background:linear-gradient(135deg,var(--primary) 0%,#003a73 100%);color:#fff;padding:60px 0 80px;text-align:center}
+.hero-eyebrow{display:inline-block;background:rgba(255,255,255,.15);padding:6px 16px;border-radius:20px;font-size:12px;font-weight:700;letter-spacing:.05em;margin-bottom:18px}
+.hero-title{font-size:28px;font-weight:900;line-height:1.45;letter-spacing:.02em;margin-bottom:18px}
+@media(min-width:768px){.hero-title{font-size:38px}}
+.hero-sub{font-size:14px;line-height:2;opacity:.92;max-width:680px;margin:0 auto 32px;padding:0 8px}
+@media(min-width:768px){.hero-sub{font-size:16px}}
+.hero-stats{display:flex;justify-content:center;gap:20px;flex-wrap:wrap}
+.hstat{background:rgba(255,255,255,.12);backdrop-filter:blur(6px);padding:14px 22px;border-radius:12px;border:1px solid rgba(255,255,255,.2)}
+.hstat-v{font-size:24px;font-weight:900;color:#ffe66b}
+.hstat-l{font-size:11px;opacity:.85;letter-spacing:.05em;margin-top:2px}
+
+/* Section */
+.section{padding:60px 0}
+@media(min-width:768px){.section{padding:80px 0}}
+.section-title{font-size:24px;font-weight:900;text-align:center;margin-bottom:8px;color:var(--ink)}
+@media(min-width:768px){.section-title{font-size:30px}}
+.section-title em{color:var(--primary);font-style:normal;border-bottom:3px solid var(--accent);padding-bottom:2px}
+.section-sub{text-align:center;color:var(--muted);font-size:14px;margin-bottom:36px}
+
+/* Category cards */
+.cat-grid{display:grid;gap:18px;grid-template-columns:1fr}
+@media(min-width:640px){.cat-grid{grid-template-columns:1fr 1fr}}
+@media(min-width:1024px){.cat-grid{grid-template-columns:repeat(4,1fr)}}
+.cat-card{background:#fff;border-radius:16px;padding:28px 22px;box-shadow:0 4px 20px rgba(0,0,0,.06);border:1px solid var(--border);transition:transform .2s,box-shadow .2s}
+.cat-card:hover{transform:translateY(-3px);box-shadow:0 12px 32px rgba(0,0,0,.1)}
+.cat-icon{width:56px;height:56px;border-radius:14px;display:grid;place-items:center;font-size:26px;margin-bottom:18px;background:linear-gradient(135deg,var(--primary),#003a73);color:#fff}
+.cat-card[data-cat="fiber"] .cat-icon{background:linear-gradient(135deg,#c8102e,#7a0c1c)}
+.cat-card[data-cat="pocket"] .cat-icon{background:linear-gradient(135deg,#1850a5,#0b2e63)}
+.cat-card[data-cat="mvno"] .cat-icon{background:linear-gradient(135deg,#bf0000,#7a0000)}
+.cat-h{font-size:18px;font-weight:900;color:var(--ink);margin-bottom:8px}
+.cat-d{font-size:13px;color:var(--muted);line-height:1.85;margin-bottom:18px}
+.cat-ct{font-size:12px;color:var(--primary);font-weight:700}
+
+/* Niche grid */
+.niche-grid{display:grid;gap:14px;grid-template-columns:1fr}
+@media(min-width:640px){.niche-grid{grid-template-columns:1fr 1fr}}
+@media(min-width:1024px){.niche-grid{grid-template-columns:repeat(3,1fr)}}
+.niche-card{background:#fff;border-radius:12px;padding:22px 18px;box-shadow:0 2px 12px rgba(0,0,0,.05);border:1px solid var(--border);border-left:4px solid var(--accent);transition:transform .2s,box-shadow .2s}
+.niche-card:hover{transform:translateX(3px);box-shadow:0 6px 20px rgba(0,0,0,.08)}
+.niche-h{font-size:15px;font-weight:900;color:var(--ink);margin-bottom:8px}
+.niche-d{font-size:12px;color:var(--muted);line-height:1.7;margin-bottom:12px}
+.niche-kw{display:flex;gap:6px;flex-wrap:wrap}
+.niche-tag{background:#eef4ff;color:var(--primary);padding:3px 10px;border-radius:12px;font-size:10px;font-weight:700}
+
+/* Features */
+.feat-grid{display:grid;gap:20px;grid-template-columns:1fr}
+@media(min-width:768px){.feat-grid{grid-template-columns:repeat(3,1fr)}}
+.feat{background:#fff;border-radius:14px;padding:30px 24px;text-align:center;box-shadow:0 2px 10px rgba(0,0,0,.04)}
+.feat-icon{width:60px;height:60px;background:#eff5ff;color:var(--primary);border-radius:50%;display:grid;place-items:center;font-size:28px;margin:0 auto 18px}
+.feat-h{font-size:16px;font-weight:900;color:var(--ink);margin-bottom:10px}
+.feat-d{font-size:13px;color:var(--muted);line-height:1.85}
+
+/* Footer */
+.footer{background:#1a1d28;color:rgba(255,255,255,.7);padding:50px 0 24px;font-size:13px}
+.footer-grid{display:grid;gap:30px;grid-template-columns:1fr}
+@media(min-width:768px){.footer-grid{grid-template-columns:2fr 1fr 1fr}}
+.footer-brand{font-size:17px;font-weight:900;color:#fff;margin-bottom:12px}
+.footer-desc{font-size:12px;line-height:1.85;color:rgba(255,255,255,.6)}
+.footer-h{font-size:12px;font-weight:700;color:rgba(255,255,255,.85);letter-spacing:.1em;margin-bottom:14px}
+.footer-list li{margin-bottom:8px;font-size:12px;color:rgba(255,255,255,.6)}
+.footer-list a:hover{color:#fff}
+.footer-bottom{margin-top:36px;padding-top:20px;border-top:1px solid rgba(255,255,255,.1);text-align:center;font-size:11px;color:rgba(255,255,255,.4)}
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="container header-inner">
+    <a href="/affiliate/" class="brand">
+      <span class="brand-mark">通</span>
+      <span>通信比較ナビ</span>
+    </a>
+    <nav class="nav">
+      <a href="#categories">カテゴリで探す</a>
+      <a href="#niches">悩みから探す</a>
+      <a href="#features">サイトについて</a>
+      <a href="/affiliate/legal.html">運営者情報</a>
+    </nav>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="container">
+    <span class="hero-eyebrow">📡 WiFi・光回線・格安SIM 総合比較</span>
+    <h1 class="hero-title">あなたの暮らしに、<br>ぴったりの通信プランを。</h1>
+    <p class="hero-sub">ホームルーター・ポケットWiFi・光回線・格安SIM、それぞれの最新プランを<br>状況別に整理して比較。一人暮らし・テレワーク・家族・引越し・ゲーム用途まで網羅。</p>
+    <div class="hero-stats">
+      <div class="hstat"><div class="hstat-v">21</div><div class="hstat-l">比較プラン数</div></div>
+      <div class="hstat"><div class="hstat-v">20</div><div class="hstat-l">用途別ガイド</div></div>
+      <div class="hstat"><div class="hstat-v">4</div><div class="hstat-l">カテゴリ網羅</div></div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="categories">
+  <div class="container">
+    <h2 class="section-title">サービス<em>カテゴリ</em>で探す</h2>
+    <p class="section-sub">4つの主要カテゴリから、あなたの目的に合うサービスをチェック</p>
+    <div class="cat-grid">
+      <a href="/a/one_person_room-rakuten-turbo" class="cat-card" data-cat="home_router">
+        <div class="cat-icon">🏠</div>
+        <h3 class="cat-h">ホームルーター</h3>
+        <p class="cat-d">工事不要・コンセント挿すだけ。賃貸OK、引越し時の手間なし。月額3,000〜5,000円台が中心。</p>
+        <p class="cat-ct">比較プランを見る →</p>
+      </a>
+      <a href="/a/business_traveler-gmo-wimax" class="cat-card" data-cat="pocket">
+        <div class="cat-icon">📱</div>
+        <h3 class="cat-h">ポケットWiFi</h3>
+        <p class="cat-d">持ち運び自由。出張・外回り・カフェ作業に最適。バッテリー内蔵で全国どこでも。</p>
+        <p class="cat-ct">比較プランを見る →</p>
+      </a>
+      <a href="/a/remote_worker-docomo-hikari" class="cat-card" data-cat="fiber">
+        <div class="cat-icon">⚡</div>
+        <h3 class="cat-h">光回線</h3>
+        <p class="cat-d">下り最大2Gbps・低Ping・無制限。テレワーク・ゲーム・4K動画視聴に必須の高速回線。</p>
+        <p class="cat-ct">比較プランを見る →</p>
+      </a>
+      <a href="/a/price_sensitive-rakuten-mobile" class="cat-card" data-cat="mvno">
+        <div class="cat-icon">📞</div>
+        <h3 class="cat-h">格安SIM・スマホ</h3>
+        <p class="cat-d">月990円〜のスマホプラン。MNP特典・ポイント還元・縛りなしプラン情報を網羅。</p>
+        <p class="cat-ct">比較プランを見る →</p>
+      </a>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="niches" style="background:#fff">
+  <div class="container">
+    <h2 class="section-title">あなたの<em>状況</em>から探す</h2>
+    <p class="section-sub">「一人暮らし」「テレワーク」「引越し」など、具体的な使い方から最適プランをご紹介</p>
+    <div class="niche-grid">
+      <a href="/a/one_person_room-rakuten-turbo" class="niche-card">
+        <div class="niche-h">🏘 一人暮らしで即日使いたい</div>
+        <p class="niche-d">引越し直後・新生活開始時、工事を待たずネット利用を始めたい方向け</p>
+        <div class="niche-kw"><span class="niche-tag">工事不要</span><span class="niche-tag">即日</span><span class="niche-tag">月5千円以下</span></div>
+      </a>
+      <a href="/a/rental_no_construction-rakuten-turbo" class="niche-card">
+        <div class="niche-h">🚪 賃貸で工事ができない</div>
+        <p class="niche-d">大家確認不要・原状回復不要のWiFi。マンション・アパート問わずOK</p>
+        <div class="niche-kw"><span class="niche-tag">賃貸OK</span><span class="niche-tag">大家確認なし</span></div>
+      </a>
+      <a href="/a/remote_worker-docomo-hikari" class="niche-card">
+        <div class="niche-h">💼 テレワーク・Web会議用</div>
+        <p class="niche-d">Zoom・Teams・VPNが安定する高速回線。業務利用に最適なプラン</p>
+        <div class="niche-kw"><span class="niche-tag">高速</span><span class="niche-tag">安定</span><span class="niche-tag">低Ping</span></div>
+      </a>
+      <a href="/a/elderly_simple-rakuten-turbo" class="niche-card">
+        <div class="niche-h">👵 シニア・親世代向け</div>
+        <p class="niche-d">コンセント挿すだけ・電話サポート充実・料金体系シンプル</p>
+        <div class="niche-kw"><span class="niche-tag">かんたん</span><span class="niche-tag">サポート充実</span></div>
+      </a>
+      <a href="/a/business_traveler-gmo-wimax" class="niche-card">
+        <div class="niche-h">✈️ 出張・外回りが多い</div>
+        <p class="niche-d">全国対応・持ち運び可・無制限プラン。営業・フリーランス向け</p>
+        <div class="niche-kw"><span class="niche-tag">持ち運び</span><span class="niche-tag">無制限</span></div>
+      </a>
+      <a href="/a/price_sensitive-rakuten-mobile" class="niche-card">
+        <div class="niche-h">💰 スマホ料金を節約したい</div>
+        <p class="niche-d">月3,000円台のプラン・MNP特典・ポイント還元キャンペーン情報</p>
+        <div class="niche-kw"><span class="niche-tag">月990円〜</span><span class="niche-tag">縛りなし</span></div>
+      </a>
+      <a href="/a/gamer-nuro-hikari" class="niche-card">
+        <div class="niche-h">🎮 ゲームを快適にしたい</div>
+        <p class="niche-d">下り最大2Gbps・低Ping。FPS・MMOプレイヤー向け高速回線</p>
+        <div class="niche-kw"><span class="niche-tag">低Ping</span><span class="niche-tag">2Gbps</span></div>
+      </a>
+      <a href="/a/family_discount-ymobile" class="niche-card">
+        <div class="niche-h">👨‍👩‍👧 家族でまとめて節約</div>
+        <p class="niche-d">家族割・セット割で月数万円の節約も。3-5人世帯向け</p>
+        <div class="niche-kw"><span class="niche-tag">家族割</span><span class="niche-tag">セット割</span></div>
+      </a>
+      <a href="/a/kids_smartphone-ymobile" class="niche-card">
+        <div class="niche-h">👦 子供のスマホデビュー</div>
+        <p class="niche-d">月990円〜・容量制限可能・フィルタリング対応</p>
+        <div class="niche-kw"><span class="niche-tag">月990円〜</span><span class="niche-tag">フィルタリング</span></div>
+      </a>
+      <a href="/a/moving_fiber-docomo-hikari" class="niche-card">
+        <div class="niche-h">🚚 引越し・新居のネット導入</div>
+        <p class="niche-d">工事費実質無料・新規入会キャッシュバック対応</p>
+        <div class="niche-kw"><span class="niche-tag">工事費無料</span><span class="niche-tag">キャッシュバック</span></div>
+      </a>
+      <a href="/a/student_new-rakuten-turbo" class="niche-card">
+        <div class="niche-h">🎓 大学生・新入生向け</div>
+        <p class="niche-d">学生生協プランより安い・縛りなし・卒業時違約金なし</p>
+        <div class="niche-kw"><span class="niche-tag">学割</span><span class="niche-tag">縛りなし</span></div>
+      </a>
+      <a href="/a/moving_urgent-broad-wimax" class="niche-card">
+        <div class="niche-h">🚨 1週間以内に急ぎでWiFi</div>
+        <p class="niche-d">店舗即日受取・最短当日発送。光回線を待てない方向け</p>
+        <div class="niche-kw"><span class="niche-tag">即日</span><span class="niche-tag">店舗受取</span></div>
+      </a>
+      <a href="/a/couple_pair-docomo-hikari" class="niche-card">
+        <div class="niche-h">💑 二人暮らし・カップル</div>
+        <p class="niche-d">2人同時利用でも安定・セット割で2人分の通信費を節約</p>
+        <div class="niche-kw"><span class="niche-tag">2人同時</span><span class="niche-tag">セット割</span></div>
+      </a>
+      <a href="/a/video_streaming-nuro-hikari" class="niche-card">
+        <div class="niche-h">📺 動画視聴を快適にしたい</div>
+        <p class="niche-d">4K動画も止まらない・無制限・データ容量気にせず</p>
+        <div class="niche-kw"><span class="niche-tag">4K対応</span><span class="niche-tag">無制限</span></div>
+      </a>
+      <a href="/a/corporate_small-docomo-hikari" class="niche-card">
+        <div class="niche-h">🏢 法人・事務所のネット</div>
+        <p class="niche-d">法人契約対応・領収書発行・経費計上スムーズ</p>
+        <div class="niche-kw"><span class="niche-tag">法人契約</span><span class="niche-tag">経費計上</span></div>
+      </a>
+      <a href="/a/freelancer-gmo-wimax" class="niche-card">
+        <div class="niche-h">💻 フリーランス・ノマド向け</div>
+        <p class="niche-d">外出先でも安定・経費計上可・セキュリティ重視</p>
+        <div class="niche-kw"><span class="niche-tag">外出OK</span><span class="niche-tag">経費</span></div>
+      </a>
+      <a href="/a/mnp_from_au-povo" class="niche-card">
+        <div class="niche-h">📶 auから乗換検討中</div>
+        <p class="niche-d">au回線品質キープ・乗換特典・解約金負担あり</p>
+        <div class="niche-kw"><span class="niche-tag">au乗換</span><span class="niche-tag">特典あり</span></div>
+      </a>
+      <a href="/a/mnp_from_docomo-ahamo" class="niche-card">
+        <div class="niche-h">📶 ドコモから乗換検討中</div>
+        <p class="niche-d">ドコモ回線品質キープ・dポイント連携・スムーズ乗換</p>
+        <div class="niche-kw"><span class="niche-tag">ドコモ乗換</span><span class="niche-tag">dポイント</span></div>
+      </a>
+      <a href="/a/mnp_from_softbank-linemo" class="niche-card">
+        <div class="niche-h">📶 ソフトバンクから乗換検討中</div>
+        <p class="niche-d">ソフトバンク回線品質キープ・PayPay連携・スムーズ乗換</p>
+        <div class="niche-kw"><span class="niche-tag">SB乗換</span><span class="niche-tag">PayPay</span></div>
+      </a>
+      <a href="/a/second_line-povo" class="niche-card">
+        <div class="niche-h">🔄 副回線・予備用</div>
+        <p class="niche-d">基本料金0円〜・縛りなし・災害備え・通信障害対策に</p>
+        <div class="niche-kw"><span class="niche-tag">0円〜</span><span class="niche-tag">災害対策</span></div>
+      </a>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="features">
+  <div class="container">
+    <h2 class="section-title">通信比較ナビ<em>について</em></h2>
+    <p class="section-sub">各通信サービスの料金・条件・特典を客観的に整理し、比較・選択をサポートします</p>
+    <div class="feat-grid">
+      <div class="feat">
+        <div class="feat-icon">📊</div>
+        <h3 class="feat-h">客観的なプラン比較</h3>
+        <p class="feat-d">各社公式情報をもとに、料金・速度・容量・キャッシュバック条件を整理しています。</p>
+      </div>
+      <div class="feat">
+        <div class="feat-icon">🎯</div>
+        <h3 class="feat-h">用途別ガイド</h3>
+        <p class="feat-d">一人暮らし・テレワーク・家族・ゲームなど、具体的な使い方に合わせて最適プランをご紹介。</p>
+      </div>
+      <div class="feat">
+        <div class="feat-icon">📖</div>
+        <h3 class="feat-h">わかりやすい解説</h3>
+        <p class="feat-d">専門用語を避け、料金体系・契約条件をシンプルに解説。初心者の方にも安心。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer class="footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div>
+        <div class="footer-brand">📡 通信比較ナビ</div>
+        <p class="footer-desc">WiFi・光回線・格安SIMを中心に、目的別の通信プラン情報を提供する比較メディアです。各社公式情報を整理し、用途に合わせた最適選択をサポートします。</p>
+      </div>
+      <div>
+        <p class="footer-h">— カテゴリ —</p>
+        <ul class="footer-list">
+          <li><a href="#categories">ホームルーター</a></li>
+          <li><a href="#categories">ポケットWiFi</a></li>
+          <li><a href="#categories">光回線</a></li>
+          <li><a href="#categories">格安SIM</a></li>
+        </ul>
+      </div>
+      <div>
+        <p class="footer-h">— サイト情報 —</p>
+        <ul class="footer-list">
+          <li><a href="/affiliate/legal.html">運営者情報・特商法表記</a></li>
+          <li><a href="/affiliate/privacy.html">プライバシーポリシー</a></li>
+          <li><a href="#features">サイトについて</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      © 2026 通信比較ナビ All rights reserved.<br>
+      ※掲載情報は各社公式情報を元に整理しています。最新の料金・キャンペーン内容は各公式サイトでご確認ください。
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
