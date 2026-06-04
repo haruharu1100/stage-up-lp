@@ -6,21 +6,9 @@
       "id": "one_person_room",
       "name": "一人暮らし即日WiFi",
       "persona": "新生活開始の20代社会人・学生。引っ越し直後でネット環境がなく、できるだけ早く・安く・工事なしで使いたい。",
-      "pain_points": [
-        "明日からネット使いたい、工事は待てない",
-        "スマホのギガがすぐ無くなる",
-        "1人だから家用WiFi契約は損な気がする",
-        "退去時の解約金が怖い"
-      ],
-      "search_keywords": [
-        "一人暮らし WiFi おすすめ",
-        "引っ越し ネット 即日",
-        "工事不要 WiFi 1人",
-        "賃貸 WiFi すぐ使える",
-        "一人暮らし ホームルーター",
-        "新生活 WiFi 安い"
-      ],
-      "preferred_offers": ["rakuten-turbo", "softbank-air", "gmo-wimax", "zeus-wifi"],
+      "pain_points": ["明日からネット使いたい、工事は待てない", "スマホのギガがすぐ無くなる", "1人だから家用WiFi契約は損な気がする", "退去時の解約金が怖い"],
+      "search_keywords": ["一人暮らし WiFi おすすめ", "引っ越し ネット 即日", "工事不要 WiFi 1人", "賃貸 WiFi すぐ使える", "一人暮らし ホームルーター", "新生活 WiFi 安い"],
+      "preferred_offers": ["rakuten-turbo", "softbank-air", "gmo-wimax", "zeus-wifi", "kashimo-wimax"],
       "primary_appeal": "工事なしで即日開通、契約縛りなし、月5,000円以内",
       "ng_appeal": ["速度自慢", "ファミリー向け推し"]
     },
@@ -28,20 +16,9 @@
       "id": "rental_no_construction",
       "name": "賃貸工事NG・大家確認不要",
       "persona": "賃貸マンション居住の20-40代。大家への工事申請が面倒、または禁止。配線工事せずネットを引きたい。",
-      "pain_points": [
-        "大家に工事申請するのが気まずい",
-        "管理会社から工事NGと言われた",
-        "退去時の原状回復が不安",
-        "光回線の工事を待てない"
-      ],
-      "search_keywords": [
-        "賃貸 WiFi 工事不要",
-        "マンション ネット 工事できない",
-        "大家 工事 NG WiFi",
-        "アパート WiFi コンセント",
-        "賃貸 ホームルーター 比較"
-      ],
-      "preferred_offers": ["rakuten-turbo", "softbank-air", "gmo-wimax"],
+      "pain_points": ["大家に工事申請するのが気まずい", "管理会社から工事NGと言われた", "退去時の原状回復が不安", "光回線の工事を待てない"],
+      "search_keywords": ["賃貸 WiFi 工事不要", "マンション ネット 工事できない", "大家 工事 NG WiFi", "アパート WiFi コンセント", "賃貸 ホームルーター 比較"],
+      "preferred_offers": ["rakuten-turbo", "softbank-air", "gmo-wimax", "broad-wimax"],
       "primary_appeal": "コンセント挿すだけ・原状回復不要・申請不要",
       "ng_appeal": ["光回線推し", "工事不要を理由で速度劣後を隠す"]
     },
@@ -49,20 +26,9 @@
       "id": "remote_worker",
       "name": "テレワーク・Web会議落ちない回線",
       "persona": "在宅勤務の30-50代。Web会議の音声/映像品質を重視。回線が落ちると業務に支障が出る。",
-      "pain_points": [
-        "Web会議中に回線が切れる",
-        "上り速度が遅くて画面共有が固まる",
-        "ZoomやTeamsで音声が途切れる",
-        "VPN接続が不安定"
-      ],
-      "search_keywords": [
-        "テレワーク 回線 おすすめ",
-        "在宅勤務 ネット 速い",
-        "Web会議 回線 落ちない",
-        "Zoom 安定 ネット回線",
-        "VPN 速い 光回線"
-      ],
-      "preferred_offers": ["docomo-hikari", "auhikari", "nuro-hikari", "gmo-wimax"],
+      "pain_points": ["Web会議中に回線が切れる", "上り速度が遅くて画面共有が固まる", "ZoomやTeamsで音声が途切れる", "VPN接続が不安定"],
+      "search_keywords": ["テレワーク 回線 おすすめ", "在宅勤務 ネット 速い", "Web会議 回線 落ちない", "Zoom 安定 ネット回線", "VPN 速い 光回線"],
+      "preferred_offers": ["docomo-hikari", "auhikari", "nuro-hikari", "softbank-hikari", "gmo-wimax"],
       "primary_appeal": "上り下りバランスの良い高速回線・低Ping・安定性",
       "ng_appeal": ["コスト重視訴求", "工事不要訴求（むしろ光推奨）"]
     },
@@ -70,20 +36,9 @@
       "id": "elderly_simple",
       "name": "シニア・親世代向けかんたんWiFi",
       "persona": "60代以上の親世代、または親に契約してあげる40-50代の子世代。設定が簡単で、サポートしっかり、料金明朗を重視。",
-      "pain_points": [
-        "ルーターの設定がわからない",
-        "業者に来てもらいたくない（コロナ・防犯）",
-        "解約金・料金体系が複雑で不安",
-        "孫とのビデオ通話くらいできれば十分"
-      ],
-      "search_keywords": [
-        "シニア WiFi 簡単",
-        "親 ネット プレゼント",
-        "高齢者 WiFi おすすめ",
-        "実家 ネット 設定簡単",
-        "コンセント WiFi 工事なし"
-      ],
-      "preferred_offers": ["rakuten-turbo", "softbank-air", "ymobile"],
+      "pain_points": ["ルーターの設定がわからない", "業者に来てもらいたくない（コロナ・防犯）", "解約金・料金体系が複雑で不安", "孫とのビデオ通話くらいできれば十分"],
+      "search_keywords": ["シニア WiFi 簡単", "親 ネット プレゼント", "高齢者 WiFi おすすめ", "実家 ネット 設定簡単", "コンセント WiFi 工事なし"],
+      "preferred_offers": ["rakuten-turbo", "softbank-air", "ymobile", "mineo"],
       "primary_appeal": "コンセント挿すだけ・電話サポート充実・料金1本",
       "ng_appeal": ["速度スペック訴求", "技術用語多用"]
     },
@@ -91,20 +46,9 @@
       "id": "business_traveler",
       "name": "出張・外回り多い人向けポケットWiFi",
       "persona": "全国出張の営業職・フリーランス。外出先でも安定して使えるモバイル回線を求めている。",
-      "pain_points": [
-        "出張先のホテルWiFiが遅い・繋がらない",
-        "スマホテザリングだとバッテリーがすぐ切れる",
-        "カフェのフリーWiFiはセキュリティが不安",
-        "海外含めて使えると便利"
-      ],
-      "search_keywords": [
-        "出張 ポケットWiFi おすすめ",
-        "営業 モバイルWiFi 比較",
-        "ホテル WiFi 遅い 対策",
-        "持ち運び WiFi 無制限",
-        "フリーランス WiFi"
-      ],
-      "preferred_offers": ["gmo-wimax", "zeus-wifi"],
+      "pain_points": ["出張先のホテルWiFiが遅い・繋がらない", "スマホテザリングだとバッテリーがすぐ切れる", "カフェのフリーWiFiはセキュリティが不安", "海外含めて使えると便利"],
+      "search_keywords": ["出張 ポケットWiFi おすすめ", "営業 モバイルWiFi 比較", "ホテル WiFi 遅い 対策", "持ち運び WiFi 無制限", "フリーランス WiFi"],
+      "preferred_offers": ["gmo-wimax", "broad-wimax", "zeus-wifi", "the-wifi", "ahamo"],
       "primary_appeal": "全国対応・無制限・モバイル特化",
       "ng_appeal": ["据置型推し"]
     },
@@ -112,20 +56,9 @@
       "id": "price_sensitive",
       "name": "格安スマホ乗換・通信費削減",
       "persona": "通信費を見直したい20-50代。月のスマホ料金が8,000円超え、半額以下に抑えたい。",
-      "pain_points": [
-        "スマホ代が月8,000円超えてキツい",
-        "大手キャリアの料金プランが複雑",
-        "MNP手続きが面倒で踏み出せない",
-        "ポイント還元で実質安くしたい"
-      ],
-      "search_keywords": [
-        "格安SIM 乗換 おすすめ",
-        "スマホ料金 安く",
-        "MNP キャンペーン 比較",
-        "楽天モバイル 評判",
-        "スマホ 月3000円"
-      ],
-      "preferred_offers": ["rakuten-mobile", "ymobile", "linemo"],
+      "pain_points": ["スマホ代が月8,000円超えてキツい", "大手キャリアの料金プランが複雑", "MNP手続きが面倒で踏み出せない", "ポイント還元で実質安くしたい"],
+      "search_keywords": ["格安SIM 乗換 おすすめ", "スマホ料金 安く", "MNP キャンペーン 比較", "楽天モバイル 評判", "スマホ 月3000円"],
+      "preferred_offers": ["rakuten-mobile", "ymobile", "linemo", "ahamo", "mineo", "iijmio"],
       "primary_appeal": "月3,000円台・縛りなし・ポイント還元",
       "ng_appeal": ["速度・電波品質訴求"]
     },
@@ -133,20 +66,9 @@
       "id": "gamer",
       "name": "ゲーマー向け低Ping回線",
       "persona": "FPS・格闘ゲーム・MMOプレイヤーの10-30代。Ping値・上り速度・安定性を重視。ラグでロケコン投げる勢。",
-      "pain_points": [
-        "Ping値が高くて対戦で勝てない",
-        "オンラインゲーム中にラグる",
-        "夜の時間帯に回線が混んで遅い",
-        "ダウンロード速度が遅くて困る"
-      ],
-      "search_keywords": [
-        "ゲーム回線 おすすめ",
-        "FPS 回線 ping",
-        "光回線 ゲーム 速い",
-        "オンラインゲーム ラグ 対策",
-        "Apex 回線 おすすめ"
-      ],
-      "preferred_offers": ["nuro-hikari", "auhikari", "docomo-hikari"],
+      "pain_points": ["Ping値が高くて対戦で勝てない", "オンラインゲーム中にラグる", "夜の時間帯に回線が混んで遅い", "ダウンロード速度が遅くて困る"],
+      "search_keywords": ["ゲーム回線 おすすめ", "FPS 回線 ping", "光回線 ゲーム 速い", "オンラインゲーム ラグ 対策", "Apex 回線 おすすめ"],
+      "preferred_offers": ["nuro-hikari", "auhikari", "docomo-hikari", "softbank-hikari"],
       "primary_appeal": "下り2Gbps・低Ping・独自回線で混雑回避",
       "ng_appeal": ["モバイルWiFi推し", "速度の数値訴求のみ"]
     },
@@ -154,20 +76,9 @@
       "id": "family_discount",
       "name": "家族でまとめて通信費節約",
       "persona": "30-50代の家族世帯。家族3-5人分のスマホ料金が月3-5万円。家族割でまとめて節約したい。",
-      "pain_points": [
-        "家族のスマホ代合計で月3万超え",
-        "子供のギガが足りない",
-        "光回線とスマホ別々で割引なし",
-        "キャリアショップ行くのが面倒"
-      ],
-      "search_keywords": [
-        "家族割 スマホ おすすめ",
-        "光回線 スマホ セット割",
-        "家族 通信費 節約",
-        "ワイモバイル 家族割",
-        "格安SIM 家族 まとめて"
-      ],
-      "preferred_offers": ["ymobile", "docomo-hikari", "auhikari", "softbank-air"],
+      "pain_points": ["家族のスマホ代合計で月3万超え", "子供のギガが足りない", "光回線とスマホ別々で割引なし", "キャリアショップ行くのが面倒"],
+      "search_keywords": ["家族割 スマホ おすすめ", "光回線 スマホ セット割", "家族 通信費 節約", "ワイモバイル 家族割", "格安SIM 家族 まとめて"],
+      "preferred_offers": ["ymobile", "docomo-hikari", "auhikari", "softbank-air", "iijmio"],
       "primary_appeal": "家族割で2回線目から半額・セット割で永年割引",
       "ng_appeal": ["単身者向け訴求", "短期キャンペーン強調"]
     },
@@ -175,20 +86,9 @@
       "id": "kids_smartphone",
       "name": "子供のスマホデビュー向け格安プラン",
       "persona": "中高生の子を持つ40-50代の親。子供用スマホを契約。月額を抑えつつフィルタリング等の安心機能も欲しい。",
-      "pain_points": [
-        "子供のスマホ代を抑えたい",
-        "使いすぎが心配で容量制限したい",
-        "有害サイトのフィルタリングが必須",
-        "MNP手続きが親には複雑"
-      ],
-      "search_keywords": [
-        "子供 スマホ 格安",
-        "中学生 スマホ おすすめ",
-        "高校生 格安SIM",
-        "キッズスマホ プラン",
-        "ジュニアスマホ 比較"
-      ],
-      "preferred_offers": ["ymobile", "linemo", "rakuten-mobile"],
+      "pain_points": ["子供のスマホ代を抑えたい", "使いすぎが心配で容量制限したい", "有害サイトのフィルタリングが必須", "MNP手続きが親には複雑"],
+      "search_keywords": ["子供 スマホ 格安", "中学生 スマホ おすすめ", "高校生 格安SIM", "キッズスマホ プラン", "ジュニアスマホ 比較"],
+      "preferred_offers": ["ymobile", "linemo", "rakuten-mobile", "mineo", "iijmio"],
       "primary_appeal": "月990円〜・容量制限可能・フィルタリング対応",
       "ng_appeal": ["大容量プラン推し", "ビジネス向け訴求"]
     },
@@ -196,22 +96,111 @@
       "id": "moving_fiber",
       "name": "引越し・新居の光回線新規導入",
       "persona": "30-40代の戸建て購入者・新築マンション入居者。引越しに合わせて光回線を新規契約。長期利用前提で品質重視。",
-      "pain_points": [
-        "引越し日までに開通させたい",
-        "戸建てとマンションで違うらしいが何が違う？",
-        "工事費が高そうで不安",
-        "解約時の違約金で揉めたくない"
-      ],
-      "search_keywords": [
-        "引っ越し 光回線 新規",
-        "新築 ネット 開通",
-        "戸建て 光回線 おすすめ",
-        "新居 ネット 契約",
-        "光回線 工事費 比較"
-      ],
-      "preferred_offers": ["docomo-hikari", "auhikari", "nuro-hikari"],
+      "pain_points": ["引越し日までに開通させたい", "戸建てとマンションで違うらしいが何が違う？", "工事費が高そうで不安", "解約時の違約金で揉めたくない"],
+      "search_keywords": ["引っ越し 光回線 新規", "新築 ネット 開通", "戸建て 光回線 おすすめ", "新居 ネット 契約", "光回線 工事費 比較"],
+      "preferred_offers": ["docomo-hikari", "auhikari", "nuro-hikari", "softbank-hikari", "enhikari"],
       "primary_appeal": "工事費実質無料・新規入会キャッシュバック・セット割",
       "ng_appeal": ["短期利用訴求", "モバイル推し"]
+    },
+    {
+      "id": "student_new",
+      "name": "大学生・新入生向け4月需要",
+      "persona": "大学進学に伴う一人暮らしを始める18-19歳と親。費用を抑えつつ、生協契約より自由度の高い選択肢を探している。",
+      "pain_points": ["大学生協のプランより安くしたい", "実家から離れて初の単身、契約が初めて", "親が支払うので明朗会計を求められる", "卒業時の解約金が心配"],
+      "search_keywords": ["大学生 WiFi 安い", "新大学生 ネット 契約", "学生 一人暮らし WiFi", "大学 生協 ネット 比較", "学生向け 格安SIM"],
+      "preferred_offers": ["rakuten-turbo", "gmo-wimax", "zeus-wifi", "linemo", "rakuten-mobile"],
+      "primary_appeal": "学割・縛りなし・卒業時違約金なし",
+      "ng_appeal": ["家族向け訴求", "長期契約推し"]
+    },
+    {
+      "id": "moving_urgent",
+      "name": "引越し1週間以内の超急ぎWiFi",
+      "persona": "急な転勤・引越しが決まった20-40代。光回線開通を待てない。最短即日でネット環境が必要。",
+      "pain_points": ["明日から仕事でネット必須", "光回線は2週間以上かかると言われた", "今のスマホテザリングでは仕事にならない", "今日明日中に何とかしたい"],
+      "search_keywords": ["WiFi 即日 今日", "引っ越し ネット 急ぎ", "WiFi すぐ使える", "ネット 翌日 開通", "WiFi 当日 受取"],
+      "preferred_offers": ["broad-wimax", "rakuten-turbo", "softbank-air", "gmo-wimax"],
+      "primary_appeal": "店舗即日受取・最短当日発送・申込30分",
+      "ng_appeal": ["光回線推し", "長期契約推し"]
+    },
+    {
+      "id": "couple_pair",
+      "name": "二人暮らし・カップル向けWiFi",
+      "persona": "20-30代の同棲・新婚カップル。2人で動画視聴・テレワーク・ゲームを同時に使う。回線品質と料金バランス重視。",
+      "pain_points": ["2人で使うと回線が遅くなる", "光回線か据置WiFiか迷う", "同棲解消した時の解約が不安", "2人分の通信費を抑えたい"],
+      "search_keywords": ["二人暮らし WiFi おすすめ", "同棲 ネット 契約", "カップル WiFi 比較", "2人 光回線", "夫婦 通信費 節約"],
+      "preferred_offers": ["docomo-hikari", "auhikari", "softbank-air", "rakuten-turbo"],
+      "primary_appeal": "同時2-3デバイスでも安定・セット割で2人分の通信費削減",
+      "ng_appeal": ["単身者向け訴求", "ファミリー大世帯訴求"]
+    },
+    {
+      "id": "video_streaming",
+      "name": "動画視聴特化・Netflix/YouTube",
+      "persona": "20-40代の動画視聴ヘビーユーザー。Netflix、YouTube、Amazon Prime、Disney+ を毎日4-8時間視聴。データ容量を気にしたくない。",
+      "pain_points": ["動画でギガが減りすぎる", "4K動画が止まる", "速度制限で画質が落ちる", "光回線まで必要かわからない"],
+      "search_keywords": ["動画視聴 WiFi おすすめ", "Netflix ネット回線", "YouTube ギガ消費", "4K動画 光回線", "アマプラ 安定 回線"],
+      "preferred_offers": ["nuro-hikari", "docomo-hikari", "the-wifi", "softbank-air"],
+      "primary_appeal": "4K動画も止まらない・無制限・データ容量気にせず視聴",
+      "ng_appeal": ["低容量プラン推し", "速度制限注意を強調しすぎ"]
+    },
+    {
+      "id": "corporate_small",
+      "name": "中小企業・個人事業主の事務所WiFi",
+      "persona": "従業員1-20名の中小企業経営者・個人事業主。事務所でテレワーク・Web会議・クラウド業務を行う。法人契約で経費処理したい。",
+      "pain_points": ["事務所のネット環境が古い", "Web会議増えて回線が追いつかない", "法人契約の手続きが面倒", "経費処理しやすい料金体系がいい"],
+      "search_keywords": ["法人 WiFi おすすめ", "事務所 ネット 比較", "中小企業 光回線", "個人事業主 通信費", "法人契約 光回線"],
+      "preferred_offers": ["docomo-hikari", "auhikari", "softbank-hikari", "nuro-hikari", "gmo-wimax"],
+      "primary_appeal": "法人契約対応・領収書発行・経費計上スムーズ",
+      "ng_appeal": ["個人向け訴求", "学割推し"]
+    },
+    {
+      "id": "freelancer",
+      "name": "フリーランス・ノマド向け回線",
+      "persona": "フリーランスエンジニア・デザイナー・ライターの20-40代。自宅・カフェ・コワーキングを行き来。クラウド業務・Web会議・大容量データ転送が必要。",
+      "pain_points": ["カフェのフリーWiFiは仕事には危険", "コワーキングのWiFiが遅い時間がある", "クライアントとのWeb会議で落ちられない", "経費にしたい"],
+      "search_keywords": ["フリーランス WiFi おすすめ", "ノマド モバイルWiFi", "クライアントワーク 回線", "リモート ポケットWiFi", "個人事業主 通信費 経費"],
+      "preferred_offers": ["gmo-wimax", "broad-wimax", "zeus-wifi", "the-wifi", "ahamo"],
+      "primary_appeal": "外出先でも安定・経費計上可能・セキュリティ重視",
+      "ng_appeal": ["据置型のみ推し", "家庭向け訴求"]
+    },
+    {
+      "id": "mnp_from_au",
+      "name": "auから乗換検討中の方向け",
+      "persona": "au契約中の20-50代。月のスマホ料金に不満。乗換を検討しているが、au関連のサービス連携やキャッシュバック条件を比較したい。",
+      "pain_points": ["au料金がもう少し安くならないか", "au PAYや家族割を失いたくない", "MNP予約番号の取得が面倒", "電波品質は維持したい"],
+      "search_keywords": ["au 乗換 おすすめ", "au から 格安SIM", "au MNP キャンペーン", "auひかり 乗換", "auユーザー 通信費"],
+      "preferred_offers": ["povo", "auhikari", "rakuten-mobile", "ymobile", "linemo"],
+      "primary_appeal": "au回線品質キープ・乗換キャンペーン特典・解約金負担あり",
+      "ng_appeal": ["全く別キャリア強引推し"]
+    },
+    {
+      "id": "mnp_from_docomo",
+      "name": "ドコモから乗換検討中の方向け",
+      "persona": "docomo契約中の20-50代。長年利用しているが料金見直したい。dポイント・ファミリー割引を保ちつつコスト削減したい。",
+      "pain_points": ["ドコモ歴長くて他社が不安", "dポイント還元を失いたくない", "ファミリー割引対象が減りそう", "電波・店舗サポートは欲しい"],
+      "search_keywords": ["ドコモ 乗換 おすすめ", "docomo から ahamo", "ドコモ MNP キャンペーン", "ドコモ光 比較", "ドコモユーザー 安く"],
+      "preferred_offers": ["ahamo", "docomo-hikari", "rakuten-mobile", "iijmio", "mineo"],
+      "primary_appeal": "ドコモ回線品質キープ・dポイント連携・スムーズな乗換",
+      "ng_appeal": ["楽天Linkのみ推し", "電波品質劣化案件"]
+    },
+    {
+      "id": "mnp_from_softbank",
+      "name": "ソフトバンクから乗換検討中の方向け",
+      "persona": "SoftBank契約中の20-50代。料金見直し中。PayPay・Yahoo!連携・おうち割を保ちつつコスト削減したい。",
+      "pain_points": ["ソフトバンク料金が高すぎる", "PayPay還元を失いたくない", "おうち割光セットを保ちたい", "電波品質は維持したい"],
+      "search_keywords": ["ソフトバンク 乗換 おすすめ", "ソフトバンク から LINEMO", "SoftBank MNP", "ワイモバイル 比較", "ソフトバンク光 乗換"],
+      "preferred_offers": ["linemo", "ymobile", "softbank-hikari", "softbank-air", "rakuten-mobile"],
+      "primary_appeal": "ソフトバンク回線品質キープ・PayPay連携・スムーズな乗換",
+      "ng_appeal": ["全く別キャリア強引推し"]
+    },
+    {
+      "id": "second_line",
+      "name": "副回線・予備用の格安プラン",
+      "persona": "メイン回線とは別に副回線を持ちたい20-50代。災害時の備え、通信障害対策、仕事プライベート分け、海外渡航前の準備など多目的。",
+      "pain_points": ["メイン回線が落ちた時の備えが欲しい", "仕事用とプライベートを分けたい", "災害時のリスク分散したい", "副回線にお金はかけたくない"],
+      "search_keywords": ["副回線 おすすめ", "予備 SIM 安い", "サブ回線 比較", "通信障害 対策 SIM", "0円 SIM"],
+      "preferred_offers": ["povo", "rakuten-mobile", "linemo", "iijmio", "mineo"],
+      "primary_appeal": "基本料金0円〜・縛りなし・いつでも解約可",
+      "ng_appeal": ["メイン回線推し", "高単価プラン訴求"]
     }
   ]
 }
