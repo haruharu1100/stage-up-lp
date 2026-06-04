@@ -1,0 +1,306 @@
+{
+  "_comment": "通信ジャンル ASP案件マスター。報酬・条件・アフィリリンクは仮値。ユーザーがASP契約後、実値に差し替えること。",
+  "_legal_note": "景表法・電気通信事業法・特定商取引法の遵守必須。下記NG表現を絶対に使わない: 最速/日本一/業界No.1/絶対/必ず/最安（根拠なし）/激安。キャッシュバックは受取条件・時期を明示。",
+  "offers": [
+    {
+      "id": "rakuten-turbo",
+      "name": "Rakuten Turbo",
+      "category": "home_router",
+      "subcategory": "工事不要・据置型",
+      "asp": "A8.net",
+      "reward_jpy": 13000,
+      "approval_rate_estimate": 0.65,
+      "cookie_hours": 24,
+      "affiliate_url_placeholder": "https://px.a8.net/svt/ejp?a8mat=XXXXXXX",
+      "monthly_fee_jpy": 4840,
+      "initial_fee_jpy": 0,
+      "contract_period_months": 0,
+      "speed_max_mbps": 2100,
+      "data_cap": "無制限",
+      "area_coverage": "楽天5Gエリア依存",
+      "cashback_jpy": 20000,
+      "cashback_condition": "申込から6ヶ月後にメール案内、要手続き",
+      "selling_points": [
+        "工事不要・コンセント挿すだけで使える",
+        "データ無制限・速度制限なし",
+        "契約期間の縛りなし"
+      ],
+      "weak_points": [
+        "楽天回線エリア外だと使えない",
+        "据置型のため持ち運び不可"
+      ],
+      "target_personas": ["one_person_room", "rental_no_construction", "elderly_simple"],
+      "ng_phrases": ["日本一速い", "絶対つながる", "電波最強"]
+    },
+    {
+      "id": "softbank-air",
+      "name": "SoftBank Air",
+      "category": "home_router",
+      "subcategory": "工事不要・据置型",
+      "asp": "afb",
+      "reward_jpy": 18000,
+      "approval_rate_estimate": 0.55,
+      "cookie_hours": 24,
+      "affiliate_url_placeholder": "https://t.afi-b.com/visit.php?guid=XXXXXX",
+      "monthly_fee_jpy": 5368,
+      "initial_fee_jpy": 3300,
+      "contract_period_months": 0,
+      "speed_max_mbps": 2100,
+      "data_cap": "無制限",
+      "area_coverage": "全国（5G/4G）",
+      "cashback_jpy": 35000,
+      "cashback_condition": "代理店経由特典。申込から8ヶ月後の自動振込",
+      "selling_points": [
+        "工事不要、最短翌日発送",
+        "おうち割光セットでスマホ料金割引",
+        "高額キャッシュバック"
+      ],
+      "weak_points": [
+        "建物条件により速度が大きく変動",
+        "8日間お試しキャンセル後の制約あり"
+      ],
+      "target_personas": ["one_person_room", "rental_no_construction", "softbank_user"],
+      "ng_phrases": ["どこでもサクサク", "絶対繋がる"]
+    },
+    {
+      "id": "gmo-wimax",
+      "name": "GMOとくとくBB WiMAX",
+      "category": "pocket_wifi",
+      "subcategory": "モバイル・据置兼用",
+      "asp": "felmat",
+      "reward_jpy": 16000,
+      "approval_rate_estimate": 0.60,
+      "cookie_hours": 24,
+      "affiliate_url_placeholder": "https://t.felmat.net/fmcl?ak=XXXXXX",
+      "monthly_fee_jpy": 4807,
+      "initial_fee_jpy": 3300,
+      "contract_period_months": 0,
+      "speed_max_mbps": 4200,
+      "data_cap": "無制限（混雑時制限あり）",
+      "area_coverage": "全国（au 5G/4G LTE併用）",
+      "cashback_jpy": 49000,
+      "cashback_condition": "11ヶ月後と23ヶ月後に分割案内、要メール手続き",
+      "selling_points": [
+        "持ち運び可能・据置兼用",
+        "業界最高水準のキャッシュバック",
+        "auスマホ・UQモバイル割引対応"
+      ],
+      "weak_points": [
+        "キャッシュバック受取手続きが煩雑",
+        "山間部・地下で電波が弱い場合あり"
+      ],
+      "target_personas": ["business_traveler", "student", "remote_worker", "one_person_room"],
+      "ng_phrases": ["日本最速", "業界No.1キャッシュバック"]
+    },
+    {
+      "id": "zeus-wifi",
+      "name": "ZEUS WiFi",
+      "category": "pocket_wifi",
+      "subcategory": "クラウドSIM・モバイル",
+      "asp": "A8.net",
+      "reward_jpy": 11000,
+      "approval_rate_estimate": 0.60,
+      "cookie_hours": 24,
+      "affiliate_url_placeholder": "https://px.a8.net/svt/ejp?a8mat=XXXXXXX",
+      "monthly_fee_jpy": 2618,
+      "initial_fee_jpy": 3300,
+      "contract_period_months": 0,
+      "speed_max_mbps": 150,
+      "data_cap": "30GB / 50GB / 100GB",
+      "area_coverage": "全国（クラウドSIM）",
+      "cashback_jpy": 10000,
+      "cashback_condition": "新規契約特典。初月から割引適用",
+      "selling_points": [
+        "クラウドSIMで全国つながりやすい",
+        "月額2,618円〜の低価格",
+        "30GBプランから選べる"
+      ],
+      "weak_points": [
+        "無制限ではなくデータ容量上限あり",
+        "通信速度は最大150Mbpsまで"
+      ],
+      "target_personas": ["business_traveler", "student", "second_line"],
+      "ng_phrases": ["完全無制限", "最強コスパ"]
+    },
+    {
+      "id": "docomo-hikari",
+      "name": "ドコモ光",
+      "category": "fiber",
+      "subcategory": "光回線・代理店経由",
+      "asp": "valuecommerce",
+      "reward_jpy": 22000,
+      "approval_rate_estimate": 0.45,
+      "cookie_hours": 24,
+      "affiliate_url_placeholder": "https://ck.jp.ap.valuecommerce.com/servlet/referral?sid=XXXX",
+      "monthly_fee_jpy": 5720,
+      "initial_fee_jpy": 19800,
+      "contract_period_months": 24,
+      "speed_max_mbps": 1000,
+      "data_cap": "無制限",
+      "area_coverage": "全国（NTTフレッツ提供エリア）",
+      "cashback_jpy": 45000,
+      "cashback_condition": "代理店独自特典。開通月の翌々月末に振込",
+      "selling_points": [
+        "ドコモスマホとのセット割で永年割引",
+        "プロバイダ選択肢豊富",
+        "工事費実質無料キャンペーン中"
+      ],
+      "weak_points": [
+        "開通工事に2-4週間",
+        "賃貸は大家確認必須"
+      ],
+      "target_personas": ["family_house", "docomo_user", "long_term_resident", "remote_worker"],
+      "ng_phrases": ["最安", "工事費完全無料"]
+    },
+    {
+      "id": "auhikari",
+      "name": "auひかり",
+      "category": "fiber",
+      "subcategory": "光回線・独自回線",
+      "asp": "afb",
+      "reward_jpy": 25000,
+      "approval_rate_estimate": 0.45,
+      "cookie_hours": 24,
+      "affiliate_url_placeholder": "https://t.afi-b.com/visit.php?guid=XXXXXX",
+      "monthly_fee_jpy": 5610,
+      "initial_fee_jpy": 33000,
+      "contract_period_months": 36,
+      "speed_max_mbps": 1000,
+      "data_cap": "無制限",
+      "area_coverage": "東京・愛知・大阪・福岡などの提供エリア",
+      "cashback_jpy": 63000,
+      "cashback_condition": "代理店特典。開通12ヶ月後に振込手続き案内、要返信",
+      "selling_points": [
+        "独自回線でフレッツ混雑の影響を受けにくい",
+        "auスマホ・UQモバイルとのセット割対応",
+        "高額キャッシュバック特典"
+      ],
+      "weak_points": [
+        "提供エリアが限定的",
+        "解約時の違約金が発生する場合あり"
+      ],
+      "target_personas": ["family_house", "au_user", "remote_worker", "gamer"],
+      "ng_phrases": ["国内最速", "絶対つながる"]
+    },
+    {
+      "id": "nuro-hikari",
+      "name": "NURO光",
+      "category": "fiber",
+      "subcategory": "光回線・独自回線",
+      "asp": "valuecommerce",
+      "reward_jpy": 28000,
+      "approval_rate_estimate": 0.40,
+      "cookie_hours": 24,
+      "affiliate_url_placeholder": "https://ck.jp.ap.valuecommerce.com/servlet/referral?sid=XXXX",
+      "monthly_fee_jpy": 5200,
+      "initial_fee_jpy": 44000,
+      "contract_period_months": 36,
+      "speed_max_mbps": 2000,
+      "data_cap": "無制限",
+      "area_coverage": "関東・関西・東海・北海道・九州の一部",
+      "cashback_jpy": 45000,
+      "cashback_condition": "開通から6ヶ月後にメール案内、期間内に手続き必要",
+      "selling_points": [
+        "下り最大2Gbpsの高速回線",
+        "工事費実質無料キャンペーン",
+        "ソフトバンクスマホとのセット割対応"
+      ],
+      "weak_points": [
+        "提供エリアが限定的",
+        "工事に1-3ヶ月かかる場合あり"
+      ],
+      "target_personas": ["gamer", "remote_worker", "family_house", "softbank_user"],
+      "ng_phrases": ["世界最速", "100%快適"]
+    },
+    {
+      "id": "rakuten-mobile",
+      "name": "楽天モバイル",
+      "category": "mvno",
+      "subcategory": "格安SIM・キャリア",
+      "asp": "A8.net",
+      "reward_jpy": 7000,
+      "approval_rate_estimate": 0.70,
+      "cookie_hours": 24,
+      "affiliate_url_placeholder": "https://px.a8.net/svt/ejp?a8mat=XXXXXXX",
+      "monthly_fee_jpy": 3278,
+      "initial_fee_jpy": 0,
+      "contract_period_months": 0,
+      "speed_max_mbps": null,
+      "data_cap": "無制限（楽天回線）",
+      "area_coverage": "楽天回線エリア＋パートナー回線",
+      "cashback_jpy": 0,
+      "cashback_condition": "楽天ポイント還元（最大14,000pt）",
+      "selling_points": [
+        "データ無制限で月3,278円",
+        "国内通話無料（Rakuten Linkアプリ）",
+        "契約期間・解約金なし"
+      ],
+      "weak_points": [
+        "屋内・地下で電波弱い場合あり",
+        "iPhone使用時はLinkアプリ通話品質要確認"
+      ],
+      "target_personas": ["price_sensitive", "rakuten_user", "second_line"],
+      "ng_phrases": ["絶対つながる", "完全無制限"]
+    },
+    {
+      "id": "ymobile",
+      "name": "ワイモバイル",
+      "category": "mvno",
+      "subcategory": "サブブランド・キャリア",
+      "asp": "afb",
+      "reward_jpy": 9000,
+      "approval_rate_estimate": 0.65,
+      "cookie_hours": 24,
+      "affiliate_url_placeholder": "https://t.afi-b.com/visit.php?guid=XXXXXX",
+      "monthly_fee_jpy": 2178,
+      "initial_fee_jpy": 0,
+      "contract_period_months": 0,
+      "speed_max_mbps": null,
+      "data_cap": "4GB / 20GB / 30GB",
+      "area_coverage": "ソフトバンク回線（全国）",
+      "cashback_jpy": 0,
+      "cashback_condition": "PayPayポイント還元あり（最大10,000pt）",
+      "selling_points": [
+        "ソフトバンク回線の安定性",
+        "家族割で2回線目以降1,188円〜",
+        "全国のショップでサポート受けられる"
+      ],
+      "weak_points": [
+        "データ容量に上限あり",
+        "解約金は無いが事務手数料が発生"
+      ],
+      "target_personas": ["price_sensitive", "family_discount", "elderly_simple"],
+      "ng_phrases": ["最強コスパ", "完全無料"]
+    },
+    {
+      "id": "linemo",
+      "name": "LINEMO",
+      "category": "mvno",
+      "subcategory": "サブブランド・オンライン専用",
+      "asp": "A8.net",
+      "reward_jpy": 8000,
+      "approval_rate_estimate": 0.65,
+      "cookie_hours": 24,
+      "affiliate_url_placeholder": "https://px.a8.net/svt/ejp?a8mat=XXXXXXX",
+      "monthly_fee_jpy": 990,
+      "initial_fee_jpy": 0,
+      "contract_period_months": 0,
+      "speed_max_mbps": null,
+      "data_cap": "3GB / 20GB",
+      "area_coverage": "ソフトバンク回線（全国）",
+      "cashback_jpy": 0,
+      "cashback_condition": "PayPayポイント還元キャンペーン頻繁開催",
+      "selling_points": [
+        "ミニプラン月990円から",
+        "LINEのギガフリー（消費しない）",
+        "ソフトバンク回線で安定通信"
+      ],
+      "weak_points": [
+        "オンライン手続きのみ・店舗サポートなし",
+        "20GB以上のプランがない"
+      ],
+      "target_personas": ["price_sensitive", "second_line", "kids_smartphone"],
+      "ng_phrases": ["業界最安", "完璧"]
+    }
+  ]
+}

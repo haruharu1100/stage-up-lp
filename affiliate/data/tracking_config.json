@@ -1,0 +1,18 @@
+{
+  "_comment": "計測タグ設定。実IDが入っていれば各LPに自動埋め込みされる。空のままなら埋め込みなし。",
+  "_setup_steps": [
+    "1. GA4: analytics.google.com で新規プロパティ作成 → 測定IDを ga4_measurement_id に貼付",
+    "2. Microsoft Clarity: clarity.microsoft.com で無料登録 → プロジェクトIDを clarity_project_id に貼付",
+    "3. ASP計測タグ: 各ASPの管理画面で発行されるCV計測タグを asp_conversion_tags に登録"
+  ],
+  "ga4_measurement_id": "",
+  "clarity_project_id": "",
+  "asp_conversion_tags": {
+    "a8net": "",
+    "afb": "",
+    "felmat": "",
+    "valuecommerce": ""
+  },
+  "google_ads_conversion_id": "",
+  "google_ads_conversion_label": ""
+}
