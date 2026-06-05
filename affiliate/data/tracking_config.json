@@ -6,7 +6,7 @@
     "3. ASP計測タグ: 各ASPの管理画面で発行されるCV計測タグを asp_conversion_tags に登録"
   ],
   "ga4_measurement_id": "G-8XKJ81F390",
-  "clarity_project_id": "",
+  "clarity_project_id": "x283fyep35",
   "asp_conversion_tags": {
     "a8net": "",
     "afb": "",
