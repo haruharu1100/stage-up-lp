@@ -8,7 +8,7 @@
       "persona": "新生活開始の20代社会人・学生。引っ越し直後でネット環境がなく、できるだけ早く・安く・工事なしで使いたい。",
       "pain_points": ["明日からネット使いたい、工事は待てない", "スマホのギガがすぐ無くなる", "1人だから家用WiFi契約は損な気がする", "退去時の解約金が怖い"],
       "search_keywords": ["一人暮らし WiFi おすすめ", "引っ越し ネット 即日", "工事不要 WiFi 1人", "賃貸 WiFi すぐ使える", "一人暮らし ホームルーター", "新生活 WiFi 安い"],
-      "preferred_offers": ["rakuten-turbo", "softbank-air", "gmo-wimax", "zeus-wifi", "kashimo-wimax"],
+      "preferred_offers": ["softbank-air", "rakuten-turbo", "gmo-wimax", "zeus-wifi", "kashimo-wimax"],
       "primary_appeal": "工事なしで即日開通、契約縛りなし、月5,000円以内",
       "ng_appeal": ["速度自慢", "ファミリー向け推し"]
     },
@@ -18,7 +18,7 @@
       "persona": "賃貸マンション居住の20-40代。大家への工事申請が面倒、または禁止。配線工事せずネットを引きたい。",
       "pain_points": ["大家に工事申請するのが気まずい", "管理会社から工事NGと言われた", "退去時の原状回復が不安", "光回線の工事を待てない"],
       "search_keywords": ["賃貸 WiFi 工事不要", "マンション ネット 工事できない", "大家 工事 NG WiFi", "アパート WiFi コンセント", "賃貸 ホームルーター 比較"],
-      "preferred_offers": ["rakuten-turbo", "softbank-air", "gmo-wimax", "broad-wimax"],
+      "preferred_offers": ["softbank-air", "rakuten-turbo", "gmo-wimax", "broad-wimax"],
       "primary_appeal": "コンセント挿すだけ・原状回復不要・申請不要",
       "ng_appeal": ["光回線推し", "工事不要を理由で速度劣後を隠す"]
     },
@@ -28,7 +28,7 @@
       "persona": "在宅勤務の30-50代。Web会議の音声/映像品質を重視。回線が落ちると業務に支障が出る。",
       "pain_points": ["Web会議中に回線が切れる", "上り速度が遅くて画面共有が固まる", "ZoomやTeamsで音声が途切れる", "VPN接続が不安定"],
       "search_keywords": ["テレワーク 回線 おすすめ", "在宅勤務 ネット 速い", "Web会議 回線 落ちない", "Zoom 安定 ネット回線", "VPN 速い 光回線"],
-      "preferred_offers": ["docomo-hikari", "auhikari", "nuro-hikari", "softbank-hikari", "gmo-wimax"],
+      "preferred_offers": ["auhikari", "biglobe-hikari", "docomo-hikari", "nuro-hikari", "softbank-hikari", "gmo-wimax"],
       "primary_appeal": "上り下りバランスの良い高速回線・低Ping・安定性",
       "ng_appeal": ["コスト重視訴求", "工事不要訴求（むしろ光推奨）"]
     },
@@ -98,7 +98,7 @@
       "persona": "30-40代の戸建て購入者・新築マンション入居者。引越しに合わせて光回線を新規契約。長期利用前提で品質重視。",
       "pain_points": ["引越し日までに開通させたい", "戸建てとマンションで違うらしいが何が違う？", "工事費が高そうで不安", "解約時の違約金で揉めたくない"],
       "search_keywords": ["引っ越し 光回線 新規", "新築 ネット 開通", "戸建て 光回線 おすすめ", "新居 ネット 契約", "光回線 工事費 比較"],
-      "preferred_offers": ["docomo-hikari", "auhikari", "nuro-hikari", "softbank-hikari", "enhikari"],
+      "preferred_offers": ["auhikari", "biglobe-hikari", "docomo-hikari", "softbank-hikari", "nuro-hikari", "enhikari"],
       "primary_appeal": "工事費実質無料・新規入会キャッシュバック・セット割",
       "ng_appeal": ["短期利用訴求", "モバイル推し"]
     },
@@ -148,7 +148,7 @@
       "persona": "従業員1-20名の中小企業経営者・個人事業主。事務所でテレワーク・Web会議・クラウド業務を行う。法人契約で経費処理したい。",
       "pain_points": ["事務所のネット環境が古い", "Web会議増えて回線が追いつかない", "法人契約の手続きが面倒", "経費処理しやすい料金体系がいい"],
       "search_keywords": ["法人 WiFi おすすめ", "事務所 ネット 比較", "中小企業 光回線", "個人事業主 通信費", "法人契約 光回線"],
-      "preferred_offers": ["docomo-hikari", "auhikari", "softbank-hikari", "nuro-hikari", "gmo-wimax"],
+      "preferred_offers": ["auhikari", "biglobe-hikari", "docomo-hikari", "softbank-hikari", "nuro-hikari", "gmo-wimax"],
       "primary_appeal": "法人契約対応・領収書発行・経費計上スムーズ",
       "ng_appeal": ["個人向け訴求", "学割推し"]
     },
