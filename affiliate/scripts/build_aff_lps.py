@@ -288,6 +288,14 @@ def gen_lp(niche, offer):
         cid = TRACKING["clarity_project_id"]
         clarity_tag = f"""<script>(function(c,l,a,r,i,t,y){{c[a]=c[a]||function(){{(c[a].q=c[a].q||[]).push(arguments)}};t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y)}})(window,document,"clarity","script","{cid}");</script>"""
 
+    # Google広告 コンバージョンタグ (AW-XXXXXXXX)
+    gads_tag = ""
+    if TRACKING.get("google_ads_conversion_id"):
+        aw_id = TRACKING["google_ads_conversion_id"]
+        gads_tag = f"""<!-- Google Ads (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id={aw_id}"></script>
+<script>window.dataLayer=window.dataLayer||[];function gtag(){{dataLayer.push(arguments);}}gtag('js',new Date());gtag('config','{aw_id}');</script>"""
+
     # 広告パラメータ引き継ぎJS（gclid/yclid/utm_*をASPリンクに付与）
     cta_url = offer["affiliate_url_placeholder"]
     param_carry_js = f"""<script>
@@ -320,6 +328,7 @@ def gen_lp(niche, offer):
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet" />
 {ga4_tag}
 {clarity_tag}
+{gads_tag}
 <style>
 :root{{
   --primary:{theme['primary']};
