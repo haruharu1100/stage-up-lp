@@ -301,8 +301,25 @@ def gen_lp(niche, offer):
         cid = TRACKING["clarity_project_id"]
         clarity_tag = f"""<script>(function(c,l,a,r,i,t,y){{c[a]=c[a]||function(){{(c[a].q=c[a].q||[]).push(arguments)}};t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y)}})(window,document,"clarity","script","{cid}");</script>"""
 
-    # 広告パラメータ引き継ぎJS（gclid/yclid/utm_*をASPリンクに付与）
+    # 広告パラメータ引き継ぎJS + CTAクリック時のCV計測
     cta_url = offer["affiliate_url_placeholder"]
+    cv_label = TRACKING.get("google_ads_conversion_label", "")
+    cv_value = TRACKING.get("google_ads_conversion_value_jpy", 10000)
+    cv_send_to = f"{aw_id}/{cv_label}" if (aw_id and cv_label) else ""
+
+    # CTAクリック時にGoogle広告CV発火するスニペット（CVラベルがある時のみ）
+    if cv_send_to:
+        cta_conversion_js = f"""
+      try {{
+        if(window.gtag) {{
+          gtag('event','cta_click',{{offer:'{offer["id"]}',niche:'{niche["id"]}'}});
+          gtag('event','conversion',{{'send_to':'{cv_send_to}','value':{cv_value}.0,'currency':'JPY'}});
+        }}
+      }} catch(e){{}}"""
+    else:
+        cta_conversion_js = f"""
+      try {{ if(window.gtag) gtag('event','cta_click',{{offer:'{offer["id"]}',niche:'{niche["id"]}'}}); }} catch(e){{}}"""
+
     param_carry_js = f"""<script>
 (function(){{
   var params = new URLSearchParams(window.location.search);
@@ -312,8 +329,7 @@ def gen_lp(niche, offer):
   var extra = qs.length ? (('{cta_url}'.indexOf('?')>-1?'&':'?') + qs.join('&')) : '';
   document.querySelectorAll('a.cta-link').forEach(function(a){{
     a.href = '{cta_url}' + extra;
-    a.addEventListener('click', function(){{
-      try {{ if(window.gtag) gtag('event','cta_click',{{offer:'{offer["id"]}',niche:'{niche["id"]}'}}); }} catch(e){{}}
+    a.addEventListener('click', function(){{{cta_conversion_js}
     }});
   }});
 }})();

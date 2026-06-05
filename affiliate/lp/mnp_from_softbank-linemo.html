@@ -267,7 +267,12 @@ a{color:inherit;text-decoration:none}
   document.querySelectorAll('a.cta-link').forEach(function(a){
     a.href = 'https://px.a8.net/svt/ejp?a8mat=XXXXXXX' + extra;
     a.addEventListener('click', function(){
-      try { if(window.gtag) gtag('event','cta_click',{offer:'linemo',niche:'mnp_from_softbank'}); } catch(e){}
+      try {
+        if(window.gtag) {
+          gtag('event','cta_click',{offer:'linemo',niche:'mnp_from_softbank'});
+          gtag('event','conversion',{'send_to':'AW-18213756380/p9RBCNzIt7kcENy7_-xD','value':10000.0,'currency':'JPY'});
+        }
+      } catch(e){}
     });
   });
 })();

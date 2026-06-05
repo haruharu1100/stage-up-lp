@@ -271,7 +271,12 @@ a{color:inherit;text-decoration:none}
   document.querySelectorAll('a.cta-link').forEach(function(a){
     a.href = 'https://t.felmat.net/fmcl?ak=XXXXXX' + extra;
     a.addEventListener('click', function(){
-      try { if(window.gtag) gtag('event','cta_click',{offer:'gmo-wimax',niche:'remote_worker'}); } catch(e){}
+      try {
+        if(window.gtag) {
+          gtag('event','cta_click',{offer:'gmo-wimax',niche:'remote_worker'});
+          gtag('event','conversion',{'send_to':'AW-18213756380/p9RBCNzIt7kcENy7_-xD','value':10000.0,'currency':'JPY'});
+        }
+      } catch(e){}
     });
   });
 })();
