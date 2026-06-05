@@ -276,25 +276,30 @@ def gen_lp(niche, offer):
         for q, a in faqs
     )
 
-    # 計測タグ
+    # 計測タグ：GA4とGoogle広告を統合（gtag.jsは1つだけロード）
+    ga4_id = TRACKING.get("ga4_measurement_id", "")
+    aw_id = TRACKING.get("google_ads_conversion_id", "")
     ga4_tag = ""
-    if TRACKING.get("ga4_measurement_id"):
-        mid = TRACKING["ga4_measurement_id"]
-        ga4_tag = f"""<script async src="https://www.googletagmanager.com/gtag/js?id={mid}"></script>
-<script>window.dataLayer=window.dataLayer||[];function gtag(){{dataLayer.push(arguments);}}gtag('js',new Date());gtag('config','{mid}');</script>"""
+    gads_tag = ""
+
+    if ga4_id and aw_id:
+        # 両方ある場合：1つのgtag.jsで両方をconfig
+        ga4_tag = f"""<!-- Google tag (gtag.js) - GA4 + Google Ads 統合 -->
+<script async src="https://www.googletagmanager.com/gtag/js?id={ga4_id}"></script>
+<script>window.dataLayer=window.dataLayer||[];function gtag(){{dataLayer.push(arguments);}}gtag('js',new Date());gtag('config','{ga4_id}');gtag('config','{aw_id}');</script>"""
+    elif ga4_id:
+        ga4_tag = f"""<!-- Google tag (gtag.js) - GA4 -->
+<script async src="https://www.googletagmanager.com/gtag/js?id={ga4_id}"></script>
+<script>window.dataLayer=window.dataLayer||[];function gtag(){{dataLayer.push(arguments);}}gtag('js',new Date());gtag('config','{ga4_id}');</script>"""
+    elif aw_id:
+        ga4_tag = f"""<!-- Google Ads (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id={aw_id}"></script>
+<script>window.dataLayer=window.dataLayer||[];function gtag(){{dataLayer.push(arguments);}}gtag('js',new Date());gtag('config','{aw_id}');</script>"""
 
     clarity_tag = ""
     if TRACKING.get("clarity_project_id"):
         cid = TRACKING["clarity_project_id"]
         clarity_tag = f"""<script>(function(c,l,a,r,i,t,y){{c[a]=c[a]||function(){{(c[a].q=c[a].q||[]).push(arguments)}};t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y)}})(window,document,"clarity","script","{cid}");</script>"""
-
-    # Google広告 コンバージョンタグ (AW-XXXXXXXX)
-    gads_tag = ""
-    if TRACKING.get("google_ads_conversion_id"):
-        aw_id = TRACKING["google_ads_conversion_id"]
-        gads_tag = f"""<!-- Google Ads (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id={aw_id}"></script>
-<script>window.dataLayer=window.dataLayer||[];function gtag(){{dataLayer.push(arguments);}}gtag('js',new Date());gtag('config','{aw_id}');</script>"""
 
     # 広告パラメータ引き継ぎJS（gclid/yclid/utm_*をASPリンクに付与）
     cta_url = offer["affiliate_url_placeholder"]

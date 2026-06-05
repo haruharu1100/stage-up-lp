@@ -5,7 +5,7 @@
     "2. Microsoft Clarity: clarity.microsoft.com で無料登録 → プロジェクトIDを clarity_project_id に貼付",
     "3. ASP計測タグ: 各ASPの管理画面で発行されるCV計測タグを asp_conversion_tags に登録"
   ],
-  "ga4_measurement_id": "",
+  "ga4_measurement_id": "G-8XKJ81F390",
   "clarity_project_id": "",
   "asp_conversion_tags": {
     "a8net": "",
