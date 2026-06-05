@@ -267,9 +267,9 @@ a{color:inherit;text-decoration:none}
   var keepKeys = ['gclid','yclid','msclkid','utm_source','utm_medium','utm_campaign','utm_term','utm_content'];
   var qs = [];
   keepKeys.forEach(function(k){ if(params.get(k)) qs.push(k+'='+encodeURIComponent(params.get(k))); });
-  var extra = qs.length ? (('https://t.afi-b.com/visit.php?guid=XXXXXX'.indexOf('?')>-1?'&':'?') + qs.join('&')) : '';
+  var extra = qs.length ? (('https://px.a8.net/svt/ejp?a8mat=4B5OO6+GF7GHE+348K+3H18R6'.indexOf('?')>-1?'&':'?') + qs.join('&')) : '';
   document.querySelectorAll('a.cta-link').forEach(function(a){
-    a.href = 'https://t.afi-b.com/visit.php?guid=XXXXXX' + extra;
+    a.href = 'https://px.a8.net/svt/ejp?a8mat=4B5OO6+GF7GHE+348K+3H18R6' + extra;
     a.addEventListener('click', function(){
       try {
         if(window.gtag) {
