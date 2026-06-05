@@ -28,7 +28,7 @@
       "persona": "在宅勤務の30-50代。Web会議の音声/映像品質を重視。回線が落ちると業務に支障が出る。",
       "pain_points": ["Web会議中に回線が切れる", "上り速度が遅くて画面共有が固まる", "ZoomやTeamsで音声が途切れる", "VPN接続が不安定"],
       "search_keywords": ["テレワーク 回線 おすすめ", "在宅勤務 ネット 速い", "Web会議 回線 落ちない", "Zoom 安定 ネット回線", "VPN 速い 光回線"],
-      "preferred_offers": ["auhikari", "biglobe-hikari", "docomo-hikari", "nuro-hikari", "softbank-hikari", "gmo-wimax"],
+      "preferred_offers": ["auhikari", "biglobe-hikari", "sonet-hikari", "nifty-hikari", "docomo-hikari", "nuro-hikari", "softbank-hikari", "gmo-wimax"],
       "primary_appeal": "上り下りバランスの良い高速回線・低Ping・安定性",
       "ng_appeal": ["コスト重視訴求", "工事不要訴求（むしろ光推奨）"]
     },
@@ -78,7 +78,7 @@
       "persona": "30-50代の家族世帯。家族3-5人分のスマホ料金が月3-5万円。家族割でまとめて節約したい。",
       "pain_points": ["家族のスマホ代合計で月3万超え", "子供のギガが足りない", "光回線とスマホ別々で割引なし", "キャリアショップ行くのが面倒"],
       "search_keywords": ["家族割 スマホ おすすめ", "光回線 スマホ セット割", "家族 通信費 節約", "ワイモバイル 家族割", "格安SIM 家族 まとめて"],
-      "preferred_offers": ["ymobile", "docomo-hikari", "auhikari", "softbank-air", "iijmio"],
+      "preferred_offers": ["ymobile", "docomo-hikari", "auhikari", "softbank-air", "nifty-hikari", "sonet-hikari", "iijmio"],
       "primary_appeal": "家族割で2回線目から半額・セット割で永年割引",
       "ng_appeal": ["単身者向け訴求", "短期キャンペーン強調"]
     },
@@ -98,7 +98,7 @@
       "persona": "30-40代の戸建て購入者・新築マンション入居者。引越しに合わせて光回線を新規契約。長期利用前提で品質重視。",
       "pain_points": ["引越し日までに開通させたい", "戸建てとマンションで違うらしいが何が違う？", "工事費が高そうで不安", "解約時の違約金で揉めたくない"],
       "search_keywords": ["引っ越し 光回線 新規", "新築 ネット 開通", "戸建て 光回線 おすすめ", "新居 ネット 契約", "光回線 工事費 比較"],
-      "preferred_offers": ["auhikari", "biglobe-hikari", "docomo-hikari", "softbank-hikari", "nuro-hikari", "enhikari"],
+      "preferred_offers": ["auhikari", "biglobe-hikari", "nifty-hikari", "sonet-hikari", "dti-hikari", "docomo-hikari", "softbank-hikari", "nuro-hikari", "enhikari"],
       "primary_appeal": "工事費実質無料・新規入会キャッシュバック・セット割",
       "ng_appeal": ["短期利用訴求", "モバイル推し"]
     },
