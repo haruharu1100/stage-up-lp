@@ -9,7 +9,7 @@
 <meta name="description" content="中小企業・個人事業主の事務所WiFiに最適なauひかりを徹底解説。法人契約対応・領収書発行・経費計上スムーズ。月額5,610円・最大63,000円キャッシュバック。" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;800;900&display=swap" rel="stylesheet" />
 <!-- Google tag (gtag.js) - GA4 + Google Ads 統合 -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-8XKJ81F390"></script>
 <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-8XKJ81F390');gtag('config','AW-18213756380');</script>
@@ -24,93 +24,204 @@
   --muted:#5a6478;
   --paper:#fff;
   --border:#e5e8ef;
+  --gold:#fbbf24;
+  --gold-dark:#f59e0b;
+  --gold-bg:#fff8e1;
   --success:#22a06b;
+  --danger:#dc2626;
+  --shadow-sm:0 2px 8px rgba(0,0,0,.06);
+  --shadow-md:0 6px 18px rgba(0,0,0,.08);
+  --shadow-lg:0 16px 40px rgba(0,0,0,.12);
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
-body{font-family:"Noto Sans JP",sans-serif;background:var(--bg);color:var(--ink);font-size:15px;line-height:1.8;-webkit-font-smoothing:antialiased;padding-bottom:72px}
+body{font-family:"Noto Sans JP",sans-serif;background:var(--bg);color:var(--ink);font-size:15px;line-height:1.75;-webkit-font-smoothing:antialiased;padding-bottom:80px}
 img{display:block;max-width:100%;height:auto}
 a{color:inherit;text-decoration:none}
-.container{width:100%;max-width:680px;margin:0 auto;padding:0 16px}
+.container{width:100%;max-width:720px;margin:0 auto;padding:0 16px}
 
-/* FV */
-.fv{padding:24px 0 32px;background:linear-gradient(135deg,var(--primary) 0%,color-mix(in srgb,var(--primary) 70%,#000 30%) 100%);color:#fff;text-align:center}
-.fv-eyebrow{display:inline-block;background:var(--accent);color:#fff;padding:4px 14px;border-radius:14px;font-size:12px;font-weight:700;letter-spacing:.05em;margin-bottom:14px}
-.fv-title{font-size:26px;font-weight:900;line-height:1.4;letter-spacing:.02em;margin-bottom:14px}
-.fv-title em{color:#ffe66b;font-style:normal}
-@media(min-width:640px){.fv-title{font-size:32px}}
-.fv-sub{font-size:14px;line-height:1.9;opacity:.95;margin-bottom:24px;padding:0 8px}
-.fv-badges{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin-bottom:22px}
-.fv-badge{background:rgba(255,255,255,.18);backdrop-filter:blur(8px);padding:6px 14px;border-radius:20px;font-size:12px;font-weight:700;border:1px solid rgba(255,255,255,.3)}
+/* Top Notice (緊急性訴求) */
+.top-notice{background:linear-gradient(90deg,var(--danger),#b91c1c);color:#fff;text-align:center;padding:7px 16px;font-size:12px;font-weight:800;letter-spacing:.04em;position:sticky;top:0;z-index:60}
+.top-notice .blink{display:inline-block;width:8px;height:8px;background:#ffe66b;border-radius:50%;margin-right:7px;animation:blink 1.4s ease-in-out infinite;vertical-align:middle}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
 
-.cta-btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:18px 20px;background:var(--accent);color:#fff;border-radius:12px;font-weight:900;font-size:17px;letter-spacing:.05em;box-shadow:0 6px 20px rgba(0,0,0,.18);animation:pulse 2.2s ease-in-out infinite}
-.cta-btn::after{content:"→";font-size:20px}
-@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.02)}}
+/* Header */
+.site-header{background:rgba(255,255,255,.97);backdrop-filter:blur(14px);border-bottom:1px solid var(--border);padding:8px 0;position:sticky;top:30px;z-index:55}
+.header-inner{max-width:720px;margin:0 auto;padding:0 16px;display:flex;align-items:center;justify-content:space-between;gap:10px}
+.brand{display:flex;align-items:center;gap:8px;font-weight:900;font-size:14px;color:var(--ink)}
+.brand-icon{width:28px;height:28px;background:linear-gradient(135deg,var(--primary),color-mix(in srgb,var(--primary) 60%,#000 40%));color:#fff;border-radius:6px;display:grid;place-items:center;font-size:14px}
+.header-cta{background:var(--accent);color:#fff;padding:8px 16px;border-radius:7px;font-size:11px;font-weight:900;letter-spacing:.04em}
+
+/* FV - メガ強化版 */
+.fv{padding:28px 0 36px;background:linear-gradient(160deg,var(--primary) 0%,color-mix(in srgb,var(--primary) 60%,#000 40%) 100%);color:#fff;text-align:center;position:relative;overflow:hidden}
+.fv::before{content:"";position:absolute;top:-50%;left:-20%;width:140%;height:200%;background:radial-gradient(ellipse,rgba(255,255,255,.08) 0%,transparent 60%);pointer-events:none}
+.fv-content{position:relative;z-index:1}
+.fv-tag{display:inline-block;background:linear-gradient(90deg,var(--gold),var(--gold-dark));color:#3a2a00;padding:5px 16px;border-radius:18px;font-size:11px;font-weight:900;letter-spacing:.06em;margin-bottom:14px;box-shadow:0 4px 12px rgba(251,191,36,.4)}
+.fv-title{font-size:24px;font-weight:900;line-height:1.45;letter-spacing:.01em;margin-bottom:8px}
+.fv-title-product{display:block;font-size:30px;background:linear-gradient(135deg,#ffe66b,#fbbf24);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-top:6px;text-shadow:none}
+@media(min-width:640px){.fv-title{font-size:30px}.fv-title-product{font-size:38px}}
+.fv-sub{font-size:13px;line-height:1.85;opacity:.93;margin:14px auto 22px;padding:0 8px;max-width:480px}
+
+/* FV Cashback Splash */
+.fv-cb{margin:8px auto 20px;display:inline-block;background:rgba(255,255,255,.13);backdrop-filter:blur(10px);border:2px solid rgba(255,230,107,.5);border-radius:14px;padding:14px 28px;position:relative}
+.fv-cb-pre{font-size:11px;font-weight:700;letter-spacing:.1em;opacity:.85;margin-bottom:2px}
+.fv-cb-amount{font-size:42px;font-weight:900;line-height:1;background:linear-gradient(135deg,#ffe66b,#fbbf24);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:-.02em}
+.fv-cb-amount small{font-size:18px;margin-left:3px}
+.fv-cb-post{font-size:13px;font-weight:800;margin-top:4px;letter-spacing:.03em}
+
+.fv-badges{display:flex;justify-content:center;gap:6px;flex-wrap:wrap;margin-bottom:24px}
+.fv-badge{background:rgba(255,255,255,.18);backdrop-filter:blur(8px);padding:6px 12px;border-radius:18px;font-size:11px;font-weight:800;border:1px solid rgba(255,255,255,.25);display:inline-flex;align-items:center;gap:4px}
+.fv-badge::before{content:"✓";color:#ffe66b;font-weight:900}
+
+/* CTA Button - 強化版 */
+.cta-btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:18px 18px;background:linear-gradient(135deg,var(--accent),color-mix(in srgb,var(--accent) 80%,#000 20%));color:#fff;border-radius:14px;font-weight:900;font-size:16px;letter-spacing:.03em;box-shadow:0 10px 24px rgba(0,0,0,.22),inset 0 1px 0 rgba(255,255,255,.2);animation:pulse 2.2s ease-in-out infinite;position:relative;overflow:hidden}
+.cta-btn::after{content:"→";font-size:22px;font-weight:900}
+.cta-btn::before{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.25),transparent);transform:translateX(-100%);animation:shimmer 3.5s infinite}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.025)}}
+@keyframes shimmer{0%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
+.cta-btn-large{padding:22px 18px;font-size:18px}
 .cta-note{margin-top:10px;font-size:11px;opacity:.85}
 
+.fv-trust{margin-top:20px;display:flex;justify-content:center;gap:14px;flex-wrap:wrap;font-size:11px;opacity:.88}
+.fv-trust span{display:inline-flex;align-items:center;gap:4px}
+
+/* Section base */
+.section{padding:44px 0}
+.section-title{font-size:22px;font-weight:900;text-align:center;line-height:1.5;margin-bottom:8px;color:var(--ink)}
+.section-title em{color:var(--primary);font-style:normal;border-bottom:3px solid var(--gold);padding-bottom:2px}
+.section-sub{font-size:12px;color:var(--muted);text-align:center;margin-bottom:28px}
+
+/* Recommendation No.1 Section - 結論セクション */
+.rec1-section{padding:32px 0 12px;background:linear-gradient(180deg,var(--gold-bg) 0%,var(--bg) 100%)}
+.rec1-eyebrow{display:flex;align-items:center;justify-content:center;gap:8px;font-size:13px;font-weight:900;color:var(--gold-dark);letter-spacing:.06em;margin-bottom:14px}
+.rec1-eyebrow::before,.rec1-eyebrow::after{content:"";display:block;width:32px;height:2px;background:var(--gold-dark)}
+.rec1-card{background:#fff;border-radius:18px;padding:30px 22px 26px;box-shadow:var(--shadow-lg);border:3px solid var(--gold);position:relative;overflow:hidden}
+.rec1-card::before{content:"";position:absolute;top:0;left:0;right:0;height:6px;background:linear-gradient(90deg,var(--gold),var(--gold-dark),var(--gold))}
+.rec1-crown{font-size:36px;text-align:center;margin-bottom:4px;filter:drop-shadow(0 4px 12px rgba(251,191,36,.5))}
+.rec1-rank{display:inline-block;background:linear-gradient(135deg,var(--gold),var(--gold-dark));color:#3a2a00;padding:5px 18px;border-radius:18px;font-size:13px;font-weight:900;letter-spacing:.08em;margin-bottom:12px}
+.rec1-name{font-size:24px;font-weight:900;color:var(--ink);text-align:center;margin-bottom:4px;line-height:1.3}
+.rec1-cat{font-size:12px;color:var(--muted);text-align:center;margin-bottom:22px;font-weight:700}
+.rec1-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px}
+.rec1-grid .rec1-hl{grid-column:1/-1;background:linear-gradient(135deg,var(--gold-bg),#fff3c4);border:2px solid var(--gold)}
+.rec1-item{background:var(--bg);border-radius:10px;padding:14px 12px;text-align:center}
+.rec1-label{font-size:10px;color:var(--muted);font-weight:800;letter-spacing:.06em;margin-bottom:4px}
+.rec1-value{font-size:18px;font-weight:900;color:var(--ink);line-height:1.2}
+.rec1-hl .rec1-value{color:var(--gold-dark);font-size:24px}
+.rec1-stars{text-align:center;font-size:15px;color:var(--gold-dark);margin-bottom:20px;font-weight:900;letter-spacing:.1em}
+.rec1-stars small{display:block;font-size:10px;color:var(--muted);letter-spacing:0;margin-top:3px;font-weight:600}
+
 /* Pain section */
-.section{padding:40px 0}
-.section-title{font-size:22px;font-weight:900;text-align:center;line-height:1.5;margin-bottom:24px;color:var(--ink)}
-.section-title em{color:var(--primary);font-style:normal;border-bottom:3px solid var(--accent);padding-bottom:2px}
-.pain-card{background:var(--paper);border-radius:14px;padding:24px 20px;box-shadow:0 4px 20px rgba(0,0,0,.06)}
+.pain-card{background:var(--paper);border-radius:14px;padding:24px 20px;box-shadow:var(--shadow-md)}
 .pain-list{list-style:none}
-.pain-list li{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);font-size:14px;line-height:1.7}
+.pain-list li{display:flex;align-items:flex-start;gap:10px;padding:12px 0;border-bottom:1px solid var(--border);font-size:14px;line-height:1.7;font-weight:600}
 .pain-list li:last-child{border-bottom:0}
-.pain-list .check{flex-shrink:0;width:24px;height:24px;background:var(--accent);color:#fff;border-radius:50%;display:grid;place-items:center;font-size:13px;font-weight:900;margin-top:1px}
-.pain-cta{margin-top:20px;padding:16px;background:linear-gradient(135deg,var(--primary),color-mix(in srgb,var(--primary) 75%,#000 25%));color:#fff;border-radius:12px;text-align:center;font-size:15px;font-weight:700}
+.pain-list .check{flex-shrink:0;width:24px;height:24px;background:linear-gradient(135deg,var(--danger),#b91c1c);color:#fff;border-radius:50%;display:grid;place-items:center;font-size:13px;font-weight:900;margin-top:1px}
+.pain-cta{margin-top:22px;padding:18px;background:linear-gradient(135deg,var(--primary),color-mix(in srgb,var(--primary) 70%,#000 30%));color:#fff;border-radius:12px;text-align:center;font-size:15px;font-weight:800;line-height:1.6}
+.pain-cta strong{display:block;color:var(--gold);font-size:18px;margin-top:4px}
 
 /* Benefits */
 .benefit-list{display:grid;gap:14px}
-.benefit{background:var(--paper);border-radius:14px;padding:22px 18px;box-shadow:0 4px 16px rgba(0,0,0,.05);border-left:5px solid var(--accent)}
-.benefit-no{display:inline-block;background:var(--primary);color:#fff;padding:3px 10px;border-radius:8px;font-size:11px;font-weight:900;letter-spacing:.05em;margin-bottom:8px}
-.benefit h3{font-size:16px;font-weight:700;line-height:1.6;color:var(--ink)}
+@media(min-width:640px){.benefit-list{grid-template-columns:repeat(2,1fr)}}
+.benefit{background:var(--paper);border-radius:14px;padding:22px 18px;box-shadow:var(--shadow-md);border-top:4px solid var(--accent);transition:transform .2s,box-shadow .2s;position:relative}
+.benefit:hover{transform:translateY(-3px)}
+.benefit-no{display:inline-block;background:linear-gradient(135deg,var(--primary),color-mix(in srgb,var(--primary) 70%,#000 30%));color:#fff;padding:4px 11px;border-radius:8px;font-size:10px;font-weight:900;letter-spacing:.06em;margin-bottom:10px}
+.benefit h3{font-size:15px;font-weight:800;line-height:1.55;color:var(--ink)}
+
+/* Steps section */
+.steps-section{background:linear-gradient(180deg,var(--bg) 0%,#fff 100%);padding:40px 0}
+.steps-list{display:grid;gap:14px;position:relative}
+.step{background:#fff;border-radius:14px;padding:20px 18px;box-shadow:var(--shadow-sm);border-left:5px solid var(--primary);position:relative}
+.step-no{display:inline-block;background:linear-gradient(135deg,var(--primary),color-mix(in srgb,var(--primary) 70%,#000 30%));color:#fff;padding:5px 12px;border-radius:8px;font-size:11px;font-weight:900;letter-spacing:.05em;margin-bottom:8px}
+.step-h{font-size:15px;font-weight:800;color:var(--ink);margin-bottom:6px}
+.step-d{font-size:12px;color:var(--muted);line-height:1.7}
+.steps-foot{margin-top:20px;text-align:center;font-size:12px;color:var(--muted);font-weight:700}
+.steps-foot strong{display:block;font-size:16px;color:var(--primary);margin-top:4px}
 
 /* Spec */
-.spec-card{background:var(--paper);border-radius:14px;padding:24px 18px;box-shadow:0 4px 20px rgba(0,0,0,.06)}
+.spec-card{background:var(--paper);border-radius:14px;padding:24px 18px;box-shadow:var(--shadow-md)}
 .spec-header{text-align:center;padding-bottom:18px;border-bottom:2px dashed var(--border);margin-bottom:18px}
-.spec-name{font-size:13px;color:var(--muted);font-weight:700;letter-spacing:.05em;margin-bottom:6px}
+.spec-name{font-size:11px;color:var(--muted);font-weight:800;letter-spacing:.08em;margin-bottom:6px}
 .spec-title{font-size:22px;font-weight:900;color:var(--primary)}
 .spec-table{width:100%;border-collapse:collapse;font-size:13px}
-.spec-table th{text-align:left;padding:10px 8px;background:var(--bg);color:var(--muted);font-weight:700;width:42%;border-bottom:1px solid var(--border)}
-.spec-table td{padding:10px 8px;border-bottom:1px solid var(--border);font-weight:700;color:var(--ink)}
-.cashback-callout{margin-top:18px;padding:16px;background:linear-gradient(135deg,#fff4e6,#ffe7c2);border-radius:12px;border:2px solid var(--accent);text-align:center;display:flex;flex-direction:column;gap:6px}
-.cb-label{font-size:11px;font-weight:900;color:var(--accent);letter-spacing:.05em}
-.cb-amount{font-size:20px;font-weight:900;color:#d4750a}
+.spec-table th{text-align:left;padding:11px 8px;background:var(--bg);color:var(--muted);font-weight:700;width:42%;border-bottom:1px solid var(--border)}
+.spec-table td{padding:11px 8px;border-bottom:1px solid var(--border);font-weight:800;color:var(--ink)}
+.cashback-callout{margin-top:18px;padding:18px;background:linear-gradient(135deg,var(--gold-bg),#fff3c4);border-radius:12px;border:2px solid var(--gold);text-align:center;display:flex;flex-direction:column;gap:6px}
+.cb-label{font-size:11px;font-weight:900;color:var(--gold-dark);letter-spacing:.06em}
+.cb-amount{font-size:22px;font-weight:900;color:#9a5a00}
 .cb-cond{font-size:10px;color:var(--muted);line-height:1.6}
 
-/* Compare */
-.compare-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;background:var(--paper);border-radius:14px;box-shadow:0 4px 16px rgba(0,0,0,.05)}
-.compare-table{width:100%;min-width:560px;border-collapse:collapse;font-size:12px}
-.compare-table th{background:var(--ink);color:#fff;padding:12px 8px;text-align:center;font-weight:700;font-size:11px}
-.compare-table td{padding:14px 8px;text-align:center;border-bottom:1px solid var(--border);font-weight:600}
-.rank-badge{display:inline-block;background:var(--muted);color:#fff;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:900;margin-bottom:4px}
-.rank-1{background:var(--accent)}
-.row-recommend{background:#fff7e6}
-.row-recommend td{color:var(--ink);font-weight:900}
+/* Simulation card */
+.sim-card{background:#fff;border-radius:14px;padding:22px 18px;margin-top:14px;box-shadow:var(--shadow-md);border:2px solid var(--success)}
+.sim-title{font-size:13px;font-weight:900;color:var(--success);letter-spacing:.04em;margin-bottom:14px;text-align:center}
+.sim-row{display:flex;justify-content:space-between;align-items:baseline;padding:8px 0;border-bottom:1px dashed var(--border);font-size:13px}
+.sim-row:last-of-type{border-bottom:0}
+.sim-row span{color:var(--muted);font-weight:700}
+.sim-row strong{font-weight:900;font-size:15px;color:var(--ink)}
+.sim-final{margin-top:14px;padding:14px;background:linear-gradient(135deg,#dcfce7,#bbf7d0);border-radius:10px;text-align:center}
+.sim-final-label{font-size:11px;font-weight:900;color:var(--success);letter-spacing:.05em;margin-bottom:4px}
+.sim-final-value{font-size:26px;font-weight:900;color:#15803d;line-height:1}
+.sim-final-value small{font-size:14px;margin-left:3px}
 
-/* Voices */
+/* Compare */
+.compare-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;background:var(--paper);border-radius:14px;box-shadow:var(--shadow-md)}
+.compare-table{width:100%;min-width:600px;border-collapse:collapse;font-size:12px}
+.compare-table th{background:var(--ink);color:#fff;padding:14px 8px;text-align:center;font-weight:800;font-size:11px;letter-spacing:.04em}
+.compare-table td{padding:16px 8px;text-align:center;border-bottom:1px solid var(--border);font-weight:700}
+.rank-badge{display:inline-block;background:var(--muted);color:#fff;padding:3px 10px;border-radius:12px;font-size:10px;font-weight:900;margin-bottom:4px}
+.rank-1{background:linear-gradient(135deg,var(--gold),var(--gold-dark));color:#3a2a00}
+.rank-2{background:#94a3b8}
+.rank-3{background:#cd7f32}
+.row-recommend{background:linear-gradient(90deg,var(--gold-bg),#fff8e1)}
+.row-recommend td{color:var(--ink);font-weight:900}
+.compare-cta{display:inline-block;background:var(--accent);color:#fff;padding:6px 12px;border-radius:7px;font-size:10px;font-weight:900;margin-top:4px}
+
+/* Voices with stars */
 .voice-list{display:grid;gap:12px}
-.voice{background:var(--paper);border-radius:14px;padding:18px 16px;box-shadow:0 3px 12px rgba(0,0,0,.04);border:1px solid var(--border)}
-.voice-text{font-size:13px;line-height:1.85;color:var(--ink);margin-bottom:8px}
-.voice-name{font-size:11px;color:var(--muted);text-align:right;font-weight:700}
+.voice{background:var(--paper);border-radius:14px;padding:18px 16px;box-shadow:var(--shadow-sm);border:1px solid var(--border);position:relative}
+.voice-stars{font-size:14px;color:var(--gold-dark);letter-spacing:.1em;margin-bottom:8px;font-weight:900}
+.voice-stars small{color:var(--muted);font-size:11px;margin-left:6px;letter-spacing:0;font-weight:700}
+.voice-text{font-size:13px;line-height:1.85;color:var(--ink);margin-bottom:10px;font-weight:600}
+.voice-name{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--muted);font-weight:700}
+.voice-avatar{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--primary),color-mix(in srgb,var(--primary) 60%,#000 40%));color:#fff;display:grid;place-items:center;font-weight:900;font-size:13px;flex-shrink:0}
+
+/* Campaign summary section */
+.camp-section{padding:36px 0;background:linear-gradient(135deg,var(--ink) 0%,#0b1020 100%);color:#fff;text-align:center}
+.camp-tag{display:inline-block;background:linear-gradient(90deg,var(--gold),var(--gold-dark));color:#3a2a00;padding:5px 16px;border-radius:18px;font-size:11px;font-weight:900;letter-spacing:.06em;margin-bottom:14px}
+.camp-title{font-size:22px;font-weight:900;margin-bottom:12px;color:#fff}
+.camp-title em{color:var(--gold);font-style:normal}
+.camp-amount-row{display:flex;justify-content:center;align-items:baseline;gap:8px;margin:18px 0;flex-wrap:wrap}
+.camp-amount-label{font-size:12px;opacity:.85;font-weight:700}
+.camp-amount{font-size:46px;font-weight:900;color:var(--gold);line-height:1;letter-spacing:-.02em}
+.camp-amount small{font-size:18px;margin-left:3px}
+.camp-deadline{font-size:12px;opacity:.85;margin-bottom:18px}
+.camp-deadline strong{color:var(--gold);font-weight:900;font-size:13px}
 
 /* FAQ */
-.faq{background:var(--paper);border-radius:10px;padding:0;margin-bottom:8px;border:1px solid var(--border);overflow:hidden}
-.faq summary{padding:16px;font-weight:700;font-size:14px;cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center;gap:10px;color:var(--ink)}
+.faq{background:var(--paper);border-radius:10px;padding:0;margin-bottom:8px;border:1px solid var(--border);overflow:hidden;box-shadow:var(--shadow-sm)}
+.faq summary{padding:16px;font-weight:800;font-size:14px;cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center;gap:10px;color:var(--ink)}
 .faq summary::-webkit-details-marker{display:none}
 .faq summary::after{content:"+";font-size:22px;color:var(--primary);font-weight:900;flex-shrink:0;transition:transform .2s}
 .faq[open] summary::after{transform:rotate(45deg)}
 .faq p{padding:0 16px 16px;font-size:13px;line-height:1.85;color:var(--muted)}
 
-/* CTA fixed bottom */
-.cta-fixed{position:fixed;left:0;right:0;bottom:0;z-index:50;background:rgba(255,255,255,.96);backdrop-filter:blur(14px);border-top:1px solid var(--border);padding:10px 16px;box-shadow:0 -4px 20px rgba(0,0,0,.08)}
-.cta-fixed-inner{max-width:680px;margin:0 auto}
-.cta-fixed .cta-btn{padding:14px 16px;font-size:15px;animation:none}
+/* Final CTA Section */
+.final-cta{padding:50px 0;background:linear-gradient(135deg,var(--gold-bg),#fff3c4);text-align:center}
+.final-pre{font-size:13px;color:var(--gold-dark);font-weight:900;letter-spacing:.05em;margin-bottom:8px}
+.final-title{font-size:24px;font-weight:900;color:var(--ink);margin-bottom:14px;line-height:1.4}
+.final-title em{color:var(--gold-dark);font-style:normal}
+.final-desc{font-size:13px;color:var(--muted);max-width:480px;margin:0 auto 22px;line-height:1.85;font-weight:600}
+.final-note{margin-top:14px;font-size:11px;color:var(--muted)}
 
-/* Legal */
-.legal{padding:30px 16px;background:#1a1d28;color:#9aa3b8;font-size:11px;line-height:1.8}
-.legal-inner{max-width:680px;margin:0 auto}
-.legal h4{color:#cdd3e0;font-size:12px;margin-bottom:10px;font-weight:700}
+/* CTA fixed bottom (mobile sticky) */
+.cta-fixed{position:fixed;left:0;right:0;bottom:0;z-index:50;background:rgba(255,255,255,.97);backdrop-filter:blur(14px);border-top:1px solid var(--border);padding:10px 16px;box-shadow:0 -8px 24px rgba(0,0,0,.1)}
+.cta-fixed-inner{max-width:720px;margin:0 auto}
+.cta-fixed .cta-btn{padding:14px 16px;font-size:14px;animation:none}
+.cta-fixed .cta-btn::before{display:none}
+
+/* Legal Footer */
+.legal{padding:30px 16px;background:#0f1320;color:#9aa3b8;font-size:11px;line-height:1.8}
+.legal-inner{max-width:720px;margin:0 auto}
+.legal h4{color:#cdd3e0;font-size:12px;margin-bottom:10px;font-weight:800}
 .legal p{margin-bottom:10px}
 .legal a{color:#7ec0d4}
 
@@ -119,19 +230,72 @@ a{color:inherit;text-decoration:none}
 </head>
 <body>
 
-<!-- ファーストビュー -->
+<!-- TOP NOTICE -->
+<div class="top-notice"><span class="blink"></span>6月5日 当サイト限定キャンペーン実施中</div>
+
+<!-- HEADER -->
+<header class="site-header">
+  <div class="header-inner">
+    <a href="#top" class="brand"><span class="brand-icon">⚡</span><span>通信比較ナビ</span></a>
+    <a href="#cta" class="cta-link header-cta">申込はこちら</a>
+  </div>
+</header>
+
+<main id="top">
+
+<!-- ファーストビュー（メガ強化版） -->
 <section class="fv">
-  <div class="container">
-    <span class="fv-eyebrow">中小企業・個人事業主の事務所WiFi</span>
-    <h1 class="fv-title">法人契約対応・領収書発行・経費計上スムーズ<br><em>auひかり</em></h1>
+  <div class="container fv-content">
+    <span class="fv-tag">中小企業・個人事業主の事務所WiFi向け</span>
+    <h1 class="fv-title">法人契約対応・領収書発行・経費計上スムーズ<span class="fv-title-product">auひかり</span></h1>
     <p class="fv-sub">従業員1-20名の中小企業経営者・個人事業主。事務所でテレワーク・Web会議・クラウド業務を行う。法人契約で経費処理したい。</p>
+    <div class="fv-cb">
+      <div class="fv-cb-pre">― 当サイト限定特典 ―</div>
+      <div class="fv-cb-amount">63,000<small>円</small></div>
+      <div class="fv-cb-post">最大キャッシュバック</div>
+    </div>
     <div class="fv-badges">
       <span class="fv-badge">月額 5,610円</span>
       <span class="fv-badge">無制限</span>
-      <span class="fv-badge">36ヶ月</span>
+      <span class="fv-badge">36ヶ月契約</span>
     </div>
-    <a href="#cta" class="cta-link cta-btn">公式サイトで詳細を見る</a>
+    <a href="#cta" class="cta-link cta-btn cta-btn-large">公式サイトで詳細を見る</a>
     <p class="cta-note">※申込・お見積もりは公式サイトで</p>
+    <div class="fv-trust">
+      <span>📋 申込はオンライン</span>
+      <span>🚚 開通工事の日程調整・開通完了</span>
+      <span>✨ 充実サポート</span>
+    </div>
+  </div>
+</section>
+
+<!-- 結論：おすすめNo.1セクション -->
+<section class="rec1-section">
+  <div class="container">
+    <div class="rec1-eyebrow">本日のおすすめプラン</div>
+    <div class="rec1-card">
+      <div class="rec1-crown">👑</div>
+      <div style="text-align:center"><span class="rec1-rank">第1位</span></div>
+      <h2 class="rec1-name">auひかり</h2>
+      <p class="rec1-cat">光回線・独自回線</p>
+      <div class="rec1-grid">
+        <div class="rec1-item">
+          <div class="rec1-label">月額料金</div>
+          <div class="rec1-value">5,610円</div>
+        </div>
+        <div class="rec1-item">
+          <div class="rec1-label">契約縛り</div>
+          <div class="rec1-value">36ヶ月</div>
+        </div>
+        <div class="rec1-item rec1-hl">
+          <div class="rec1-label">⭐ 当サイト限定キャッシュバック</div>
+          <div class="rec1-value">63,000円</div>
+        </div>
+      </div>
+      <div class="rec1-stars">★★★★★<small>ご利用者からの高評価</small></div>
+      <a href="#cta" class="cta-link cta-btn cta-btn-large">公式サイトで申込手続きへ</a>
+      <p class="cta-note" style="text-align:center;color:var(--muted);margin-top:10px">※適用条件は公式サイトでご確認ください</p>
+    </div>
   </div>
 </section>
 
@@ -139,25 +303,37 @@ a{color:inherit;text-decoration:none}
 <section class="section">
   <div class="container">
     <h2 class="section-title">こんな<em>お悩み</em>ありませんか？</h2>
+    <p class="section-sub">中小企業・個人事業主の事務所WiFiでよくあるお悩み</p>
     <div class="pain-card">
       <ul class="pain-list"><li><span class="check">✓</span>事務所のネット環境が古い</li><li><span class="check">✓</span>Web会議増えて回線が追いつかない</li><li><span class="check">✓</span>法人契約の手続きが面倒</li><li><span class="check">✓</span>経費処理しやすい料金体系がいい</li></ul>
-      <p class="pain-cta">そのお悩み、<br>「auひかり」で解決できます。</p>
+      <p class="pain-cta">その悩みを解消する選択肢が<strong>「auひかり」</strong></p>
     </div>
   </div>
 </section>
 
-<!-- ベネフィット -->
+<!-- 選ばれる理由 -->
 <section class="section">
   <div class="container">
-    <h2 class="section-title"><em>選ばれる</em>3つの理由</h2>
-    <div class="benefit-list"><article class="benefit"><div class="benefit-no">01</div><h3>独自回線でフレッツ混雑の影響を受けにくい</h3></article><article class="benefit"><div class="benefit-no">02</div><h3>auスマホ・UQモバイルとのセット割対応</h3></article><article class="benefit"><div class="benefit-no">03</div><h3>高額キャッシュバック特典</h3></article></div>
+    <h2 class="section-title"><em>選ばれる</em>理由</h2>
+    <p class="section-sub">auひかりが支持される3つのポイント</p>
+    <div class="benefit-list"><article class="benefit"><div class="benefit-no">REASON 01</div><h3>💎 独自回線でフレッツ混雑の影響を受けにくい</h3></article><article class="benefit"><div class="benefit-no">REASON 02</div><h3>⚡ auスマホ・UQモバイルとのセット割対応</h3></article><article class="benefit"><div class="benefit-no">REASON 03</div><h3>🎯 高額キャッシュバック特典</h3></article></div>
   </div>
 </section>
 
-<!-- スペック / 料金 -->
+<!-- 申込まで3STEP -->
+<section class="steps-section">
+  <div class="container">
+    <h2 class="section-title">申込まで<em>カンタン3STEP</em></h2>
+    <p class="section-sub">公式サイトでの申込手順</p>
+    <div class="steps-list"><div class="step"><div class="step-no">STEP 01</div><h3 class="step-h">公式サイトで申込</h3><p class="step-d">本ページのボタンから公式サイトへ移動</p></div><div class="step"><div class="step-no">STEP 02</div><h3 class="step-h">必要事項を入力</h3><p class="step-d">住所・お支払い情報を入力（約5〜10分）</p></div><div class="step"><div class="step-no">STEP 03</div><h3 class="step-h">利用開始</h3><p class="step-d">開通工事の日程調整・開通完了</p></div></div>
+    <p class="steps-foot">所要時間の目安<strong>約5〜10分</strong></p>
+  </div>
+</section>
+
+<!-- スペック / 料金 + 実質月額シミュレーション -->
 <section class="section">
   <div class="container">
-    <h2 class="section-title">料金・<em>スペック</em></h2>
+    <h2 class="section-title">料金・<em>スペック詳細</em></h2>
     <div class="spec-card">
       <div class="spec-header">
         <p class="spec-name">光回線・独自回線</p>
@@ -177,48 +353,87 @@ a{color:inherit;text-decoration:none}
       <span class="cb-cond">※代理店特典。開通12ヶ月後に振込手続き案内、要返信</span>
     </div>
     </div>
-    <div style="margin-top:20px"><a href="#cta" class="cta-link cta-btn">公式サイトで申込む</a></div>
+    <div class="sim-card">
+      <p class="sim-title">💰 実質月額シミュレーション（2年間）</p>
+      <div class="sim-row"><span>月額料金 × 24ヶ月</span><strong>134,640円</strong></div>
+      <div class="sim-row"><span>初期費用</span><strong>33,000円</strong></div>
+      <div class="sim-row"><span>キャッシュバック</span><strong style="color:var(--success)">-63,000円</strong></div>
+      <div class="sim-final">
+        <div class="sim-final-label">実質月額</div>
+        <div class="sim-final-value">4,360<small>円</small></div>
+      </div>
+      <p style="font-size:10px;color:var(--muted);margin-top:10px;text-align:center">※キャッシュバック適用後の試算。実際の適用には所定の条件・手続きが必要です。</p>
+    </div>
+    <div style="margin-top:20px"><a href="#cta" class="cta-link cta-btn">公式サイトで詳細を見る</a></div>
   </div>
 </section>
 
-<!-- 比較表 -->
+<!-- 比較表（ランキング化） -->
 <section class="section">
   <div class="container">
-    <h2 class="section-title">他社との<em>比較</em></h2>
+    <h2 class="section-title">同カテゴリ<em>3社比較</em></h2>
+    <p class="section-sub">同じカテゴリの主要サービスを比較</p>
     <div class="compare-wrap">
       <table class="compare-table">
-        <thead><tr><th>サービス</th><th>月額</th><th>容量</th><th>キャッシュバック</th><th>縛り</th></tr></thead>
+        <thead><tr><th>ランキング</th><th>月額</th><th>容量</th><th>キャッシュバック</th><th>縛り</th></tr></thead>
         <tbody><tr class="row-recommend">
-          <td><span class="rank-badge rank-1">No.1</span><br><strong>auひかり</strong></td>
+          <td><span class="rank-badge rank-1">👑 1位</span><br><strong>auひかり</strong><br><span class="compare-cta">⭐ 当ページ推奨</span></td>
           <td>5,610円</td>
-          <td>無制限</td>
-          <td>63,000円</td>
+          <td style="font-size:11px">無制限</td>
+          <td><strong style="color:#9a5a00">63,000円</strong></td>
           <td>36ヶ月</td>
         </tr><tr class="">
-          <td><span class="rank-badge">No.2</span><br><strong>BIGLOBE光</strong></td>
+          <td><span class="rank-badge rank-2">🥈 2位</span><br><strong>BIGLOBE光</strong></td>
           <td>4,378円</td>
-          <td>無制限</td>
-          <td>40,000円</td>
+          <td style="font-size:11px">無制限</td>
+          <td><strong style="color:#9a5a00">40,000円</strong></td>
           <td>24ヶ月</td>
         </tr><tr class="">
-          <td><span class="rank-badge">No.3</span><br><strong>@nifty光</strong></td>
+          <td><span class="rank-badge rank-3">🥉 3位</span><br><strong>@nifty光</strong></td>
           <td>4,378円</td>
-          <td>無制限</td>
-          <td>50,000円</td>
+          <td style="font-size:11px">無制限</td>
+          <td><strong style="color:#9a5a00">50,000円</strong></td>
           <td>24ヶ月</td>
         </tr></tbody>
       </table>
     </div>
-    <p style="font-size:10px;color:var(--muted);margin-top:8px;line-height:1.7">※2026年時点の各社公式情報をもとに作成。最新情報・適用条件は各公式サイトでご確認ください。</p>
+    <p style="font-size:10px;color:var(--muted);margin-top:8px;line-height:1.7;text-align:center">※2026年時点の各社公式情報をもとに作成。最新情報・適用条件は各公式サイトでご確認ください。</p>
   </div>
 </section>
 
-<!-- 口コミ -->
+<!-- 口コミ（星評価付き） -->
 <section class="section">
   <div class="container">
-    <h2 class="section-title">利用者の<em>声</em></h2>
-    <div class="voice-list"><article class="voice"><p class="voice-text">"事務所5名分のWeb会議が同時に使えるようになって、業務効率が上がりました。法人契約で経費処理もスムーズ。"</p><p class="voice-name">— Iさん（45歳・建設業経営）</p></article><article class="voice"><p class="voice-text">"クラウド会計を使うので回線品質が重要でした。乗換後はストレスゼロです。"</p><p class="voice-name">— Mさん（38歳・税理士事務所）</p></article><article class="voice"><p class="voice-text">"領収書発行もしっかり対応してくれて、経費計上が楽になりました。"</p><p class="voice-name">— Kさん（42歳・個人事業主）</p></article></div>
+    <h2 class="section-title">ご利用者の<em>声</em></h2>
+    <p class="section-sub">実際に利用された方からの感想</p>
+    <div class="voice-list"><article class="voice">
+          <div class="voice-stars">★★★★★<small>満足度・高評価</small></div>
+          <p class="voice-text">「事務所5名分のWeb会議が同時に使えるようになって、業務効率が上がりました。法人契約で経費処理もスムーズ。」</p>
+          <div class="voice-name"><div class="voice-avatar">I</div>— Iさん（45歳・建設業経営）</div>
+        </article><article class="voice">
+          <div class="voice-stars">★★★★★<small>満足度・高評価</small></div>
+          <p class="voice-text">「クラウド会計を使うので回線品質が重要でした。乗換後はストレスゼロです。」</p>
+          <div class="voice-name"><div class="voice-avatar">M</div>— Mさん（38歳・税理士事務所）</div>
+        </article><article class="voice">
+          <div class="voice-stars">★★★★★<small>満足度・高評価</small></div>
+          <p class="voice-text">「領収書発行もしっかり対応してくれて、経費計上が楽になりました。」</p>
+          <div class="voice-name"><div class="voice-avatar">K</div>— Kさん（42歳・個人事業主）</div>
+        </article></div>
     <p style="font-size:10px;color:var(--muted);margin-top:10px;text-align:center">※個人の感想であり、効果・満足度を保証するものではありません。</p>
+  </div>
+</section>
+
+<!-- キャンペーン要約セクション -->
+<section class="camp-section">
+  <div class="container">
+    <span class="camp-tag">⚡ 当サイト限定特典</span>
+    <h2 class="camp-title">最大<em>63,000円</em>キャッシュバック</h2>
+    <div class="camp-amount-row">
+      <span class="camp-amount-label">最大</span>
+      <div class="camp-amount">63,000<small>円</small></div>
+    </div>
+    <p class="camp-deadline">期間限定キャンペーン<br><strong>代理店特典。開通12ヶ月後に振込手続き案内、要返信</strong></p>
+    <div style="max-width:480px;margin:0 auto"><a href="#cta" class="cta-link cta-btn cta-btn-large">今すぐ公式サイトで確認</a></div>
   </div>
 </section>
 
@@ -226,19 +441,23 @@ a{color:inherit;text-decoration:none}
 <section class="section">
   <div class="container">
     <h2 class="section-title">よくある<em>質問</em></h2>
+    <p class="section-sub">申込前に気になるポイントを解説</p>
     <details class="faq"><summary>Q. 工事はどのくらいかかりますか？</summary><p>戸建てで2〜4週間、マンションで1〜3週間が目安です。繁忙期はさらに時間がかかる場合があります。</p></details><details class="faq"><summary>Q. 賃貸でも契約できますか？</summary><p>建物の配線方式や管理会社の許可により異なります。事前にオーナー・管理会社にご確認ください。</p></details><details class="faq"><summary>Q. 引っ越し時はどうなりますか？</summary><p>移転手続きで継続利用が可能です。手数料や工事費が発生する場合があります。</p></details><details class="faq"><summary>Q. プロバイダはどう選べばいいですか？</summary><p>速度・料金・特典が異なります。本ページ記載のおすすめプロバイダを参考にしてください。</p></details><details class="faq"><summary>Q. 解約金はいくらですか？</summary><p>契約期間・解約タイミングにより異なります。詳細は公式ページでご確認ください。</p></details>
   </div>
 </section>
 
 <!-- 最終CTA -->
-<section class="section" id="cta" style="text-align:center">
+<section class="final-cta" id="cta">
   <div class="container">
-    <h2 class="section-title">まずは<em>公式サイト</em>で確認</h2>
-    <p style="font-size:14px;line-height:1.9;color:var(--muted);margin-bottom:20px">最新のキャンペーン・適用条件・対応エリアは<br>公式サイトでご確認ください。</p>
-    <a href="#" class="cta-link cta-btn">公式サイトで詳細を見る</a>
-    <p class="cta-note" style="color:var(--muted);margin-top:12px">※申込・解約に関する詳細は公式サイトをご参照ください</p>
+    <p class="final-pre">― 最後にもう一度 ―</p>
+    <h2 class="final-title">まずは<em>公式サイト</em>で<br>キャンペーン詳細を確認</h2>
+    <p class="final-desc">最新のキャンペーン内容・適用条件・対応エリアは公式サイトでご確認いただけます。申込手続きはオンラインで完結します。</p>
+    <a href="#" class="cta-link cta-btn cta-btn-large">auひかり 公式サイトを見る</a>
+    <p class="final-note">※申込・解約に関する詳細は公式サイトをご参照ください</p>
   </div>
 </section>
+
+</main>
 
 <!-- フッター固定CTA -->
 <div class="cta-fixed">
@@ -250,13 +469,15 @@ a{color:inherit;text-decoration:none}
 <!-- 法令注記 -->
 <footer class="legal">
   <div class="legal-inner">
-    <h4>表記に関する注意</h4>
+    <h4>表記に関する注意事項</h4>
     <p>本ページの情報は2026年06月時点のものです。料金・キャンペーン内容・適用条件は予告なく変更される場合があります。最新の情報は公式サイトでご確認ください。</p>
     <p>※掲載のキャッシュバックは代理店経由の特典であり、適用には所定の条件・手続きが必要です。受取手続きを忘れた場合は無効となります。</p>
-    <p>※「利用者の声」は実在ユーザーの感想を要約・編集して掲載しているものを含みます。効果・満足度を保証するものではありません。</p>
+    <p>※「ご利用者の声」「ランキング」は当サイト独自の評価・編集を含みます。効果・満足度を保証するものではありません。</p>
     <p>※比較表の内容は各社公式情報をもとに作成しています。提供条件はエリア・建物・時期により異なります。</p>
+    <p>※「実質月額シミュレーション」は条件達成時の試算であり、実際の請求額・キャッシュバック適用額とは異なる場合があります。</p>
     <h4 style="margin-top:18px">本サイトについて</h4>
-    <p>本サイトはauひかりの正規代理店およびアフィリエイトプログラムを通じて、商品情報・申込導線を提供しています。お申込み・解約に関するお問い合わせは公式サイトへお願いいたします。</p>
+    <p>本サイトはauひかりのアフィリエイトプログラムを通じて、商品情報・申込導線を提供しています。お申込み・解約に関するお問い合わせは公式サイトへお願いいたします。</p>
+    <p style="margin-top:12px"><a href="/affiliate/privacy.html">プライバシーポリシー</a> ｜ <a href="/affiliate/legal.html">運営者情報</a></p>
     <p style="margin-top:16px;text-align:center;opacity:.6">© 2026 通信比較ナビ All rights reserved.</p>
   </div>
 </footer>
