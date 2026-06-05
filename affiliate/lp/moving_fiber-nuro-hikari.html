@@ -226,6 +226,105 @@ a{color:inherit;text-decoration:none}
 .legal a{color:#7ec0d4}
 
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* ================================================
+   DESKTOP LAYOUT (タブレット〜PC)
+   ================================================ */
+@media(min-width:768px){
+  body{font-size:16px;line-height:1.85;padding-bottom:90px}
+  .container{max-width:920px;padding:0 32px}
+  .section{padding:60px 0}
+  .section-title{font-size:28px;margin-bottom:10px}
+  .section-sub{font-size:13px;margin-bottom:36px}
+
+  /* FV */
+  .fv{padding:48px 0 56px}
+  .fv-title{font-size:34px}
+  .fv-title-product{font-size:46px}
+  .fv-sub{font-size:15px;max-width:560px}
+  .fv-cb{padding:18px 40px}
+  .fv-cb-amount{font-size:56px}
+  .fv-cb-amount small{font-size:22px}
+  .fv-cb-post{font-size:15px}
+  .fv-badges{gap:10px}
+  .fv-badge{font-size:13px;padding:8px 16px}
+  .cta-btn{max-width:540px;margin:0 auto;font-size:18px;padding:22px 28px}
+  .cta-btn-large{padding:24px 32px;font-size:20px}
+  .fv-trust{gap:24px;font-size:12px;margin-top:24px}
+
+  /* Recommendation No.1 - ワイド版 */
+  .rec1-section{padding:56px 0 32px}
+  .rec1-card{padding:42px 48px;max-width:760px;margin:0 auto}
+  .rec1-crown{font-size:48px}
+  .rec1-name{font-size:32px;margin-bottom:6px}
+  .rec1-cat{font-size:13px;margin-bottom:26px}
+  .rec1-grid{grid-template-columns:1fr 1fr 2fr;gap:14px;margin-bottom:22px}
+  .rec1-grid .rec1-hl{grid-column:auto}
+  .rec1-item{padding:18px 14px}
+  .rec1-value{font-size:22px}
+  .rec1-hl .rec1-value{font-size:30px}
+  .rec1-stars{font-size:18px;margin-bottom:24px}
+  .rec1-card > a.cta-link{max-width:520px;margin:0 auto;display:flex}
+
+  /* Benefits - 3カラム */
+  .benefit-list{grid-template-columns:repeat(3,1fr);gap:18px}
+  .benefit{padding:28px 22px}
+  .benefit h3{font-size:16px}
+
+  /* Steps - 3カラム横並び */
+  .steps-list{grid-template-columns:repeat(3,1fr);gap:18px;position:relative}
+  .step{padding:28px 22px}
+  .step-h{font-size:17px}
+  .step-d{font-size:13px}
+
+  /* Compare table - 余白追加で見やすく */
+  .compare-table{font-size:13px}
+  .compare-table th{padding:16px 12px;font-size:12px}
+  .compare-table td{padding:18px 12px}
+
+  /* Voices - 3カラム */
+  .voice-list{grid-template-columns:repeat(3,1fr);gap:16px}
+  .voice{padding:22px 20px}
+
+  /* Final CTA */
+  .final-cta{padding:72px 0}
+  .final-title{font-size:32px}
+  .final-desc{font-size:14px;max-width:560px}
+
+  /* Campaign section */
+  .camp-section{padding:56px 0}
+  .camp-title{font-size:30px}
+  .camp-amount{font-size:64px}
+  .camp-amount small{font-size:24px}
+
+  /* Pain section */
+  .pain-card{padding:36px 36px}
+  .pain-list li{font-size:15px;padding:14px 0}
+
+  /* Header */
+  .header-inner{padding:0 32px;max-width:1100px}
+  .brand{font-size:16px}
+  .brand-icon{width:32px;height:32px;font-size:16px}
+  .header-cta{font-size:13px;padding:10px 20px}
+
+  /* Top notice */
+  .top-notice{font-size:13px;padding:9px 16px}
+
+  /* Mobile固定CTAをPCでは非表示 */
+  .cta-fixed{display:none}
+  body{padding-bottom:0}
+}
+
+/* 大画面 LCD */
+@media(min-width:1280px){
+  .container{max-width:1080px}
+  .fv-title{font-size:38px}
+  .fv-title-product{font-size:52px}
+  .fv-cb-amount{font-size:64px}
+  .rec1-name{font-size:36px}
+  .camp-amount{font-size:72px}
+  .header-inner{max-width:1200px}
+}
 </style>
 </head>
 <body>
