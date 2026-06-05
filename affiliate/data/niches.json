@@ -58,7 +58,7 @@
       "persona": "通信費を見直したい20-50代。月のスマホ料金が8,000円超え、半額以下に抑えたい。",
       "pain_points": ["スマホ代が月8,000円超えてキツい", "大手キャリアの料金プランが複雑", "MNP手続きが面倒で踏み出せない", "ポイント還元で実質安くしたい"],
       "search_keywords": ["格安SIM 乗換 おすすめ", "スマホ料金 安く", "MNP キャンペーン 比較", "楽天モバイル 評判", "スマホ 月3000円"],
-      "preferred_offers": ["rakuten-mobile", "ymobile", "linemo", "ahamo", "mineo", "iijmio"],
+      "preferred_offers": ["ahamo", "libmo", "rakuten-mobile", "ymobile", "linemo", "mineo", "iijmio"],
       "primary_appeal": "月3,000円台・縛りなし・ポイント還元",
       "ng_appeal": ["速度・電波品質訴求"]
     },
@@ -88,7 +88,7 @@
       "persona": "中高生の子を持つ40-50代の親。子供用スマホを契約。月額を抑えつつフィルタリング等の安心機能も欲しい。",
       "pain_points": ["子供のスマホ代を抑えたい", "使いすぎが心配で容量制限したい", "有害サイトのフィルタリングが必須", "MNP手続きが親には複雑"],
       "search_keywords": ["子供 スマホ 格安", "中学生 スマホ おすすめ", "高校生 格安SIM", "キッズスマホ プラン", "ジュニアスマホ 比較"],
-      "preferred_offers": ["ymobile", "linemo", "rakuten-mobile", "mineo", "iijmio"],
+      "preferred_offers": ["libmo", "ymobile", "linemo", "rakuten-mobile", "mineo", "iijmio"],
       "primary_appeal": "月990円〜・容量制限可能・フィルタリング対応",
       "ng_appeal": ["大容量プラン推し", "ビジネス向け訴求"]
     },
@@ -178,7 +178,7 @@
       "persona": "docomo契約中の20-50代。長年利用しているが料金見直したい。dポイント・ファミリー割引を保ちつつコスト削減したい。",
       "pain_points": ["ドコモ歴長くて他社が不安", "dポイント還元を失いたくない", "ファミリー割引対象が減りそう", "電波・店舗サポートは欲しい"],
       "search_keywords": ["ドコモ 乗換 おすすめ", "docomo から ahamo", "ドコモ MNP キャンペーン", "ドコモ光 比較", "ドコモユーザー 安く"],
-      "preferred_offers": ["ahamo", "docomo-hikari", "rakuten-mobile", "iijmio", "mineo"],
+      "preferred_offers": ["ahamo", "libmo", "docomo-hikari", "rakuten-mobile", "iijmio", "mineo"],
       "primary_appeal": "ドコモ回線品質キープ・dポイント連携・スムーズな乗換",
       "ng_appeal": ["楽天Linkのみ推し", "電波品質劣化案件"]
     },
