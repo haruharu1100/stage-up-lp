@@ -1046,12 +1046,21 @@ td small{{color:#6a7180;font-size:11px}}
 
 
 # ============================================================
+# 静的オーバーライドスラグ（手作り版 - 自動生成で上書きしない）
+# ============================================================
+STATIC_OVERRIDE_SLUGS = {
+    "one_person_room-softbank-air",  # プレミアム手作りLP（Room WiFi Review版）
+}
+
+
+# ============================================================
 # 生成ループ
 # ============================================================
 def main():
     os.makedirs(OUT_DIR, exist_ok=True)
     count = 0
     skipped = 0
+    overridden = 0
     generated = {}  # niche_id -> [(offer_id, slug)]
     for niche in NICHES.values():
         generated[niche["id"]] = []
@@ -1061,8 +1070,16 @@ def main():
                 print(f"  ⚠️  offer not found: {offer_id} (niche: {niche['id']})")
                 skipped += 1
                 continue
-            html = gen_lp(niche, offer)
             slug = f"{niche['id']}-{offer_id}"
+
+            # 静的オーバーライドがある場合はスキップ（手作りLPを保護）
+            if slug in STATIC_OVERRIDE_SLUGS:
+                print(f"  ⏩ {slug}.html (static override - skipped)")
+                generated[niche["id"]].append((offer_id, slug))
+                overridden += 1
+                continue
+
+            html = gen_lp(niche, offer)
             filename = f"{slug}.html"
             with open(f"{OUT_DIR}/{filename}", "w", encoding="utf-8") as f:
                 f.write(html)
@@ -1076,6 +1093,8 @@ def main():
     print(f"  ✓ index.html (管理ダッシュボード)")
 
     print(f"\n✅ 生成完了: {count} 本のLP")
+    if overridden:
+        print(f"   静的オーバーライド保護: {overridden} 件")
     if skipped:
         print(f"   スキップ: {skipped} 件")
     print(f"   出力先: {OUT_DIR}")
