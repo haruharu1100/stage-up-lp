@@ -434,9 +434,18 @@ a{color:inherit;text-decoration:none;transition:color .2s,opacity .2s}
   var destination = baseUrl + (carried.length ? sep + carried.join("&") : "");
   document.querySelectorAll("a.cta-link").forEach(function (link) {
     link.href = destination;
-    link.addEventListener("click", function () {
-      try { if (window.gtag) { window.gtag("event","cta_click",{offer:"zeus-wifi",niche:"business_traveler",page_variant:"premium"});
-          window.gtag("event","conversion",{"send_to":"AW-18213756380/p9RBCNzIt7kcENy7_-xD","value":10000.0,"currency":"JPY"}); } } catch (e) {}
+    link.addEventListener("click", function (e) {
+      var navigated = false;
+      var go = function () { if (navigated) return; navigated = true; window.location.href = destination; };
+      try {
+        if (window.gtag) {
+          e.preventDefault();
+          window.gtag("event","cta_click",{offer:"zeus-wifi",niche:"business_traveler",page_variant:"premium",transport_type:"beacon"});
+          window.gtag("event","conversion",{"send_to":"AW-18213756380/p9RBCNzIt7kcENy7_-xD","value":10000.0,"currency":"JPY",transport_type:"beacon"});
+          // 念のため 350ms 後にナビゲート（gtag の送信猶予を確保）
+          setTimeout(go, 350);
+        }
+      } catch (err) { go(); }
     });
   });
 })();

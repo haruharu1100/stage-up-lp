@@ -432,12 +432,14 @@ def gen_lp(niche, offer):
     cv_value = TRACKING.get('google_ads_conversion_value_jpy', 10000)
     cv_send_to = f"{aw_id}/{cv_label}" if (aw_id and cv_label) else ""
 
+    # beacon transport で離脱前に確実に送信
     if cv_send_to:
-        cta_event_js = f"""window.gtag("event","cta_click",{{offer:"{offer['id']}",niche:"{niche['id']}",page_variant:"premium"}});
-          window.gtag("event","conversion",{{"send_to":"{cv_send_to}","value":{cv_value}.0,"currency":"JPY"}});"""
+        cta_event_js = f"""window.gtag("event","cta_click",{{offer:"{offer['id']}",niche:"{niche['id']}",page_variant:"premium",transport_type:"beacon"}});
+          window.gtag("event","conversion",{{"send_to":"{cv_send_to}","value":{cv_value}.0,"currency":"JPY",transport_type:"beacon"}});"""
     else:
-        cta_event_js = f"""window.gtag("event","cta_click",{{offer:"{offer['id']}",niche:"{niche['id']}",page_variant:"premium"}});"""
+        cta_event_js = f"""window.gtag("event","cta_click",{{offer:"{offer['id']}",niche:"{niche['id']}",page_variant:"premium",transport_type:"beacon"}});"""
 
+    # CTAクリック処理：preventDefault → gtag送信 → 短い遅延後にナビゲート（送信ロスを防ぐ）
     param_carry_js = f"""<script>
 (function () {{
   var baseUrl = {repr(cta_url)};
@@ -449,8 +451,17 @@ def gen_lp(niche, offer):
   var destination = baseUrl + (carried.length ? sep + carried.join("&") : "");
   document.querySelectorAll("a.cta-link").forEach(function (link) {{
     link.href = destination;
-    link.addEventListener("click", function () {{
-      try {{ if (window.gtag) {{ {cta_event_js} }} }} catch (e) {{}}
+    link.addEventListener("click", function (e) {{
+      var navigated = false;
+      var go = function () {{ if (navigated) return; navigated = true; window.location.href = destination; }};
+      try {{
+        if (window.gtag) {{
+          e.preventDefault();
+          {cta_event_js}
+          // 念のため 350ms 後にナビゲート（gtag の送信猶予を確保）
+          setTimeout(go, 350);
+        }}
+      }} catch (err) {{ go(); }}
     }});
   }});
 }})();
