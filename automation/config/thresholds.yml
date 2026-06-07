@@ -1,0 +1,45 @@
+# ============================================================
+# AI判定の閾値設定
+# ============================================================
+
+analysis:
+  # 分析対象期間（日）
+  lookback_days: 7
+  # 判定に必要な最低クリック数
+  min_clicks_for_judgment: 100
+  # 判定に必要な最低表示回数
+  min_impressions_for_judgment: 1000
+
+keyword:
+  # 即停止：表示があるのにクリック0
+  stop_no_click_impressions: 1000
+  # 停止候補：CV率これ未満
+  stop_cv_rate: 0.005
+  # 停止候補：CPAが報酬額の何倍を超えると停止
+  stop_cpa_to_reward_ratio: 0.8
+  # 強化候補：CV率これ以上
+  boost_cv_rate: 0.02
+  # 強化候補：ROASこれ以上
+  boost_roas: 200
+
+ad:
+  # CTR最低基準（これ未満は広告文改善対象）
+  min_ctr: 0.05
+  # 1広告あたり最低表示回数（判定に必要）
+  min_impressions: 1000
+
+lp:
+  # 直帰率の上限
+  max_bounce_rate: 0.70
+  # CTA クリック率の最低基準
+  min_cta_click_rate: 0.03
+  # 最低エンゲージメント時間（秒）
+  min_engagement_seconds: 15
+  # Rage クリックの上限（セッションあたり）
+  max_rage_clicks_per_session: 1.0
+  # Quick back の上限
+  max_quick_back_rate: 0.30
+
+reward_assumptions:
+  # 案件平均報酬（円）。stitched で使う想定値
+  avg_reward_jpy: 13000
