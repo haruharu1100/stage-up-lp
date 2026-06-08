@@ -468,8 +468,11 @@ def gen_lp(niche, offer):
 </script>"""
 
     # ----- title/desc -----
-    title = f"{esc(niche['name'])}向け｜{esc(offer['name'])} の料金・特典まとめ - {brand_name}"
-    desc  = f"{esc(niche['name'])}に向く{esc(offer['name'])}を、料金・実質負担・キャンペーン特典の観点から整理。月額{yen(monthly)}・データ容量{esc(offer.get('data_cap',''))}。2026年時点の情報。"
+    # 検索KWを title/desc に含めて品質スコアと SEO 両方を強化
+    primary_kw = niche.get('search_keywords', [niche['name']])[0]
+    cb_phrase = f"最大{cb:,}円キャッシュバック・" if has_cb else ""
+    title = f"【{esc(primary_kw)}】{esc(offer['name'])} の料金・実質月額・キャンペーン徹底比較 - {brand_name}"
+    desc  = f"【{esc(primary_kw)}】の決定版。{esc(offer['name'])}を、{cb_phrase}月額{yen(monthly)}・実質月額・データ容量{esc(offer.get('data_cap',''))}の観点から徹底比較。2026年時点の最新情報。"
 
     # ----- ヒーロー第3カード（特典 or サブ訴求） -----
     if has_cb:
@@ -829,7 +832,7 @@ a{{color:inherit;text-decoration:none;transition:color .2s,opacity .2s}}
 <section class="section conclusion">
   <div class="container">
     <p class="kicker">結論</p>
-    <h2 class="h-section">{esc(niche['name'])}を考えるなら、<br/>最初に比較したい候補です。</h2>
+    <h2 class="h-section">【{esc(primary_kw)}】なら、<br/>最初に比較したい候補です。</h2>
     <p class="lead">{esc(niche['primary_appeal'])}を重視する方に向いた選択肢です。本ページでは料金・実質負担・条件・他社比較を整理しています。</p>
     <div class="concl-grid" style="margin-top:48px">
       <div>
@@ -854,7 +857,7 @@ a{{color:inherit;text-decoration:none;transition:color .2s,opacity .2s}}
 <section id="features" class="section">
   <div class="container">
     <p class="kicker">Why It Works</p>
-    <h2 class="h-section">{esc(niche['name'])}にうれしい<br/>3つの理由。</h2>
+    <h2 class="h-section">【{esc(primary_kw)}】に選ばれる<br/>3つの理由。</h2>
     <p class="lead">{esc(niche['primary_appeal'])}を実現するための、3つのポイントを整理しました。</p>
     <div class="feat-grid">{feat_html}</div>
   </div>

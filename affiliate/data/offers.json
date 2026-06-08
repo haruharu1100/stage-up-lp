@@ -22,10 +22,25 @@
       "area_coverage": "楽天5Gエリア依存",
       "cashback_jpy": 20000,
       "cashback_condition": "申込から6ヶ月後にメール案内、要手続き",
-      "selling_points": ["工事不要・コンセント挿すだけで使える", "データ無制限・速度制限なし", "契約期間の縛りなし"],
-      "weak_points": ["楽天回線エリア外だと使えない", "据置型のため持ち運び不可"],
-      "target_personas": ["one_person_room", "rental_no_construction", "elderly_simple"],
-      "ng_phrases": ["日本一速い", "絶対つながる", "電波最強"]
+      "selling_points": [
+        "工事不要・コンセント挿すだけで使える",
+        "データ無制限・速度制限なし",
+        "契約期間の縛りなし"
+      ],
+      "weak_points": [
+        "楽天回線エリア外だと使えない",
+        "据置型のため持ち運び不可"
+      ],
+      "target_personas": [
+        "one_person_room",
+        "rental_no_construction",
+        "elderly_simple"
+      ],
+      "ng_phrases": [
+        "日本一速い",
+        "絶対つながる",
+        "電波最強"
+      ]
     },
     {
       "id": "softbank-air",
@@ -45,10 +60,24 @@
       "area_coverage": "全国（5G/4G）",
       "cashback_jpy": 35000,
       "cashback_condition": "代理店経由特典。申込から8ヶ月後の自動振込",
-      "selling_points": ["工事不要、最短翌日発送", "おうち割光セットでスマホ料金割引", "高額キャッシュバック"],
-      "weak_points": ["建物条件により速度が大きく変動", "8日間お試しキャンセル後の制約あり"],
-      "target_personas": ["one_person_room", "rental_no_construction", "softbank_user"],
-      "ng_phrases": ["どこでもサクサク", "絶対繋がる"]
+      "selling_points": [
+        "工事不要、最短翌日発送",
+        "おうち割光セットでスマホ料金割引",
+        "高額キャッシュバック"
+      ],
+      "weak_points": [
+        "建物条件により速度が大きく変動",
+        "8日間お試しキャンセル後の制約あり"
+      ],
+      "target_personas": [
+        "one_person_room",
+        "rental_no_construction",
+        "softbank_user"
+      ],
+      "ng_phrases": [
+        "どこでもサクサク",
+        "絶対繋がる"
+      ]
     },
     {
       "id": "gmo-wimax",
@@ -57,7 +86,7 @@
       "subcategory": "モバイル・据置兼用",
       "asp": "felmat",
       "reward_jpy": 16000,
-      "approval_rate_estimate": 0.60,
+      "approval_rate_estimate": 0.6,
       "cookie_hours": 24,
       "affiliate_url_placeholder": "https://t.felmat.net/fmcl?ak=XXXXXX",
       "monthly_fee_jpy": 4807,
@@ -68,10 +97,25 @@
       "area_coverage": "全国（au 5G/4G LTE併用）",
       "cashback_jpy": 49000,
       "cashback_condition": "11ヶ月後と23ヶ月後に分割案内、要メール手続き",
-      "selling_points": ["持ち運び可能・据置兼用", "業界最高水準のキャッシュバック", "auスマホ・UQモバイル割引対応"],
-      "weak_points": ["キャッシュバック受取手続きが煩雑", "山間部・地下で電波が弱い場合あり"],
-      "target_personas": ["business_traveler", "student", "remote_worker", "one_person_room"],
-      "ng_phrases": ["日本最速", "業界No.1キャッシュバック"]
+      "selling_points": [
+        "持ち運び可能・据置兼用",
+        "業界最高水準のキャッシュバック",
+        "auスマホ・UQモバイル割引対応"
+      ],
+      "weak_points": [
+        "キャッシュバック受取手続きが煩雑",
+        "山間部・地下で電波が弱い場合あり"
+      ],
+      "target_personas": [
+        "business_traveler",
+        "student",
+        "remote_worker",
+        "one_person_room"
+      ],
+      "ng_phrases": [
+        "日本最速",
+        "業界No.1キャッシュバック"
+      ]
     },
     {
       "id": "broad-wimax",
@@ -80,7 +124,7 @@
       "subcategory": "モバイル・据置兼用",
       "asp": "afb",
       "reward_jpy": 15000,
-      "approval_rate_estimate": 0.60,
+      "approval_rate_estimate": 0.6,
       "cookie_hours": 24,
       "affiliate_url_placeholder": "https://t.afi-b.com/visit.php?guid=XXXXXX",
       "monthly_fee_jpy": 3773,
@@ -91,10 +135,24 @@
       "area_coverage": "全国（au 5G/4G LTE併用）",
       "cashback_jpy": 0,
       "cashback_condition": "他社違約金最大19,000円負担キャンペーンあり",
-      "selling_points": ["他社違約金負担で乗換しやすい", "月額最安水準（初月特価あり）", "全国店舗での即日受取可"],
-      "weak_points": ["初期費用が高め（割引適用条件あり）", "Web窓口経由の申込必須"],
-      "target_personas": ["business_traveler", "rental_no_construction", "one_person_room"],
-      "ng_phrases": ["業界最安", "完全無料"]
+      "selling_points": [
+        "他社違約金負担で乗換しやすい",
+        "月額最安水準（初月特価あり）",
+        "全国店舗での即日受取可"
+      ],
+      "weak_points": [
+        "初期費用が高め（割引適用条件あり）",
+        "Web窓口経由の申込必須"
+      ],
+      "target_personas": [
+        "business_traveler",
+        "rental_no_construction",
+        "one_person_room"
+      ],
+      "ng_phrases": [
+        "業界最安",
+        "完全無料"
+      ]
     },
     {
       "id": "kashimo-wimax",
@@ -114,10 +172,24 @@
       "area_coverage": "全国（au 5G/4G LTE併用）",
       "cashback_jpy": 6000,
       "cashback_condition": "初月のみ1,408円、申込後Amazonギフト送付（要メール手続き）",
-      "selling_points": ["初月料金1,408円のお試しキャンペーン", "端末代金実質無料", "シンプルな2プラン構成"],
-      "weak_points": ["キャッシュバック額は控えめ", "プロバイダ系特典が少なめ"],
-      "target_personas": ["one_person_room", "business_traveler", "student"],
-      "ng_phrases": ["最安", "業界一"]
+      "selling_points": [
+        "初月料金1,408円のお試しキャンペーン",
+        "端末代金実質無料",
+        "シンプルな2プラン構成"
+      ],
+      "weak_points": [
+        "キャッシュバック額は控えめ",
+        "プロバイダ系特典が少なめ"
+      ],
+      "target_personas": [
+        "one_person_room",
+        "business_traveler",
+        "student"
+      ],
+      "ng_phrases": [
+        "最安",
+        "業界一"
+      ]
     },
     {
       "id": "zeus-wifi",
@@ -126,7 +198,7 @@
       "subcategory": "クラウドSIM・モバイル",
       "asp": "A8.net",
       "reward_jpy": 11000,
-      "approval_rate_estimate": 0.60,
+      "approval_rate_estimate": 0.6,
       "cookie_hours": 24,
       "affiliate_url_placeholder": "https://px.a8.net/svt/ejp?a8mat=XXXXXXX",
       "monthly_fee_jpy": 2618,
@@ -137,10 +209,24 @@
       "area_coverage": "全国（クラウドSIM）",
       "cashback_jpy": 10000,
       "cashback_condition": "新規契約特典。初月から割引適用",
-      "selling_points": ["クラウドSIMで全国つながりやすい", "月額2,618円〜の低価格", "30GBプランから選べる"],
-      "weak_points": ["無制限ではなくデータ容量上限あり", "通信速度は最大150Mbpsまで"],
-      "target_personas": ["business_traveler", "student", "second_line"],
-      "ng_phrases": ["完全無制限", "最強コスパ"]
+      "selling_points": [
+        "クラウドSIMで全国つながりやすい",
+        "月額2,618円〜の低価格",
+        "30GBプランから選べる"
+      ],
+      "weak_points": [
+        "無制限ではなくデータ容量上限あり",
+        "通信速度は最大150Mbpsまで"
+      ],
+      "target_personas": [
+        "business_traveler",
+        "student",
+        "second_line"
+      ],
+      "ng_phrases": [
+        "完全無制限",
+        "最強コスパ"
+      ]
     },
     {
       "id": "the-wifi",
@@ -149,7 +235,7 @@
       "subcategory": "クラウドSIM・モバイル",
       "asp": "A8.net",
       "reward_jpy": 10000,
-      "approval_rate_estimate": 0.60,
+      "approval_rate_estimate": 0.6,
       "cookie_hours": 24,
       "affiliate_url_placeholder": "https://px.a8.net/svt/ejp?a8mat=XXXXXXX",
       "monthly_fee_jpy": 3828,
@@ -160,10 +246,24 @@
       "area_coverage": "全国（クラウドSIM・国内3キャリア対応）",
       "cashback_jpy": 0,
       "cashback_condition": "初月0円キャンペーンあり",
-      "selling_points": ["100GBプランで動画視聴も可能", "国内3キャリア自動切替で接続安定", "30日お試しモニターあり"],
-      "weak_points": ["速度は最大150Mbpsまで", "容量超過後は速度制限あり"],
-      "target_personas": ["video_streaming", "business_traveler", "second_line"],
-      "ng_phrases": ["完全無制限", "絶対繋がる"]
+      "selling_points": [
+        "100GBプランで動画視聴も可能",
+        "国内3キャリア自動切替で接続安定",
+        "30日お試しモニターあり"
+      ],
+      "weak_points": [
+        "速度は最大150Mbpsまで",
+        "容量超過後は速度制限あり"
+      ],
+      "target_personas": [
+        "video_streaming",
+        "business_traveler",
+        "second_line"
+      ],
+      "ng_phrases": [
+        "完全無制限",
+        "絶対繋がる"
+      ]
     },
     {
       "id": "biglobe-hikari",
@@ -172,7 +272,7 @@
       "subcategory": "光回線・auパートナー",
       "asp": "A8.net",
       "reward_jpy": 20000,
-      "approval_rate_estimate": 0.50,
+      "approval_rate_estimate": 0.5,
       "cookie_hours": 24,
       "affiliate_url_placeholder": "https://px.a8.net/svt/ejp?a8mat=4B5OO7+8WB88I+3SPO+7LVLZM",
       "monthly_fee_jpy": 4378,
@@ -183,10 +283,25 @@
       "area_coverage": "全国（NTTフレッツ提供エリア）",
       "cashback_jpy": 40000,
       "cashback_condition": "公式キャンペーン適用条件あり。違約金負担キャンペーン対応の場合あり",
-      "selling_points": ["au・UQモバイルとのセット割対応", "IPv6接続標準対応で速度安定", "BIGLOBE実績の信頼性"],
-      "weak_points": ["開通工事に2-4週間", "他社からの違約金負担条件あり"],
-      "target_personas": ["family_house", "au_user", "moving_fiber", "remote_worker"],
-      "ng_phrases": ["業界一", "完全無料"]
+      "selling_points": [
+        "au・UQモバイルとのセット割対応",
+        "IPv6接続標準対応で速度安定",
+        "BIGLOBE実績の信頼性"
+      ],
+      "weak_points": [
+        "開通工事に2-4週間",
+        "他社からの違約金負担条件あり"
+      ],
+      "target_personas": [
+        "family_house",
+        "au_user",
+        "moving_fiber",
+        "remote_worker"
+      ],
+      "ng_phrases": [
+        "業界一",
+        "完全無料"
+      ]
     },
     {
       "id": "nifty-hikari",
@@ -195,7 +310,7 @@
       "subcategory": "光回線・光コラボ",
       "asp": "A8.net",
       "reward_jpy": 15000,
-      "approval_rate_estimate": 0.50,
+      "approval_rate_estimate": 0.5,
       "cookie_hours": 24,
       "affiliate_url_placeholder": "https://px.a8.net/svt/ejp?a8mat=4B5OO7+8LLFCI+348K+25G2DD",
       "monthly_fee_jpy": 4378,
@@ -206,10 +321,25 @@
       "area_coverage": "全国（NTTフレッツ提供エリア）",
       "cashback_jpy": 50000,
       "cashback_condition": "新規申込で最大50,000円キャッシュバック+他社違約金最大30,000円還元キャンペーン",
-      "selling_points": ["最大50,000円キャッシュバック", "他社違約金最大30,000円還元", "プロバイダ実績豊富で安心"],
-      "weak_points": ["開通工事に2-4週間", "キャッシュバック受取に申請手続き必要"],
-      "target_personas": ["family_house", "moving_fiber", "remote_worker", "long_term_resident"],
-      "ng_phrases": ["業界一", "完全無料"]
+      "selling_points": [
+        "最大50,000円キャッシュバック",
+        "他社違約金最大30,000円還元",
+        "プロバイダ実績豊富で安心"
+      ],
+      "weak_points": [
+        "開通工事に2-4週間",
+        "キャッシュバック受取に申請手続き必要"
+      ],
+      "target_personas": [
+        "family_house",
+        "moving_fiber",
+        "remote_worker",
+        "long_term_resident"
+      ],
+      "ng_phrases": [
+        "業界一",
+        "完全無料"
+      ]
     },
     {
       "id": "sonet-hikari",
@@ -218,7 +348,7 @@
       "subcategory": "光回線・So-netグループ",
       "asp": "A8.net",
       "reward_jpy": 18000,
-      "approval_rate_estimate": 0.50,
+      "approval_rate_estimate": 0.5,
       "cookie_hours": 24,
       "affiliate_url_placeholder": "https://px.a8.net/svt/ejp?a8mat=4B5OO7+8NZ5RM+38O0+BWVTE",
       "monthly_fee_jpy": 4500,
@@ -229,10 +359,25 @@
       "area_coverage": "全国（NTTフレッツ提供エリア）",
       "cashback_jpy": 35000,
       "cashback_condition": "S/M/L プラン別の料金体系。新規申込特典あり",
-      "selling_points": ["S/M/Lの3プランで利用量に合わせて選べる", "ソニーグループ系プロバイダの信頼性", "v6プラス対応で速度安定"],
-      "weak_points": ["プラン選択がやや複雑", "キャッシュバック受取手続き必要"],
-      "target_personas": ["family_house", "moving_fiber", "remote_worker", "gamer"],
-      "ng_phrases": ["業界最速", "100%快適"]
+      "selling_points": [
+        "S/M/Lの3プランで利用量に合わせて選べる",
+        "ソニーグループ系プロバイダの信頼性",
+        "v6プラス対応で速度安定"
+      ],
+      "weak_points": [
+        "プラン選択がやや複雑",
+        "キャッシュバック受取手続き必要"
+      ],
+      "target_personas": [
+        "family_house",
+        "moving_fiber",
+        "remote_worker",
+        "gamer"
+      ],
+      "ng_phrases": [
+        "業界最速",
+        "100%快適"
+      ]
     },
     {
       "id": "dti-hikari",
@@ -252,10 +397,24 @@
       "area_coverage": "全国（NTTフレッツ提供エリア）",
       "cashback_jpy": 19000,
       "cashback_condition": "ようこそ割×のりかえ割の併用で初期工事費0円・基本料割引キャンペーン",
-      "selling_points": ["月額3,190円〜の業界水準のコスパ", "工事費実質0円キャンペーン", "縛りなしプランで安心"],
-      "weak_points": ["大手キャリアセット割なし", "プロバイダ知名度はやや低め"],
-      "target_personas": ["price_sensitive", "moving_fiber", "short_term_resident"],
-      "ng_phrases": ["最安", "永久無料"]
+      "selling_points": [
+        "月額3,190円〜の業界水準のコスパ",
+        "工事費実質0円キャンペーン",
+        "縛りなしプランで安心"
+      ],
+      "weak_points": [
+        "大手キャリアセット割なし",
+        "プロバイダ知名度はやや低め"
+      ],
+      "target_personas": [
+        "price_sensitive",
+        "moving_fiber",
+        "short_term_resident"
+      ],
+      "ng_phrases": [
+        "最安",
+        "永久無料"
+      ]
     },
     {
       "id": "docomo-hikari",
@@ -275,10 +434,25 @@
       "area_coverage": "全国（NTTフレッツ提供エリア）",
       "cashback_jpy": 45000,
       "cashback_condition": "代理店独自特典。開通月の翌々月末に振込",
-      "selling_points": ["ドコモスマホとのセット割で永年割引", "プロバイダ選択肢豊富", "工事費実質無料キャンペーン中"],
-      "weak_points": ["開通工事に2-4週間", "賃貸は大家確認必須"],
-      "target_personas": ["family_house", "docomo_user", "long_term_resident", "remote_worker"],
-      "ng_phrases": ["最安", "工事費完全無料"]
+      "selling_points": [
+        "ドコモスマホとのセット割で永年割引",
+        "プロバイダ選択肢豊富",
+        "工事費実質無料キャンペーン中"
+      ],
+      "weak_points": [
+        "開通工事に2-4週間",
+        "賃貸は大家確認必須"
+      ],
+      "target_personas": [
+        "family_house",
+        "docomo_user",
+        "long_term_resident",
+        "remote_worker"
+      ],
+      "ng_phrases": [
+        "最安",
+        "工事費完全無料"
+      ]
     },
     {
       "id": "auhikari",
@@ -298,10 +472,25 @@
       "area_coverage": "東京・愛知・大阪・福岡などの提供エリア",
       "cashback_jpy": 63000,
       "cashback_condition": "代理店特典。開通12ヶ月後に振込手続き案内、要返信",
-      "selling_points": ["独自回線でフレッツ混雑の影響を受けにくい", "auスマホ・UQモバイルとのセット割対応", "高額キャッシュバック特典"],
-      "weak_points": ["提供エリアが限定的", "解約時の違約金が発生する場合あり"],
-      "target_personas": ["family_house", "au_user", "remote_worker", "gamer"],
-      "ng_phrases": ["国内最速", "絶対つながる"]
+      "selling_points": [
+        "独自回線でフレッツ混雑の影響を受けにくい",
+        "auスマホ・UQモバイルとのセット割対応",
+        "高額キャッシュバック特典"
+      ],
+      "weak_points": [
+        "提供エリアが限定的",
+        "解約時の違約金が発生する場合あり"
+      ],
+      "target_personas": [
+        "family_house",
+        "au_user",
+        "remote_worker",
+        "gamer"
+      ],
+      "ng_phrases": [
+        "国内最速",
+        "絶対つながる"
+      ]
     },
     {
       "id": "softbank-hikari",
@@ -321,10 +510,24 @@
       "area_coverage": "全国（NTTフレッツ提供エリア）",
       "cashback_jpy": 40000,
       "cashback_condition": "代理店特典・他社違約金最大10万円負担あり",
-      "selling_points": ["おうち割でソフトバンクスマホ最大1,100円割引", "他社違約金負担キャンペーン", "全国どこでも提供"],
-      "weak_points": ["開通工事に2-4週間", "Yahoo!プレミアム加入で特典増額"],
-      "target_personas": ["family_house", "softbank_user", "moving_fiber"],
-      "ng_phrases": ["業界最速", "完全無料"]
+      "selling_points": [
+        "おうち割でソフトバンクスマホ最大1,100円割引",
+        "他社違約金負担キャンペーン",
+        "全国どこでも提供"
+      ],
+      "weak_points": [
+        "開通工事に2-4週間",
+        "Yahoo!プレミアム加入で特典増額"
+      ],
+      "target_personas": [
+        "family_house",
+        "softbank_user",
+        "moving_fiber"
+      ],
+      "ng_phrases": [
+        "業界最速",
+        "完全無料"
+      ]
     },
     {
       "id": "nuro-hikari",
@@ -333,7 +536,7 @@
       "subcategory": "光回線・独自回線",
       "asp": "valuecommerce",
       "reward_jpy": 28000,
-      "approval_rate_estimate": 0.40,
+      "approval_rate_estimate": 0.4,
       "cookie_hours": 24,
       "affiliate_url_placeholder": "https://ck.jp.ap.valuecommerce.com/servlet/referral?sid=XXXX",
       "monthly_fee_jpy": 5200,
@@ -344,10 +547,25 @@
       "area_coverage": "関東・関西・東海・北海道・九州の一部",
       "cashback_jpy": 45000,
       "cashback_condition": "開通から6ヶ月後にメール案内、期間内に手続き必要",
-      "selling_points": ["下り最大2Gbpsの高速回線", "工事費実質無料キャンペーン", "ソフトバンクスマホとのセット割対応"],
-      "weak_points": ["提供エリアが限定的", "工事に1-3ヶ月かかる場合あり"],
-      "target_personas": ["gamer", "remote_worker", "family_house", "softbank_user"],
-      "ng_phrases": ["世界最速", "100%快適"]
+      "selling_points": [
+        "下り最大2Gbpsの高速回線",
+        "工事費実質無料キャンペーン",
+        "ソフトバンクスマホとのセット割対応"
+      ],
+      "weak_points": [
+        "提供エリアが限定的",
+        "工事に1-3ヶ月かかる場合あり"
+      ],
+      "target_personas": [
+        "gamer",
+        "remote_worker",
+        "family_house",
+        "softbank_user"
+      ],
+      "ng_phrases": [
+        "世界最速",
+        "100%快適"
+      ]
     },
     {
       "id": "enhikari",
@@ -367,10 +585,24 @@
       "area_coverage": "全国（NTTフレッツ提供エリア）",
       "cashback_jpy": 0,
       "cashback_condition": "他社違約金キャッシュバック対応の場合あり",
-      "selling_points": ["契約期間の縛りなし・解約金なし", "事務手数料・工事費が業界水準内で良心的", "UQモバイル・楽天モバイルでセット割対応"],
-      "weak_points": ["大手キャリアセット割なし", "キャッシュバック特典は控えめ"],
-      "target_personas": ["short_term_resident", "rental_no_construction", "moving_fiber"],
-      "ng_phrases": ["業界一", "永久無料"]
+      "selling_points": [
+        "契約期間の縛りなし・解約金なし",
+        "事務手数料・工事費が業界水準内で良心的",
+        "UQモバイル・楽天モバイルでセット割対応"
+      ],
+      "weak_points": [
+        "大手キャリアセット割なし",
+        "キャッシュバック特典は控えめ"
+      ],
+      "target_personas": [
+        "short_term_resident",
+        "rental_no_construction",
+        "moving_fiber"
+      ],
+      "ng_phrases": [
+        "業界一",
+        "永久無料"
+      ]
     },
     {
       "id": "rakuten-mobile",
@@ -379,7 +611,7 @@
       "subcategory": "格安SIM・キャリア",
       "asp": "A8.net",
       "reward_jpy": 7000,
-      "approval_rate_estimate": 0.70,
+      "approval_rate_estimate": 0.7,
       "cookie_hours": 24,
       "affiliate_url_placeholder": "https://px.a8.net/svt/ejp?a8mat=XXXXXXX",
       "monthly_fee_jpy": 3278,
@@ -390,10 +622,24 @@
       "area_coverage": "楽天回線エリア＋パートナー回線",
       "cashback_jpy": 0,
       "cashback_condition": "楽天ポイント還元（最大14,000pt）",
-      "selling_points": ["データ無制限で月3,278円", "国内通話無料（Rakuten Linkアプリ）", "契約期間・解約金なし"],
-      "weak_points": ["屋内・地下で電波弱い場合あり", "iPhone使用時はLinkアプリ通話品質要確認"],
-      "target_personas": ["price_sensitive", "rakuten_user", "second_line"],
-      "ng_phrases": ["絶対つながる", "完全無制限"]
+      "selling_points": [
+        "データ無制限で月3,278円",
+        "国内通話無料（Rakuten Linkアプリ）",
+        "契約期間・解約金なし"
+      ],
+      "weak_points": [
+        "屋内・地下で電波弱い場合あり",
+        "iPhone使用時はLinkアプリ通話品質要確認"
+      ],
+      "target_personas": [
+        "price_sensitive",
+        "rakuten_user",
+        "second_line"
+      ],
+      "ng_phrases": [
+        "絶対つながる",
+        "完全無制限"
+      ]
     },
     {
       "id": "ymobile",
@@ -413,10 +659,24 @@
       "area_coverage": "ソフトバンク回線（全国）",
       "cashback_jpy": 0,
       "cashback_condition": "PayPayポイント還元あり（最大10,000pt）",
-      "selling_points": ["ソフトバンク回線の安定性", "家族割で2回線目以降1,188円〜", "全国のショップでサポート受けられる"],
-      "weak_points": ["データ容量に上限あり", "解約金は無いが事務手数料が発生"],
-      "target_personas": ["price_sensitive", "family_discount", "elderly_simple"],
-      "ng_phrases": ["最強コスパ", "完全無料"]
+      "selling_points": [
+        "ソフトバンク回線の安定性",
+        "家族割で2回線目以降1,188円〜",
+        "全国のショップでサポート受けられる"
+      ],
+      "weak_points": [
+        "データ容量に上限あり",
+        "解約金は無いが事務手数料が発生"
+      ],
+      "target_personas": [
+        "price_sensitive",
+        "family_discount",
+        "elderly_simple"
+      ],
+      "ng_phrases": [
+        "最強コスパ",
+        "完全無料"
+      ]
     },
     {
       "id": "linemo",
@@ -436,10 +696,24 @@
       "area_coverage": "ソフトバンク回線（全国）",
       "cashback_jpy": 0,
       "cashback_condition": "PayPayポイント還元キャンペーン頻繁開催",
-      "selling_points": ["ミニプラン月990円から", "LINEのギガフリー（消費しない）", "ソフトバンク回線で安定通信"],
-      "weak_points": ["オンライン手続きのみ・店舗サポートなし", "20GB以上のプランがない"],
-      "target_personas": ["price_sensitive", "second_line", "kids_smartphone"],
-      "ng_phrases": ["業界最安", "完璧"]
+      "selling_points": [
+        "ミニプラン月990円から",
+        "LINEのギガフリー（消費しない）",
+        "ソフトバンク回線で安定通信"
+      ],
+      "weak_points": [
+        "オンライン手続きのみ・店舗サポートなし",
+        "20GB以上のプランがない"
+      ],
+      "target_personas": [
+        "price_sensitive",
+        "second_line",
+        "kids_smartphone"
+      ],
+      "ng_phrases": [
+        "業界最安",
+        "完璧"
+      ]
     },
     {
       "id": "ahamo",
@@ -459,10 +733,24 @@
       "area_coverage": "ドコモ回線（全国・5G対応）",
       "cashback_jpy": 0,
       "cashback_condition": "dポイント還元キャンペーンあり",
-      "selling_points": ["20GBで月2,970円・5分以内通話無料込み", "ドコモ回線品質をそのまま", "海外82の国・地域でも20GBまで使える"],
-      "weak_points": ["店頭サポートは有料化", "ファミリー割引の対象外"],
-      "target_personas": ["price_sensitive", "business_traveler", "mnp_from_docomo"],
-      "ng_phrases": ["最安", "完全無料"]
+      "selling_points": [
+        "20GBで月2,970円・5分以内通話無料込み",
+        "ドコモ回線品質をそのまま",
+        "海外82の国・地域でも20GBまで使える"
+      ],
+      "weak_points": [
+        "店頭サポートは有料化",
+        "ファミリー割引の対象外"
+      ],
+      "target_personas": [
+        "price_sensitive",
+        "business_traveler",
+        "mnp_from_docomo"
+      ],
+      "ng_phrases": [
+        "最安",
+        "完全無料"
+      ]
     },
     {
       "id": "povo",
@@ -482,10 +770,24 @@
       "area_coverage": "au回線（全国・5G対応）",
       "cashback_jpy": 0,
       "cashback_condition": "新規申込で初回トッピング無料あり",
-      "selling_points": ["基本料金0円・使う分だけトッピング", "au回線の安定性", "副回線・予備として最適"],
-      "weak_points": ["180日以上利用なしで自動解約のリスク", "店頭サポートなし"],
-      "target_personas": ["second_line", "price_sensitive", "mnp_from_au"],
-      "ng_phrases": ["業界一", "完全無料"]
+      "selling_points": [
+        "基本料金0円・使う分だけトッピング",
+        "au回線の安定性",
+        "副回線・予備として最適"
+      ],
+      "weak_points": [
+        "180日以上利用なしで自動解約のリスク",
+        "店頭サポートなし"
+      ],
+      "target_personas": [
+        "second_line",
+        "price_sensitive",
+        "mnp_from_au"
+      ],
+      "ng_phrases": [
+        "業界一",
+        "完全無料"
+      ]
     },
     {
       "id": "mineo",
@@ -505,10 +807,24 @@
       "area_coverage": "au/docomo/SoftBank の3回線から選択",
       "cashback_jpy": 0,
       "cashback_condition": "新規契約特典で初月割引あり",
-      "selling_points": ["au/docomo/SoftBank の3回線から選べる", "パケット放題Plusで通信し放題（最大1.5Mbps）", "ユーザーコミュニティのサポートが手厚い"],
-      "weak_points": ["速度は混雑時間帯に低下する場合あり", "5G利用に追加オプション必要"],
-      "target_personas": ["price_sensitive", "elderly_simple", "kids_smartphone"],
-      "ng_phrases": ["最強", "業界No.1"]
+      "selling_points": [
+        "au/docomo/SoftBank の3回線から選べる",
+        "パケット放題Plusで通信し放題（最大1.5Mbps）",
+        "ユーザーコミュニティのサポートが手厚い"
+      ],
+      "weak_points": [
+        "速度は混雑時間帯に低下する場合あり",
+        "5G利用に追加オプション必要"
+      ],
+      "target_personas": [
+        "price_sensitive",
+        "elderly_simple",
+        "kids_smartphone"
+      ],
+      "ng_phrases": [
+        "最強",
+        "業界No.1"
+      ]
     },
     {
       "id": "iijmio",
@@ -528,10 +844,24 @@
       "area_coverage": "ドコモ・au回線",
       "cashback_jpy": 0,
       "cashback_condition": "端末セット申込で実質1円端末あり",
-      "selling_points": ["2GBプランが月850円〜の業界水準", "端末セット申込で実質1円スマホ多数", "10回線まで家族でシェア可能"],
-      "weak_points": ["店舗サポートが少なめ", "混雑時間帯の速度は格安SIM水準"],
-      "target_personas": ["price_sensitive", "family_discount", "kids_smartphone"],
-      "ng_phrases": ["最安", "完全無料"]
+      "selling_points": [
+        "2GBプランが月850円〜の業界水準",
+        "端末セット申込で実質1円スマホ多数",
+        "10回線まで家族でシェア可能"
+      ],
+      "weak_points": [
+        "店舗サポートが少なめ",
+        "混雑時間帯の速度は格安SIM水準"
+      ],
+      "target_personas": [
+        "price_sensitive",
+        "family_discount",
+        "kids_smartphone"
+      ],
+      "ng_phrases": [
+        "最安",
+        "完全無料"
+      ]
     },
     {
       "id": "libmo",
@@ -540,7 +870,7 @@
       "subcategory": "格安SIM・TOKAIコミュニケーションズ",
       "asp": "A8.net",
       "reward_jpy": 3000,
-      "approval_rate_estimate": 0.40,
+      "approval_rate_estimate": 0.4,
       "cookie_hours": 24,
       "affiliate_url_placeholder": "https://px.a8.net/svt/ejp?a8mat=4B5OO7+2GPLWY+3UM0+5YRHE",
       "monthly_fee_jpy": 980,
@@ -551,10 +881,25 @@
       "area_coverage": "ドコモ回線（全国）",
       "cashback_jpy": 23000,
       "cashback_condition": "端末セット申込で実質1円スマホセール開催中",
-      "selling_points": ["月980円〜の格安プラン", "ドコモ回線で全国安定", "端末セット申込で実質1円スマホあり"],
-      "weak_points": ["店頭サポート少なめ", "混雑時間帯の速度低下あり"],
-      "target_personas": ["price_sensitive", "kids_smartphone", "elderly_simple", "second_line"],
-      "ng_phrases": ["最安", "完全無料"]
+      "selling_points": [
+        "月980円〜の格安プラン",
+        "ドコモ回線で全国安定",
+        "端末セット申込で実質1円スマホあり"
+      ],
+      "weak_points": [
+        "店頭サポート少なめ",
+        "混雑時間帯の速度低下あり"
+      ],
+      "target_personas": [
+        "price_sensitive",
+        "kids_smartphone",
+        "elderly_simple",
+        "second_line"
+      ],
+      "ng_phrases": [
+        "最安",
+        "完全無料"
+      ]
     },
     {
       "id": "biglobe-wimax",
@@ -574,10 +919,486 @@
       "area_coverage": "全国（au 5G/4G LTE併用）",
       "cashback_jpy": 10000,
       "cashback_condition": "申込から6ヶ月後にメール案内、要手続き",
-      "selling_points": ["クレジットカードor口座振替対応", "BIGLOBEプロバイダ実績の安心感", "auスマートバリュー対応"],
-      "weak_points": ["他社比較でキャッシュバック控えめ", "口座振替時は手数料発生"],
-      "target_personas": ["business_traveler", "elderly_simple", "second_line"],
-      "ng_phrases": ["業界No.1", "完全無料"]
+      "selling_points": [
+        "クレジットカードor口座振替対応",
+        "BIGLOBEプロバイダ実績の安心感",
+        "auスマートバリュー対応"
+      ],
+      "weak_points": [
+        "他社比較でキャッシュバック控えめ",
+        "口座振替時は手数料発生"
+      ],
+      "target_personas": [
+        "business_traveler",
+        "elderly_simple",
+        "second_line"
+      ],
+      "ng_phrases": [
+        "業界No.1",
+        "完全無料"
+      ]
+    },
+    {
+      "id": "looop-denki",
+      "name": "Looopでんき",
+      "category": "electricity",
+      "subcategory": "新電力（基本料金0円）",
+      "asp": "A8.net",
+      "asp_status": "PARTNERED",
+      "_note": "A8.net 提携済み（2026-06-08）",
+      "reward_jpy": 5500,
+      "approval_rate_estimate": 0.65,
+      "cookie_hours": 24,
+      "affiliate_url_placeholder": "https://px.a8.net/svt/ejp?a8mat=4B5R05+FMMNG2+3SPO+ZQ80I",
+      "monthly_fee_jpy": 0,
+      "initial_fee_jpy": 0,
+      "contract_period_months": 0,
+      "selling_points": [
+        "基本料金0円",
+        "市場連動なし",
+        "最短当日切替申込"
+      ],
+      "weak_points": [
+        "燃料費調整額の影響あり"
+      ],
+      "target_personas": [
+        "electricity_one_person",
+        "electricity_family"
+      ],
+      "ng_phrases": [
+        "絶対安い",
+        "電気代0円"
+      ],
+      "speed_max_mbps": 0,
+      "data_cap": "",
+      "area_coverage": "",
+      "cashback_jpy": 0,
+      "cashback_condition": ""
+    },
+    {
+      "id": "eneos-denki",
+      "name": "ENEOSでんき",
+      "category": "electricity",
+      "subcategory": "大手系新電力",
+      "asp": "A8.net",
+      "asp_status": "NOT_YET_PARTNERED",
+      "reward_jpy": 6000,
+      "approval_rate_estimate": 0.65,
+      "cookie_hours": 24,
+      "affiliate_url_placeholder": "https://www.eneos-denki.com/?placeholder=true",
+      "selling_points": [
+        "ENEOSカード利用で割引",
+        "長期割で最大1%引き",
+        "信頼の大手"
+      ],
+      "weak_points": [
+        "対応エリア限定（一部地域）"
+      ],
+      "target_personas": [
+        "electricity_family",
+        "senior_utility"
+      ],
+      "ng_phrases": [
+        "業界最安"
+      ],
+      "speed_max_mbps": 0,
+      "data_cap": "",
+      "area_coverage": "",
+      "cashback_jpy": 0,
+      "cashback_condition": "",
+      "monthly_fee_jpy": 0,
+      "initial_fee_jpy": 0,
+      "contract_period_months": 0,
+      "active": false,
+      "_note": "A8.netでは取扱なし。バリコマ/楽天アフィリ登録後に再有効化予定。"
+    },
+    {
+      "id": "rakuten-denki",
+      "name": "楽天でんき",
+      "category": "electricity",
+      "subcategory": "新電力（楽天ポイント）",
+      "asp": "A8.net",
+      "asp_status": "NOT_YET_PARTNERED",
+      "reward_jpy": 5000,
+      "approval_rate_estimate": 0.6,
+      "cookie_hours": 24,
+      "affiliate_url_placeholder": "https://denki.rakuten.co.jp/?placeholder=true",
+      "selling_points": [
+        "楽天ポイントが貯まる・使える",
+        "基本料金0円",
+        "解約金なし"
+      ],
+      "weak_points": [
+        "市場連動型のため変動リスク"
+      ],
+      "target_personas": [
+        "electricity_one_person",
+        "electricity_family"
+      ],
+      "ng_phrases": [
+        "市場連動なし"
+      ],
+      "speed_max_mbps": 0,
+      "data_cap": "",
+      "area_coverage": "",
+      "cashback_jpy": 0,
+      "cashback_condition": "",
+      "monthly_fee_jpy": 0,
+      "initial_fee_jpy": 0,
+      "contract_period_months": 0,
+      "active": false,
+      "_note": "A8.netでは取扱なし。バリコマ/楽天アフィリ登録後に再有効化予定。"
+    },
+    {
+      "id": "au-denki",
+      "name": "auでんき",
+      "category": "electricity",
+      "subcategory": "通信セット",
+      "asp": "A8.net",
+      "asp_status": "NOT_YET_PARTNERED",
+      "reward_jpy": 5500,
+      "approval_rate_estimate": 0.6,
+      "cookie_hours": 24,
+      "affiliate_url_placeholder": "https://www.au.com/electricity/?placeholder=true",
+      "selling_points": [
+        "auスマホ・auひかりとセット割引",
+        "Pontaポイントが貯まる"
+      ],
+      "weak_points": [
+        "au非ユーザーはメリット限定"
+      ],
+      "target_personas": [
+        "electricity_gas_set",
+        "electricity_family"
+      ],
+      "ng_phrases": [
+        "全員に最安"
+      ],
+      "speed_max_mbps": 0,
+      "data_cap": "",
+      "area_coverage": "",
+      "cashback_jpy": 0,
+      "cashback_condition": "",
+      "monthly_fee_jpy": 0,
+      "initial_fee_jpy": 0,
+      "contract_period_months": 0
+    },
+    {
+      "id": "softbank-denki",
+      "name": "ソフトバンクでんき",
+      "category": "electricity",
+      "subcategory": "通信セット",
+      "asp": "A8.net",
+      "asp_status": "NOT_YET_PARTNERED",
+      "reward_jpy": 5500,
+      "approval_rate_estimate": 0.6,
+      "cookie_hours": 24,
+      "affiliate_url_placeholder": "https://www.softbank.jp/energy/?placeholder=true",
+      "selling_points": [
+        "ソフトバンク回線とセット割",
+        "PayPayポイント還元"
+      ],
+      "weak_points": [
+        "SB系非ユーザーは恩恵限定"
+      ],
+      "target_personas": [
+        "electricity_gas_set",
+        "electricity_family"
+      ],
+      "ng_phrases": [
+        "業界NO.1"
+      ],
+      "speed_max_mbps": 0,
+      "data_cap": "",
+      "area_coverage": "",
+      "cashback_jpy": 0,
+      "cashback_condition": "",
+      "monthly_fee_jpy": 0,
+      "initial_fee_jpy": 0,
+      "contract_period_months": 0
+    },
+    {
+      "id": "tokyo-gas-denki",
+      "name": "東京ガスの電気",
+      "category": "electricity",
+      "subcategory": "ガス会社系電気",
+      "asp": "A8.net",
+      "asp_status": "NOT_YET_PARTNERED",
+      "reward_jpy": 6500,
+      "approval_rate_estimate": 0.62,
+      "cookie_hours": 24,
+      "affiliate_url_placeholder": "https://home.tokyo-gas.co.jp/power/?placeholder=true",
+      "selling_points": [
+        "ガスとセット割で年間最大3000円割引",
+        "東京ガスブランドの安心感"
+      ],
+      "weak_points": [
+        "関東エリア限定"
+      ],
+      "target_personas": [
+        "electricity_gas_set",
+        "electricity_family"
+      ],
+      "ng_phrases": [
+        "最安"
+      ],
+      "speed_max_mbps": 0,
+      "data_cap": "",
+      "area_coverage": "",
+      "cashback_jpy": 0,
+      "cashback_condition": "",
+      "monthly_fee_jpy": 0,
+      "initial_fee_jpy": 0,
+      "contract_period_months": 0,
+      "active": false,
+      "_note": "A8.netでは取扱なし。バリコマ/楽天アフィリ登録後に再有効化予定。"
+    },
+    {
+      "id": "shin-energy",
+      "name": "シン・エナジー",
+      "category": "electricity",
+      "subcategory": "夜型向け新電力",
+      "asp": "afb",
+      "asp_status": "NOT_YET_PARTNERED",
+      "reward_jpy": 7000,
+      "approval_rate_estimate": 0.6,
+      "cookie_hours": 24,
+      "affiliate_url_placeholder": "https://www.symenergy.co.jp/?placeholder=true",
+      "selling_points": [
+        "夜間料金プランあり",
+        "オール電化向けプラン",
+        "高還元"
+      ],
+      "weak_points": [
+        "契約プランがやや複雑"
+      ],
+      "target_personas": [
+        "electricity_one_person",
+        "electricity_family"
+      ],
+      "ng_phrases": [
+        "絶対安い"
+      ],
+      "speed_max_mbps": 0,
+      "data_cap": "",
+      "area_coverage": "",
+      "cashback_jpy": 0,
+      "cashback_condition": "",
+      "monthly_fee_jpy": 0,
+      "initial_fee_jpy": 0,
+      "contract_period_months": 0
+    },
+    {
+      "id": "nichigas",
+      "name": "ニチガス",
+      "category": "gas",
+      "subcategory": "プロパンガス",
+      "asp": "A8.net",
+      "asp_status": "NOT_YET_PARTNERED",
+      "reward_jpy": 8000,
+      "approval_rate_estimate": 0.55,
+      "cookie_hours": 24,
+      "affiliate_url_placeholder": "https://www.nichigas.co.jp/?placeholder=true",
+      "selling_points": [
+        "プロパンガス料金見直しに強み",
+        "全国対応"
+      ],
+      "weak_points": [
+        "都市ガスエリア対応外"
+      ],
+      "target_personas": [
+        "gas_saving",
+        "moving_utility"
+      ],
+      "ng_phrases": [
+        "日本一安い"
+      ],
+      "speed_max_mbps": 0,
+      "data_cap": "",
+      "area_coverage": "",
+      "cashback_jpy": 0,
+      "cashback_condition": "",
+      "monthly_fee_jpy": 0,
+      "initial_fee_jpy": 0,
+      "contract_period_months": 0
+    },
+    {
+      "id": "lemongas",
+      "name": "レモンガス",
+      "category": "gas",
+      "subcategory": "プロパン+都市ガス",
+      "asp": "afb",
+      "asp_status": "NOT_YET_PARTNERED",
+      "reward_jpy": 7500,
+      "approval_rate_estimate": 0.58,
+      "cookie_hours": 24,
+      "affiliate_url_placeholder": "https://www.lemongas.co.jp/?placeholder=true",
+      "selling_points": [
+        "プロパンガス・都市ガス両対応",
+        "電気とのセット割"
+      ],
+      "weak_points": [
+        "対応エリア限定"
+      ],
+      "target_personas": [
+        "gas_saving",
+        "electricity_gas_set"
+      ],
+      "ng_phrases": [
+        "業界最安"
+      ],
+      "speed_max_mbps": 0,
+      "data_cap": "",
+      "area_coverage": "",
+      "cashback_jpy": 0,
+      "cashback_condition": "",
+      "monthly_fee_jpy": 0,
+      "initial_fee_jpy": 0,
+      "contract_period_months": 0
+    },
+    {
+      "id": "denki-hikaku-pro",
+      "name": "電気比較プロ（一括見積り）",
+      "category": "electricity",
+      "subcategory": "一括比較サービス",
+      "asp": "A8.net",
+      "asp_status": "NOT_YET_PARTNERED",
+      "reward_jpy": 3000,
+      "approval_rate_estimate": 0.75,
+      "cookie_hours": 24,
+      "affiliate_url_placeholder": "https://placeholder-denki-hikaku.example.com/?placeholder=true",
+      "selling_points": [
+        "複数電力会社を一括見積り",
+        "無料で診断",
+        "最短3分"
+      ],
+      "weak_points": [
+        "申込後営業電話あり"
+      ],
+      "target_personas": [
+        "electricity_one_person",
+        "electricity_family"
+      ],
+      "ng_phrases": [
+        "絶対安くなる"
+      ],
+      "speed_max_mbps": 0,
+      "data_cap": "",
+      "area_coverage": "",
+      "cashback_jpy": 0,
+      "cashback_condition": "",
+      "monthly_fee_jpy": 0,
+      "initial_fee_jpy": 0,
+      "contract_period_months": 0
+    },
+    {
+      "id": "terasel-denki",
+      "name": "TERASELでんき",
+      "category": "electricity",
+      "subcategory": "新電力（伊藤忠系）",
+      "asp": "A8.net",
+      "asp_status": "NOT_YET_PARTNERED",
+      "_note": "A8で提携申請可。伊藤忠エネクス系で信頼感あり。",
+      "reward_jpy": 6000,
+      "approval_rate_estimate": 0.62,
+      "cookie_hours": 24,
+      "affiliate_url_placeholder": "https://placeholder-terasel.example.com/?placeholder=true",
+      "monthly_fee_jpy": 0,
+      "initial_fee_jpy": 0,
+      "contract_period_months": 0,
+      "speed_max_mbps": 0,
+      "data_cap": "",
+      "area_coverage": "全国（沖縄・離島除く）",
+      "cashback_jpy": 0,
+      "cashback_condition": "",
+      "selling_points": [
+        "基本料金から3%割引",
+        "Amazonギフト券3000円キャンペーン中",
+        "伊藤忠系の安心感"
+      ],
+      "weak_points": [
+        "燃料費調整額の影響"
+      ],
+      "target_personas": [
+        "electricity_one_person",
+        "electricity_family"
+      ],
+      "ng_phrases": [
+        "絶対安い",
+        "業界最安"
+      ]
+    },
+    {
+      "id": "cd-energy",
+      "name": "CDエナジーダイレクト",
+      "category": "electricity",
+      "subcategory": "新電力（中部電力系）",
+      "asp": "A8.net",
+      "asp_status": "NOT_YET_PARTNERED",
+      "_note": "A8で提携申請可。首都圏で人気・中部電力系の安心感。",
+      "reward_jpy": 7000,
+      "approval_rate_estimate": 0.6,
+      "cookie_hours": 24,
+      "affiliate_url_placeholder": "https://placeholder-cd-energy.example.com/?placeholder=true",
+      "monthly_fee_jpy": 0,
+      "initial_fee_jpy": 0,
+      "contract_period_months": 0,
+      "speed_max_mbps": 0,
+      "data_cap": "",
+      "area_coverage": "関東エリア",
+      "cashback_jpy": 0,
+      "cashback_condition": "",
+      "selling_points": [
+        "首都圏で電気代年間最大1.5万円安い",
+        "ガスとのセット割あり",
+        "中部電力グループの安定感"
+      ],
+      "weak_points": [
+        "関東以外は対応外"
+      ],
+      "target_personas": [
+        "electricity_family",
+        "electricity_gas_set"
+      ],
+      "ng_phrases": [
+        "全国最安"
+      ]
+    },
+    {
+      "id": "his-denki",
+      "name": "HISでんき",
+      "category": "electricity",
+      "subcategory": "新電力（旅行系特典）",
+      "asp": "A8.net",
+      "asp_status": "NOT_YET_PARTNERED",
+      "_note": "A8で提携申請可。HIS旅行クーポンが特典で受けやすい。",
+      "reward_jpy": 5500,
+      "approval_rate_estimate": 0.65,
+      "cookie_hours": 24,
+      "affiliate_url_placeholder": "https://placeholder-his-denki.example.com/?placeholder=true",
+      "monthly_fee_jpy": 0,
+      "initial_fee_jpy": 0,
+      "contract_period_months": 0,
+      "speed_max_mbps": 0,
+      "data_cap": "",
+      "area_coverage": "全国（沖縄・離島除く）",
+      "cashback_jpy": 0,
+      "cashback_condition": "",
+      "selling_points": [
+        "HIS旅行クーポン年1万円分",
+        "基本料金5%割引",
+        "解約金なし"
+      ],
+      "weak_points": [
+        "旅行特典に魅力を感じない人には弱い"
+      ],
+      "target_personas": [
+        "electricity_one_person",
+        "electricity_family"
+      ],
+      "ng_phrases": [
+        "最安"
+      ]
     }
   ]
 }
