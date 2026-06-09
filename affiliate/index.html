@@ -3,337 +3,866 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5" />
-<meta name="theme-color" content="#0066cc" />
+<meta name="theme-color" content="#25221d" />
 <meta name="robots" content="noindex, nofollow" />
 <title>通信比較ナビ｜WiFi・光回線・格安SIMの最適プラン比較</title>
 <meta name="description" content="ホームルーター・ポケットWiFi・光回線・格安SIMを目的別に比較。一人暮らし・テレワーク・家族・引越し・ゲーム用途別に最適プランをご紹介。" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet" />
-<!-- Google tag (gtag.js) - GA4 + Google Ads 統合 -->
+<!-- Google tag (gtag.js) - GA4 + Google Ads -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-8XKJ81F390"></script>
 <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-8XKJ81F390');gtag('config','AW-18213756380');</script>
 <!-- Microsoft Clarity -->
 <script type="text/javascript">(function(c,l,a,r,i,t,y){c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);})(window,document,"clarity","script","x283fyep35");</script>
 <style>
+*,*::before,*::after{box-sizing:border-box}
+*{margin:0}
 :root{
-  --primary:#0066cc;
-  --accent:#ff7a00;
-  --bg:#f6f8fb;
-  --ink:#0f1830;
-  --muted:#5a6478;
-  --paper:#fff;
-  --border:#e5e8ef;
+  --paper:#fbf7ef;
+  --paper-2:#f3ebdf;
+  --surface:#fffdf8;
+  --ink:#191713;
+  --charcoal:#25221d;
+  --muted:#71695f;
+  --soft:#9b9185;
+  --line:#e4dacb;
+  --coral:#d96945;
+  --coral-dark:#934128;
+  --sage:#6f846e;
+  --blue:#425f78;
+  --gold:#b48a45;
+  --green:#55715c;
+  --shadow:0 20px 60px rgba(38,31,22,.10);
+  --shadow-sm:0 10px 28px rgba(38,31,22,.07);
+  --radius:8px;
 }
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
-body{font-family:"Noto Sans JP",sans-serif;background:var(--bg);color:var(--ink);font-size:15px;line-height:1.85;-webkit-font-smoothing:antialiased}
-img{display:block;max-width:100%;height:auto}
+html{scroll-behavior:smooth}
+body{
+  min-height:100vh;
+  font-family:"Noto Sans JP",system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  color:var(--ink);
+  background:
+    radial-gradient(circle at 12% 4%,rgba(217,105,69,.14),transparent 30%),
+    radial-gradient(circle at 86% 18%,rgba(66,95,120,.12),transparent 28%),
+    linear-gradient(180deg,var(--paper) 0%,#f8f1e8 48%,#f5efe6 100%);
+  font-size:15px;
+  line-height:1.85;
+  -webkit-font-smoothing:antialiased;
+  text-rendering:optimizeLegibility;
+}
 a{color:inherit;text-decoration:none}
-.container{width:100%;max-width:1100px;margin:0 auto;padding:0 20px}
-
-/* Header */
-.header{background:#fff;border-bottom:1px solid var(--border);padding:14px 0;position:sticky;top:0;z-index:50;backdrop-filter:blur(10px);background:rgba(255,255,255,.95)}
-.header-inner{display:flex;align-items:center;justify-content:space-between}
-.brand{display:flex;align-items:center;gap:10px;font-weight:900;font-size:18px;color:var(--primary)}
-.brand-mark{width:36px;height:36px;background:var(--primary);color:#fff;border-radius:8px;display:grid;place-items:center;font-weight:900;font-size:16px}
-.nav{display:none;gap:24px}
-@media(min-width:768px){.nav{display:flex}}
-.nav a{font-size:13px;color:var(--muted);font-weight:700}
-.nav a:hover{color:var(--primary)}
-
-/* Hero */
-.hero{background:linear-gradient(135deg,var(--primary) 0%,#003a73 100%);color:#fff;padding:60px 0 80px;text-align:center}
-.hero-eyebrow{display:inline-block;background:rgba(255,255,255,.15);padding:6px 16px;border-radius:20px;font-size:12px;font-weight:700;letter-spacing:.05em;margin-bottom:18px}
-.hero-title{font-size:28px;font-weight:900;line-height:1.45;letter-spacing:.02em;margin-bottom:18px}
-@media(min-width:768px){.hero-title{font-size:38px}}
-.hero-sub{font-size:14px;line-height:2;opacity:.92;max-width:680px;margin:0 auto 32px;padding:0 8px}
-@media(min-width:768px){.hero-sub{font-size:16px}}
-.hero-stats{display:flex;justify-content:center;gap:20px;flex-wrap:wrap}
-.hstat{background:rgba(255,255,255,.12);backdrop-filter:blur(6px);padding:14px 22px;border-radius:12px;border:1px solid rgba(255,255,255,.2)}
-.hstat-v{font-size:24px;font-weight:900;color:#ffe66b}
-.hstat-l{font-size:11px;opacity:.85;letter-spacing:.05em;margin-top:2px}
-
-/* Section */
-.section{padding:60px 0}
-@media(min-width:768px){.section{padding:80px 0}}
-.section-title{font-size:24px;font-weight:900;text-align:center;margin-bottom:8px;color:var(--ink)}
-@media(min-width:768px){.section-title{font-size:30px}}
-.section-title em{color:var(--primary);font-style:normal;border-bottom:3px solid var(--accent);padding-bottom:2px}
-.section-sub{text-align:center;color:var(--muted);font-size:14px;margin-bottom:36px}
-
-/* Category cards */
-.cat-grid{display:grid;gap:18px;grid-template-columns:1fr}
-@media(min-width:640px){.cat-grid{grid-template-columns:1fr 1fr}}
-@media(min-width:1024px){.cat-grid{grid-template-columns:repeat(4,1fr)}}
-.cat-card{background:#fff;border-radius:16px;padding:28px 22px;box-shadow:0 4px 20px rgba(0,0,0,.06);border:1px solid var(--border);transition:transform .2s,box-shadow .2s}
-.cat-card:hover{transform:translateY(-3px);box-shadow:0 12px 32px rgba(0,0,0,.1)}
-.cat-icon{width:56px;height:56px;border-radius:14px;display:grid;place-items:center;font-size:26px;margin-bottom:18px;background:linear-gradient(135deg,var(--primary),#003a73);color:#fff}
-.cat-card[data-cat="fiber"] .cat-icon{background:linear-gradient(135deg,#c8102e,#7a0c1c)}
-.cat-card[data-cat="pocket"] .cat-icon{background:linear-gradient(135deg,#1850a5,#0b2e63)}
-.cat-card[data-cat="mvno"] .cat-icon{background:linear-gradient(135deg,#bf0000,#7a0000)}
-.cat-h{font-size:18px;font-weight:900;color:var(--ink);margin-bottom:8px}
-.cat-d{font-size:13px;color:var(--muted);line-height:1.85;margin-bottom:18px}
-.cat-ct{font-size:12px;color:var(--primary);font-weight:700}
-
-/* Niche grid */
-.niche-grid{display:grid;gap:14px;grid-template-columns:1fr}
-@media(min-width:640px){.niche-grid{grid-template-columns:1fr 1fr}}
-@media(min-width:1024px){.niche-grid{grid-template-columns:repeat(3,1fr)}}
-.niche-card{background:#fff;border-radius:12px;padding:22px 18px;box-shadow:0 2px 12px rgba(0,0,0,.05);border:1px solid var(--border);border-left:4px solid var(--accent);transition:transform .2s,box-shadow .2s}
-.niche-card:hover{transform:translateX(3px);box-shadow:0 6px 20px rgba(0,0,0,.08)}
-.niche-h{font-size:15px;font-weight:900;color:var(--ink);margin-bottom:8px}
-.niche-d{font-size:12px;color:var(--muted);line-height:1.7;margin-bottom:12px}
-.niche-kw{display:flex;gap:6px;flex-wrap:wrap}
-.niche-tag{background:#eef4ff;color:var(--primary);padding:3px 10px;border-radius:12px;font-size:10px;font-weight:700}
-
-/* Features */
-.feat-grid{display:grid;gap:20px;grid-template-columns:1fr}
-@media(min-width:768px){.feat-grid{grid-template-columns:repeat(3,1fr)}}
-.feat{background:#fff;border-radius:14px;padding:30px 24px;text-align:center;box-shadow:0 2px 10px rgba(0,0,0,.04)}
-.feat-icon{width:60px;height:60px;background:#eff5ff;color:var(--primary);border-radius:50%;display:grid;place-items:center;font-size:28px;margin:0 auto 18px}
-.feat-h{font-size:16px;font-weight:900;color:var(--ink);margin-bottom:10px}
-.feat-d{font-size:13px;color:var(--muted);line-height:1.85}
-
-/* Footer */
-.footer{background:#1a1d28;color:rgba(255,255,255,.7);padding:50px 0 24px;font-size:13px}
-.footer-grid{display:grid;gap:30px;grid-template-columns:1fr}
-@media(min-width:768px){.footer-grid{grid-template-columns:2fr 1fr 1fr}}
-.footer-brand{font-size:17px;font-weight:900;color:#fff;margin-bottom:12px}
-.footer-desc{font-size:12px;line-height:1.85;color:rgba(255,255,255,.6)}
-.footer-h{font-size:12px;font-weight:700;color:rgba(255,255,255,.85);letter-spacing:.1em;margin-bottom:14px}
-.footer-list li{margin-bottom:8px;font-size:12px;color:rgba(255,255,255,.6)}
-.footer-list a:hover{color:#fff}
-.footer-bottom{margin-top:36px;padding-top:20px;border-top:1px solid rgba(255,255,255,.1);text-align:center;font-size:11px;color:rgba(255,255,255,.4)}
+svg{display:block;flex:none}
+.shell{max-width:1160px;margin:0 auto;padding:0 24px}
+.site-header{
+  position:sticky;
+  top:0;
+  z-index:30;
+  border-bottom:1px solid rgba(228,218,203,.78);
+  background:rgba(251,247,239,.84);
+  backdrop-filter:blur(18px);
+}
+.header-inner{
+  height:70px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:22px;
+}
+.brand{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  min-width:0;
+  font-weight:900;
+}
+.brand-mark{
+  width:38px;
+  height:38px;
+  display:grid;
+  place-items:center;
+  border:1px solid rgba(37,34,29,.16);
+  border-radius:8px;
+  background:var(--charcoal);
+  color:#fff7ec;
+  font-size:15px;
+  box-shadow:0 10px 24px rgba(37,34,29,.16);
+}
+.brand small{
+  display:block;
+  margin-top:1px;
+  color:var(--soft);
+  font-size:11px;
+  font-weight:900;
+  letter-spacing:.08em;
+}
+.nav{
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+.nav a{
+  min-height:38px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:7px;
+  border-radius:999px;
+  padding:7px 12px;
+  color:var(--muted);
+  font-size:12px;
+  font-weight:900;
+  white-space:nowrap;
+}
+.nav a:hover{background:#f4ede1;color:var(--ink)}
+.nav .nav-legal{
+  color:#fff7ec;
+  background:var(--charcoal);
+  box-shadow:0 12px 28px rgba(37,34,29,.16);
+}
+.hero{
+  position:relative;
+  overflow:hidden;
+  padding:76px 0 34px;
+}
+.hero::before{
+  content:"";
+  position:absolute;
+  inset:30px -16vw auto auto;
+  width:620px;
+  height:520px;
+  border-radius:30px;
+  background:
+    linear-gradient(145deg,rgba(255,253,248,.45),rgba(255,253,248,0)),
+    repeating-linear-gradient(90deg,rgba(37,34,29,.075) 0 1px,transparent 1px 18px);
+  transform:rotate(-8deg);
+  pointer-events:none;
+}
+.hero-grid{
+  position:relative;
+  display:grid;
+  grid-template-columns:minmax(0,1.06fr) 410px;
+  gap:46px;
+  align-items:center;
+}
+.eyebrow{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  color:var(--coral-dark);
+  border:1px solid rgba(217,105,69,.24);
+  background:rgba(255,253,248,.64);
+  border-radius:999px;
+  padding:7px 13px;
+  font-size:12px;
+  font-weight:900;
+  letter-spacing:.08em;
+}
+.hero h1{
+  max-width:790px;
+  margin-top:20px;
+  font-size:clamp(38px,6vw,76px);
+  line-height:1.02;
+  font-weight:900;
+  letter-spacing:0;
+}
+.hero h1 span{
+  display:block;
+  color:var(--coral-dark);
+}
+.lead{
+  max-width:700px;
+  margin-top:22px;
+  color:var(--muted);
+  font-size:16px;
+  line-height:2;
+  font-weight:500;
+}
+.hero-actions{
+  display:flex;
+  flex-wrap:wrap;
+  gap:12px;
+  margin-top:30px;
+}
+.button{
+  min-height:52px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:10px;
+  border-radius:999px;
+  padding:12px 22px;
+  font-size:14px;
+  font-weight:900;
+  transition:transform .18s ease,box-shadow .18s ease,background .18s ease;
+}
+.button.primary{
+  color:#fff7ec;
+  background:var(--charcoal);
+  box-shadow:0 16px 34px rgba(37,34,29,.18);
+}
+.button.secondary{
+  color:var(--charcoal);
+  border:1px solid rgba(37,34,29,.14);
+  background:rgba(255,253,248,.72);
+}
+.button:hover{transform:translateY(-1px)}
+.hero-stats{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:10px;
+  margin-top:32px;
+  max-width:560px;
+}
+.stat{
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  background:rgba(255,253,248,.72);
+  padding:14px 15px;
+}
+.stat strong{
+  display:block;
+  font-size:26px;
+  line-height:1;
+  color:var(--coral-dark);
+}
+.stat span{
+  display:block;
+  margin-top:7px;
+  color:var(--muted);
+  font-size:11px;
+  font-weight:900;
+  letter-spacing:.06em;
+}
+.visual-panel{
+  position:relative;
+  min-height:428px;
+  border:1px solid rgba(37,34,29,.13);
+  border-radius:var(--radius);
+  background:
+    linear-gradient(180deg,rgba(255,253,248,.94),rgba(255,253,248,.74)),
+    url("data:image/svg+xml,%3Csvg width='520' height='460' viewBox='0 0 520 460' xmlns='http://www.w3.org/2000/svg'%3E%3Crect width='520' height='460' fill='%23fffdf8'/%3E%3Cpath d='M0 338 C102 286 165 330 246 262 S404 150 520 184 V460 H0Z' fill='%23eadfce'/%3E%3Cpath d='M0 370 C108 322 174 362 262 298 S420 206 520 232 V460 H0Z' fill='%23d96945' fill-opacity='.22'/%3E%3Ccircle cx='392' cy='112' r='54' fill='%23425f78' fill-opacity='.16'/%3E%3Cpath d='M78 88 h190 M78 120 h148 M78 152 h220' stroke='%2325221d' stroke-opacity='.15' stroke-width='12' stroke-linecap='round'/%3E%3Cpath d='M110 250 h122 M110 282 h176' stroke='%236f846e' stroke-opacity='.26' stroke-width='10' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-size:cover;
+  box-shadow:var(--shadow);
+  padding:22px;
+  overflow:hidden;
+}
+.visual-panel::after{
+  content:"";
+  position:absolute;
+  inset:14px;
+  border:1px solid rgba(255,253,248,.72);
+  border-radius:6px;
+  pointer-events:none;
+}
+.panel-top,.panel-bottom{position:relative;z-index:1}
+.panel-top{
+  display:flex;
+  justify-content:space-between;
+  gap:12px;
+}
+.mini-pill{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding:7px 10px;
+  border-radius:999px;
+  background:rgba(255,253,248,.84);
+  color:var(--sage);
+  font-size:12px;
+  font-weight:900;
+}
+.recommend-card{
+  position:absolute;
+  z-index:2;
+  left:26px;
+  right:26px;
+  bottom:28px;
+  border:1px solid rgba(37,34,29,.13);
+  border-radius:8px;
+  background:rgba(255,253,248,.92);
+  box-shadow:0 16px 42px rgba(38,31,22,.12);
+  padding:20px;
+}
+.recommend-card strong{
+  display:block;
+  font-size:18px;
+  line-height:1.45;
+}
+.recommend-list{
+  display:grid;
+  gap:10px;
+  margin-top:14px;
+}
+.recommend-list span{
+  display:flex;
+  align-items:center;
+  gap:9px;
+  color:var(--muted);
+  font-size:13px;
+  font-weight:700;
+}
+.quick-search{
+  position:relative;
+  z-index:5;
+  margin-top:34px;
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  background:rgba(255,253,248,.84);
+  box-shadow:var(--shadow-sm);
+  padding:8px;
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:8px;
+}
+.quick-search a{
+  min-height:54px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  border-radius:6px;
+  color:var(--muted);
+  font-size:13px;
+  font-weight:900;
+}
+.quick-search a:hover{background:#f4ede1;color:var(--ink)}
+.notice{
+  margin-top:18px;
+  border:1px solid rgba(217,105,69,.24);
+  border-radius:var(--radius);
+  background:#fff6ed;
+  padding:18px 20px;
+  display:grid;
+  grid-template-columns:auto 1fr;
+  gap:14px;
+  color:var(--coral-dark);
+  font-weight:700;
+}
+.notice p{font-size:13px;line-height:1.85}
+.section{
+  padding:76px 0;
+  border-top:1px solid var(--line);
+}
+.section.alt{background:rgba(255,253,248,.45)}
+.section-head{
+  display:grid;
+  grid-template-columns:minmax(0,380px) minmax(0,1fr);
+  gap:34px;
+  align-items:end;
+  margin-bottom:26px;
+}
+.kicker{
+  display:inline-flex;
+  color:var(--soft);
+  font-size:12px;
+  font-weight:900;
+  letter-spacing:.12em;
+}
+.section h2{
+  margin-top:10px;
+  color:var(--charcoal);
+  font-size:clamp(26px,3.5vw,42px);
+  line-height:1.18;
+  font-weight:900;
+  letter-spacing:0;
+}
+.section-desc{
+  color:var(--muted);
+  font-size:14px;
+  line-height:1.9;
+  font-weight:500;
+}
+.category-grid{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:14px;
+}
+.category-card{
+  position:relative;
+  min-height:292px;
+  overflow:hidden;
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  background:var(--surface);
+  padding:22px;
+  box-shadow:var(--shadow-sm);
+  transition:transform .18s ease,box-shadow .18s ease;
+}
+.category-card:hover{
+  transform:translateY(-3px);
+  box-shadow:0 20px 46px rgba(38,31,22,.12);
+}
+.category-card::before{
+  content:"";
+  position:absolute;
+  inset:0 0 auto 0;
+  height:6px;
+  background:var(--accent,var(--coral));
+}
+.category-card.router{--accent:var(--coral)}
+.category-card.pocket{--accent:var(--blue)}
+.category-card.fiber{--accent:var(--sage)}
+.category-card.sim{--accent:var(--gold)}
+.icon-box{
+  width:46px;
+  height:46px;
+  display:grid;
+  place-items:center;
+  border:1px solid rgba(37,34,29,.1);
+  border-radius:8px;
+  background:#f6efe5;
+  color:var(--accent,var(--coral));
+  margin-bottom:17px;
+}
+.category-card h3{
+  font-size:19px;
+  line-height:1.45;
+  font-weight:900;
+}
+.category-card p{
+  margin-top:10px;
+  color:var(--muted);
+  font-size:13px;
+  line-height:1.8;
+  font-weight:500;
+}
+.card-link{
+  position:absolute;
+  left:22px;
+  right:22px;
+  bottom:20px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  border-top:1px solid var(--line);
+  padding-top:14px;
+  color:var(--charcoal);
+  font-size:13px;
+  font-weight:900;
+}
+.guide-grid{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:12px;
+}
+.guide-card{
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  background:var(--surface);
+  padding:18px;
+  min-height:168px;
+  box-shadow:0 8px 22px rgba(38,31,22,.05);
+  transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease;
+}
+.guide-card:hover{
+  transform:translateY(-2px);
+  border-color:rgba(217,105,69,.34);
+  box-shadow:0 16px 36px rgba(38,31,22,.09);
+}
+.guide-card h3{
+  display:flex;
+  align-items:flex-start;
+  gap:10px;
+  font-size:15px;
+  line-height:1.55;
+  font-weight:900;
+}
+.guide-card h3 svg{
+  margin-top:3px;
+  color:var(--coral-dark);
+}
+.guide-card p{
+  margin-top:9px;
+  color:var(--muted);
+  font-size:12px;
+  line-height:1.75;
+  font-weight:500;
+}
+.tags{
+  display:flex;
+  flex-wrap:wrap;
+  gap:6px;
+  margin-top:12px;
+}
+.tag{
+  display:inline-flex;
+  align-items:center;
+  min-height:24px;
+  border-radius:999px;
+  background:#f3eadc;
+  color:var(--coral-dark);
+  padding:3px 9px;
+  font-size:10px;
+  font-weight:900;
+}
+.features{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:14px;
+}
+.feature{
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  background:var(--surface);
+  padding:24px;
+  box-shadow:var(--shadow-sm);
+}
+.feature .icon-box{color:var(--blue);background:#eef3f5}
+.feature h3{
+  font-size:17px;
+  font-weight:900;
+}
+.feature p{
+  margin-top:9px;
+  color:var(--muted);
+  font-size:13px;
+  line-height:1.85;
+  font-weight:500;
+}
+.final-cta{
+  margin-top:18px;
+  display:grid;
+  grid-template-columns:1fr auto;
+  gap:24px;
+  align-items:center;
+  border:1px solid rgba(37,34,29,.14);
+  border-radius:var(--radius);
+  background:var(--charcoal);
+  color:#fff7ec;
+  padding:30px;
+  box-shadow:var(--shadow);
+}
+.final-cta h2{
+  margin:0;
+  color:#fff7ec;
+  font-size:27px;
+}
+.final-cta p{
+  margin-top:8px;
+  color:rgba(255,247,236,.72);
+  font-size:13px;
+  line-height:1.85;
+  font-weight:500;
+}
+.site-footer{
+  border-top:1px solid rgba(255,247,236,.1);
+  background:var(--charcoal);
+  color:rgba(255,247,236,.52);
+  padding:38px 0;
+}
+.footer-grid{
+  display:grid;
+  grid-template-columns:1.6fr 1fr 1fr;
+  gap:30px;
+}
+.footer-brand{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  color:#fff7ec;
+  font-weight:900;
+}
+.footer-copy{
+  margin-top:12px;
+  color:rgba(255,247,236,.6);
+  font-size:12px;
+  line-height:1.85;
+}
+.footer-title{
+  color:rgba(255,247,236,.84);
+  font-size:12px;
+  font-weight:900;
+  letter-spacing:.12em;
+  margin-bottom:12px;
+}
+.footer-links{
+  display:grid;
+  gap:8px;
+}
+.footer-links a{
+  color:rgba(255,247,236,.62);
+  font-size:12px;
+  font-weight:700;
+}
+.footer-links a:hover{color:#fff7ec}
+.copyright{
+  margin-top:30px;
+  padding-top:18px;
+  border-top:1px solid rgba(255,247,236,.1);
+  color:rgba(255,247,236,.38);
+  font-size:11px;
+}
+@media(max-width:960px){
+  .hero-grid{grid-template-columns:1fr}
+  .visual-panel{min-height:340px}
+  .section-head{grid-template-columns:1fr;gap:12px}
+  .category-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .guide-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .features{grid-template-columns:1fr}
+}
+@media(max-width:720px){
+  .shell{padding:0 16px}
+  .site-header{position:relative}
+  .header-inner{height:auto;padding:14px 0;align-items:flex-start}
+  .brand small{display:none}
+  .nav a:not(.nav-legal){display:none}
+  .nav .nav-legal{padding:8px 12px}
+  .hero{padding:44px 0 24px}
+  .lead{font-size:14px;line-height:1.9}
+  .hero-actions{display:grid;grid-template-columns:1fr}
+  .button{width:100%}
+  .hero-stats{grid-template-columns:1fr 1fr 1fr;gap:8px}
+  .stat{padding:12px 10px}
+  .stat strong{font-size:21px}
+  .quick-search{grid-template-columns:1fr 1fr}
+  .notice{padding:16px}
+  .section{padding:48px 0}
+  .category-grid,.guide-grid{grid-template-columns:1fr}
+  .category-card{min-height:244px}
+  .final-cta{grid-template-columns:1fr;padding:24px}
+  .footer-grid{grid-template-columns:1fr;gap:24px}
+}
 </style>
 </head>
 <body>
-
-<header class="header">
-  <div class="container header-inner">
-    <a href="/affiliate/" class="brand">
+<header class="site-header">
+  <div class="shell header-inner">
+    <a class="brand" href="/affiliate/" aria-label="通信比較ナビ トップへ">
       <span class="brand-mark">通</span>
-      <span>通信比較ナビ</span>
+      <span>通信比較ナビ<small>PLAN COMPARISON</small></span>
     </a>
-    <nav class="nav">
-      <a href="#categories">カテゴリで探す</a>
-      <a href="#niches">悩みから探す</a>
+    <nav class="nav" aria-label="ナビゲーション">
+      <a href="#categories">カテゴリ</a>
+      <a href="#guides">悩みから探す</a>
       <a href="#features">サイトについて</a>
-      <a href="/affiliate/legal.html">運営者情報</a>
+      <a class="nav-legal" href="/affiliate/legal.html">運営者情報</a>
     </nav>
   </div>
 </header>
 
 <section class="hero">
-  <div class="container">
-    <span class="hero-eyebrow">📡 WiFi・光回線・格安SIM 総合比較</span>
-    <h1 class="hero-title">あなたの暮らしに、<br>ぴったりの通信プランを。</h1>
-    <p class="hero-sub">ホームルーター・ポケットWiFi・光回線・格安SIM、それぞれの最新プランを<br>状況別に整理して比較。一人暮らし・テレワーク・家族・引越し・ゲーム用途まで網羅。</p>
-    <div class="hero-stats">
-      <div class="hstat"><div class="hstat-v">21</div><div class="hstat-l">比較プラン数</div></div>
-      <div class="hstat"><div class="hstat-v">20</div><div class="hstat-l">用途別ガイド</div></div>
-      <div class="hstat"><div class="hstat-v">4</div><div class="hstat-l">カテゴリ網羅</div></div>
-    </div>
-  </div>
-</section>
-
-<section class="section" id="categories">
-  <div class="container">
-    <h2 class="section-title">サービス<em>カテゴリ</em>で探す</h2>
-    <p class="section-sub">4つの主要カテゴリから、あなたの目的に合うサービスをチェック</p>
-    <div class="cat-grid">
-      <a href="/a/one_person_room-rakuten-turbo" class="cat-card" data-cat="home_router">
-        <div class="cat-icon">🏠</div>
-        <h3 class="cat-h">ホームルーター</h3>
-        <p class="cat-d">工事不要・コンセント挿すだけ。賃貸OK、引越し時の手間なし。月額3,000〜5,000円台が中心。</p>
-        <p class="cat-ct">比較プランを見る →</p>
-      </a>
-      <a href="/a/business_traveler-gmo-wimax" class="cat-card" data-cat="pocket">
-        <div class="cat-icon">📱</div>
-        <h3 class="cat-h">ポケットWiFi</h3>
-        <p class="cat-d">持ち運び自由。出張・外回り・カフェ作業に最適。バッテリー内蔵で全国どこでも。</p>
-        <p class="cat-ct">比較プランを見る →</p>
-      </a>
-      <a href="/a/remote_worker-docomo-hikari" class="cat-card" data-cat="fiber">
-        <div class="cat-icon">⚡</div>
-        <h3 class="cat-h">光回線</h3>
-        <p class="cat-d">下り最大2Gbps・低Ping・無制限。テレワーク・ゲーム・4K動画視聴に必須の高速回線。</p>
-        <p class="cat-ct">比較プランを見る →</p>
-      </a>
-      <a href="/a/price_sensitive-rakuten-mobile" class="cat-card" data-cat="mvno">
-        <div class="cat-icon">📞</div>
-        <h3 class="cat-h">格安SIM・スマホ</h3>
-        <p class="cat-d">月990円〜のスマホプラン。MNP特典・ポイント還元・縛りなしプラン情報を網羅。</p>
-        <p class="cat-ct">比較プランを見る →</p>
-      </a>
-    </div>
-  </div>
-</section>
-
-<section class="section" id="niches" style="background:#fff">
-  <div class="container">
-    <h2 class="section-title">あなたの<em>状況</em>から探す</h2>
-    <p class="section-sub">「一人暮らし」「テレワーク」「引越し」など、具体的な使い方から最適プランをご紹介</p>
-    <div class="niche-grid">
-      <a href="/a/one_person_room-rakuten-turbo" class="niche-card">
-        <div class="niche-h">🏘 一人暮らしで即日使いたい</div>
-        <p class="niche-d">引越し直後・新生活開始時、工事を待たずネット利用を始めたい方向け</p>
-        <div class="niche-kw"><span class="niche-tag">工事不要</span><span class="niche-tag">即日</span><span class="niche-tag">月5千円以下</span></div>
-      </a>
-      <a href="/a/rental_no_construction-rakuten-turbo" class="niche-card">
-        <div class="niche-h">🚪 賃貸で工事ができない</div>
-        <p class="niche-d">大家確認不要・原状回復不要のWiFi。マンション・アパート問わずOK</p>
-        <div class="niche-kw"><span class="niche-tag">賃貸OK</span><span class="niche-tag">大家確認なし</span></div>
-      </a>
-      <a href="/a/remote_worker-docomo-hikari" class="niche-card">
-        <div class="niche-h">💼 テレワーク・Web会議用</div>
-        <p class="niche-d">Zoom・Teams・VPNが安定する高速回線。業務利用に最適なプラン</p>
-        <div class="niche-kw"><span class="niche-tag">高速</span><span class="niche-tag">安定</span><span class="niche-tag">低Ping</span></div>
-      </a>
-      <a href="/a/elderly_simple-rakuten-turbo" class="niche-card">
-        <div class="niche-h">👵 シニア・親世代向け</div>
-        <p class="niche-d">コンセント挿すだけ・電話サポート充実・料金体系シンプル</p>
-        <div class="niche-kw"><span class="niche-tag">かんたん</span><span class="niche-tag">サポート充実</span></div>
-      </a>
-      <a href="/a/business_traveler-gmo-wimax" class="niche-card">
-        <div class="niche-h">✈️ 出張・外回りが多い</div>
-        <p class="niche-d">全国対応・持ち運び可・無制限プラン。営業・フリーランス向け</p>
-        <div class="niche-kw"><span class="niche-tag">持ち運び</span><span class="niche-tag">無制限</span></div>
-      </a>
-      <a href="/a/price_sensitive-rakuten-mobile" class="niche-card">
-        <div class="niche-h">💰 スマホ料金を節約したい</div>
-        <p class="niche-d">月3,000円台のプラン・MNP特典・ポイント還元キャンペーン情報</p>
-        <div class="niche-kw"><span class="niche-tag">月990円〜</span><span class="niche-tag">縛りなし</span></div>
-      </a>
-      <a href="/a/gamer-nuro-hikari" class="niche-card">
-        <div class="niche-h">🎮 ゲームを快適にしたい</div>
-        <p class="niche-d">下り最大2Gbps・低Ping。FPS・MMOプレイヤー向け高速回線</p>
-        <div class="niche-kw"><span class="niche-tag">低Ping</span><span class="niche-tag">2Gbps</span></div>
-      </a>
-      <a href="/a/family_discount-ymobile" class="niche-card">
-        <div class="niche-h">👨‍👩‍👧 家族でまとめて節約</div>
-        <p class="niche-d">家族割・セット割で月数万円の節約も。3-5人世帯向け</p>
-        <div class="niche-kw"><span class="niche-tag">家族割</span><span class="niche-tag">セット割</span></div>
-      </a>
-      <a href="/a/kids_smartphone-ymobile" class="niche-card">
-        <div class="niche-h">👦 子供のスマホデビュー</div>
-        <p class="niche-d">月990円〜・容量制限可能・フィルタリング対応</p>
-        <div class="niche-kw"><span class="niche-tag">月990円〜</span><span class="niche-tag">フィルタリング</span></div>
-      </a>
-      <a href="/a/moving_fiber-docomo-hikari" class="niche-card">
-        <div class="niche-h">🚚 引越し・新居のネット導入</div>
-        <p class="niche-d">工事費実質無料・新規入会キャッシュバック対応</p>
-        <div class="niche-kw"><span class="niche-tag">工事費無料</span><span class="niche-tag">キャッシュバック</span></div>
-      </a>
-      <a href="/a/student_new-rakuten-turbo" class="niche-card">
-        <div class="niche-h">🎓 大学生・新入生向け</div>
-        <p class="niche-d">学生生協プランより安い・縛りなし・卒業時違約金なし</p>
-        <div class="niche-kw"><span class="niche-tag">学割</span><span class="niche-tag">縛りなし</span></div>
-      </a>
-      <a href="/a/moving_urgent-broad-wimax" class="niche-card">
-        <div class="niche-h">🚨 1週間以内に急ぎでWiFi</div>
-        <p class="niche-d">店舗即日受取・最短当日発送。光回線を待てない方向け</p>
-        <div class="niche-kw"><span class="niche-tag">即日</span><span class="niche-tag">店舗受取</span></div>
-      </a>
-      <a href="/a/couple_pair-docomo-hikari" class="niche-card">
-        <div class="niche-h">💑 二人暮らし・カップル</div>
-        <p class="niche-d">2人同時利用でも安定・セット割で2人分の通信費を節約</p>
-        <div class="niche-kw"><span class="niche-tag">2人同時</span><span class="niche-tag">セット割</span></div>
-      </a>
-      <a href="/a/video_streaming-nuro-hikari" class="niche-card">
-        <div class="niche-h">📺 動画視聴を快適にしたい</div>
-        <p class="niche-d">4K動画も止まらない・無制限・データ容量気にせず</p>
-        <div class="niche-kw"><span class="niche-tag">4K対応</span><span class="niche-tag">無制限</span></div>
-      </a>
-      <a href="/a/corporate_small-docomo-hikari" class="niche-card">
-        <div class="niche-h">🏢 法人・事務所のネット</div>
-        <p class="niche-d">法人契約対応・領収書発行・経費計上スムーズ</p>
-        <div class="niche-kw"><span class="niche-tag">法人契約</span><span class="niche-tag">経費計上</span></div>
-      </a>
-      <a href="/a/freelancer-gmo-wimax" class="niche-card">
-        <div class="niche-h">💻 フリーランス・ノマド向け</div>
-        <p class="niche-d">外出先でも安定・経費計上可・セキュリティ重視</p>
-        <div class="niche-kw"><span class="niche-tag">外出OK</span><span class="niche-tag">経費</span></div>
-      </a>
-      <a href="/a/mnp_from_au-povo" class="niche-card">
-        <div class="niche-h">📶 auから乗換検討中</div>
-        <p class="niche-d">au回線品質キープ・乗換特典・解約金負担あり</p>
-        <div class="niche-kw"><span class="niche-tag">au乗換</span><span class="niche-tag">特典あり</span></div>
-      </a>
-      <a href="/a/mnp_from_docomo-ahamo" class="niche-card">
-        <div class="niche-h">📶 ドコモから乗換検討中</div>
-        <p class="niche-d">ドコモ回線品質キープ・dポイント連携・スムーズ乗換</p>
-        <div class="niche-kw"><span class="niche-tag">ドコモ乗換</span><span class="niche-tag">dポイント</span></div>
-      </a>
-      <a href="/a/mnp_from_softbank-linemo" class="niche-card">
-        <div class="niche-h">📶 ソフトバンクから乗換検討中</div>
-        <p class="niche-d">ソフトバンク回線品質キープ・PayPay連携・スムーズ乗換</p>
-        <div class="niche-kw"><span class="niche-tag">SB乗換</span><span class="niche-tag">PayPay</span></div>
-      </a>
-      <a href="/a/second_line-povo" class="niche-card">
-        <div class="niche-h">🔄 副回線・予備用</div>
-        <p class="niche-d">基本料金0円〜・縛りなし・災害備え・通信障害対策に</p>
-        <div class="niche-kw"><span class="niche-tag">0円〜</span><span class="niche-tag">災害対策</span></div>
-      </a>
-    </div>
-  </div>
-</section>
-
-<section class="section" id="features">
-  <div class="container">
-    <h2 class="section-title">通信比較ナビ<em>について</em></h2>
-    <p class="section-sub">各通信サービスの料金・条件・特典を客観的に整理し、比較・選択をサポートします</p>
-    <div class="feat-grid">
-      <div class="feat">
-        <div class="feat-icon">📊</div>
-        <h3 class="feat-h">客観的なプラン比較</h3>
-        <p class="feat-d">各社公式情報をもとに、料金・速度・容量・キャッシュバック条件を整理しています。</p>
+  <div class="shell">
+    <div class="hero-grid">
+      <div>
+        <div class="eyebrow">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6 9 17l-5-5"/></svg>
+          WIFI / FIBER / SIM GUIDE
+        </div>
+        <h1>通信プラン選びを、<span>暮らしの目線で。</span></h1>
+        <p class="lead">ホームルーター、ポケットWiFi、光回線、格安SIMを用途別に整理。料金だけでなく、工事の有無、速度、特典、乗り換えやすさまで見比べて、今の生活に合う選択肢へ案内します。</p>
+        <div class="hero-actions">
+          <a class="button primary" href="#guides">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+            状況から選ぶ
+          </a>
+          <a class="button secondary" href="#categories">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+            カテゴリを見る
+          </a>
+        </div>
+        <div class="hero-stats" aria-label="掲載概要">
+          <div class="stat"><strong>21</strong><span>比較プラン数</span></div>
+          <div class="stat"><strong>20</strong><span>用途別ガイド</span></div>
+          <div class="stat"><strong>4</strong><span>カテゴリ網羅</span></div>
+        </div>
       </div>
-      <div class="feat">
-        <div class="feat-icon">🎯</div>
-        <h3 class="feat-h">用途別ガイド</h3>
-        <p class="feat-d">一人暮らし・テレワーク・家族・ゲームなど、具体的な使い方に合わせて最適プランをご紹介。</p>
+
+      <aside class="visual-panel" aria-label="通信プラン選びの要約">
+        <div class="panel-top">
+          <span class="mini-pill">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6 9 17l-5-5"/></svg>
+            用途別に整理
+          </span>
+          <span class="mini-pill">AD DISCLOSED</span>
+        </div>
+        <div class="recommend-card">
+          <strong>迷ったら、まずは使い方から。</strong>
+          <div class="recommend-list">
+            <span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>工事できないならホームルーター</span>
+            <span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>速度重視なら光回線</span>
+            <span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>外でも使うならポケットWiFi</span>
+          </div>
+        </div>
+      </aside>
+    </div>
+
+    <nav class="quick-search" aria-label="主要カテゴリ">
+      <a href="/a/one_person_room-rakuten-turbo">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>
+        ホームルーター
+      </a>
+      <a href="/a/business_traveler-gmo-wimax">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/></svg>
+        ポケットWiFi
+      </a>
+      <a href="/a/remote_worker-docomo-hikari">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2 3 14h8l-1 8 11-14h-8l1-6Z"/></svg>
+        光回線
+      </a>
+      <a href="/a/price_sensitive-rakuten-mobile">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2A19.79 19.79 0 0 1 3.11 5.18 2 2 0 0 1 5.1 3h3a2 2 0 0 1 2 1.72c.12.9.33 1.77.63 2.6a2 2 0 0 1-.45 2.11L9 10.71a16 16 0 0 0 4.29 4.29l1.28-1.28a2 2 0 0 1 2.11-.45c.83.3 1.7.51 2.6.63A2 2 0 0 1 22 16.92Z"/></svg>
+        格安SIM
+      </a>
+    </nav>
+
+    <div class="notice">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+      <p>本サイトは情報提供・比較を目的としたメディアです。掲載リンクの一部には成果報酬型広告が含まれます。契約条件・特典の最新情報は、各サービス提供会社の公式サイトでご確認ください。</p>
+    </div>
+  </div>
+</section>
+
+<main>
+  <section class="section" id="categories">
+    <div class="shell">
+      <div class="section-head">
+        <div>
+          <span class="kicker">01 / CATEGORY</span>
+          <h2>サービスカテゴリで探す</h2>
+        </div>
+        <p class="section-desc">最初に選ぶべきなのは、回線の種類です。工事の可否、外出先で使うか、速度をどこまで求めるかで候補が自然に絞れます。</p>
       </div>
-      <div class="feat">
-        <div class="feat-icon">📖</div>
-        <h3 class="feat-h">わかりやすい解説</h3>
-        <p class="feat-d">専門用語を避け、料金体系・契約条件をシンプルに解説。初心者の方にも安心。</p>
+      <div class="category-grid">
+        <a class="category-card router" href="/a/one_person_room-rakuten-turbo">
+          <div class="icon-box">
+            <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/><path d="M9 20v-6h6v6"/></svg>
+          </div>
+          <h3>ホームルーター</h3>
+          <p>工事不要で、コンセントに挿すだけ。賃貸、新生活、引越し直後のネット環境づくりに向いています。</p>
+          <span class="card-link">比較プランを見る <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12h14M13 5l7 7-7 7"/></svg></span>
+        </a>
+        <a class="category-card pocket" href="/a/business_traveler-gmo-wimax">
+          <div class="icon-box">
+            <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/></svg>
+          </div>
+          <h3>ポケットWiFi</h3>
+          <p>持ち運び自由。出張、外回り、カフェ作業など、家の外でも通信環境を確保したい人に。</p>
+          <span class="card-link">比較プランを見る <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12h14M13 5l7 7-7 7"/></svg></span>
+        </a>
+        <a class="category-card fiber" href="/a/remote_worker-docomo-hikari">
+          <div class="icon-box">
+            <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2 3 14h8l-1 8 11-14h-8l1-6Z"/></svg>
+          </div>
+          <h3>光回線</h3>
+          <p>速度と安定性を重視する人向け。テレワーク、オンラインゲーム、4K動画、家族利用に強い選択肢です。</p>
+          <span class="card-link">比較プランを見る <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12h14M13 5l7 7-7 7"/></svg></span>
+        </a>
+        <a class="category-card sim" href="/a/price_sensitive-rakuten-mobile">
+          <div class="icon-box">
+            <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2A19.79 19.79 0 0 1 3.11 5.18 2 2 0 0 1 5.1 3h3a2 2 0 0 1 2 1.72c.12.9.33 1.77.63 2.6a2 2 0 0 1-.45 2.11L9 10.71a16 16 0 0 0 4.29 4.29l1.28-1.28a2 2 0 0 1 2.11-.45c.83.3 1.7.51 2.6.63A2 2 0 0 1 22 16.92Z"/></svg>
+          </div>
+          <h3>格安SIM・スマホ</h3>
+          <p>月額を抑えたい、MNP特典を使いたい、家族で通信費を見直したい人に。</p>
+          <span class="card-link">比較プランを見る <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12h14M13 5l7 7-7 7"/></svg></span>
+        </a>
       </div>
     </div>
-  </div>
-</section>
+  </section>
 
-<footer class="footer">
-  <div class="container">
+  <section class="section alt" id="guides">
+    <div class="shell">
+      <div class="section-head">
+        <div>
+          <span class="kicker">02 / USE CASE</span>
+          <h2>あなたの状況から探す</h2>
+        </div>
+        <p class="section-desc">「何を契約するか」より先に、「どんな生活で使うか」を決めると失敗しにくくなります。よくある悩み別に、候補ページへすぐ進めます。</p>
+      </div>
+      <div class="guide-grid">
+        <a href="/a/one_person_room-rakuten-turbo" class="guide-card"><h3><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>一人暮らしで即日使いたい</h3><p>引越し直後や新生活で、工事を待たずにネット利用を始めたい方向け。</p><div class="tags"><span class="tag">工事不要</span><span class="tag">即日</span><span class="tag">月5千円以下</span></div></a>
+        <a href="/a/rental_no_construction-rakuten-turbo" class="guide-card"><h3><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 21V9l8-6 8 6v12"/></svg>賃貸で工事ができない</h3><p>大家確認や原状回復が気になるマンション、アパート住まいの人に。</p><div class="tags"><span class="tag">賃貸OK</span><span class="tag">大家確認なし</span></div></a>
+        <a href="/a/remote_worker-docomo-hikari" class="guide-card"><h3><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M8 22h8M12 18v4"/></svg>テレワーク・Web会議用</h3><p>Zoom、Teams、VPNを安定させたい業務利用向け。</p><div class="tags"><span class="tag">高速</span><span class="tag">安定</span><span class="tag">低Ping</span></div></a>
+        <a href="/a/elderly_simple-rakuten-turbo" class="guide-card"><h3><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="7" r="4"/><path d="M5.5 21a6.5 6.5 0 0 1 13 0"/></svg>シニア・親世代向け</h3><p>設置がかんたんで、料金体系やサポートのわかりやすさを重視。</p><div class="tags"><span class="tag">かんたん</span><span class="tag">サポート充実</span></div></a>
+        <a href="/a/business_traveler-gmo-wimax" class="guide-card"><h3><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.18 9"/><path d="M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5L21 16Z"/></svg>出張・外回りが多い</h3><p>全国対応、持ち運び、外出先での安定性を優先したい人に。</p><div class="tags"><span class="tag">持ち運び</span><span class="tag">無制限</span></div></a>
+        <a href="/a/price_sensitive-rakuten-mobile" class="guide-card"><h3><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7H14a3.5 3.5 0 0 1 0 7H6"/></svg>スマホ料金を節約したい</h3><p>月額料金、MNP特典、ポイント還元を見直したい人向け。</p><div class="tags"><span class="tag">月990円〜</span><span class="tag">縛りなし</span></div></a>
+        <a href="/a/gamer-nuro-hikari" class="guide-card"><h3><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="10" rx="4"/><path d="M8 12h.01M6 10h.01M6 14h.01M16 11h.01M18 13h.01"/></svg>ゲームを快適にしたい</h3><p>FPS、MMO、配信などで低Pingと安定性を求める人に。</p><div class="tags"><span class="tag">低Ping</span><span class="tag">2Gbps</span></div></a>
+        <a href="/a/family_discount-ymobile" class="guide-card"><h3><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-8 0v2"/><circle cx="12" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M2 21v-2a4 4 0 0 1 3-3.87"/></svg>家族でまとめて節約</h3><p>家族割、セット割で毎月の通信費をまとめて見直したい世帯へ。</p><div class="tags"><span class="tag">家族割</span><span class="tag">セット割</span></div></a>
+        <a href="/a/kids_smartphone-ymobile" class="guide-card"><h3><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a7 7 0 0 0-7 7v3a7 7 0 0 0 14 0V9a7 7 0 0 0-7-7Z"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/></svg>子供のスマホデビュー</h3><p>月額、容量制限、フィルタリングのバランスを見たい家庭向け。</p><div class="tags"><span class="tag">月990円〜</span><span class="tag">フィルタリング</span></div></a>
+        <a href="/a/moving_fiber-docomo-hikari" class="guide-card"><h3><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 16V6a2 2 0 0 1 2-2h11v12"/><path d="M16 8h3l2 3v5h-5"/><circle cx="7.5" cy="18.5" r="1.5"/><circle cx="17.5" cy="18.5" r="1.5"/></svg>引越し・新居のネット導入</h3><p>工事費、開通時期、キャッシュバックを含めて検討したい人に。</p><div class="tags"><span class="tag">工事費無料</span><span class="tag">特典</span></div></a>
+        <a href="/a/student_new-rakuten-turbo" class="guide-card"><h3><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m22 10-10-5-10 5 10 5 10-5Z"/><path d="M6 12v5c3 2 9 2 12 0v-5"/></svg>大学生・新入生向け</h3><p>初期費用、縛り、卒業や引越し時の解約しやすさを重視。</p><div class="tags"><span class="tag">学割</span><span class="tag">縛りなし</span></div></a>
+        <a href="/a/moving_urgent-broad-wimax" class="guide-card"><h3><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>1週間以内に急ぎでWiFi</h3><p>店舗受取、即日発送など、光回線の開通を待てない人向け。</p><div class="tags"><span class="tag">即日</span><span class="tag">店舗受取</span></div></a>
+        <a href="/a/couple_pair-docomo-hikari" class="guide-card"><h3><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8Z"/></svg>二人暮らし・カップル</h3><p>2人同時利用でも安定し、セット割も見込める回線を探す人に。</p><div class="tags"><span class="tag">2人同時</span><span class="tag">セット割</span></div></a>
+        <a href="/a/video_streaming-nuro-hikari" class="guide-card"><h3><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="m10 9 5 3-5 3V9Z"/></svg>動画視聴を快適にしたい</h3><p>4K動画、複数端末、データ容量を気にせず使いたい人へ。</p><div class="tags"><span class="tag">4K対応</span><span class="tag">無制限</span></div></a>
+        <a href="/a/corporate_small-docomo-hikari" class="guide-card"><h3><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M5 21V7l8-4v18M19 21V11l-6-4"/></svg>法人・事務所のネット</h3><p>法人契約、領収書、経費計上を含めて導入したい事業者向け。</p><div class="tags"><span class="tag">法人契約</span><span class="tag">経費計上</span></div></a>
+        <a href="/a/freelancer-gmo-wimax" class="guide-card"><h3><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M8 22h8M12 18v4"/></svg>フリーランス・ノマド向け</h3><p>外出先での作業、セキュリティ、経費としての扱いやすさを重視。</p><div class="tags"><span class="tag">外出OK</span><span class="tag">経費</span></div></a>
+        <a href="/a/mnp_from_au-povo" class="guide-card"><h3><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 7h10v10H7z"/><path d="M3 12h4M17 12h4M12 3v4M12 17v4"/></svg>auから乗換検討中</h3><p>回線品質、乗換特典、解約金負担などを確認したい人へ。</p><div class="tags"><span class="tag">au乗換</span><span class="tag">特典あり</span></div></a>
+        <a href="/a/mnp_from_docomo-ahamo" class="guide-card"><h3><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 7h10v10H7z"/><path d="M3 12h4M17 12h4M12 3v4M12 17v4"/></svg>ドコモから乗換検討中</h3><p>ドコモ回線品質、dポイント連携、乗り換えやすさを比較。</p><div class="tags"><span class="tag">ドコモ乗換</span><span class="tag">dポイント</span></div></a>
+        <a href="/a/mnp_from_softbank-linemo" class="guide-card"><h3><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 7h10v10H7z"/><path d="M3 12h4M17 12h4M12 3v4M12 17v4"/></svg>ソフトバンクから乗換検討中</h3><p>PayPay連携や回線品質を残しながら料金を見直したい人に。</p><div class="tags"><span class="tag">SB乗換</span><span class="tag">PayPay</span></div></a>
+        <a href="/a/second_line-povo" class="guide-card"><h3><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>副回線・予備用</h3><p>通信障害や災害対策として、維持しやすい予備回線を持ちたい人へ。</p><div class="tags"><span class="tag">0円〜</span><span class="tag">災害対策</span></div></a>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="features">
+    <div class="shell">
+      <div class="section-head">
+        <div>
+          <span class="kicker">03 / ABOUT</span>
+          <h2>通信比較ナビについて</h2>
+        </div>
+        <p class="section-desc">料金の安さだけでなく、契約条件や特典の受け取りやすさも含めて、判断しやすい形に整理します。</p>
+      </div>
+      <div class="features">
+        <article class="feature">
+          <div class="icon-box"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg></div>
+          <h3>客観的なプラン比較</h3>
+          <p>各社公式情報をもとに、料金、速度、容量、キャッシュバック条件を整理しています。</p>
+        </article>
+        <article class="feature">
+          <div class="icon-box"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg></div>
+          <h3>用途別ガイド</h3>
+          <p>一人暮らし、テレワーク、家族、ゲームなど、具体的な利用シーンから候補を探せます。</p>
+        </article>
+        <article class="feature">
+          <div class="icon-box"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5V4a2 2 0 0 1 2-2h12v20H6a2 2 0 0 1-2-2.5Z"/><path d="M8 7h6M8 11h8M8 15h5"/></svg></div>
+          <h3>わかりやすい解説</h3>
+          <p>専門用語をできるだけ噛みくだき、契約前に確認すべきポイントをシンプルにまとめます。</p>
+        </article>
+      </div>
+
+      <div class="final-cta">
+        <div>
+          <span class="kicker">DISCLOSURE</span>
+          <h2>広告表記と運営者情報を確認できます</h2>
+          <p>本サイトの運営者情報、アフィリエイト広告の取り扱い、免責事項は特定商取引法に基づく表記ページに掲載しています。</p>
+        </div>
+        <a class="button secondary" href="/affiliate/legal.html">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/><path d="M16 13H8M16 17H8M10 9H8"/></svg>
+          運営者情報を見る
+        </a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="shell">
     <div class="footer-grid">
       <div>
-        <div class="footer-brand">📡 通信比較ナビ</div>
-        <p class="footer-desc">WiFi・光回線・格安SIMを中心に、目的別の通信プラン情報を提供する比較メディアです。各社公式情報を整理し、用途に合わせた最適選択をサポートします。</p>
+        <div class="footer-brand"><span class="brand-mark">通</span>通信比較ナビ</div>
+        <p class="footer-copy">WiFi・光回線・格安SIMを中心に、目的別の通信プラン情報を提供する比較メディアです。</p>
       </div>
       <div>
-        <p class="footer-h">— カテゴリ —</p>
-        <ul class="footer-list">
-          <li><a href="#categories">ホームルーター</a></li>
-          <li><a href="#categories">ポケットWiFi</a></li>
-          <li><a href="#categories">光回線</a></li>
-          <li><a href="#categories">格安SIM</a></li>
-        </ul>
+        <p class="footer-title">CATEGORY</p>
+        <nav class="footer-links">
+          <a href="#categories">ホームルーター</a>
+          <a href="#categories">ポケットWiFi</a>
+          <a href="#categories">光回線</a>
+          <a href="#categories">格安SIM</a>
+        </nav>
       </div>
       <div>
-        <p class="footer-h">— サイト情報 —</p>
-        <ul class="footer-list">
-          <li><a href="/affiliate/legal.html">運営者情報・特商法表記</a></li>
-          <li><a href="/affiliate/privacy.html">プライバシーポリシー</a></li>
-          <li><a href="#features">サイトについて</a></li>
-        </ul>
+        <p class="footer-title">INFORMATION</p>
+        <nav class="footer-links">
+          <a href="/affiliate/legal.html">運営者情報・特商法表記</a>
+          <a href="/affiliate/privacy.html">プライバシーポリシー</a>
+          <a href="#features">サイトについて</a>
+        </nav>
       </div>
     </div>
-    <div class="footer-bottom">
-      © 2026 通信比較ナビ All rights reserved.<br>
-      ※掲載情報は各社公式情報を元に整理しています。最新の料金・キャンペーン内容は各公式サイトでご確認ください。
-    </div>
+    <p class="copyright">© 2026 通信比較ナビ All Rights Reserved. 掲載情報は各社公式情報を元に整理しています。最新の料金・キャンペーン内容は各公式サイトでご確認ください。</p>
   </div>
 </footer>
-
 </body>
 </html>
