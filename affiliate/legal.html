@@ -5,517 +5,777 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5" />
 <meta name="robots" content="noindex, nofollow" />
 <title>特定商取引法に基づく表記｜通信比較ナビ</title>
-<meta name="description" content="通信比較ナビの特定商取引法に基づく表記。REMERCI株式会社の運営者情報・サービス内容・お問い合わせ方法について記載しています。" />
+<meta name="description" content="通信比較ナビの特定商取引法に基づく表記。REMERCI株式会社の運営者情報、広告掲載方針、サービス内容、お問い合わせ方法を記載しています。" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700;900&display=swap" rel="stylesheet" />
-<!-- Google tag (gtag.js) -->
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet" />
+<!-- Google tag (gtag.js) - GA4 + Google Ads -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-8XKJ81F390"></script>
 <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-8XKJ81F390');gtag('config','AW-18213756380');</script>
 <!-- Microsoft Clarity -->
 <script type="text/javascript">(function(c,l,a,r,i,t,y){c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);})(window,document,"clarity","script","x283fyep35");</script>
 <style>
-/* ===== Reset & Base ===== */
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+*,*::before,*::after{box-sizing:border-box}
+*{margin:0}
 :root{
-  --blue:#0057d9;
-  --blue-light:#3b82f6;
-  --blue-dark:#003fa3;
-  --accent:#ff6b35;
-  --ink:#0d1526;
-  --ink2:#3d4a63;
-  --ink3:#8896b0;
-  --bg:#f0f4fa;
-  --white:#ffffff;
-  --border:#dce4f0;
-  --shadow-sm:0 1px 4px rgba(0,40,120,.06);
-  --shadow-md:0 4px 20px rgba(0,40,120,.10);
-  --shadow-lg:0 12px 48px rgba(0,40,120,.14);
-  --radius-sm:8px;
-  --radius:16px;
-  --radius-lg:24px;
+  --paper:#fbf7ef;
+  --paper-2:#f4eee3;
+  --surface:#fffdf8;
+  --ink:#191713;
+  --muted:#6f685f;
+  --soft:#958b80;
+  --line:#e5dccf;
+  --charcoal:#25221d;
+  --coral:#d96945;
+  --coral-dark:#9c432a;
+  --sage:#6f846e;
+  --gold:#b48a45;
+  --blue:#425f78;
+  --shadow:0 20px 60px rgba(38,31,22,.10);
+  --shadow-sm:0 10px 30px rgba(38,31,22,.07);
+  --radius:8px;
 }
 html{scroll-behavior:smooth}
 body{
-  font-family:"Noto Sans JP",sans-serif;
-  background:var(--bg);
-  color:var(--ink);
-  font-size:15px;
-  line-height:1.9;
-  -webkit-font-smoothing:antialiased;
   min-height:100vh;
+  font-family:"Noto Sans JP",system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  color:var(--ink);
+  background:
+    radial-gradient(circle at 15% 8%,rgba(217,105,69,.14),transparent 30%),
+    linear-gradient(180deg,var(--paper) 0%,#f9f3ea 48%,#f5efe6 100%);
+  font-size:15px;
+  line-height:1.85;
+  -webkit-font-smoothing:antialiased;
+  text-rendering:optimizeLegibility;
 }
-a{color:var(--blue);text-decoration:none;transition:color .2s}
-a:hover{color:var(--blue-light);text-decoration:underline}
-img{max-width:100%;display:block}
-
-/* ===== Header ===== */
+a{color:inherit;text-decoration:none}
+svg{display:block;flex:none}
+.shell{max-width:1120px;margin:0 auto;padding:0 24px}
 .site-header{
-  position:sticky;top:0;z-index:100;
-  background:rgba(255,255,255,.92);
-  backdrop-filter:blur(20px);
-  -webkit-backdrop-filter:blur(20px);
-  border-bottom:1px solid rgba(220,228,240,.7);
-  box-shadow:var(--shadow-sm);
+  position:sticky;
+  top:0;
+  z-index:20;
+  border-bottom:1px solid rgba(229,220,207,.78);
+  background:rgba(251,247,239,.84);
+  backdrop-filter:blur(18px);
 }
 .header-inner{
-  max-width:960px;margin:0 auto;padding:0 24px;
-  height:62px;display:flex;align-items:center;justify-content:space-between;
+  height:68px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:18px;
 }
-.brand{display:flex;align-items:center;gap:10px;font-weight:900;font-size:17px;color:var(--blue);letter-spacing:-.3px}
-.brand-icon{
-  width:38px;height:38px;
-  background:linear-gradient(135deg,var(--blue),var(--blue-light));
-  border-radius:10px;
-  display:grid;place-items:center;
-  font-size:15px;font-weight:900;color:#fff;
-  box-shadow:0 4px 12px rgba(0,87,217,.3);
+.brand{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  min-width:0;
+  font-weight:900;
+  letter-spacing:0;
 }
-.back-link{
-  display:flex;align-items:center;gap:6px;
-  font-size:13px;font-weight:700;color:var(--ink2);
-  border:1.5px solid var(--border);
-  padding:6px 14px;border-radius:20px;
-  transition:all .2s;
+.brand-mark{
+  width:38px;
+  height:38px;
+  border:1px solid rgba(37,34,29,.16);
+  border-radius:8px;
+  background:var(--charcoal);
+  color:#fff7ec;
+  display:grid;
+  place-items:center;
+  font-size:15px;
+  box-shadow:0 10px 24px rgba(37,34,29,.16);
 }
-.back-link:hover{color:var(--blue);border-color:var(--blue);text-decoration:none;background:var(--bg)}
-
-/* ===== Hero ===== */
+.brand small{
+  display:block;
+  margin-top:1px;
+  color:var(--soft);
+  font-size:11px;
+  font-weight:700;
+  letter-spacing:.08em;
+}
+.header-actions{
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+.ghost-link,.primary-link{
+  min-height:40px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  border-radius:999px;
+  padding:8px 16px;
+  font-size:13px;
+  font-weight:900;
+  white-space:nowrap;
+  transition:transform .18s ease,box-shadow .18s ease,background .18s ease,border-color .18s ease;
+}
+.ghost-link{
+  color:var(--charcoal);
+  border:1px solid rgba(37,34,29,.14);
+  background:rgba(255,253,248,.56);
+}
+.primary-link{
+  color:#fffaf3;
+  border:1px solid var(--charcoal);
+  background:var(--charcoal);
+  box-shadow:0 12px 28px rgba(37,34,29,.18);
+}
+.ghost-link:hover,.primary-link:hover{transform:translateY(-1px)}
 .hero{
-  position:relative;overflow:hidden;
-  background:linear-gradient(140deg,#021d5c 0%,#0057d9 45%,#1e7ef5 100%);
-  padding:64px 24px 72px;
-  text-align:center;
-  color:#fff;
+  position:relative;
+  overflow:hidden;
+  padding:74px 0 28px;
 }
 .hero::before{
-  content:"";position:absolute;inset:0;
-  background:url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.04'%3E%3Ccircle cx='30' cy='30' r='20'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E") repeat;
+  content:"";
+  position:absolute;
+  inset:auto -18vw -170px auto;
+  width:620px;
+  height:620px;
+  background:
+    linear-gradient(145deg,rgba(255,253,248,.34),rgba(255,253,248,0)),
+    repeating-linear-gradient(90deg,rgba(37,34,29,.08) 0 1px,transparent 1px 18px);
+  transform:rotate(-9deg);
+  border-radius:32px;
+  pointer-events:none;
 }
-.hero::after{
-  content:"";position:absolute;bottom:-2px;left:0;right:0;height:48px;
-  background:var(--bg);
-  clip-path:ellipse(60% 100% at 50% 100%);
+.hero-grid{
+  position:relative;
+  display:grid;
+  grid-template-columns:minmax(0,1.05fr) 390px;
+  gap:42px;
+  align-items:end;
 }
-.hero-inner{position:relative;z-index:1;max-width:720px;margin:0 auto}
-.hero-badge{
-  display:inline-flex;align-items:center;gap:6px;
-  background:rgba(255,255,255,.15);
-  border:1px solid rgba(255,255,255,.25);
-  backdrop-filter:blur(10px);
-  border-radius:40px;
-  padding:6px 16px;
-  font-size:12px;font-weight:700;letter-spacing:.5px;
-  color:rgba(255,255,255,.9);
-  margin-bottom:20px;
-}
-.hero-badge svg{width:14px;height:14px;flex-shrink:0}
-.hero h1{
-  font-size:clamp(22px,5vw,36px);
+.eyebrow{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  color:var(--coral-dark);
+  border:1px solid rgba(217,105,69,.24);
+  background:rgba(255,253,248,.58);
+  border-radius:999px;
+  padding:7px 13px;
+  font-size:12px;
   font-weight:900;
-  letter-spacing:-1px;
-  line-height:1.2;
-  margin-bottom:14px;
+  letter-spacing:.08em;
 }
-.hero-sub{
-  font-size:14px;font-weight:400;
-  color:rgba(255,255,255,.75);
-  line-height:1.7;
+.hero h1{
+  max-width:780px;
+  margin-top:20px;
+  font-size:clamp(34px,6vw,72px);
+  line-height:1.02;
+  font-weight:900;
+  letter-spacing:0;
 }
-.hero-update{
-  margin-top:18px;
-  font-size:12px;color:rgba(255,255,255,.5);
+.hero h1 span{
+  display:block;
+  color:var(--coral-dark);
+}
+.lead{
+  max-width:690px;
+  margin-top:22px;
+  color:var(--muted);
+  font-size:16px;
+  line-height:2;
   font-weight:500;
 }
-
-/* ===== Content Layout ===== */
-.content{
-  max-width:860px;margin:0 auto;
-  padding:48px 24px 96px;
+.hero-meta{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+  margin-top:28px;
 }
-
-/* ===== Info Banner ===== */
-.info-banner{
-  display:flex;align-items:flex-start;gap:14px;
-  background:#fff;
-  border:1px solid var(--border);
-  border-left:4px solid var(--blue);
-  border-radius:var(--radius-sm);
-  padding:18px 22px;
-  margin-bottom:40px;
+.meta-pill{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  min-height:38px;
+  padding:7px 13px;
+  border:1px solid var(--line);
+  border-radius:999px;
+  background:rgba(255,253,248,.72);
+  color:var(--muted);
+  font-size:12px;
+  font-weight:900;
+}
+.trust-panel{
+  position:relative;
+  border:1px solid rgba(37,34,29,.13);
+  border-radius:var(--radius);
+  background:
+    linear-gradient(180deg,rgba(255,253,248,.94),rgba(255,253,248,.72)),
+    url("data:image/svg+xml,%3Csvg width='420' height='280' viewBox='0 0 420 280' xmlns='http://www.w3.org/2000/svg'%3E%3Crect width='420' height='280' fill='%23fffdf8'/%3E%3Cpath d='M0 210 C70 170 118 200 182 150 S314 72 420 114 V280 H0Z' fill='%23eadfce'/%3E%3Cpath d='M0 226 C80 196 128 226 194 176 S326 106 420 132 V280 H0Z' fill='%23d96945' fill-opacity='.22'/%3E%3Ccircle cx='312' cy='84' r='44' fill='%23425f78' fill-opacity='.15'/%3E%3Cpath d='M66 72 h160 M66 100 h120 M66 128 h184' stroke='%2325221d' stroke-opacity='.16' stroke-width='10' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-size:cover;
+  box-shadow:var(--shadow);
+  padding:22px;
+  min-height:330px;
+  display:flex;
+  flex-direction:column;
+  justify-content:space-between;
+}
+.trust-panel::after{
+  content:"";
+  position:absolute;
+  inset:14px;
+  border:1px solid rgba(255,253,248,.72);
+  border-radius:6px;
+  pointer-events:none;
+}
+.trust-top,.trust-bottom{position:relative;z-index:1}
+.trust-top{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+}
+.status{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding:7px 10px;
+  border-radius:999px;
+  background:rgba(255,253,248,.84);
+  color:var(--sage);
+  font-size:12px;
+  font-weight:900;
+}
+.trust-card{
+  margin-top:92px;
+  max-width:292px;
+  border:1px solid rgba(37,34,29,.13);
+  border-radius:8px;
+  background:rgba(255,253,248,.9);
+  padding:18px;
+  box-shadow:0 16px 42px rgba(38,31,22,.12);
+}
+.trust-card strong{
+  display:block;
+  font-size:15px;
+  line-height:1.55;
+}
+.trust-card p{
+  margin-top:8px;
+  color:var(--muted);
+  font-size:12px;
+  line-height:1.7;
+  font-weight:700;
+}
+.quick-nav{
+  position:relative;
+  z-index:5;
+  margin-top:34px;
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  background:rgba(255,253,248,.82);
+  box-shadow:var(--shadow-sm);
+  padding:8px;
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:8px;
+}
+.quick-nav a{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  min-height:48px;
+  border-radius:6px;
+  color:var(--muted);
+  font-size:13px;
+  font-weight:900;
+}
+.quick-nav a:hover{
+  background:#f4ede1;
+  color:var(--ink);
+}
+.notice-band{
+  margin-top:18px;
+  border:1px solid rgba(217,105,69,.24);
+  border-radius:var(--radius);
+  background:#fff6ed;
+  padding:18px 20px;
+  display:grid;
+  grid-template-columns:auto 1fr;
+  gap:14px;
+  color:var(--coral-dark);
+  font-weight:700;
+}
+.notice-band p{font-size:13px;line-height:1.85}
+.content{
+  padding:34px 0 86px;
+}
+.section{
+  display:grid;
+  grid-template-columns:260px minmax(0,1fr);
+  gap:34px;
+  padding:48px 0;
+  border-top:1px solid var(--line);
+}
+.section-kicker{
+  display:inline-flex;
+  color:var(--soft);
+  font-size:12px;
+  font-weight:900;
+  letter-spacing:.12em;
+}
+.section h2{
+  margin-top:10px;
+  color:var(--charcoal);
+  font-size:25px;
+  line-height:1.3;
+  font-weight:900;
+  letter-spacing:0;
+}
+.section-note{
+  margin-top:12px;
+  color:var(--muted);
+  font-size:13px;
+  line-height:1.8;
+  font-weight:500;
+}
+.info-table{
+  overflow:hidden;
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  background:var(--surface);
   box-shadow:var(--shadow-sm);
 }
-.info-banner svg{flex-shrink:0;width:22px;height:22px;color:var(--blue);margin-top:2px}
-.info-banner p{font-size:13px;line-height:1.85;color:var(--ink2);margin:0}
-
-/* ===== Section ===== */
-.section{margin-bottom:40px}
-.section-header{
-  display:flex;align-items:center;gap:12px;
-  margin-bottom:18px;
+.row{
+  display:grid;
+  grid-template-columns:170px minmax(0,1fr);
 }
-.section-num{
-  width:32px;height:32px;
-  background:linear-gradient(135deg,var(--blue),var(--blue-light));
-  border-radius:50%;
-  display:grid;place-items:center;
-  font-size:13px;font-weight:900;color:#fff;
-  flex-shrink:0;
-  box-shadow:0 4px 12px rgba(0,87,217,.25);
+.row:not(:last-child){border-bottom:1px solid var(--line)}
+.row dt,.row dd{padding:18px 20px}
+.row dt{
+  background:#f5efe6;
+  color:var(--muted);
+  font-size:13px;
+  font-weight:900;
 }
-.section-title{
-  font-size:18px;font-weight:900;color:var(--ink);
-  letter-spacing:-.3px;
+.row dd{
+  color:var(--ink);
+  font-size:14px;
+  font-weight:500;
 }
-
-/* ===== Table Card ===== */
-.table-card{
-  background:#fff;
-  border:1px solid var(--border);
+.row dd strong{font-weight:900}
+.copyable{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  color:var(--blue);
+  font-weight:900;
+  word-break:break-all;
+}
+.sub-note{
+  display:block;
+  margin-top:4px;
+  color:var(--soft);
+  font-size:12px;
+  font-weight:500;
+}
+.badge{
+  display:inline-flex;
+  align-items:center;
+  min-height:30px;
+  padding:4px 10px;
+  border-radius:999px;
+  border:1px solid rgba(180,138,69,.28);
+  background:#fff8e8;
+  color:#7b5b20;
+  font-size:13px;
+  font-weight:900;
+}
+.card-grid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:14px;
+}
+.policy-card{
+  min-height:206px;
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  background:var(--surface);
+  padding:22px;
+  box-shadow:var(--shadow-sm);
+}
+.icon-box{
+  width:42px;
+  height:42px;
+  display:grid;
+  place-items:center;
+  border-radius:8px;
+  margin-bottom:16px;
+  border:1px solid rgba(37,34,29,.1);
+}
+.icon-box.coral{background:#fff0e9;color:var(--coral-dark)}
+.icon-box.sage{background:#edf3ec;color:var(--sage)}
+.icon-box.gold{background:#fff8e8;color:#866526}
+.icon-box.blue{background:#edf4f8;color:var(--blue)}
+.policy-card h3{
+  font-size:16px;
+  line-height:1.45;
+  font-weight:900;
+}
+.policy-card p{
+  margin-top:10px;
+  color:var(--muted);
+  font-size:13px;
+  line-height:1.85;
+  font-weight:500;
+}
+.disclaimer{
+  border:1px solid var(--line);
   border-radius:var(--radius);
   overflow:hidden;
-  box-shadow:var(--shadow-md);
-}
-.table-card table{width:100%;border-collapse:collapse}
-.table-card tr{transition:background .15s}
-.table-card tr:not(:last-child) td,
-.table-card tr:not(:last-child) th{border-bottom:1px solid #eef1f8}
-.table-card th{
-  width:160px;
-  padding:18px 20px;
-  background:linear-gradient(180deg,#f7f9ff 0%,#eef2fc 100%);
-  font-size:13px;font-weight:700;color:var(--ink2);
-  white-space:nowrap;vertical-align:top;
-  border-right:1px solid #e5ecfb;
-}
-.table-card td{
-  padding:18px 20px;
-  font-size:14px;color:var(--ink);
-  line-height:1.85;vertical-align:top;
-}
-.table-card tr:hover td,
-.table-card tr:hover th{background:rgba(0,87,217,.025)}
-.invoice-badge{
-  display:inline-flex;align-items:center;gap:6px;
-  background:linear-gradient(135deg,#e8f0fe,#cce0ff);
-  border:1px solid #b3d0ff;
-  border-radius:6px;
-  padding:4px 10px;
-  font-size:13px;font-weight:700;
-  color:var(--blue-dark);
-  letter-spacing:.5px;
-}
-.mail-link{
-  display:inline-flex;align-items:center;gap:6px;
-  color:var(--blue);font-weight:700;
-}
-.mail-note{display:block;font-size:12px;color:var(--ink3);font-weight:400;margin-top:4px}
-
-/* ===== Text Cards ===== */
-.text-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:0}
-.text-card{
-  background:#fff;
-  border:1px solid var(--border);
-  border-radius:var(--radius);
-  padding:24px 22px;
+  background:var(--surface);
   box-shadow:var(--shadow-sm);
-  transition:box-shadow .2s,transform .2s;
 }
-.text-card:hover{box-shadow:var(--shadow-md);transform:translateY(-2px)}
-.text-card-icon{
-  width:44px;height:44px;
-  border-radius:12px;
-  display:grid;place-items:center;
-  margin-bottom:14px;
-  font-size:20px;
+.disclaimer-item{
+  display:grid;
+  grid-template-columns:52px minmax(0,1fr);
+  gap:0;
 }
-.text-card-icon.blue{background:linear-gradient(135deg,#e8f0fe,#c5d8ff)}
-.text-card-icon.orange{background:linear-gradient(135deg,#fff3e8,#ffd8b8)}
-.text-card-icon.green{background:linear-gradient(135deg,#e8faf0,#b8f0d0)}
-.text-card-icon.purple{background:linear-gradient(135deg,#f3e8ff,#e0b8ff)}
-.text-card h3{font-size:15px;font-weight:900;color:var(--ink);margin-bottom:10px;letter-spacing:-.2px}
-.text-card p{font-size:13px;color:var(--ink2);line-height:1.85;margin:0}
-
-/* ===== Contact Card ===== */
-.contact-card{
-  background:linear-gradient(135deg,#0057d9 0%,#1e7ef5 100%);
-  border-radius:var(--radius-lg);
-  padding:40px 36px;
-  text-align:center;
-  color:#fff;
-  box-shadow:0 16px 48px rgba(0,87,217,.28);
-  position:relative;overflow:hidden;
+.disclaimer-item:not(:last-child){border-bottom:1px solid var(--line)}
+.number{
+  display:grid;
+  place-items:center;
+  background:#f5efe6;
+  color:var(--coral-dark);
+  font-size:13px;
+  font-weight:900;
 }
-.contact-card::before{
-  content:"";position:absolute;top:-40px;right:-40px;
-  width:200px;height:200px;
-  background:rgba(255,255,255,.06);
-  border-radius:50%;
+.disclaimer-copy{padding:20px}
+.disclaimer-copy h3{
+  font-size:15px;
+  font-weight:900;
 }
-.contact-card::after{
-  content:"";position:absolute;bottom:-60px;left:-30px;
-  width:220px;height:220px;
-  background:rgba(255,255,255,.04);
-  border-radius:50%;
+.disclaimer-copy p{
+  margin-top:6px;
+  color:var(--muted);
+  font-size:13px;
+  line-height:1.85;
+  font-weight:500;
 }
-.contact-card-inner{position:relative;z-index:1}
-.contact-icon{
-  width:60px;height:60px;
-  background:rgba(255,255,255,.15);
-  border-radius:16px;
-  display:grid;place-items:center;
-  margin:0 auto 18px;
-  font-size:26px;
-  backdrop-filter:blur(10px);
-  border:1px solid rgba(255,255,255,.2);
+.contact-panel{
+  display:grid;
+  grid-template-columns:1fr auto;
+  gap:24px;
+  align-items:center;
+  border:1px solid rgba(37,34,29,.14);
+  border-radius:var(--radius);
+  background:var(--charcoal);
+  color:#fff7ec;
+  padding:30px;
+  box-shadow:var(--shadow);
 }
-.contact-card h3{font-size:20px;font-weight:900;margin-bottom:8px;letter-spacing:-.3px}
-.contact-card p{font-size:13px;color:rgba(255,255,255,.8);margin-bottom:22px}
-.contact-mail-btn{
-  display:inline-flex;align-items:center;gap:10px;
-  background:#fff;
-  color:var(--blue)!important;
-  font-weight:900;font-size:15px;
-  padding:14px 30px;border-radius:40px;
-  box-shadow:0 8px 24px rgba(0,0,0,.15);
-  transition:transform .2s,box-shadow .2s;
-  text-decoration:none!important;
+.contact-panel h2{
+  margin:0;
+  color:#fff7ec;
+  font-size:24px;
 }
-.contact-mail-btn:hover{transform:translateY(-2px);box-shadow:0 12px 32px rgba(0,0,0,.2)}
-.contact-mail-btn svg{width:18px;height:18px;flex-shrink:0}
-.contact-note{margin-top:16px;font-size:12px;color:rgba(255,255,255,.6)}
-
-/* ===== Divider ===== */
-.divider{
-  border:none;
-  border-top:1px solid var(--border);
-  margin:40px 0;
+.contact-panel p{
+  margin-top:8px;
+  color:rgba(255,247,236,.72);
+  font-size:13px;
+  line-height:1.85;
+  font-weight:500;
 }
-
-/* ===== Footer ===== */
+.mail-button{
+  min-height:52px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:10px;
+  border-radius:999px;
+  background:#fff7ec;
+  color:var(--charcoal);
+  padding:12px 22px;
+  font-size:14px;
+  font-weight:900;
+  white-space:nowrap;
+}
 .site-footer{
-  background:var(--ink);
-  color:rgba(255,255,255,.5);
-  padding:40px 24px;
-  text-align:center;
+  border-top:1px solid rgba(255,247,236,.1);
+  background:var(--charcoal);
+  color:rgba(255,247,236,.52);
+  padding:36px 0;
 }
-.footer-brand{
-  display:flex;align-items:center;justify-content:center;gap:10px;
-  font-weight:900;font-size:16px;color:rgba(255,255,255,.85);
-  margin-bottom:20px;
-}
-.footer-brand-icon{
-  width:34px;height:34px;
-  background:linear-gradient(135deg,var(--blue),var(--blue-light));
-  border-radius:8px;
-  display:grid;place-items:center;
-  font-size:13px;font-weight:900;color:#fff;
+.footer-inner{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:20px;
 }
 .footer-links{
-  display:flex;align-items:center;justify-content:center;
-  gap:6px;flex-wrap:wrap;
-  margin-bottom:18px;
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
 }
 .footer-links a{
-  font-size:12px;color:rgba(255,255,255,.45);
-  padding:4px 12px;
-  border:1px solid rgba(255,255,255,.12);
-  border-radius:20px;
-  transition:all .2s;
+  min-height:34px;
+  display:inline-flex;
+  align-items:center;
+  border:1px solid rgba(255,247,236,.12);
+  border-radius:999px;
+  padding:6px 12px;
+  font-size:12px;
+  font-weight:900;
 }
-.footer-links a:hover{color:rgba(255,255,255,.8);border-color:rgba(255,255,255,.3);text-decoration:none}
-.footer-copy{font-size:11px;color:rgba(255,255,255,.3)}
-
-/* ===== Responsive ===== */
-@media(max-width:640px){
-  .hero{padding:48px 20px 60px}
-  .content{padding:32px 16px 72px}
-  .text-grid{grid-template-columns:1fr}
-  .table-card th{width:110px;font-size:12px;padding:14px 12px}
-  .table-card td{font-size:13px;padding:14px 12px}
-  .contact-card{padding:28px 20px}
-  .header-inner{padding:0 16px}
+@media(max-width:900px){
+  .hero-grid{grid-template-columns:1fr}
+  .trust-panel{min-height:280px}
+  .section{grid-template-columns:1fr;gap:18px}
+}
+@media(max-width:680px){
+  .shell{padding:0 16px}
+  .site-header{position:relative}
+  .header-inner{height:auto;padding:14px 0;align-items:flex-start}
+  .brand small{display:none}
+  .header-actions{gap:8px}
+  .ghost-link{display:none}
+  .primary-link{padding:8px 12px;font-size:12px}
+  .hero{padding:42px 0 22px}
+  .lead{font-size:14px;line-height:1.9}
+  .quick-nav{grid-template-columns:1fr 1fr}
+  .notice-band{padding:16px}
+  .section{padding:36px 0}
+  .row{grid-template-columns:1fr}
+  .row dt,.row dd{padding:14px 16px}
+  .row dt{padding-bottom:8px;background:var(--surface);color:var(--soft)}
+  .row dd{padding-top:0}
+  .card-grid{grid-template-columns:1fr}
+  .contact-panel{grid-template-columns:1fr;padding:24px}
+  .mail-button{width:100%}
+  .footer-inner{align-items:flex-start;flex-direction:column}
 }
 </style>
 </head>
 <body>
-
-<!-- ===== Header ===== -->
 <header class="site-header">
-  <div class="header-inner">
-    <a href="/affiliate/" class="brand">
-      <span class="brand-icon">通</span>
-      <span>通信比較ナビ</span>
+  <div class="shell header-inner">
+    <a class="brand" href="/affiliate/" aria-label="通信比較ナビ トップへ">
+      <span class="brand-mark">通</span>
+      <span>通信比較ナビ<small>AFFILIATE DISCLOSURE</small></span>
     </a>
-    <a href="/affiliate/" class="back-link">
-      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-      トップへ戻る
-    </a>
+    <nav class="header-actions" aria-label="ページ内ナビゲーション">
+      <a class="ghost-link" href="#policy">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v18M3 12h18"/></svg>
+        広告方針
+      </a>
+      <a class="primary-link" href="/affiliate/">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        トップへ戻る
+      </a>
+    </nav>
   </div>
 </header>
 
-<!-- ===== Hero ===== -->
 <section class="hero">
-  <div class="hero-inner">
-    <div class="hero-badge">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
-      LEGAL DISCLOSURE
+  <div class="shell">
+    <div class="hero-grid">
+      <div>
+        <div class="eyebrow">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6 9 17l-5-5"/></svg>
+          LEGAL DISCLOSURE
+        </div>
+        <h1>透明性まで、<span>比較品質の一部に。</span></h1>
+        <p class="lead">
+          本ページでは、通信比較ナビの運営者情報、アフィリエイト広告の取り扱い、サービスの性質を掲載しています。ユーザーが安心して比較し、公式サイトで判断できるよう、広告と情報提供の関係を明記します。
+        </p>
+        <div class="hero-meta" aria-label="概要">
+          <span class="meta-pill">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z"/></svg>
+            最終更新 2026年6月9日
+          </span>
+          <span class="meta-pill">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/></svg>
+            noindex
+          </span>
+          <span class="meta-pill">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11h18M5 7h14M7 15h10M9 19h6"/></svg>
+            広告表記あり
+          </span>
+        </div>
+      </div>
+
+      <aside class="trust-panel" aria-label="広告掲載方針の要約">
+        <div class="trust-top">
+          <span class="status">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6 9 17l-5-5"/></svg>
+            公開情報
+          </span>
+          <span class="status">REMERCI Inc.</span>
+        </div>
+        <div class="trust-card">
+          <strong>申込み・契約は各サービス提供会社の公式サイトで行われます。</strong>
+          <p>通信比較ナビは、比較情報と広告リンクを掲載するメディアです。</p>
+        </div>
+      </aside>
     </div>
-    <h1>特定商取引法に基づく表記</h1>
-    <p class="hero-sub">本ページはインターネット回線・格安スマホ・電気・ガスの<br>比較情報サービス「通信比較ナビ」の運営者情報を記載しています。</p>
-    <p class="hero-update">最終更新：2026年6月9日</p>
+
+    <nav class="quick-nav" aria-label="主要セクション">
+      <a href="#operator">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M5 21V7l8-4v18M19 21V11l-6-4"/></svg>
+        運営者情報
+      </a>
+      <a href="#policy">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9M7 20h10M9 16h6"/></svg>
+        サービス詳細
+      </a>
+      <a href="#disclaimer">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+        免責事項
+      </a>
+      <a href="#contact">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m22 7-10 7L2 7"/><rect x="2" y="5" width="20" height="14" rx="2"/></svg>
+        お問い合わせ
+      </a>
+    </nav>
+
+    <div class="notice-band">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+      <p>本サイトは情報提供・比較を目的としたメディアです。掲載リンクの一部には成果報酬型広告が含まれますが、商品・サービスのご契約は各通信会社・電力会社等の公式サイトで行われます。</p>
+    </div>
   </div>
 </section>
 
-<!-- ===== Main Content ===== -->
 <main class="content">
-
-  <!-- Info Banner -->
-  <div class="info-banner">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-    <p>本サイトは情報提供・比較を目的としたメディアです。商品・サービスのご契約は各通信会社・電力会社等の<strong>公式サイト</strong>でおこなわれます。本サイト上での直接販売はおこなっておりません。</p>
-  </div>
-
-  <!-- Section 1: 運営者情報 -->
-  <div class="section">
-    <div class="section-header">
-      <div class="section-num">1</div>
-      <h2 class="section-title">運営者情報</h2>
-    </div>
-    <div class="table-card">
-      <table>
-        <tbody>
-          <tr>
-            <th>法人名</th>
-            <td><strong>REMERCI株式会社</strong></td>
-          </tr>
-          <tr>
-            <th>代表者</th>
-            <td>横田 明樹</td>
-          </tr>
-          <tr>
-            <th>所在地</th>
-            <td>〒594-0021<br>大阪府和泉市阪本町376-161</td>
-          </tr>
-          <tr>
-            <th>お問い合わせ</th>
-            <td>
-              <a href="mailto:hatunemikudaisuki@gmail.com" class="mail-link">
-                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-                hatunemikudaisuki@gmail.com
-              </a>
-              <span class="mail-note">※原則5営業日以内にご返信いたします</span>
-            </td>
-          </tr>
-          <tr>
-            <th>インボイス<br>登録番号</th>
-            <td><span class="invoice-badge">T 9120103003185</span></td>
-          </tr>
-          <tr>
-            <th>事業内容</th>
-            <td>インターネット回線・格安スマホ・電力・ガス等の情報提供サービス、アフィリエイト広告事業</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-
-  <hr class="divider">
-
-  <!-- Section 2: テキストカード群 -->
-  <div class="section">
-    <div class="section-header">
-      <div class="section-num">2</div>
-      <h2 class="section-title">サービスの詳細</h2>
-    </div>
-    <div class="text-grid">
-
-      <div class="text-card">
-        <div class="text-card-icon blue">📋</div>
-        <h3>サービスの性質</h3>
-        <p>本サイトは通信サービス・電力等の比較情報を提供するメディアです。申込み・契約は各社公式サイトまたは代理店にておこなわれます。</p>
+  <div class="shell">
+    <section class="section" id="operator">
+      <div>
+        <span class="section-kicker">01 / OPERATOR</span>
+        <h2>運営者情報</h2>
+        <p class="section-note">法令に基づき、運営会社とお問い合わせ先を明示しています。</p>
       </div>
+      <dl class="info-table">
+        <div class="row">
+          <dt>法人名</dt>
+          <dd><strong>REMERCI株式会社</strong></dd>
+        </div>
+        <div class="row">
+          <dt>代表者</dt>
+          <dd>横田 明樹</dd>
+        </div>
+        <div class="row">
+          <dt>所在地</dt>
+          <dd>〒594-0021<br />大阪府和泉市阪本町376-161</dd>
+        </div>
+        <div class="row">
+          <dt>お問い合わせ</dt>
+          <dd>
+            <a class="copyable" href="mailto:hatunemikudaisuki@gmail.com">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m22 7-10 7L2 7"/><rect x="2" y="5" width="20" height="14" rx="2"/></svg>
+              hatunemikudaisuki@gmail.com
+            </a>
+            <span class="sub-note">原則5営業日以内にご返信いたします。</span>
+          </dd>
+        </div>
+        <div class="row">
+          <dt>インボイス登録番号</dt>
+          <dd><span class="badge">T 9120103003185</span></dd>
+        </div>
+        <div class="row">
+          <dt>事業内容</dt>
+          <dd>インターネット回線・格安スマホ・電力・ガス等の情報提供サービス、アフィリエイト広告事業</dd>
+        </div>
+      </dl>
+    </section>
 
-      <div class="text-card">
-        <div class="text-card-icon orange">💡</div>
-        <h3>アフィリエイト広告について</h3>
-        <p>掲載リンクの一部は成果報酬型広告（アフィリエイト）です。申込み成立時に当社が報酬を受け取る場合があります。</p>
+    <section class="section" id="policy">
+      <div>
+        <span class="section-kicker">02 / POLICY</span>
+        <h2>サービスと広告の取り扱い</h2>
+        <p class="section-note">LP・広告・アフィリエイトの関係が自然に伝わるよう、判断材料を整理しています。</p>
       </div>
-
-      <div class="text-card">
-        <div class="text-card-icon green">💰</div>
-        <h3>料金・費用</h3>
-        <p>本サイトの閲覧は無料です。各サービスの月額料金・初期費用等は各社公式サイトをご確認ください。掲載情報は予告なく変更される場合があります。</p>
+      <div class="card-grid">
+        <article class="policy-card">
+          <div class="icon-box coral">
+            <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5V4a2 2 0 0 1 2-2h12v20H6a2 2 0 0 1-2-2.5Z"/><path d="M8 6h6M8 10h8M8 14h5"/></svg>
+          </div>
+          <h3>サービスの性質</h3>
+          <p>通信比較ナビは、通信サービス・電力等の比較情報を提供するメディアです。申込み・契約は各社公式サイトまたは代理店サイトで行われます。</p>
+        </article>
+        <article class="policy-card">
+          <div class="icon-box sage">
+            <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v18M3 12h18"/><path d="M19 5 5 19"/></svg>
+          </div>
+          <h3>アフィリエイト広告について</h3>
+          <p>掲載リンクの一部は成果報酬型広告です。申込み成立時に、当社が広告主またはASPから報酬を受け取る場合があります。</p>
+        </article>
+        <article class="policy-card">
+          <div class="icon-box gold">
+            <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7H14a3.5 3.5 0 0 1 0 7H6"/></svg>
+          </div>
+          <h3>料金・費用</h3>
+          <p>本サイトの閲覧は無料です。各サービスの月額料金・初期費用・解約条件等は、各社公式サイトの最新情報をご確認ください。</p>
+        </article>
+        <article class="policy-card">
+          <div class="icon-box blue">
+            <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="8" width="18" height="13" rx="2"/><path d="M12 8v13M19 8v13M5 8V6a2 2 0 0 1 2-2h3l2 4 2-4h3a2 2 0 0 1 2 2v2"/></svg>
+          </div>
+          <h3>キャッシュバック・特典</h3>
+          <p>掲載の特典は代理店・ASP経由の独自特典を含む場合があります。適用には条件・期間・手続きがあり、内容は予告なく変更・終了される場合があります。</p>
+        </article>
       </div>
+    </section>
 
-      <div class="text-card">
-        <div class="text-card-icon purple">🎁</div>
-        <h3>キャッシュバック・特典</h3>
-        <p>掲載のキャッシュバック・特典は代理店・ASP経由の独自特典を含みます。適用には条件・期間・手続きが伴います。内容は予告なく変更・終了される場合があります。</p>
+    <section class="section" id="disclaimer">
+      <div>
+        <span class="section-kicker">03 / DISCLAIMER</span>
+        <h2>免責事項</h2>
+        <p class="section-note">比較情報を利用する前にご確認ください。</p>
       </div>
+      <div class="disclaimer">
+        <article class="disclaimer-item">
+          <div class="number">01</div>
+          <div class="disclaimer-copy">
+            <h3>情報の正確性</h3>
+            <p>掲載情報の正確性維持に努めておりますが、完全性・最新性を保証するものではありません。最新情報は各社公式サイトにてご確認ください。</p>
+          </div>
+        </article>
+        <article class="disclaimer-item">
+          <div class="number">02</div>
+          <div class="disclaimer-copy">
+            <h3>損害について</h3>
+            <p>掲載情報を利用して発生した損害について、当社は一切の責任を負いかねます。</p>
+          </div>
+        </article>
+        <article class="disclaimer-item">
+          <div class="number">03</div>
+          <div class="disclaimer-copy">
+            <h3>リンク先について</h3>
+            <p>本サイトからリンクされた外部サイトの内容、申込み条件、キャンペーン内容について、当社は責任を負いません。</p>
+          </div>
+        </article>
+      </div>
+    </section>
 
-    </div>
-  </div>
-
-  <hr class="divider">
-
-  <!-- Section 3: 免責事項 -->
-  <div class="section">
-    <div class="section-header">
-      <div class="section-num">3</div>
-      <h2 class="section-title">免責事項</h2>
-    </div>
-    <div class="table-card">
-      <table>
-        <tbody>
-          <tr>
-            <th>情報の正確性</th>
-            <td>掲載情報の正確性維持に努めておりますが、完全性・最新性を保証するものではありません。最新情報は各社公式サイトにてご確認ください。</td>
-          </tr>
-          <tr>
-            <th>損害について</th>
-            <td>掲載情報を利用して発生した損害について、当社は一切の責任を負いかねます。</td>
-          </tr>
-          <tr>
-            <th>リンク先</th>
-            <td>本サイトからリンクされた外部サイトの内容について、当社は責任を負いません。</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-
-  <hr class="divider">
-
-  <!-- Contact -->
-  <div class="contact-card">
-    <div class="contact-card-inner">
-      <div class="contact-icon">✉️</div>
-      <h3>お問い合わせ</h3>
-      <p>サービス内容・掲載情報に関するご質問はこちらから<br>原則5営業日以内にご返信いたします。</p>
-      <a href="mailto:hatunemikudaisuki@gmail.com" class="contact-mail-btn">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+    <section class="contact-panel" id="contact">
+      <div>
+        <span class="section-kicker">CONTACT</span>
+        <h2>掲載情報・広告表記に関するお問い合わせ</h2>
+        <p>サービス内容や掲載情報についてのご質問はメールにて承ります。土日祝日は返信までお時間をいただく場合があります。</p>
+      </div>
+      <a class="mail-button" href="mailto:hatunemikudaisuki@gmail.com">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m22 7-10 7L2 7"/><rect x="2" y="5" width="20" height="14" rx="2"/></svg>
         メールで問い合わせる
       </a>
-      <p class="contact-note">土日祝日はお時間をいただく場合があります</p>
-    </div>
+    </section>
   </div>
-
 </main>
 
-<!-- ===== Footer ===== -->
 <footer class="site-footer">
-  <div class="footer-brand">
-    <span class="footer-brand-icon">通</span>
-    通信比較ナビ
+  <div class="shell footer-inner">
+    <p>© 2026 REMERCI株式会社 All Rights Reserved.</p>
+    <nav class="footer-links" aria-label="フッターナビゲーション">
+      <a href="/affiliate/">トップ</a>
+      <a href="/affiliate/privacy.html">プライバシーポリシー</a>
+      <a href="/affiliate/legal.html">特定商取引法</a>
+    </nav>
   </div>
-  <nav class="footer-links">
-    <a href="/affiliate/">トップ</a>
-    <a href="/affiliate/privacy.html">プライバシーポリシー</a>
-    <a href="/affiliate/legal.html">特定商取引法</a>
-  </nav>
-  <p class="footer-copy">© 2026 REMERCI株式会社 All Rights Reserved.</p>
 </footer>
-
 </body>
 </html>
