@@ -5,78 +5,389 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5" />
 <meta name="robots" content="noindex, nofollow" />
 <title>特定商取引法に基づく表記｜通信比較ナビ</title>
-<meta name="description" content="通信比較ナビの特定商取引法に基づく表記。運営者情報、サービス内容、お問い合わせ方法について記載しています。" />
+<meta name="description" content="通信比較ナビの特定商取引法に基づく表記。REMERCI株式会社の運営者情報・サービス内容・お問い合わせ方法について記載しています。" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet" />
-<!-- Google tag (gtag.js) - GA4 + Google Ads 統合 -->
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700;900&display=swap" rel="stylesheet" />
+<!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-8XKJ81F390"></script>
 <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-8XKJ81F390');gtag('config','AW-18213756380');</script>
 <!-- Microsoft Clarity -->
 <script type="text/javascript">(function(c,l,a,r,i,t,y){c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);})(window,document,"clarity","script","x283fyep35");</script>
 <style>
+/* ===== Reset & Base ===== */
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-body{font-family:"Noto Sans JP",sans-serif;background:#f6f8fb;color:#1a1d28;font-size:15px;line-height:1.95;-webkit-font-smoothing:antialiased}
-a{color:#0066cc;text-decoration:none}
-a:hover{text-decoration:underline}
-.header{background:#fff;border-bottom:1px solid #e5e8ef;padding:14px 0}
-.container{width:100%;max-width:820px;margin:0 auto;padding:0 20px}
-.header-inner{display:flex;align-items:center;justify-content:space-between}
-.brand{display:flex;align-items:center;gap:10px;font-weight:900;font-size:18px;color:#0066cc}
-.brand-mark{width:36px;height:36px;background:#0066cc;color:#fff;border-radius:8px;display:grid;place-items:center;font-weight:900;font-size:16px}
-.nav a{font-size:12px;color:#5a6478;font-weight:700}
-
-.main{padding:48px 0 80px}
-h1{font-size:28px;font-weight:900;margin-bottom:8px;color:#0f1830}
-.lead{color:#5a6478;font-size:14px;margin-bottom:36px}
-h2{font-size:20px;font-weight:900;color:#0f1830;margin-top:36px;margin-bottom:14px;padding-bottom:8px;border-bottom:2px solid #0066cc}
-p{margin-bottom:14px;color:#1a1d28}
-ul{margin-bottom:14px;padding-left:24px}
-li{margin-bottom:6px;color:#1a1d28}
-.card{background:#fff;border:1px solid #e5e8ef;border-radius:14px;padding:32px 28px;box-shadow:0 2px 12px rgba(0,0,0,.04)}
-.callout{background:#eff5ff;border-left:4px solid #0066cc;padding:14px 18px;border-radius:6px;margin:18px 0;font-size:13px;line-height:1.85}
-.table-wrap{overflow-x:auto;margin-bottom:24px}
-table{width:100%;border-collapse:collapse;font-size:14px}
-th,td{padding:14px 16px;border:1px solid #dde3ee;text-align:left;vertical-align:top}
-th{background:#f0f4fb;font-weight:700;width:180px;white-space:nowrap;color:#0f1830}
-td{color:#1a1d28;line-height:1.85}
-@media(max-width:600px){
-  th{width:120px;font-size:13px;padding:10px 12px}
-  td{font-size:13px;padding:10px 12px}
-  h1{font-size:22px}
+:root{
+  --blue:#0057d9;
+  --blue-light:#3b82f6;
+  --blue-dark:#003fa3;
+  --accent:#ff6b35;
+  --ink:#0d1526;
+  --ink2:#3d4a63;
+  --ink3:#8896b0;
+  --bg:#f0f4fa;
+  --white:#ffffff;
+  --border:#dce4f0;
+  --shadow-sm:0 1px 4px rgba(0,40,120,.06);
+  --shadow-md:0 4px 20px rgba(0,40,120,.10);
+  --shadow-lg:0 12px 48px rgba(0,40,120,.14);
+  --radius-sm:8px;
+  --radius:16px;
+  --radius-lg:24px;
 }
-.footer{background:#1a1d28;color:rgba(255,255,255,.6);padding:32px 0;text-align:center;font-size:12px}
-.footer a{color:rgba(255,255,255,.5);text-decoration:underline}
+html{scroll-behavior:smooth}
+body{
+  font-family:"Noto Sans JP",sans-serif;
+  background:var(--bg);
+  color:var(--ink);
+  font-size:15px;
+  line-height:1.9;
+  -webkit-font-smoothing:antialiased;
+  min-height:100vh;
+}
+a{color:var(--blue);text-decoration:none;transition:color .2s}
+a:hover{color:var(--blue-light);text-decoration:underline}
+img{max-width:100%;display:block}
+
+/* ===== Header ===== */
+.site-header{
+  position:sticky;top:0;z-index:100;
+  background:rgba(255,255,255,.92);
+  backdrop-filter:blur(20px);
+  -webkit-backdrop-filter:blur(20px);
+  border-bottom:1px solid rgba(220,228,240,.7);
+  box-shadow:var(--shadow-sm);
+}
+.header-inner{
+  max-width:960px;margin:0 auto;padding:0 24px;
+  height:62px;display:flex;align-items:center;justify-content:space-between;
+}
+.brand{display:flex;align-items:center;gap:10px;font-weight:900;font-size:17px;color:var(--blue);letter-spacing:-.3px}
+.brand-icon{
+  width:38px;height:38px;
+  background:linear-gradient(135deg,var(--blue),var(--blue-light));
+  border-radius:10px;
+  display:grid;place-items:center;
+  font-size:15px;font-weight:900;color:#fff;
+  box-shadow:0 4px 12px rgba(0,87,217,.3);
+}
+.back-link{
+  display:flex;align-items:center;gap:6px;
+  font-size:13px;font-weight:700;color:var(--ink2);
+  border:1.5px solid var(--border);
+  padding:6px 14px;border-radius:20px;
+  transition:all .2s;
+}
+.back-link:hover{color:var(--blue);border-color:var(--blue);text-decoration:none;background:var(--bg)}
+
+/* ===== Hero ===== */
+.hero{
+  position:relative;overflow:hidden;
+  background:linear-gradient(140deg,#021d5c 0%,#0057d9 45%,#1e7ef5 100%);
+  padding:64px 24px 72px;
+  text-align:center;
+  color:#fff;
+}
+.hero::before{
+  content:"";position:absolute;inset:0;
+  background:url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.04'%3E%3Ccircle cx='30' cy='30' r='20'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E") repeat;
+}
+.hero::after{
+  content:"";position:absolute;bottom:-2px;left:0;right:0;height:48px;
+  background:var(--bg);
+  clip-path:ellipse(60% 100% at 50% 100%);
+}
+.hero-inner{position:relative;z-index:1;max-width:720px;margin:0 auto}
+.hero-badge{
+  display:inline-flex;align-items:center;gap:6px;
+  background:rgba(255,255,255,.15);
+  border:1px solid rgba(255,255,255,.25);
+  backdrop-filter:blur(10px);
+  border-radius:40px;
+  padding:6px 16px;
+  font-size:12px;font-weight:700;letter-spacing:.5px;
+  color:rgba(255,255,255,.9);
+  margin-bottom:20px;
+}
+.hero-badge svg{width:14px;height:14px;flex-shrink:0}
+.hero h1{
+  font-size:clamp(22px,5vw,36px);
+  font-weight:900;
+  letter-spacing:-1px;
+  line-height:1.2;
+  margin-bottom:14px;
+}
+.hero-sub{
+  font-size:14px;font-weight:400;
+  color:rgba(255,255,255,.75);
+  line-height:1.7;
+}
+.hero-update{
+  margin-top:18px;
+  font-size:12px;color:rgba(255,255,255,.5);
+  font-weight:500;
+}
+
+/* ===== Content Layout ===== */
+.content{
+  max-width:860px;margin:0 auto;
+  padding:48px 24px 96px;
+}
+
+/* ===== Info Banner ===== */
+.info-banner{
+  display:flex;align-items:flex-start;gap:14px;
+  background:#fff;
+  border:1px solid var(--border);
+  border-left:4px solid var(--blue);
+  border-radius:var(--radius-sm);
+  padding:18px 22px;
+  margin-bottom:40px;
+  box-shadow:var(--shadow-sm);
+}
+.info-banner svg{flex-shrink:0;width:22px;height:22px;color:var(--blue);margin-top:2px}
+.info-banner p{font-size:13px;line-height:1.85;color:var(--ink2);margin:0}
+
+/* ===== Section ===== */
+.section{margin-bottom:40px}
+.section-header{
+  display:flex;align-items:center;gap:12px;
+  margin-bottom:18px;
+}
+.section-num{
+  width:32px;height:32px;
+  background:linear-gradient(135deg,var(--blue),var(--blue-light));
+  border-radius:50%;
+  display:grid;place-items:center;
+  font-size:13px;font-weight:900;color:#fff;
+  flex-shrink:0;
+  box-shadow:0 4px 12px rgba(0,87,217,.25);
+}
+.section-title{
+  font-size:18px;font-weight:900;color:var(--ink);
+  letter-spacing:-.3px;
+}
+
+/* ===== Table Card ===== */
+.table-card{
+  background:#fff;
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  overflow:hidden;
+  box-shadow:var(--shadow-md);
+}
+.table-card table{width:100%;border-collapse:collapse}
+.table-card tr{transition:background .15s}
+.table-card tr:not(:last-child) td,
+.table-card tr:not(:last-child) th{border-bottom:1px solid #eef1f8}
+.table-card th{
+  width:160px;
+  padding:18px 20px;
+  background:linear-gradient(180deg,#f7f9ff 0%,#eef2fc 100%);
+  font-size:13px;font-weight:700;color:var(--ink2);
+  white-space:nowrap;vertical-align:top;
+  border-right:1px solid #e5ecfb;
+}
+.table-card td{
+  padding:18px 20px;
+  font-size:14px;color:var(--ink);
+  line-height:1.85;vertical-align:top;
+}
+.table-card tr:hover td,
+.table-card tr:hover th{background:rgba(0,87,217,.025)}
+.invoice-badge{
+  display:inline-flex;align-items:center;gap:6px;
+  background:linear-gradient(135deg,#e8f0fe,#cce0ff);
+  border:1px solid #b3d0ff;
+  border-radius:6px;
+  padding:4px 10px;
+  font-size:13px;font-weight:700;
+  color:var(--blue-dark);
+  letter-spacing:.5px;
+}
+.mail-link{
+  display:inline-flex;align-items:center;gap:6px;
+  color:var(--blue);font-weight:700;
+}
+.mail-note{display:block;font-size:12px;color:var(--ink3);font-weight:400;margin-top:4px}
+
+/* ===== Text Cards ===== */
+.text-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:0}
+.text-card{
+  background:#fff;
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  padding:24px 22px;
+  box-shadow:var(--shadow-sm);
+  transition:box-shadow .2s,transform .2s;
+}
+.text-card:hover{box-shadow:var(--shadow-md);transform:translateY(-2px)}
+.text-card-icon{
+  width:44px;height:44px;
+  border-radius:12px;
+  display:grid;place-items:center;
+  margin-bottom:14px;
+  font-size:20px;
+}
+.text-card-icon.blue{background:linear-gradient(135deg,#e8f0fe,#c5d8ff)}
+.text-card-icon.orange{background:linear-gradient(135deg,#fff3e8,#ffd8b8)}
+.text-card-icon.green{background:linear-gradient(135deg,#e8faf0,#b8f0d0)}
+.text-card-icon.purple{background:linear-gradient(135deg,#f3e8ff,#e0b8ff)}
+.text-card h3{font-size:15px;font-weight:900;color:var(--ink);margin-bottom:10px;letter-spacing:-.2px}
+.text-card p{font-size:13px;color:var(--ink2);line-height:1.85;margin:0}
+
+/* ===== Contact Card ===== */
+.contact-card{
+  background:linear-gradient(135deg,#0057d9 0%,#1e7ef5 100%);
+  border-radius:var(--radius-lg);
+  padding:40px 36px;
+  text-align:center;
+  color:#fff;
+  box-shadow:0 16px 48px rgba(0,87,217,.28);
+  position:relative;overflow:hidden;
+}
+.contact-card::before{
+  content:"";position:absolute;top:-40px;right:-40px;
+  width:200px;height:200px;
+  background:rgba(255,255,255,.06);
+  border-radius:50%;
+}
+.contact-card::after{
+  content:"";position:absolute;bottom:-60px;left:-30px;
+  width:220px;height:220px;
+  background:rgba(255,255,255,.04);
+  border-radius:50%;
+}
+.contact-card-inner{position:relative;z-index:1}
+.contact-icon{
+  width:60px;height:60px;
+  background:rgba(255,255,255,.15);
+  border-radius:16px;
+  display:grid;place-items:center;
+  margin:0 auto 18px;
+  font-size:26px;
+  backdrop-filter:blur(10px);
+  border:1px solid rgba(255,255,255,.2);
+}
+.contact-card h3{font-size:20px;font-weight:900;margin-bottom:8px;letter-spacing:-.3px}
+.contact-card p{font-size:13px;color:rgba(255,255,255,.8);margin-bottom:22px}
+.contact-mail-btn{
+  display:inline-flex;align-items:center;gap:10px;
+  background:#fff;
+  color:var(--blue)!important;
+  font-weight:900;font-size:15px;
+  padding:14px 30px;border-radius:40px;
+  box-shadow:0 8px 24px rgba(0,0,0,.15);
+  transition:transform .2s,box-shadow .2s;
+  text-decoration:none!important;
+}
+.contact-mail-btn:hover{transform:translateY(-2px);box-shadow:0 12px 32px rgba(0,0,0,.2)}
+.contact-mail-btn svg{width:18px;height:18px;flex-shrink:0}
+.contact-note{margin-top:16px;font-size:12px;color:rgba(255,255,255,.6)}
+
+/* ===== Divider ===== */
+.divider{
+  border:none;
+  border-top:1px solid var(--border);
+  margin:40px 0;
+}
+
+/* ===== Footer ===== */
+.site-footer{
+  background:var(--ink);
+  color:rgba(255,255,255,.5);
+  padding:40px 24px;
+  text-align:center;
+}
+.footer-brand{
+  display:flex;align-items:center;justify-content:center;gap:10px;
+  font-weight:900;font-size:16px;color:rgba(255,255,255,.85);
+  margin-bottom:20px;
+}
+.footer-brand-icon{
+  width:34px;height:34px;
+  background:linear-gradient(135deg,var(--blue),var(--blue-light));
+  border-radius:8px;
+  display:grid;place-items:center;
+  font-size:13px;font-weight:900;color:#fff;
+}
+.footer-links{
+  display:flex;align-items:center;justify-content:center;
+  gap:6px;flex-wrap:wrap;
+  margin-bottom:18px;
+}
+.footer-links a{
+  font-size:12px;color:rgba(255,255,255,.45);
+  padding:4px 12px;
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:20px;
+  transition:all .2s;
+}
+.footer-links a:hover{color:rgba(255,255,255,.8);border-color:rgba(255,255,255,.3);text-decoration:none}
+.footer-copy{font-size:11px;color:rgba(255,255,255,.3)}
+
+/* ===== Responsive ===== */
+@media(max-width:640px){
+  .hero{padding:48px 20px 60px}
+  .content{padding:32px 16px 72px}
+  .text-grid{grid-template-columns:1fr}
+  .table-card th{width:110px;font-size:12px;padding:14px 12px}
+  .table-card td{font-size:13px;padding:14px 12px}
+  .contact-card{padding:28px 20px}
+  .header-inner{padding:0 16px}
+}
 </style>
 </head>
 <body>
 
-<header class="header">
-  <div class="container header-inner">
+<!-- ===== Header ===== -->
+<header class="site-header">
+  <div class="header-inner">
     <a href="/affiliate/" class="brand">
-      <span class="brand-mark">通</span>
+      <span class="brand-icon">通</span>
       <span>通信比較ナビ</span>
     </a>
-    <nav><a href="/affiliate/">← トップへ戻る</a></nav>
+    <a href="/affiliate/" class="back-link">
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+      トップへ戻る
+    </a>
   </div>
 </header>
 
-<main class="main">
-  <div class="container">
+<!-- ===== Hero ===== -->
+<section class="hero">
+  <div class="hero-inner">
+    <div class="hero-badge">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+      LEGAL DISCLOSURE
+    </div>
     <h1>特定商取引法に基づく表記</h1>
-    <p class="lead">最終更新: 2026年6月9日</p>
+    <p class="hero-sub">本ページはインターネット回線・格安スマホ・電気・ガスの<br>比較情報サービス「通信比較ナビ」の運営者情報を記載しています。</p>
+    <p class="hero-update">最終更新：2026年6月9日</p>
+  </div>
+</section>
 
-    <div class="card">
-      <div class="callout">
-        本サイト「通信比較ナビ」は、インターネット回線・格安スマホ・電力・ガスに関する情報提供およびアフィリエイト広告を掲載しています。商品・サービスの申込みは各通信会社・電力会社等の公式サイトにておこなわれます。
-      </div>
+<!-- ===== Main Content ===== -->
+<main class="content">
 
-      <h2>運営者情報</h2>
-      <div class="table-wrap">
-        <table>
+  <!-- Info Banner -->
+  <div class="info-banner">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    <p>本サイトは情報提供・比較を目的としたメディアです。商品・サービスのご契約は各通信会社・電力会社等の<strong>公式サイト</strong>でおこなわれます。本サイト上での直接販売はおこなっておりません。</p>
+  </div>
+
+  <!-- Section 1: 運営者情報 -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-num">1</div>
+      <h2 class="section-title">運営者情報</h2>
+    </div>
+    <div class="table-card">
+      <table>
+        <tbody>
           <tr>
             <th>法人名</th>
-            <td>REMERCI株式会社</td>
+            <td><strong>REMERCI株式会社</strong></td>
           </tr>
           <tr>
             <th>代表者</th>
@@ -84,55 +395,126 @@ td{color:#1a1d28;line-height:1.85}
           </tr>
           <tr>
             <th>所在地</th>
-            <td>〒594-0021　大阪府和泉市阪本町376-161</td>
+            <td>〒594-0021<br>大阪府和泉市阪本町376-161</td>
           </tr>
           <tr>
-            <th>メールアドレス</th>
-            <td><a href="mailto:hatunemikudaisuki@gmail.com">hatunemikudaisuki@gmail.com</a><br />
-              <span style="font-size:12px;color:#666">※お問い合わせには原則5営業日以内に返信いたします。</span>
+            <th>お問い合わせ</th>
+            <td>
+              <a href="mailto:hatunemikudaisuki@gmail.com" class="mail-link">
+                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                hatunemikudaisuki@gmail.com
+              </a>
+              <span class="mail-note">※原則5営業日以内にご返信いたします</span>
             </td>
           </tr>
           <tr>
-            <th>適格請求書<br />発行事業者<br />登録番号</th>
-            <td>T9120103003185</td>
+            <th>インボイス<br>登録番号</th>
+            <td><span class="invoice-badge">T 9120103003185</span></td>
           </tr>
           <tr>
             <th>事業内容</th>
             <td>インターネット回線・格安スマホ・電力・ガス等の情報提供サービス、アフィリエイト広告事業</td>
           </tr>
-        </table>
-      </div>
-
-      <h2>サービスの性質について</h2>
-      <p>本サイトは情報提供・比較を目的としたメディアサイトです。各通信サービス・電力サービス等の申込み・契約は、各社の公式サイトまたは代理店窓口にておこなわれます。本サイトにおける販売はおこなっておりません。</p>
-      <p>本サイトに掲載のリンクの一部はアフィリエイト広告（成果報酬型広告）です。リンク先への申込みが成立した場合、当社が報酬を受け取る場合があります。掲載内容は広告主から独立した観点で作成していますが、報酬の有無が情報の公平性に影響する可能性があることをご承知おきください。</p>
-
-      <h2>料金・費用について</h2>
-      <p>本サイトの情報閲覧は無料です。各サービスの月額料金・初期費用・解約金等は各社の公式サイト記載の内容をご確認ください。掲載料金は取材・公開時点の情報であり、予告なく変更される場合があります。</p>
-
-      <h2>キャッシュバック・特典について</h2>
-      <p>本サイトに掲載のキャッシュバック金額・特典は、代理店・ASP経由の独自特典を含む場合があります。特典の適用には条件・期間・手続きが伴うことがあり、詳細は各申込み窓口にてご確認ください。特典内容は予告なく変更・終了される場合があります。</p>
-
-      <h2>お問い合わせ</h2>
-      <p>サービス内容・掲載情報に関するお問い合わせは、下記メールアドレスまでご連絡ください。</p>
-      <p><strong>メール：</strong><a href="mailto:hatunemikudaisuki@gmail.com">hatunemikudaisuki@gmail.com</a></p>
-      <p>※お問い合わせへの返信は原則5営業日以内とさせていただきます。土日祝日はお時間をいただく場合があります。</p>
-
-      <h2>免責事項</h2>
-      <p>本サイトに掲載する情報は正確性の維持に努めておりますが、情報の完全性・正確性・最新性を保証するものではありません。掲載情報を利用して発生した損害について、当社は一切の責任を負いかねます。最新かつ正確な情報は各サービス提供会社の公式サイトにてご確認ください。</p>
+        </tbody>
+      </table>
     </div>
   </div>
+
+  <hr class="divider">
+
+  <!-- Section 2: テキストカード群 -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-num">2</div>
+      <h2 class="section-title">サービスの詳細</h2>
+    </div>
+    <div class="text-grid">
+
+      <div class="text-card">
+        <div class="text-card-icon blue">📋</div>
+        <h3>サービスの性質</h3>
+        <p>本サイトは通信サービス・電力等の比較情報を提供するメディアです。申込み・契約は各社公式サイトまたは代理店にておこなわれます。</p>
+      </div>
+
+      <div class="text-card">
+        <div class="text-card-icon orange">💡</div>
+        <h3>アフィリエイト広告について</h3>
+        <p>掲載リンクの一部は成果報酬型広告（アフィリエイト）です。申込み成立時に当社が報酬を受け取る場合があります。</p>
+      </div>
+
+      <div class="text-card">
+        <div class="text-card-icon green">💰</div>
+        <h3>料金・費用</h3>
+        <p>本サイトの閲覧は無料です。各サービスの月額料金・初期費用等は各社公式サイトをご確認ください。掲載情報は予告なく変更される場合があります。</p>
+      </div>
+
+      <div class="text-card">
+        <div class="text-card-icon purple">🎁</div>
+        <h3>キャッシュバック・特典</h3>
+        <p>掲載のキャッシュバック・特典は代理店・ASP経由の独自特典を含みます。適用には条件・期間・手続きが伴います。内容は予告なく変更・終了される場合があります。</p>
+      </div>
+
+    </div>
+  </div>
+
+  <hr class="divider">
+
+  <!-- Section 3: 免責事項 -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-num">3</div>
+      <h2 class="section-title">免責事項</h2>
+    </div>
+    <div class="table-card">
+      <table>
+        <tbody>
+          <tr>
+            <th>情報の正確性</th>
+            <td>掲載情報の正確性維持に努めておりますが、完全性・最新性を保証するものではありません。最新情報は各社公式サイトにてご確認ください。</td>
+          </tr>
+          <tr>
+            <th>損害について</th>
+            <td>掲載情報を利用して発生した損害について、当社は一切の責任を負いかねます。</td>
+          </tr>
+          <tr>
+            <th>リンク先</th>
+            <td>本サイトからリンクされた外部サイトの内容について、当社は責任を負いません。</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <hr class="divider">
+
+  <!-- Contact -->
+  <div class="contact-card">
+    <div class="contact-card-inner">
+      <div class="contact-icon">✉️</div>
+      <h3>お問い合わせ</h3>
+      <p>サービス内容・掲載情報に関するご質問はこちらから<br>原則5営業日以内にご返信いたします。</p>
+      <a href="mailto:hatunemikudaisuki@gmail.com" class="contact-mail-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+        メールで問い合わせる
+      </a>
+      <p class="contact-note">土日祝日はお時間をいただく場合があります</p>
+    </div>
+  </div>
+
 </main>
 
-<footer class="footer">
-  <div class="container">
-    <p>© 2026 REMERCI株式会社 ／ 通信比較ナビ</p>
-    <p style="margin-top:8px">
-      <a href="/affiliate/">トップ</a> ／
-      <a href="/affiliate/privacy.html">プライバシーポリシー</a> ／
-      <a href="/affiliate/legal.html">特定商取引法</a>
-    </p>
+<!-- ===== Footer ===== -->
+<footer class="site-footer">
+  <div class="footer-brand">
+    <span class="footer-brand-icon">通</span>
+    通信比較ナビ
   </div>
+  <nav class="footer-links">
+    <a href="/affiliate/">トップ</a>
+    <a href="/affiliate/privacy.html">プライバシーポリシー</a>
+    <a href="/affiliate/legal.html">特定商取引法</a>
+  </nav>
+  <p class="footer-copy">© 2026 REMERCI株式会社 All Rights Reserved.</p>
 </footer>
 
 </body>
