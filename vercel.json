@@ -6,7 +6,7 @@
     { "source": "/admin", "destination": "/api/auth?slug=admin" },
     { "source": "/:slug(\\d+-[a-z0-9-]+)", "destination": "/api/auth?slug=:slug" },
     { "source": "/:slug(m\\d+-[a-z0-9-]+)", "destination": "/api/auth?slug=:slug" },
-    { "source": "/a/:slug", "destination": "/affiliate/lp/:slug" }
+    { "source": "/a/:slug", "destination": "/affiliate/lp/:slug.html" }
   ],
   "redirects": [
     { "source": "/_proposals/:path*", "destination": "/", "permanent": false }
