@@ -609,11 +609,11 @@
       "name": "楽天モバイル",
       "category": "mvno",
       "subcategory": "格安SIM・キャリア",
-      "asp": "A8.net",
+      "asp": "楽天アフィリエイト",
       "reward_jpy": 7000,
       "approval_rate_estimate": 0.7,
       "cookie_hours": 24,
-      "affiliate_url_placeholder": "https://px.a8.net/svt/ejp?a8mat=XXXXXXX",
+      "affiliate_url_placeholder": "https://hb.afl.rakuten.co.jp/hsc/54b1c952.fc40e17c.54b1c848.18b9750f/?link_type=text&rafst=rmn&ut=eyJwYWdlIjoic2hvcCIsInR5cGUiOiJ0ZXh0IiwiY29sIjoxLCJjYXQiOjEsImJhbiI6Im5hbWUiLCJhbXAiOmZhbHNlfQ%3D%3D",
       "monthly_fee_jpy": 3278,
       "initial_fee_jpy": 0,
       "contract_period_months": 0,
@@ -639,7 +639,10 @@
       "ng_phrases": [
         "絶対つながる",
         "完全無制限"
-      ]
+      ],
+      "asp_status": "PARTNERED",
+      "active": true,
+      "_note": "楽天アフィリエイト経由（2026-06-08提携）"
     },
     {
       "id": "ymobile",
@@ -1398,6 +1401,77 @@
       ],
       "ng_phrases": [
         "最安"
+      ]
+    },
+    {
+      "id": "wifi-tokyo-prepaid",
+      "name": "WiFi東京プリペイド",
+      "category": "pocket_wifi",
+      "subcategory": "プリペイド・短期利用型",
+      "asp": "A8.net",
+      "asp_status": "PARTNERED",
+      "_note": "A8.net 提携済み（2026-06-10）",
+      "reward_jpy": 1000,
+      "approval_rate_estimate": 0.7,
+      "cookie_hours": 24,
+      "affiliate_url_placeholder": "https://px.a8.net/svt/ejp?a8mat=4B5OO7+9X83QQ+3MKA+15OK2A",
+      "monthly_fee_jpy": 0,
+      "initial_fee_jpy": 0,
+      "contract_period_months": 0,
+      "speed_max_mbps": 150,
+      "data_cap": "使った分だけ（プリペイド制）",
+      "area_coverage": "全国（クラウドSIM）",
+      "cashback_jpy": 0,
+      "cashback_condition": "",
+      "selling_points": [
+        "使った分だけ料金発生・無駄なし",
+        "契約・縛りなし・いつでも解約可",
+        "届いたらすぐ使えるシンプル設計"
+      ],
+      "weak_points": [
+        "長期利用では月額プランより割高になる場合あり",
+        "大容量利用には向かない"
+      ],
+      "target_personas": [
+        "business_traveler",
+        "short_term_resident",
+        "second_line"
+      ],
+      "ng_phrases": [
+        "完全無制限",
+        "業界最安"
+      ]
+    },
+    {
+      "id": "rakuten-card",
+      "name": "楽天カード",
+      "category": "credit_card",
+      "subcategory": "高還元・年会費無料",
+      "asp": "楽天アフィリエイト",
+      "asp_status": "PARTNERED",
+      "active": true,
+      "_note": "楽天アフィリエイト経由（2026-06-08提携）",
+      "reward_jpy": 5000,
+      "approval_rate_estimate": 0.4,
+      "cookie_hours": 24,
+      "affiliate_url_placeholder": "https://hb.afl.rakuten.co.jp/hgc/54b1a0e0.3bead26b.54b1a0e1.8927ec1f/?pc=https%3A%2F%2Fwww.rakuten-card.co.jp%2F&link_type=text&ut=eyJwYWdlIjoidXJsIiwidHlwZSI6InRleHQiLCJjb2wiOjF9",
+      "selling_points": [
+        "年会費永年無料",
+        "新規入会で5,000-10,000ポイント",
+        "楽天市場で還元率3%以上",
+        "楽天でんき・楽天モバイルとセットでさらにお得"
+      ],
+      "weak_points": [
+        "楽天会員でない人にはメリット薄い"
+      ],
+      "target_personas": [
+        "credit_card_beginner",
+        "rakuten_user",
+        "family_kakei"
+      ],
+      "ng_phrases": [
+        "最高還元率",
+        "業界No.1"
       ]
     }
   ]
