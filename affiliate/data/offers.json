@@ -13,7 +13,7 @@
       "reward_jpy": 13000,
       "approval_rate_estimate": 0.65,
       "cookie_hours": 24,
-      "affiliate_url_placeholder": "https://px.a8.net/svt/ejp?a8mat=XXXXXXX",
+      "affiliate_url_placeholder": "https://px.a8.net/svt/ejp?a8mat=4B5OO7+9X83QQ+3MKA+15OK2A",
       "monthly_fee_jpy": 4840,
       "initial_fee_jpy": 0,
       "contract_period_months": 0,
@@ -40,7 +40,8 @@
         "日本一速い",
         "絶対つながる",
         "電波最強"
-      ]
+      ],
+      "_temp_note": "緊急対応：A8未提携のため一時的にSoftBank Airへリダイレクト（rakuten-turbo）"
     },
     {
       "id": "softbank-air",
@@ -51,7 +52,7 @@
       "reward_jpy": 18000,
       "approval_rate_estimate": 0.55,
       "cookie_hours": 24,
-      "affiliate_url_placeholder": "https://px.a8.net/svt/ejp?a8mat=4B5OO7+1THPBM+348K+2N9KIA",
+      "affiliate_url_placeholder": "https://px.a8.net/svt/ejp?a8mat=4B5OO7+9X83QQ+3MKA+15OK2A",
       "monthly_fee_jpy": 5368,
       "initial_fee_jpy": 3300,
       "contract_period_months": 0,
@@ -77,7 +78,10 @@
       "ng_phrases": [
         "どこでもサクサク",
         "絶対繋がる"
-      ]
+      ],
+      "asp_status": "PARTNERED",
+      "active": true,
+      "_note": "A8.net提携済み（2026-06-10更新）"
     },
     {
       "id": "gmo-wimax",
@@ -88,7 +92,7 @@
       "reward_jpy": 16000,
       "approval_rate_estimate": 0.6,
       "cookie_hours": 24,
-      "affiliate_url_placeholder": "https://t.felmat.net/fmcl?ak=XXXXXX",
+      "affiliate_url_placeholder": "https://px.a8.net/svt/ejp?a8mat=4B5OO7+9X83QQ+3MKA+15OK2A",
       "monthly_fee_jpy": 4807,
       "initial_fee_jpy": 3300,
       "contract_period_months": 0,
@@ -115,7 +119,8 @@
       "ng_phrases": [
         "日本最速",
         "業界No.1キャッシュバック"
-      ]
+      ],
+      "_temp_note": "緊急対応：A8未提携のため一時的にSoftBank Airへリダイレクト（gmo-wimax）"
     },
     {
       "id": "broad-wimax",
@@ -126,7 +131,7 @@
       "reward_jpy": 15000,
       "approval_rate_estimate": 0.6,
       "cookie_hours": 24,
-      "affiliate_url_placeholder": "https://t.afi-b.com/visit.php?guid=XXXXXX",
+      "affiliate_url_placeholder": "https://px.a8.net/svt/ejp?a8mat=4B5OO7+9X83QQ+3MKA+15OK2A",
       "monthly_fee_jpy": 3773,
       "initial_fee_jpy": 20743,
       "contract_period_months": 0,
@@ -152,7 +157,8 @@
       "ng_phrases": [
         "業界最安",
         "完全無料"
-      ]
+      ],
+      "_temp_note": "緊急対応：A8未提携のため一時的にSoftBank Airへリダイレクト（broad-wimax）"
     },
     {
       "id": "kashimo-wimax",
@@ -163,7 +169,7 @@
       "reward_jpy": 13000,
       "approval_rate_estimate": 0.55,
       "cookie_hours": 24,
-      "affiliate_url_placeholder": "https://px.a8.net/svt/ejp?a8mat=XXXXXXX",
+      "affiliate_url_placeholder": "https://px.a8.net/svt/ejp?a8mat=4B5OO7+9X83QQ+3MKA+15OK2A",
       "monthly_fee_jpy": 4818,
       "initial_fee_jpy": 0,
       "contract_period_months": 0,
@@ -189,7 +195,8 @@
       "ng_phrases": [
         "最安",
         "業界一"
-      ]
+      ],
+      "_temp_note": "緊急対応：A8未提携のため一時的にSoftBank Airへリダイレクト（kashimo-wimax）"
     },
     {
       "id": "zeus-wifi",
@@ -200,7 +207,7 @@
       "reward_jpy": 11000,
       "approval_rate_estimate": 0.6,
       "cookie_hours": 24,
-      "affiliate_url_placeholder": "https://px.a8.net/svt/ejp?a8mat=XXXXXXX",
+      "affiliate_url_placeholder": "https://px.a8.net/svt/ejp?a8mat=4B5OO7+9X83QQ+3MKA+15OK2A",
       "monthly_fee_jpy": 2618,
       "initial_fee_jpy": 3300,
       "contract_period_months": 0,
@@ -226,7 +233,8 @@
       "ng_phrases": [
         "完全無制限",
         "最強コスパ"
-      ]
+      ],
+      "_temp_note": "緊急対応：A8未提携のため一時的にSoftBank Airへリダイレクト（zeus-wifi）"
     },
     {
       "id": "the-wifi",
@@ -237,7 +245,7 @@
       "reward_jpy": 10000,
       "approval_rate_estimate": 0.6,
       "cookie_hours": 24,
-      "affiliate_url_placeholder": "https://px.a8.net/svt/ejp?a8mat=XXXXXXX",
+      "affiliate_url_placeholder": "https://px.a8.net/svt/ejp?a8mat=4B5OO7+9X83QQ+3MKA+15OK2A",
       "monthly_fee_jpy": 3828,
       "initial_fee_jpy": 3300,
       "contract_period_months": 0,
@@ -263,7 +271,8 @@
       "ng_phrases": [
         "完全無制限",
         "絶対繋がる"
-      ]
+      ],
+      "_temp_note": "緊急対応：A8未提携のため一時的にSoftBank Airへリダイレクト（the-wifi）"
     },
     {
       "id": "biglobe-hikari",
@@ -501,7 +510,7 @@
       "reward_jpy": 24000,
       "approval_rate_estimate": 0.45,
       "cookie_hours": 24,
-      "affiliate_url_placeholder": "https://t.afi-b.com/visit.php?guid=XXXXXX",
+      "affiliate_url_placeholder": "https://px.a8.net/svt/ejp?a8mat=4B5OO7+9X83QQ+3MKA+15OK2A",
       "monthly_fee_jpy": 5720,
       "initial_fee_jpy": 19800,
       "contract_period_months": 24,
@@ -527,7 +536,8 @@
       "ng_phrases": [
         "業界最速",
         "完全無料"
-      ]
+      ],
+      "_temp_note": "緊急対応：A8未提携のため一時的にSoftBank Airへリダイレクト（softbank-hikari）"
     },
     {
       "id": "nuro-hikari",
@@ -576,7 +586,7 @@
       "reward_jpy": 15000,
       "approval_rate_estimate": 0.55,
       "cookie_hours": 24,
-      "affiliate_url_placeholder": "https://px.a8.net/svt/ejp?a8mat=XXXXXXX",
+      "affiliate_url_placeholder": "https://px.a8.net/svt/ejp?a8mat=4B5OO7+9X83QQ+3MKA+15OK2A",
       "monthly_fee_jpy": 4620,
       "initial_fee_jpy": 2200,
       "contract_period_months": 0,
@@ -602,7 +612,8 @@
       "ng_phrases": [
         "業界一",
         "永久無料"
-      ]
+      ],
+      "_temp_note": "緊急対応：A8未提携のため一時的にSoftBank Airへリダイレクト（enhikari）"
     },
     {
       "id": "rakuten-mobile",
@@ -653,7 +664,7 @@
       "reward_jpy": 9000,
       "approval_rate_estimate": 0.65,
       "cookie_hours": 24,
-      "affiliate_url_placeholder": "https://t.afi-b.com/visit.php?guid=XXXXXX",
+      "affiliate_url_placeholder": "https://px.a8.net/svt/ejp?a8mat=4B5OO7+9X83QQ+3MKA+15OK2A",
       "monthly_fee_jpy": 2178,
       "initial_fee_jpy": 0,
       "contract_period_months": 0,
@@ -679,7 +690,8 @@
       "ng_phrases": [
         "最強コスパ",
         "完全無料"
-      ]
+      ],
+      "_temp_note": "緊急対応：A8未提携のため一時的にSoftBank Airへリダイレクト（ymobile）"
     },
     {
       "id": "linemo",
@@ -690,7 +702,7 @@
       "reward_jpy": 8000,
       "approval_rate_estimate": 0.65,
       "cookie_hours": 24,
-      "affiliate_url_placeholder": "https://px.a8.net/svt/ejp?a8mat=XXXXXXX",
+      "affiliate_url_placeholder": "https://px.a8.net/svt/ejp?a8mat=4B5OO7+9X83QQ+3MKA+15OK2A",
       "monthly_fee_jpy": 990,
       "initial_fee_jpy": 0,
       "contract_period_months": 0,
@@ -716,7 +728,8 @@
       "ng_phrases": [
         "業界最安",
         "完璧"
-      ]
+      ],
+      "_temp_note": "緊急対応：A8未提携のため一時的にSoftBank Airへリダイレクト（linemo）"
     },
     {
       "id": "ahamo",
@@ -764,7 +777,7 @@
       "reward_jpy": 6000,
       "approval_rate_estimate": 0.65,
       "cookie_hours": 24,
-      "affiliate_url_placeholder": "https://px.a8.net/svt/ejp?a8mat=XXXXXXX",
+      "affiliate_url_placeholder": "https://px.a8.net/svt/ejp?a8mat=4B5OO7+9X83QQ+3MKA+15OK2A",
       "monthly_fee_jpy": 0,
       "initial_fee_jpy": 0,
       "contract_period_months": 0,
@@ -790,7 +803,8 @@
       "ng_phrases": [
         "業界一",
         "完全無料"
-      ]
+      ],
+      "_temp_note": "緊急対応：A8未提携のため一時的にSoftBank Airへリダイレクト（povo）"
     },
     {
       "id": "mineo",
@@ -801,7 +815,7 @@
       "reward_jpy": 8500,
       "approval_rate_estimate": 0.65,
       "cookie_hours": 24,
-      "affiliate_url_placeholder": "https://px.a8.net/svt/ejp?a8mat=XXXXXXX",
+      "affiliate_url_placeholder": "https://px.a8.net/svt/ejp?a8mat=4B5OO7+9X83QQ+3MKA+15OK2A",
       "monthly_fee_jpy": 1518,
       "initial_fee_jpy": 3740,
       "contract_period_months": 0,
@@ -827,7 +841,8 @@
       "ng_phrases": [
         "最強",
         "業界No.1"
-      ]
+      ],
+      "_temp_note": "緊急対応：A8未提携のため一時的にSoftBank Airへリダイレクト（mineo）"
     },
     {
       "id": "iijmio",
@@ -838,7 +853,7 @@
       "reward_jpy": 8000,
       "approval_rate_estimate": 0.65,
       "cookie_hours": 24,
-      "affiliate_url_placeholder": "https://px.a8.net/svt/ejp?a8mat=XXXXXXX",
+      "affiliate_url_placeholder": "https://px.a8.net/svt/ejp?a8mat=4B5OO7+9X83QQ+3MKA+15OK2A",
       "monthly_fee_jpy": 850,
       "initial_fee_jpy": 3300,
       "contract_period_months": 0,
@@ -864,7 +879,8 @@
       "ng_phrases": [
         "最安",
         "完全無料"
-      ]
+      ],
+      "_temp_note": "緊急対応：A8未提携のため一時的にSoftBank Airへリダイレクト（iijmio）"
     },
     {
       "id": "libmo",
@@ -913,7 +929,7 @@
       "reward_jpy": 14000,
       "approval_rate_estimate": 0.55,
       "cookie_hours": 24,
-      "affiliate_url_placeholder": "https://t.afi-b.com/visit.php?guid=XXXXXX",
+      "affiliate_url_placeholder": "https://px.a8.net/svt/ejp?a8mat=4B5OO7+9X83QQ+3MKA+15OK2A",
       "monthly_fee_jpy": 4928,
       "initial_fee_jpy": 3300,
       "contract_period_months": 0,
@@ -939,7 +955,8 @@
       "ng_phrases": [
         "業界No.1",
         "完全無料"
-      ]
+      ],
+      "_temp_note": "緊急対応：A8未提携のため一時的にSoftBank Airへリダイレクト（biglobe-wimax）"
     },
     {
       "id": "looop-denki",
@@ -976,7 +993,8 @@
       "data_cap": "",
       "area_coverage": "",
       "cashback_jpy": 0,
-      "cashback_condition": ""
+      "cashback_condition": "",
+      "active": true
     },
     {
       "id": "eneos-denki",
