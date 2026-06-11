@@ -964,12 +964,12 @@
       "category": "electricity",
       "subcategory": "新電力（基本料金0円）",
       "asp": "A8.net",
-      "asp_status": "PARTNERED",
-      "_note": "A8.net 提携済み（2026-06-08）",
+      "asp_status": "NOT_YET_PARTNERED",
+      "_note": "A8.net 提携申請中。承認後に実リンクを設定すること。",
       "reward_jpy": 5500,
       "approval_rate_estimate": 0.65,
       "cookie_hours": 24,
-      "affiliate_url_placeholder": "https://px.a8.net/svt/ejp?a8mat=4B5R05+FMMNG2+3SPO+ZQ80I",
+      "affiliate_url_placeholder": "https://px.a8.net/svt/ejp?a8mat=XXXXXXX",
       "monthly_fee_jpy": 0,
       "initial_fee_jpy": 0,
       "contract_period_months": 0,
@@ -1208,6 +1208,45 @@
       "monthly_fee_jpy": 0,
       "initial_fee_jpy": 0,
       "contract_period_months": 0
+    },
+    {
+      "id": "gas-choice",
+      "name": "ガスチョイス",
+      "category": "gas",
+      "subcategory": "都市ガス比較・切替サービス",
+      "asp": "A8.net",
+      "asp_status": "PARTNERED",
+      "_note": "A8.net 提携済み（2026-06-10）",
+      "reward_jpy": 5000,
+      "approval_rate_estimate": 0.65,
+      "cookie_hours": 24,
+      "affiliate_url_placeholder": "https://px.a8.net/svt/ejp?a8mat=4B5R05+FMMNG2+3SPO+ZQ80I",
+      "monthly_fee_jpy": 0,
+      "initial_fee_jpy": 0,
+      "contract_period_months": 0,
+      "speed_max_mbps": 0,
+      "data_cap": "",
+      "area_coverage": "都市ガス提供エリア（全国対応）",
+      "cashback_jpy": 0,
+      "cashback_condition": "",
+      "selling_points": [
+        "複数のガス会社を一括比較・無料診断",
+        "手続きは最短3分・面倒な連絡不要",
+        "切替後のガス代節約効果を事前確認可"
+      ],
+      "weak_points": [
+        "都市ガスエリア限定（プロパンガスは対象外）",
+        "切替後の節約額はエリア・使用量により異なる"
+      ],
+      "target_personas": [
+        "gas_saving",
+        "electricity_gas_set",
+        "moving_utility"
+      ],
+      "ng_phrases": [
+        "必ず安くなる",
+        "業界最安"
+      ]
     },
     {
       "id": "nichigas",

@@ -685,6 +685,7 @@
         "プロパン 適正価格"
       ],
       "preferred_offers": [
+        "gas-choice",
         "nichigas",
         "lemongas",
         "tokyo-gas-denki"
@@ -711,6 +712,7 @@
         "東京ガス 電気 セット"
       ],
       "preferred_offers": [
+        "gas-choice",
         "tokyo-gas-denki",
         "au-denki",
         "softbank-denki",
@@ -739,6 +741,7 @@
         "引越し ガス 立会い"
       ],
       "preferred_offers": [
+        "gas-choice",
         "looop-denki",
         "rakuten-denki",
         "tokyo-gas-denki",
