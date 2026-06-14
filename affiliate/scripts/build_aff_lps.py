@@ -1157,6 +1157,11 @@ def main():
                 print(f"  ⚠️  offer not found: {offer_id} (niche: {niche['id']})")
                 skipped += 1
                 continue
+            # active: false の案件はスキップ（リンク未設定・掲載停止）
+            if offer.get("active") is False:
+                print(f"  ⏭  {offer_id} (inactive - skipped)")
+                skipped += 1
+                continue
             slug = f"{niche['id']}-{offer_id}"
 
             # 静的オーバーライドがある場合はスキップ（手作りLPを保護）
