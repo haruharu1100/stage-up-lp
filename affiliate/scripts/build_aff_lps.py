@@ -467,6 +467,69 @@ def gen_lp(niche, offer):
 }})();
 </script>"""
 
+    # ----- カテゴリ別CTAテキスト（コンバージョン最適化） -----
+    _cat = offer.get('category', 'home_router')
+    _is_contract_free = offer.get('contract_period_months', 0) == 0
+    _contract_label = '縛りなし' if _is_contract_free else f"{offer['contract_period_months']}ヶ月契約"
+
+    CTA_HERO   = {
+        'home_router':  '今すぐ申し込む（工事不要・最短翌日）',
+        'pocket_wifi':  '今すぐ申し込む（最短翌日発送）',
+        'fiber':        '公式サイトで工事日を確認する',
+        'mvno':         '今すぐSIMを申し込む（最短翌日発送）',
+        'electricity':  '無料で切り替え申し込む（5分で完了）',
+        'gas':          '無料でガス会社を比較する',
+        'credit_card':  '今すぐ無料で申し込む',
+    }.get(_cat, '公式サイトで申し込む')
+
+    CTA_MID    = {
+        'home_router':  '公式サイトで在庫・キャンペーンを確認する',
+        'pocket_wifi':  '公式サイトでキャンペーンを確認する',
+        'fiber':        '公式サイトで対応エリア・工事日を確認する',
+        'mvno':         '公式サイトで料金・プランを確認する',
+        'electricity':  '公式サイトで料金シミュレーションを確認する',
+        'gas':          '無料でガス料金を比較する',
+        'credit_card':  '公式サイトで入会特典を確認する',
+    }.get(_cat, '公式サイトで確認する')
+
+    CTA_FINAL  = {
+        'home_router':  f'{esc(offer["name"])} に申し込む（公式サイト）',
+        'pocket_wifi':  f'{esc(offer["name"])} に申し込む（公式サイト）',
+        'fiber':        f'{esc(offer["name"])} の工事日を確認・申し込む',
+        'mvno':         f'{esc(offer["name"])} のSIMを申し込む（公式）',
+        'electricity':  f'{esc(offer["name"])} に無料で切り替え申し込む',
+        'gas':          f'{esc(offer["name"])} で無料比較する',
+        'credit_card':  f'{esc(offer["name"])} に無料で申し込む',
+    }.get(_cat, f'{esc(offer["name"])} 公式サイトへ')
+
+    CTA_STICKY = {
+        'home_router':  f'申し込む（月額{yen(monthly)}〜）→',
+        'pocket_wifi':  f'申し込む（月額{yen(monthly)}〜）→',
+        'fiber':        f'対応エリアを確認・申し込む →',
+        'mvno':         f'申し込む（月額{yen(monthly)}〜）→',
+        'electricity':  '無料で切り替え申し込む →',
+        'gas':          '無料でガス代を比較する →',
+        'credit_card':  '無料で申し込む →',
+    }.get(_cat, '公式サイトで申し込む →')
+
+    # ----- CTAボタン前の安心バッジ -----
+    _badges = []
+    if _is_contract_free:
+        _badges.append('縛り・解約金なし')
+    if offer.get('initial_fee_jpy', 99999) == 0:
+        _badges.append('初期費用0円')
+    _badges.append('申込はオンライン完結')
+    if _cat in ('home_router', 'pocket_wifi', 'mvno'):
+        _badges.append('個人情報は公式サイトに直接入力')
+    if _cat == 'fiber':
+        _badges.append('工事日は後から調整可能')
+    if _cat in ('electricity', 'gas'):
+        _badges.append('現在の電力会社への連絡不要')
+
+    trust_badges_html = '<div class="trust-badges">' + ''.join(
+        f'<span class="tbadge">✓ {b}</span>' for b in _badges
+    ) + '</div>'
+
     # ----- title/desc -----
     # 検索KWを title/desc に含めて品質スコアと SEO 両方を強化
     primary_kw = niche.get('search_keywords', [niche['name']])[0]
@@ -558,7 +621,8 @@ def gen_lp(niche, offer):
     <p class="campaign-kicker">Campaign</p>
     <h2>最大 <span class="amount">{cb:,}円</span> キャッシュバック<br/>{esc(niche['name'])}向けの代理店経由特典。</h2>
     <p class="campaign-lead">2026年時点の代理店独自特典です。受取条件・申請手続きは公式サイトで最新情報をご確認ください。</p>
-    <a href="#" class="cta-link btn btn-primary">公式サイトで条件を見る</a>
+    {trust_badges_html}
+    <a href="#" class="cta-link btn btn-primary">{CTA_MID}</a>
   </div>
 </section>"""
 
@@ -774,6 +838,10 @@ a{{color:inherit;text-decoration:none;transition:color .2s,opacity .2s}}
 .final-cta .btn{{padding:18px 36px;font-size:15px}}
 .final-note{{margin-top:18px;font-size:11px;color:var(--muted)}}
 
+.trust-badges{{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:16px auto 20px;max-width:640px}}
+.tbadge{{font-size:11px;font-weight:600;color:var(--green);background:var(--green-soft);border:1px solid rgba(25,169,116,.25);border-radius:100px;padding:5px 12px;letter-spacing:.02em;white-space:nowrap}}
+@media(max-width:540px){{.tbadge{{font-size:10px;padding:4px 10px}}}}
+
 .sticky-cta{{position:fixed;left:0;right:0;bottom:0;background:rgba(255,255,255,.97);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-top:1px solid var(--line);padding:12px 16px;z-index:60;box-shadow:0 -8px 20px rgba(15,30,60,.08)}}
 .sticky-cta .btn{{width:100%;padding:14px;font-size:13px}}
 @media(min-width:768px){{.sticky-cta{{display:none}}}}
@@ -804,7 +872,7 @@ a{{color:inherit;text-decoration:none;transition:color .2s,opacity .2s}}
   <div class="container header-inner">
     <a href="#" class="brand"><span class="brand-mark">{brand_initial}</span><span class="brand-text">{brand_name}<small>Editorial Comparison Media</small></span></a>
     <nav class="nav"><a href="#features">特徴</a><a href="#pricing">料金</a><a href="#compare">比較</a></nav>
-    <a href="#" class="cta-link header-cta">公式で確認</a>
+    <a href="#" class="cta-link header-cta">公式で申し込む</a>
   </div>
 </header>
 
@@ -816,9 +884,10 @@ a{{color:inherit;text-decoration:none;transition:color .2s,opacity .2s}}
     <p class="hero-lead">{esc(niche['persona'])}</p>
     {hero_cb_html}
     <div class="hero-actions">
-      <a href="#" class="cta-link btn btn-primary">キャンペーンを確認</a>
+      <a href="#" class="cta-link btn btn-primary">{CTA_HERO}</a>
       <a href="#pricing" class="btn btn-ghost">料金を見る</a>
     </div>
+    {trust_badges_html}
     <div class="hero-cards">
       <div class="hcard"><div class="hcard-l">Monthly</div><div class="hcard-v">{monthly:,}<small style="font-size:13px">円</small></div><div class="hcard-n">月額料金</div></div>
       <div class="hcard"><div class="hcard-l">Data</div><div class="hcard-v">{esc(offer.get('data_cap', '─'))}</div><div class="hcard-n">データ容量</div></div>
@@ -870,7 +939,10 @@ a{{color:inherit;text-decoration:none;transition:color .2s,opacity .2s}}
     <p class="lead">表示の月額料金と、特典適用後の実質月額には差が出ます。本ページでは2026年時点の条件を元に、24ヶ月利用前提でシミュレーションしています。</p>
     {price_grid}
     {sim_html}
-    <div style="margin-top:32px;text-align:center"><a href="#" class="cta-link btn btn-primary">最新キャンペーンを公式で見る</a></div>
+    <div style="margin-top:32px;text-align:center">
+      {trust_badges_html}
+      <a href="#" class="cta-link btn btn-primary">{CTA_MID}</a>
+    </div>
   </div>
 </section>
 
@@ -922,14 +994,17 @@ a{{color:inherit;text-decoration:none;transition:color .2s,opacity .2s}}
 <section class="final-cta">
   <div class="container">
     <p class="kicker">Final Check</p>
-    <h2>まずは公式サイトで、<br/>今のキャンペーン条件を確認。</h2>
-    <p>料金・キャンペーン内容・適用条件・対応エリアは公式サイトで最新情報をご確認ください。申込手続きはオンラインで完結します。</p>
-    <a href="#" class="cta-link btn btn-primary">{esc(offer['name'])} 公式ページへ</a>
-    <p class="final-note">※ 申込・解約・サポートに関するお問い合わせは公式サイトをご参照ください。</p>
+    <h2>迷ったら、まず公式サイトで<br/>料金・条件を確認してください。</h2>
+    <p>料金・キャンペーン内容・適用条件・対応エリアは公式サイトで最新情報をご確認ください。<br/>申込手続きはオンラインで完結、最短5〜10分で完了します。</p>
+    {trust_badges_html}
+    <a href="#" class="cta-link btn btn-primary">{CTA_FINAL}</a>
+    <p class="final-note">※ 申込・解約・サポートに関するお問い合わせは公式サイトをご参照ください。当サイトはアフィリエイトリンクを含みます。</p>
   </div>
 </section>
 
-<div class="sticky-cta"><a href="#" class="cta-link btn btn-primary">公式でキャンペーン確認</a></div>
+<div class="sticky-cta">
+  <a href="#" class="cta-link btn btn-primary">{CTA_STICKY}</a>
+</div>
 
 <footer class="site-footer">
   <div class="container">

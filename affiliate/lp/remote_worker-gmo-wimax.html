@@ -209,6 +209,10 @@ a{color:inherit;text-decoration:none;transition:color .2s,opacity .2s}
 .final-cta .btn{padding:18px 36px;font-size:15px}
 .final-note{margin-top:18px;font-size:11px;color:var(--muted)}
 
+.trust-badges{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:16px auto 20px;max-width:640px}
+.tbadge{font-size:11px;font-weight:600;color:var(--green);background:var(--green-soft);border:1px solid rgba(25,169,116,.25);border-radius:100px;padding:5px 12px;letter-spacing:.02em;white-space:nowrap}
+@media(max-width:540px){.tbadge{font-size:10px;padding:4px 10px}}
+
 .sticky-cta{position:fixed;left:0;right:0;bottom:0;background:rgba(255,255,255,.97);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-top:1px solid var(--line);padding:12px 16px;z-index:60;box-shadow:0 -8px 20px rgba(15,30,60,.08)}
 .sticky-cta .btn{width:100%;padding:14px;font-size:13px}
 @media(min-width:768px){.sticky-cta{display:none}}
@@ -239,7 +243,7 @@ a{color:inherit;text-decoration:none;transition:color .2s,opacity .2s}
   <div class="container header-inner">
     <a href="#" class="brand"><span class="brand-mark">P</span><span class="brand-text">Pocket WiFi Lab<small>Editorial Comparison Media</small></span></a>
     <nav class="nav"><a href="#features">特徴</a><a href="#pricing">料金</a><a href="#compare">比較</a></nav>
-    <a href="#" class="cta-link header-cta">公式で確認</a>
+    <a href="#" class="cta-link header-cta">公式で申し込む</a>
   </div>
 </header>
 
@@ -251,9 +255,10 @@ a{color:inherit;text-decoration:none;transition:color .2s,opacity .2s}
     <p class="hero-lead">在宅勤務の30-50代。Web会議の音声/映像品質を重視。回線が落ちると業務に支障が出る。</p>
     <div class="hero-cb"><span class="hero-cb-label">代理店経由特典</span><span class="hero-cb-amount">最大 49,000<small>円</small></span><span class="hero-cb-sub">キャッシュバック</span></div>
     <div class="hero-actions">
-      <a href="#" class="cta-link btn btn-primary">キャンペーンを確認</a>
+      <a href="#" class="cta-link btn btn-primary">今すぐ申し込む（最短翌日発送）</a>
       <a href="#pricing" class="btn btn-ghost">料金を見る</a>
     </div>
+    <div class="trust-badges"><span class="tbadge">✓ 縛り・解約金なし</span><span class="tbadge">✓ 申込はオンライン完結</span><span class="tbadge">✓ 個人情報は公式サイトに直接入力</span></div>
     <div class="hero-cards">
       <div class="hcard"><div class="hcard-l">Monthly</div><div class="hcard-v">4,807<small style="font-size:13px">円</small></div><div class="hcard-n">月額料金</div></div>
       <div class="hcard"><div class="hcard-l">Data</div><div class="hcard-v">無制限（混雑時制限あり）</div><div class="hcard-n">データ容量</div></div>
@@ -324,7 +329,10 @@ a{color:inherit;text-decoration:none;transition:color .2s,opacity .2s}
       </div>
       <p class="sim-disclaimer">※ 2026年時点の代理店特典条件に基づく試算です。条件達成時の目安であり、実際の請求額・キャッシュバック適用額は申込時の最新条件・適用可否によって異なります。最新条件は公式サイトでご確認ください。</p>
     </div>
-    <div style="margin-top:32px;text-align:center"><a href="#" class="cta-link btn btn-primary">最新キャンペーンを公式で見る</a></div>
+    <div style="margin-top:32px;text-align:center">
+      <div class="trust-badges"><span class="tbadge">✓ 縛り・解約金なし</span><span class="tbadge">✓ 申込はオンライン完結</span><span class="tbadge">✓ 個人情報は公式サイトに直接入力</span></div>
+      <a href="#" class="cta-link btn btn-primary">公式サイトでキャンペーンを確認する</a>
+    </div>
   </div>
 </section>
 
@@ -372,7 +380,8 @@ a{color:inherit;text-decoration:none;transition:color .2s,opacity .2s}
     <p class="campaign-kicker">Campaign</p>
     <h2>最大 <span class="amount">49,000円</span> キャッシュバック<br/>テレワーク・Web会議落ちない回線向けの代理店経由特典。</h2>
     <p class="campaign-lead">2026年時点の代理店独自特典です。受取条件・申請手続きは公式サイトで最新情報をご確認ください。</p>
-    <a href="#" class="cta-link btn btn-primary">公式サイトで条件を見る</a>
+    <div class="trust-badges"><span class="tbadge">✓ 縛り・解約金なし</span><span class="tbadge">✓ 申込はオンライン完結</span><span class="tbadge">✓ 個人情報は公式サイトに直接入力</span></div>
+    <a href="#" class="cta-link btn btn-primary">公式サイトでキャンペーンを確認する</a>
   </div>
 </section>
 
@@ -387,14 +396,17 @@ a{color:inherit;text-decoration:none;transition:color .2s,opacity .2s}
 <section class="final-cta">
   <div class="container">
     <p class="kicker">Final Check</p>
-    <h2>まずは公式サイトで、<br/>今のキャンペーン条件を確認。</h2>
-    <p>料金・キャンペーン内容・適用条件・対応エリアは公式サイトで最新情報をご確認ください。申込手続きはオンラインで完結します。</p>
-    <a href="#" class="cta-link btn btn-primary">GMOとくとくBB WiMAX 公式ページへ</a>
-    <p class="final-note">※ 申込・解約・サポートに関するお問い合わせは公式サイトをご参照ください。</p>
+    <h2>迷ったら、まず公式サイトで<br/>料金・条件を確認してください。</h2>
+    <p>料金・キャンペーン内容・適用条件・対応エリアは公式サイトで最新情報をご確認ください。<br/>申込手続きはオンラインで完結、最短5〜10分で完了します。</p>
+    <div class="trust-badges"><span class="tbadge">✓ 縛り・解約金なし</span><span class="tbadge">✓ 申込はオンライン完結</span><span class="tbadge">✓ 個人情報は公式サイトに直接入力</span></div>
+    <a href="#" class="cta-link btn btn-primary">GMOとくとくBB WiMAX に申し込む（公式サイト）</a>
+    <p class="final-note">※ 申込・解約・サポートに関するお問い合わせは公式サイトをご参照ください。当サイトはアフィリエイトリンクを含みます。</p>
   </div>
 </section>
 
-<div class="sticky-cta"><a href="#" class="cta-link btn btn-primary">公式でキャンペーン確認</a></div>
+<div class="sticky-cta">
+  <a href="#" class="cta-link btn btn-primary">申し込む（月額4,807円〜）→</a>
+</div>
 
 <footer class="site-footer">
   <div class="container">
