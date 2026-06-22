@@ -1,5 +1,14 @@
 const banner = document.getElementById("cookie-banner");
 const accept = document.getElementById("cookie-accept");
+const instagramUrl = window.siteConfig && window.siteConfig.instagramUrl;
+
+document.querySelectorAll("[data-instagram-link]").forEach((link) => {
+  if (instagramUrl) {
+    link.href = instagramUrl;
+  } else {
+    link.hidden = true;
+  }
+});
 
 if (banner && accept && localStorage.getItem("morika_cookie_consent") !== "yes") {
   banner.hidden = false;
