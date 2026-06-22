@@ -1,24 +1,19 @@
-const countdownEl = document.getElementById("countdown");
-if (countdownEl) {
-  const key = "morika_lp_offer_deadline";
-  const dayMs = 24 * 60 * 60 * 1000;
-  let deadline = Number(localStorage.getItem(key));
-  const now = Date.now();
-  if (!deadline || deadline <= now) {
-    deadline = now + dayMs;
-    localStorage.setItem(key, String(deadline));
-  }
+const banner = document.getElementById("cookie-banner");
+const accept = document.getElementById("cookie-accept");
 
-  function tick() {
-    const remain = Math.max(0, deadline - Date.now());
-    const hours = Math.floor(remain / 3600000);
-    const minutes = Math.floor((remain % 3600000) / 60000);
-    const seconds = Math.floor((remain % 60000) / 1000);
-    countdownEl.textContent = [hours, minutes, seconds]
-      .map((value) => String(value).padStart(2, "0"))
-      .join(":");
-  }
-
-  tick();
-  setInterval(tick, 1000);
+if (banner && accept && localStorage.getItem("morika_cookie_consent") !== "yes") {
+  banner.hidden = false;
+  accept.addEventListener("click", () => {
+    localStorage.setItem("morika_cookie_consent", "yes");
+    banner.hidden = true;
+  });
 }
+
+document.querySelectorAll(".track-link").forEach((link) => {
+  link.addEventListener("click", () => {
+    const name = link.getAttribute("data-conversion") || "contact";
+    if (typeof window.gtag === "function") {
+      window.gtag("event", "conversion_click", { method: name });
+    }
+  });
+});
