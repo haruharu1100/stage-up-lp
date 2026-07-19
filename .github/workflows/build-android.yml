@@ -9,6 +9,9 @@ on:
       - 'fg-dream/android-app/**'
       - '.github/workflows/build-android.yml'
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -43,9 +46,23 @@ jobs:
 
       - name: APK 組み立て（デバッグ署名）
         run: |
+          set -o pipefail
           chmod +x android/gradlew
           cd android
-          ./gradlew assembleDebug --no-daemon
+          ./gradlew assembleDebug --no-daemon --stacktrace 2>&1 | tee /tmp/build.log
+
+      - name: 失敗時：エラーログをci-logブランチへ退避
+        if: failure()
+        working-directory: ${{ github.workspace }}
+        run: |
+          mkdir -p ci-logs
+          tail -n 250 /tmp/build.log > ci-logs/last-build-error.log || echo "ログ取得失敗" > ci-logs/last-build-error.log
+          git config user.email "actions@github.com"
+          git config user.name "gh-actions"
+          git checkout -B ci-log
+          git add -f ci-logs/last-build-error.log
+          git commit -m "CI build error log [skip ci]"
+          git push -f origin ci-log
 
       - name: 出来上がったAPKを保存
         uses: actions/upload-artifact@v4
