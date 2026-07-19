@@ -1,0 +1,9 @@
+{
+  "appId": "jp.fgdream.app",
+  "appName": "FGドリーム",
+  "webDir": "www",
+  "server": {
+    "url": "https://fg-dream.pages.dev",
+    "cleartext": false
+  }
+}
