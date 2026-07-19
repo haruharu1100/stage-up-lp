@@ -73,3 +73,11 @@ jobs:
           name: fg-dream-android-apk
           path: fg-dream/android-app/android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
+
+      - name: スマホから直接入れられる配布リンクを公開
+        working-directory: ${{ github.workspace }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create android-latest --title "FGドリーム Androidアプリ 最新版" --notes "スタッフ配布用。Androidスマホでこのページの app-debug.apk をタップして入れてください。" || true
+          gh release upload android-latest fg-dream/android-app/android/app/build/outputs/apk/debug/app-debug.apk --clobber
