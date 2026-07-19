@@ -44,6 +44,9 @@ jobs:
       - name: 部品インストール
         run: npm ci
 
+      - name: Capacitor 同期（自動生成ファイルを復元）
+        run: npx cap sync android
+
       - name: APK 組み立て（デバッグ署名）
         run: |
           set -o pipefail
