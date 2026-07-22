@@ -1,5 +1,5 @@
 import * as cheerio from "cheerio";
-import { getDb, getSetting } from "./db.js";
+import { get, all, run, getSetting } from "./db.js";
 import { lookupProduct, judge } from "./amazon.js";
 import { sendNotificationEmail } from "./notify.js";
 import { normalizePlan, dealLimit } from "./plans.js";
@@ -343,16 +343,14 @@ export async function extractItems(url, supplier) {
 }
 
 export async function runTask(taskId) {
-  const db = getDb();
-  const task = db
-    .prepare(
-      `SELECT t.*, s.name AS supplier_name, s.base_url,
-              s.selector_item, s.selector_name, s.selector_price,
-              s.selector_jan, s.selector_link, s.selector_image
-       FROM tasks t LEFT JOIN suppliers s ON s.id = t.supplier_id
-       WHERE t.id = ?`
-    )
-    .get(taskId);
+  const task = await get(
+    `SELECT t.*, s.name AS supplier_name, s.base_url,
+            s.selector_item, s.selector_name, s.selector_price,
+            s.selector_jan, s.selector_link, s.selector_image
+     FROM tasks t LEFT JOIN suppliers s ON s.id = t.supplier_id
+     WHERE t.id = ?`,
+    [taskId]
+  );
 
   if (!task) {
     return { extracted: 0, matched: 0, notified: 0, errors: ["タスクが見つかりません。"] };
@@ -389,34 +387,45 @@ export async function runTask(taskId) {
   // プランごとに「1回の巡回で見つける利益商品の上限」を決める。
   // 利益商品がこの件数に達したら、それ以上は照合せず巡回を終了する。
   // フリー=1件 / スタンダード=10件 / プロ=無制限。
-  const plan = normalizePlan(getSetting("plan"));
+  const plan = normalizePlan(await getSetting("plan"));
   const maxDeals = dealLimit(plan);
   let dealCount = 0;
   // 同じ商品（同一ASIN）が仕入れ先ページに複数回出てくることがあるため、
   // 巡回結果に同じ商品を重複表示しないよう、一度出したASINは記録しておく。
   const seenAsin = new Set();
 
-  const insert = db.prepare(`
-    INSERT OR IGNORE INTO notifications
+  const NOTIF_SQL = `INSERT OR IGNORE INTO notifications
       (task_id, supplier_name, product_name, jan, asin, buy_price, amazon_price,
        fees, profit, profit_rate, monthly_sales, source_url, product_url, image_url)
-    VALUES
-      (@task_id, @supplier_name, @product_name, @jan, @asin, @buy_price, @amazon_price,
-       @fees, @profit, @profit_rate, @monthly_sales, @source_url, @product_url, @image_url)
-  `);
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 
   // 巡回結果（利益条件を満たさない商品も含む、Amazonと照合できた全商品）を保存する。
   // いつでも見返して商品ページURLから買えるように、この一覧を残す。
-  const insertFinding = db.prepare(`
-    INSERT INTO findings
+  const FINDING_SQL = `INSERT INTO findings
       (task_id, supplier_name, product_name, jan, asin, buy_price, amazon_price,
        fees, profit, profit_rate, monthly_sales, source_url, product_url, image_url, is_deal)
-    VALUES
-      (@task_id, @supplier_name, @product_name, @jan, @asin, @buy_price, @amazon_price,
-       @fees, @profit, @profit_rate, @monthly_sales, @source_url, @product_url, @image_url, @is_deal)
-  `);
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+
+  // row（オブジェクト）を上記SQLの「?」の順番どおりの配列に並べ替える。
+  const rowArgs = (r) => [
+    r.task_id,
+    r.supplier_name,
+    r.product_name,
+    r.jan,
+    r.asin,
+    r.buy_price,
+    r.amazon_price,
+    r.fees,
+    r.profit,
+    r.profit_rate,
+    r.monthly_sales,
+    r.source_url,
+    r.product_url,
+    r.image_url,
+  ];
+
   // 最新の巡回結果だけを見せるため、このタスクの前回結果は消してから入れ直す。
-  db.prepare("DELETE FROM findings WHERE task_id = ?").run(task.id);
+  await run("DELETE FROM findings WHERE task_id = ?", [task.id]);
 
   for (const it of candidates) {
     let info;
@@ -446,7 +455,7 @@ export async function runTask(taskId) {
     if (!info || !info.price) continue;
     matched++;
 
-    const verdict = judge(task, it.price, info.price, info.monthlySales);
+    const verdict = await judge(task, it.price, info.price, info.monthlySales);
 
     // 商品ごとの個別リンクが取れていればそれを使う。
     // 取れていない（＝トップページや一覧URLしか無い）場合は、
@@ -479,10 +488,10 @@ export async function runTask(taskId) {
     // 同じ商品（ASIN）が複数出てきても、巡回結果には1回だけ表示する。
     if (info.asin && seenAsin.has(info.asin)) continue;
     if (info.asin) seenAsin.add(info.asin);
-    insertFinding.run({ ...row, is_deal: 1 });
+    await run(FINDING_SQL, [...rowArgs(row), 1]);
 
     // 利益商品は「通知」にも入れ、メール対象にする。
-    const result = insert.run(row);
+    const result = await run(NOTIF_SQL, rowArgs(row));
     if (result.changes > 0) {
       notified++;
       newItems.push(row);
@@ -493,7 +502,7 @@ export async function runTask(taskId) {
     if (dealCount >= maxDeals) break;
   }
 
-  db.prepare("UPDATE tasks SET last_run = datetime('now') WHERE id = ?").run(task.id);
+  await run("UPDATE tasks SET last_run = datetime('now') WHERE id = ?", [task.id]);
 
   if (newItems.length > 0) {
     try {
@@ -507,8 +516,7 @@ export async function runTask(taskId) {
 }
 
 export async function runAllTasks() {
-  const db = getDb();
-  const tasks = db.prepare("SELECT id, name FROM tasks WHERE enabled = 1").all();
+  const tasks = await all("SELECT id, name FROM tasks WHERE enabled = 1");
   const summary = [];
   for (const t of tasks) {
     const r = await runTask(t.id);

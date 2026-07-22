@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { runTask, runAllTasks } from "@/lib/crawler";
 
-export const maxDuration = 300;
+// Vercel（無料プラン）の関数の最長実行時間は60秒。
+export const runtime = "nodejs";
+export const maxDuration = 60;
 
 export async function POST(req) {
   let body = {};
