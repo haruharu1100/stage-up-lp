@@ -24,11 +24,14 @@ function extractJan(text, html) {
 }
 
 // 価格文字列から「実際の値段」を賢く取り出す。
-// ¥／￥／円 の付いた金額を最優先する。無い場合の「ただの数字」は、
-// 型番（例: DK-R12101、DK-3925EA）の数字を誤って値段扱いしないよう、
-// 直前が英字やハイフンでない“独立した数字”に限って採用する。
-// 「品切れ」など数字が無ければ null（＝仕入れ対象外として除外）。
-function pickPrice(text) {
+// ¥／￥／円 の付いた金額を最優先する。
+// requireCurrency=true のときは通貨記号（¥/￥/円）が付いた金額だけを採用する。
+//   → 商品名やまとめ文から拾う「自動検出モード」で、
+//     「300粒入」「100日分」「39種」などの“数量の数字”を値段と誤認しないため。
+// requireCurrency=false（目印セレクタで価格欄を直接指定している場合）は、
+//   型番（DK-R12101 等）の数字だけ避けて、素の数字も値段として拾う。
+// 数字が無ければ null（＝仕入れ対象外として除外）。
+function pickPrice(text, requireCurrency = false) {
   if (!text) return null;
   const s = String(text).replace(/,/g, "");
   // ¥1980 / ￥1980（半角¥ U+00A5 / 全角￥ U+FFE5）
@@ -37,7 +40,9 @@ function pickPrice(text) {
   // 1980円
   const en = s.match(/(\d{3,7})\s?円/);
   if (en) return parseInt(en[1], 10);
-  // 通貨記号が無いときのみ、型番に紛れた数字を避けて独立した数字を拾う。
+  // 通貨記号が必須のモードでは、ここで諦める（誤検出を防ぐ）。
+  if (requireCurrency) return null;
+  // 通貨記号が無いときは、型番に紛れた数字を避けて独立した数字を拾う。
   // 直前が「英字・数字・ハイフン」でない3〜7桁だけを候補にする。
   const any = s.match(/(?:^|[^0-9A-Za-z-])(\d{3,7})(?![0-9])/);
   return any ? parseInt(any[1], 10) : null;
@@ -222,7 +227,9 @@ function extractGeneric($, url) {
     const fullText = $el.text().trim();
     if (!fullText || fullText.length > 1200) return;
 
-    const price = pickPrice(fullText);
+    // 自動検出は商品名・説明文ごとまとめて読むため、数量（300粒・100日分等）を
+    // 値段と誤認しないよう、通貨記号（¥/円）付きの金額だけを価格として採用する。
+    const price = pickPrice(fullText, true);
     if (!price) return;
 
     let name = "";
