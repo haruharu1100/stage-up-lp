@@ -1,7 +1,7 @@
 import "./globals.css";
 
 export const metadata = {
-  title: "Reseller Radar",
+  title: "仕入れセンサー（ShiireSensor）",
   description: "仕入れ先を毎日巡回し、利益商品を自動検知する",
 };
 
@@ -12,8 +12,8 @@ export default function RootLayout({ children }) {
         <header className="header">
           <div className="header-inner">
             <a className="logo" href="/">
-              <span className="mark">RR</span>
-              <span className="name">Reseller Radar</span>
+              <span className="mark">仕</span>
+              <span className="name">仕入れセンサー</span>
             </a>
             <nav className="nav">
               <a href="/">通知</a>
