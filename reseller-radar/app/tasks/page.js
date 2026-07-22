@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { normalizePlan, planLabel, taskLimit, taskLimitLabel } from "@/lib/plans";
+import { normalizePlan, planLabel, dealLimit, dealLimitLabel } from "@/lib/plans";
 
 const SHIP = [
   { v: "FBA", label: "FBA" },
@@ -132,28 +132,18 @@ export default function TasksPage() {
     load();
   }
 
-  const limit = taskLimit(plan);
-  const atLimit = tasks.length >= limit;
-  const remainingText =
-    limit === Infinity
-      ? "無制限"
-      : `残り ${Math.max(0, limit - tasks.length)}件`;
-
   return (
     <div>
       <div className="page-head">
         <h1>巡回タスク</h1>
       </div>
 
-      <div className={"notice" + (atLimit ? " err" : "")}>
-        現在のプラン：<strong>{planLabel(plan)}</strong>（巡回タスク 上限
-        {taskLimitLabel(plan)} ／ 登録済み {tasks.length}件・{remainingText}）
-        {atLimit && (
-          <>
-            {" "}
-            — 上限に達しています。さらに登録するには上位プランへのアップグレードが必要です。
-          </>
-        )}
+      <div className="notice">
+        現在のプラン：<strong>{planLabel(plan)}</strong>（1回の巡回で表示される利益商品
+        {dealLimitLabel(plan)}まで ／ 巡回タスクは何件でも登録できます）
+        <br />
+        巡回は<strong>利益が出る商品が{dealLimitLabel(plan)}見つかった時点で終了</strong>します。
+        もっと多くの利益商品を見たい場合は、上位プランへのアップグレードでご利用いただけます。
       </div>
 
       {notice && (
@@ -280,8 +270,8 @@ export default function TasksPage() {
             </div>
           </div>
 
-          <button className="btn" type="submit" disabled={atLimit}>
-            {atLimit ? "上限に達しています" : "タスクを登録"}
+          <button className="btn" type="submit">
+            タスクを登録
           </button>
         </form>
       </div>

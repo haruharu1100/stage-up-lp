@@ -23,32 +23,23 @@ const STEPS = [
 
 export default function ResultsPage() {
   const [items, setItems] = useState([]);
-  const [dealOnly, setDealOnly] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  async function load(deal) {
+  async function load() {
     setLoading(true);
-    const res = await fetch(`/api/findings?deal=${deal ? 1 : 0}`);
+    const res = await fetch(`/api/findings?deal=1`);
     setItems(await res.json());
     setLoading(false);
   }
 
   useEffect(() => {
-    load(dealOnly);
-  }, [dealOnly]);
+    load();
+  }, []);
 
   return (
     <div>
       <div className="page-head">
         <h1>巡回結果</h1>
-        <div className="row-actions">
-          <button
-            className="btn secondary small"
-            onClick={() => setDealOnly((v) => !v)}
-          >
-            {dealOnly ? "すべて表示" : "利益条件を満たす商品だけ"}
-          </button>
-        </div>
       </div>
 
       <div className="steps">
@@ -62,10 +53,10 @@ export default function ResultsPage() {
       </div>
 
       <div className="notice">
-        巡回で見つかり、Amazonと照合できた商品の一覧です。各商品の
+        巡回で見つかった<strong>利益が出る商品</strong>の一覧です。各商品の
         <strong>「商品ページを開く（購入）」</strong>から、その場で仕入れ先ページを開いて購入できます。
         <br />
-        青い<strong>「利益条件 達成」</strong>バッジが付いた商品は、設定した利益条件を満たしています。
+        ※ プランごとに1回の巡回で表示される件数が変わります（フリー1件／スタンダード10件／プロ無制限）。
       </div>
 
       {loading ? (
@@ -82,10 +73,7 @@ export default function ResultsPage() {
         items.map((it) => {
           const plus = it.profit >= 0;
           return (
-            <div
-              className={"deal-card" + (it.is_deal ? " deal" : "")}
-              key={it.id}
-            >
+            <div className="deal-card deal" key={it.id}>
               {it.image_url ? (
                 <img className="thumb" src={it.image_url} alt="" />
               ) : (
@@ -94,11 +82,7 @@ export default function ResultsPage() {
 
               <div className="deal-main">
                 <div className="deal-top">
-                  {it.is_deal ? (
-                    <span className="badge blue">利益条件 達成</span>
-                  ) : (
-                    <span className="badge gray">参考</span>
-                  )}
+                  <span className="badge blue">利益条件 達成</span>
                   <span>{it.supplier_name || "仕入れ先不明"}</span>
                   {it.task_name && <span>／ {it.task_name}</span>}
                 </div>

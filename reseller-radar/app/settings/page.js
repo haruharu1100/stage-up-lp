@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { PLANS, PLAN_LABELS, taskLimitLabel } from "@/lib/plans";
+import { PLANS, PLAN_LABELS, dealLimitLabel } from "@/lib/plans";
 
 export default function SettingsPage() {
   const [s, setS] = useState(null);
@@ -65,8 +65,8 @@ export default function SettingsPage() {
             </div>
           </div>
           <p style={{ color: "#6b7280", fontSize: 13, margin: "4px 0 0" }}>
-            登録できる巡回タスクの上限：
-            {taskLimitLabel(s.plan || "free")}
+            1回の巡回で表示される利益商品の上限：
+            {dealLimitLabel(s.plan || "free")}
             （フリー=1件 / スタンダード=10件 / プロ=無制限）
           </p>
         </div>

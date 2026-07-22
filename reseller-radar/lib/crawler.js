@@ -1,7 +1,8 @@
 import * as cheerio from "cheerio";
-import { getDb } from "./db.js";
+import { getDb, getSetting } from "./db.js";
 import { lookupProduct, judge } from "./amazon.js";
 import { sendNotificationEmail } from "./notify.js";
+import { normalizePlan, dealLimit } from "./plans.js";
 
 const UA =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0 Safari/537.36";
@@ -378,6 +379,13 @@ export async function runTask(taskId) {
   let notified = 0;
   const newItems = [];
 
+  // プランごとに「1回の巡回で見つける利益商品の上限」を決める。
+  // 利益商品がこの件数に達したら、それ以上は照合せず巡回を終了する。
+  // フリー=1件 / スタンダード=10件 / プロ=無制限。
+  const plan = normalizePlan(getSetting("plan"));
+  const maxDeals = dealLimit(plan);
+  let dealCount = 0;
+
   const insert = db.prepare(`
     INSERT OR IGNORE INTO notifications
       (task_id, supplier_name, product_name, jan, asin, buy_price, amazon_price,
@@ -456,16 +464,20 @@ export async function runTask(taskId) {
       image_url: info.imageUrl || it.image || "",
     };
 
-    // 利益条件を満たさなくても、巡回で見つかった商品として必ず記録する。
-    insertFinding.run({ ...row, is_deal: verdict.ok ? 1 : 0 });
-
-    // 利益条件を満たしたものだけ「通知」に入れ、メール対象にする。
+    // 利益が出る商品だけを巡回結果として記録する（マイナスの商品は表示しない）。
     if (!verdict.ok) continue;
+    insertFinding.run({ ...row, is_deal: 1 });
+
+    // 利益商品は「通知」にも入れ、メール対象にする。
     const result = insert.run(row);
     if (result.changes > 0) {
       notified++;
       newItems.push(row);
     }
+
+    // プランの上限（利益商品の件数）に達したら、その巡回を終了する。
+    dealCount++;
+    if (dealCount >= maxDeals) break;
   }
 
   db.prepare("UPDATE tasks SET last_run = datetime('now') WHERE id = ?").run(task.id);
