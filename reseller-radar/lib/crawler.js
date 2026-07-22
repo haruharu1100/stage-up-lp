@@ -48,14 +48,49 @@ function absUrl(href, base) {
   }
 }
 
-export async function extractItems(url, supplier) {
-  const res = await fetch(url, {
-    headers: { "User-Agent": UA, "Accept-Language": "ja" },
-  });
-  if (!res.ok) {
-    throw new Error(`仕入れ先ページの取得に失敗しました（HTTP ${res.status}）。`);
+// 仕入れ先ページを取得する。タイムアウト付きで最大2回まで再試行し、
+// 接続そのものに失敗した場合は「fetch failed」ではなく分かりやすい日本語を返す。
+async function fetchHtml(url) {
+  const headers = {
+    "User-Agent": UA,
+    Accept:
+      "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+    "Accept-Language": "ja,en-US;q=0.8,en;q=0.6",
+    "Cache-Control": "no-cache",
+  };
+
+  let lastErr;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 20000);
+    try {
+      const res = await fetch(url, {
+        headers,
+        redirect: "follow",
+        signal: controller.signal,
+      });
+      clearTimeout(timer);
+      if (!res.ok) {
+        throw new Error(
+          `仕入れ先ページの取得に失敗しました（HTTP ${res.status}）。URLが正しいか、サイトがアクセスを制限していないかご確認ください。`
+        );
+      }
+      return await res.text();
+    } catch (e) {
+      clearTimeout(timer);
+      lastErr = e;
+      // HTTPエラー（4xx/5xx）は再試行しても無駄なので即中断
+      if (e && e.message && e.message.includes("HTTP")) throw e;
+      await sleep(800);
+    }
   }
-  const html = await res.text();
+  throw new Error(
+    "仕入れ先ページに接続できませんでした。サイト側がサーバーからのアクセスを拒否している可能性があります（楽天・Yahoo・あみあみ等の一部サイトは自動巡回をブロックします）。別の仕入れ先URLでお試しください。"
+  );
+}
+
+export async function extractItems(url, supplier) {
+  const html = await fetchHtml(url);
   const $ = cheerio.load(html);
 
   const items = [];

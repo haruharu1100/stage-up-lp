@@ -1,7 +1,9 @@
 import { getSetting } from "./db.js";
 
 function getKey() {
-  const key = (getSetting("keepa_key") || "").trim();
+  // 設定画面のキーを優先。無ければ環境変数(KEEPA_KEY)を使う。
+  // 環境変数は再起動しても消えないので、無料プランでも入力し直し不要。
+  const key = (getSetting("keepa_key") || process.env.KEEPA_KEY || "").trim();
   if (!key) {
     throw new Error("Keepa APIキーが未設定です。設定画面でキーを登録してください。");
   }
