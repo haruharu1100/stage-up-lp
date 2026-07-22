@@ -358,6 +358,19 @@ export async function runTask(taskId) {
        @fees, @profit, @profit_rate, @monthly_sales, @source_url, @product_url, @image_url)
   `);
 
+  // 巡回結果（利益条件を満たさない商品も含む、Amazonと照合できた全商品）を保存する。
+  // いつでも見返して商品ページURLから買えるように、この一覧を残す。
+  const insertFinding = db.prepare(`
+    INSERT INTO findings
+      (task_id, supplier_name, product_name, jan, asin, buy_price, amazon_price,
+       fees, profit, profit_rate, monthly_sales, source_url, product_url, image_url, is_deal)
+    VALUES
+      (@task_id, @supplier_name, @product_name, @jan, @asin, @buy_price, @amazon_price,
+       @fees, @profit, @profit_rate, @monthly_sales, @source_url, @product_url, @image_url, @is_deal)
+  `);
+  // 最新の巡回結果だけを見せるため、このタスクの前回結果は消してから入れ直す。
+  db.prepare("DELETE FROM findings WHERE task_id = ?").run(task.id);
+
   for (const it of candidates) {
     let info;
     try {
@@ -387,7 +400,6 @@ export async function runTask(taskId) {
     matched++;
 
     const verdict = judge(task, it.price, info.price, info.monthlySales);
-    if (!verdict.ok) continue;
 
     const row = {
       task_id: task.id,
@@ -405,6 +417,12 @@ export async function runTask(taskId) {
       product_url: info.productUrl,
       image_url: info.imageUrl || it.image || "",
     };
+
+    // 利益条件を満たさなくても、巡回で見つかった商品として必ず記録する。
+    insertFinding.run({ ...row, is_deal: verdict.ok ? 1 : 0 });
+
+    // 利益条件を満たしたものだけ「通知」に入れ、メール対象にする。
+    if (!verdict.ok) continue;
     const result = insert.run(row);
     if (result.changes > 0) {
       notified++;

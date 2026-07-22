@@ -68,6 +68,26 @@ function initDb() {
       UNIQUE(task_id, jan, buy_price)
     );
 
+    CREATE TABLE IF NOT EXISTS findings (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      task_id INTEGER REFERENCES tasks(id),
+      supplier_name TEXT,
+      product_name TEXT,
+      jan TEXT,
+      asin TEXT,
+      buy_price INTEGER,
+      amazon_price INTEGER,
+      fees INTEGER,
+      profit INTEGER,
+      profit_rate REAL,
+      monthly_sales INTEGER,
+      source_url TEXT,
+      product_url TEXT,
+      image_url TEXT,
+      is_deal INTEGER DEFAULT 0,
+      found_at TEXT DEFAULT (datetime('now'))
+    );
+
     CREATE TABLE IF NOT EXISTS settings (
       key TEXT PRIMARY KEY,
       value TEXT

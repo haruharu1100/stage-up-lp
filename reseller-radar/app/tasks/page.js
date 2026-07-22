@@ -126,7 +126,7 @@ export default function TasksPage() {
     }
     const r = data.result || {};
     setNotice({
-      msg: `抽出 ${r.extracted}件 / Amazon一致 ${r.matched}件 / 新規通知 ${r.notified}件`,
+      msg: `抽出 ${r.extracted}件 / Amazon一致 ${r.matched}件 / 新規通知 ${r.notified}件 … 見つかった商品は「巡回結果」で確認できます。`,
       errors: r.errors && r.errors.length ? r.errors : null,
     });
     load();

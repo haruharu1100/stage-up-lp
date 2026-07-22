@@ -17,6 +17,7 @@ export default function RootLayout({ children }) {
             </a>
             <nav className="nav">
               <a href="/">通知</a>
+              <a href="/results">巡回結果</a>
               <a href="/tasks">巡回タスク</a>
               <a href="/suppliers">仕入れ先</a>
               <a href="/settings">設定</a>
