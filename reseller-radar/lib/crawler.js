@@ -1,6 +1,6 @@
 import * as cheerio from "cheerio";
 import { getDb } from "./db.js";
-import { lookupByJan, judge } from "./amazon.js";
+import { lookupProduct, judge } from "./amazon.js";
 import { sendNotificationEmail } from "./notify.js";
 
 const UA =
@@ -22,11 +22,21 @@ function extractJan(text, html) {
   return null;
 }
 
-// 価格文字列を数値へ（カンマ除去、3〜7桁）
-function parsePrice(text) {
+// 価格文字列から「実際の値段」を賢く取り出す。
+// ¥／￥／円 の付いた金額を最優先し、無ければ最初の3〜7桁を採用。
+// 「品切れ」など数字が無ければ null（＝仕入れ対象外として除外）。
+function pickPrice(text) {
   if (!text) return null;
-  const m = String(text).replace(/,/g, "").match(/(\d{3,7})/);
-  return m ? parseInt(m[1], 10) : null;
+  const s = String(text).replace(/,/g, "");
+  // ¥1980 / ￥1980（半角¥ U+00A5 / 全角￥ U+FFE5）
+  const yen = s.match(/[¥￥]\s?(\d{3,7})/);
+  if (yen) return parseInt(yen[1], 10);
+  // 1980円
+  const en = s.match(/(\d{3,7})\s?円/);
+  if (en) return parseInt(en[1], 10);
+  // それ以外は最初の3〜7桁
+  const any = s.match(/(\d{3,7})/);
+  return any ? parseInt(any[1], 10) : null;
 }
 
 function absUrl(href, base) {
@@ -60,7 +70,7 @@ export async function extractItems(url, supplier) {
       const priceText = supplier.selector_price
         ? $el.find(supplier.selector_price).first().text()
         : $el.text();
-      const price = parsePrice(priceText);
+      const price = pickPrice(priceText);
 
       const linkSel = supplier.selector_link || "a";
       const href = $el.find(linkSel).first().attr("href") || "";
@@ -95,7 +105,7 @@ export async function extractItems(url, supplier) {
       const fullText = $el.text().trim();
       if (!fullText || fullText.length > 1200) return;
 
-      const price = parsePrice(matchPrice(fullText));
+      const price = pickPrice(fullText);
       if (!price) return;
 
       let name = "";
@@ -127,15 +137,6 @@ export async function extractItems(url, supplier) {
   }
 
   return items;
-}
-
-// ¥1,234 / 1,234円 形式を1件抽出
-function matchPrice(text) {
-  const yen = text.match(/¥\s?([\d,]{3,})/);
-  if (yen) return yen[1];
-  const en = text.match(/([\d,]{3,})\s?円/);
-  if (en) return en[1];
-  return null;
 }
 
 export async function runTask(taskId) {
@@ -174,7 +175,10 @@ export async function runTask(taskId) {
     return { extracted: 0, matched: 0, notified: 0, errors };
   }
 
-  const withJan = extracted.filter((it) => it.jan);
+  // 仕入れ先ページにバーコードが無くても、商品名でAmazon検索して照合する。
+  // トークン消費を抑えるため、1回の巡回で照合する上限を設ける。
+  const MAX_LOOKUPS = 40;
+  const candidates = extracted.filter((it) => it.name && it.price).slice(0, MAX_LOOKUPS);
   let matched = 0;
   let notified = 0;
   const newItems = [];
@@ -188,10 +192,10 @@ export async function runTask(taskId) {
        @fees, @profit, @profit_rate, @monthly_sales, @source_url, @product_url, @image_url)
   `);
 
-  for (const it of withJan) {
+  for (const it of candidates) {
     let info;
     try {
-      info = await lookupByJan(it.jan);
+      info = await lookupProduct(it); // JANがあればJAN優先、無ければ商品名で検索
     } catch (e) {
       const msg = e.message || String(e);
       errors.push(msg);

@@ -1,32 +1,33 @@
 import { getSetting } from "./db.js";
 
-// Keepa（domain=5 = Amazon.co.jp）でJANから商品を照合する
-export async function lookupByJan(jan) {
+function getKey() {
   const key = (getSetting("keepa_key") || "").trim();
   if (!key) {
     throw new Error("Keepa APIキーが未設定です。設定画面でキーを登録してください。");
   }
+  return key;
+}
 
-  const url = `https://api.keepa.com/product?key=${encodeURIComponent(
-    key
-  )}&domain=5&code=${encodeURIComponent(jan)}&stats=30&history=0`;
-
+async function keepaFetch(url) {
   const res = await fetch(url);
   if (!res.ok) {
     throw new Error(`Keepa APIエラー（HTTP ${res.status}）が発生しました。`);
   }
-  const data = await res.json();
+  return res.json();
+}
 
-  const product = data && data.products && data.products[0];
+// Keepaのproductオブジェクトから、価格・販売数・画像などを取り出す
+function parseProduct(product) {
   if (!product) return null;
 
   const stats = product.stats || {};
   const current = stats.current || [];
 
-  // 価格: Amazon本体(0) を優先、なければ新品最安(1)
+  // 価格: Amazon本体(0) を優先、なければ新品最安(1)、次に中古最安(2)
   let price = null;
   if (current[0] != null && current[0] > 0) price = current[0];
   else if (current[1] != null && current[1] > 0) price = current[1];
+  else if (current[2] != null && current[2] > 0) price = current[2];
   if (price == null) return null;
   price = Math.round(price / 100); // Keepaは円×100（銭）で返す
 
@@ -45,7 +46,64 @@ export async function lookupByJan(jan) {
 
   const productUrl = asin ? `https://www.amazon.co.jp/dp/${asin}` : null;
 
-  return { asin, price, monthlySales, imageUrl, productUrl };
+  return { asin, price, monthlySales, imageUrl, productUrl, title: product.title || "" };
+}
+
+// Keepa（domain=5 = Amazon.co.jp）でJAN（バーコード）から商品を照合する
+export async function lookupByJan(jan) {
+  const key = getKey();
+  const url = `https://api.keepa.com/product?key=${encodeURIComponent(
+    key
+  )}&domain=5&code=${encodeURIComponent(jan)}&stats=30&history=0`;
+  const data = await keepaFetch(url);
+  const product = data && data.products && data.products[0];
+  return parseProduct(product);
+}
+
+// 仕入れ先ページの商品名から不要語を取り除き、検索精度を上げる
+function cleanName(name) {
+  return String(name || "")
+    .replace(/[【\[(（].*?[】\])）]/g, " ") // 括弧内（状態・付属など）を除去
+    .replace(/(中古|新品|美品|未使用|品切れ|送料無料|税込|限定|予約)/g, " ")
+    .replace(/[!！?？★☆♪]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 60);
+}
+
+// バーコードが無い商品を、商品名でAmazon検索して照合する
+export async function searchByName(name) {
+  const key = getKey();
+  const term = cleanName(name);
+  if (!term || term.length < 3) return null;
+
+  const url = `https://api.keepa.com/search?key=${encodeURIComponent(
+    key
+  )}&domain=5&type=product&term=${encodeURIComponent(term)}&stats=30`;
+  const data = await keepaFetch(url);
+
+  // 検索はproducts配列、またはasinListで返る場合がある
+  let product = data && data.products && data.products[0];
+  if (!product && data && Array.isArray(data.asinList) && data.asinList[0]) {
+    const asin = data.asinList[0];
+    const purl = `https://api.keepa.com/product?key=${encodeURIComponent(
+      key
+    )}&domain=5&asin=${encodeURIComponent(asin)}&stats=30&history=0`;
+    const pdata = await keepaFetch(purl);
+    product = pdata && pdata.products && pdata.products[0];
+  }
+  return parseProduct(product);
+}
+
+// 商品情報を取得する共通入口（JANがあればJAN優先、無ければ商品名で検索）
+export async function lookupProduct(item) {
+  if (item && item.jan) {
+    const byJan = await lookupByJan(item.jan);
+    if (byJan) return { ...byJan, matchedBy: "jan" };
+  }
+  const byName = await searchByName(item && item.name);
+  if (byName) return { ...byName, matchedBy: "name" };
+  return null;
 }
 
 export function estimateFees(amazonPrice, shipMethod) {
