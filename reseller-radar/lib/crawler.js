@@ -82,7 +82,7 @@ function buildFetchTarget(url) {
   return { target: `https://api.scraperapi.com/?${params.toString()}`, viaProxy: true };
 }
 
-// 仕入れ先ページを取得する。タイムアウト付きで最大2回まで再試行し、
+// 仕入れ先ページを取得する。タイムアウト付きで再試行し、
 // 接続そのものに失敗した場合は「fetch failed」ではなく分かりやすい日本語を返す。
 async function fetchHtml(url) {
   const { target, viaProxy } = buildFetchTarget(url);
@@ -95,8 +95,11 @@ async function fetchHtml(url) {
   };
   // プロキシ（特にJS描画）は時間がかかるためタイムアウトを長めに取る
   const timeoutMs = viaProxy ? 70000 : 20000;
+  // JS描画は中継サービス側で一時的に500等を返すことがあるので、
+  // プロキシ経由のときは再試行回数を増やして取りこぼしを防ぐ。
+  const maxAttempts = viaProxy ? 4 : 2;
 
-  for (let attempt = 0; attempt < 2; attempt++) {
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
     try {
@@ -107,6 +110,13 @@ async function fetchHtml(url) {
       });
       clearTimeout(timer);
       if (!res.ok) {
+        // 一時的なエラー（混雑429・サーバー側500系）は再試行する。
+        // 特にJS描画は成功と失敗が交互に起きやすい。
+        const transient = res.status === 429 || res.status >= 500;
+        if (transient && attempt < maxAttempts - 1) {
+          await sleep(1500);
+          continue;
+        }
         throw new Error(
           `仕入れ先ページの取得に失敗しました（HTTP ${res.status}）。URLが正しいか、サイトがアクセスを制限していないかご確認ください。`
         );
@@ -114,7 +124,7 @@ async function fetchHtml(url) {
       return await res.text();
     } catch (e) {
       clearTimeout(timer);
-      // HTTPエラー（4xx/5xx）は再試行しても無駄なので即中断
+      // 恒久的なHTTPエラー（上で再試行しても直らなかったもの）は即中断
       if (e && e.message && e.message.includes("HTTP")) throw e;
       await sleep(800);
     }
