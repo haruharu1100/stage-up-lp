@@ -55,7 +55,9 @@ function absUrl(href, base) {
 // このドメインはJavaScriptで商品を描画するため、必ずJS描画付きで取得する。
 // （通常サイトに描画を付けると中継サービスの消費が10〜25倍になるので、
 //  本当に必要なサイトだけに限定する）
-const RENDER_REQUIRED_HOSTS = ["shopping.yahoo.co.jp", "store.shopping.yahoo.co.jp"];
+// Yahoo!ショッピングはページ内に商品データがJSONで埋め込まれているため、
+// JS描画を使わずJSONを直接読む方が速く・安く・確実（下記 extractYahoo を使用）。
+const RENDER_REQUIRED_HOSTS = [];
 
 function needsRender(url) {
   if ((process.env.SCRAPER_RENDER || "").trim() === "1") return true;
@@ -222,9 +224,74 @@ function extractGeneric($, url) {
   return items;
 }
 
+// Yahoo!ショッピングは検索結果の商品データをページ内のJSON
+// (__NEXT_DATA__) に丸ごと持っている。JS描画（不安定・高コスト）を使わず、
+// このJSONを読むことで確実に商品一覧を取り出す。
+function extractYahoo($, url) {
+  const raw = $("#__NEXT_DATA__").first().html();
+  if (!raw) return [];
+  let data;
+  try {
+    data = JSON.parse(raw);
+  } catch {
+    return [];
+  }
+  const items = [];
+  const seen = new Set();
+  const visit = (o) => {
+    if (!o || typeof o !== "object") return;
+    if (Array.isArray(o)) {
+      o.forEach(visit);
+      return;
+    }
+    const name = o.name;
+    const price = o.price;
+    const link = o.url;
+    if (
+      typeof name === "string" &&
+      name &&
+      typeof price === "number" &&
+      price > 0 &&
+      typeof link === "string" &&
+      link.startsWith("http")
+    ) {
+      const dedup = o.itemId || link;
+      if (!seen.has(dedup)) {
+        seen.add(dedup);
+        const image =
+          typeof o.image === "string"
+            ? o.image
+            : o.image && typeof o.image.raw === "string"
+            ? o.image.raw
+            : "";
+        items.push({
+          name: String(name).slice(0, 120),
+          price: Math.round(price),
+          jan: extractJan(name, ""),
+          link: absUrl(link, url),
+          image: absUrl(image, url),
+        });
+      }
+    }
+    for (const k of Object.keys(o)) visit(o[k]);
+  };
+  visit(data);
+  return items;
+}
+
 export async function extractItems(url, supplier) {
   const html = await fetchHtml(url);
   const $ = cheerio.load(html);
+
+  // Yahoo!ショッピングは埋め込みJSONを優先的に読む（最も確実）。
+  let host = "";
+  try {
+    host = new URL(url).hostname;
+  } catch {}
+  if (host === "shopping.yahoo.co.jp" || host.endsWith(".shopping.yahoo.co.jp")) {
+    const yahoo = extractYahoo($, url);
+    if (yahoo.length > 0) return yahoo;
+  }
 
   let items = [];
   if (supplier && supplier.selector_item) {
