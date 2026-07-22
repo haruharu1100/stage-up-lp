@@ -93,6 +93,7 @@ function seedSettings() {
     fba_fee: "450",
     self_ship_fee: "300",
     cron_hour: "8",
+    plan: "free",
   };
   const insert = db.prepare(
     "INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)"

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { PLANS, PLAN_LABELS, taskLimitLabel } from "@/lib/plans";
 
 export default function SettingsPage() {
   const [s, setS] = useState(null);
@@ -46,6 +47,30 @@ export default function SettingsPage() {
       )}
 
       <form onSubmit={save}>
+        <div className="card">
+          <strong>ご利用プラン</strong>
+          <div className="field" style={{ marginTop: 12 }}>
+            <label>プラン</label>
+            <div className="seg">
+              {PLANS.map((p) => (
+                <button
+                  type="button"
+                  key={p}
+                  className={(s.plan || "free") === p ? "on" : ""}
+                  onClick={() => set("plan", p)}
+                >
+                  {PLAN_LABELS[p]}
+                </button>
+              ))}
+            </div>
+          </div>
+          <p style={{ color: "#6b7280", fontSize: 13, margin: "4px 0 0" }}>
+            登録できる巡回タスクの上限：
+            {taskLimitLabel(s.plan || "free")}
+            （フリー=1件 / スタンダード=10件 / プロ=無制限）
+          </p>
+        </div>
+
         <div className="card">
           <strong>Amazon照合（Keepa）</strong>
           <div className="field" style={{ marginTop: 12 }}>

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { getDb } from "@/lib/db";
+import { getDb, getSetting } from "@/lib/db";
+import { normalizePlan, planLabel, taskLimit, taskLimitLabel } from "@/lib/plans";
 
 export async function GET() {
   const db = getDb();
@@ -18,6 +19,21 @@ export async function POST(req) {
   const b = await req.json();
   if (!b.name || !b.url) {
     return NextResponse.json({ error: "タスク名と監視URLは必須です。" }, { status: 400 });
+  }
+
+  // 料金プランごとの上限をチェック（フリー1件 / スタンダード10件 / プロ無制限）
+  const plan = normalizePlan(getSetting("plan"));
+  const limit = taskLimit(plan);
+  const count = db.prepare("SELECT COUNT(*) AS c FROM tasks").get().c;
+  if (count >= limit) {
+    return NextResponse.json(
+      {
+        error: `現在のプラン（${planLabel(plan)}）で登録できる巡回タスクは${taskLimitLabel(
+          plan
+        )}までです。これ以上登録するには、上位プランへのアップグレードが必要です。`,
+      },
+      { status: 403 }
+    );
   }
   const info = db
     .prepare(
