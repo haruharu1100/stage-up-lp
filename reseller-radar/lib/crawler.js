@@ -385,6 +385,9 @@ export async function runTask(taskId) {
   const plan = normalizePlan(getSetting("plan"));
   const maxDeals = dealLimit(plan);
   let dealCount = 0;
+  // 同じ商品（同一ASIN）が仕入れ先ページに複数回出てくることがあるため、
+  // 巡回結果に同じ商品を重複表示しないよう、一度出したASINは記録しておく。
+  const seenAsin = new Set();
 
   const insert = db.prepare(`
     INSERT OR IGNORE INTO notifications
@@ -466,6 +469,9 @@ export async function runTask(taskId) {
 
     // 利益が出る商品だけを巡回結果として記録する（マイナスの商品は表示しない）。
     if (!verdict.ok) continue;
+    // 同じ商品（ASIN）が複数出てきても、巡回結果には1回だけ表示する。
+    if (info.asin && seenAsin.has(info.asin)) continue;
+    if (info.asin) seenAsin.add(info.asin);
     insertFinding.run({ ...row, is_deal: 1 });
 
     // 利益商品は「通知」にも入れ、メール対象にする。
