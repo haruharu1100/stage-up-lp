@@ -52,6 +52,21 @@ function absUrl(href, base) {
 // SCRAPER_API_KEY が設定されていれば ScraperAPI 経由（住宅用IP＋日本地域＋
 // 必要に応じてJS描画）でアクセスし、大手通販サイトのブロックを回避する。
 // 未設定なら従来どおりサーバーから直接アクセスする。
+// このドメインはJavaScriptで商品を描画するため、必ずJS描画付きで取得する。
+// （通常サイトに描画を付けると中継サービスの消費が10〜25倍になるので、
+//  本当に必要なサイトだけに限定する）
+const RENDER_REQUIRED_HOSTS = ["shopping.yahoo.co.jp", "store.shopping.yahoo.co.jp"];
+
+function needsRender(url) {
+  if ((process.env.SCRAPER_RENDER || "").trim() === "1") return true;
+  try {
+    const host = new URL(url).hostname;
+    return RENDER_REQUIRED_HOSTS.some((h) => host === h || host.endsWith("." + h));
+  } catch {
+    return false;
+  }
+}
+
 function buildFetchTarget(url) {
   const key = (process.env.SCRAPER_API_KEY || "").trim();
   if (!key) return { target: url, viaProxy: false };
@@ -60,8 +75,8 @@ function buildFetchTarget(url) {
     url,
     country_code: (process.env.SCRAPER_COUNTRY || "jp").trim(),
   });
-  // 楽天・Yahoo等のJSで描画されるサイト向け。SCRAPER_RENDER=1 で有効。
-  if ((process.env.SCRAPER_RENDER || "").trim() === "1") {
+  // JSで描画されるサイト（Yahoo等）向け。必要なサイトだけ自動でJS描画する。
+  if (needsRender(url)) {
     params.set("render", "true");
   }
   return { target: `https://api.scraperapi.com/?${params.toString()}`, viaProxy: true };
@@ -158,7 +173,7 @@ function extractGeneric($, url) {
   const items = [];
   const seen = new Set();
   const containers = $(
-    "li, article, .item, .product, div[class*='item'], div[class*='product'], tr"
+    "li, article, .item, .product, div[class*='item' i], div[class*='product' i], tr"
   );
   containers.each((_, el) => {
     const $el = $(el);
