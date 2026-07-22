@@ -364,8 +364,19 @@ export async function runTask(taskId) {
       info = await lookupProduct(it); // JANがあればJAN優先、無ければ商品名で検索
     } catch (e) {
       const msg = e.message || String(e);
+      if (msg.includes("APIキー")) {
+        errors.push(msg);
+        break; // キー未設定は即中断
+      }
+      // Keepaの利用量オーバー（429）は、続けても無駄なので即中断。
+      // 同じエラーを何十行も出さず、分かりやすい説明を1つだけ残す。
+      if (msg.includes("429")) {
+        errors.push(
+          "Amazon照合サービス（Keepa）の短時間の利用上限に達しました。しばらく時間をおいてから再度お試しください（無料プランは1分あたりの照合数に上限があります）。"
+        );
+        break;
+      }
       errors.push(msg);
-      if (msg.includes("APIキー")) break; // キー未設定は即中断
       await sleep(1100);
       continue;
     }
