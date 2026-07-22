@@ -31,7 +31,9 @@ function parseProduct(product) {
   else if (current[1] != null && current[1] > 0) price = current[1];
   else if (current[2] != null && current[2] > 0) price = current[2];
   if (price == null) return null;
-  price = Math.round(price / 100); // Keepaは円×100（銭）で返す
+  // Amazon.co.jp（domain=5）では、Keepaは価格を「円」でそのまま返す。
+  // （以前は銭とみなして÷100していたため、¥891が¥9になり利益計算が壊れていた）
+  price = Math.round(price);
 
   const monthlySales =
     stats.salesRankDrops30 != null ? stats.salesRankDrops30 : 0;
