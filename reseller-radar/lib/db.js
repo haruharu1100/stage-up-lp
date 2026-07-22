@@ -1,21 +1,38 @@
-import Database from "better-sqlite3";
+import { createClient } from "@libsql/client";
 import path from "path";
 import fs from "fs";
 
-// 本番サーバーでは環境変数 DATA_DIR に永続ディスクのパスを指定できる
-const DATA_DIR = process.env.DATA_DIR || path.join(process.cwd(), "data");
-const DB_PATH = path.join(DATA_DIR, "app.db");
+// 本番（Vercel）は Turso のクラウドDBに接続する。
+//   TURSO_DATABASE_URL … 例: libsql://xxxx.turso.io
+//   TURSO_AUTH_TOKEN   … Turso の認証トークン
+// この2つが無い場合（手元での開発）は、ローカルのファイルDBに保存する。
+let client;
+let readyPromise;
 
-let db;
+function rawClient() {
+  if (client) return client;
+  const url = (process.env.TURSO_DATABASE_URL || "").trim();
+  const authToken = (process.env.TURSO_AUTH_TOKEN || "").trim();
+  if (url) {
+    client = createClient({ url, authToken: authToken || undefined });
+  } else {
+    // 開発用: ローカルのSQLiteファイル
+    const DATA_DIR = process.env.DATA_DIR || path.join(process.cwd(), "data");
+    if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+    client = createClient({ url: `file:${path.join(DATA_DIR, "app.db")}` });
+  }
+  return client;
+}
 
-function initDb() {
-  if (db) return db;
-  if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+// 表の作成と初期データ投入を一度だけ行う。
+function ready() {
+  if (!readyPromise) readyPromise = init();
+  return readyPromise;
+}
 
-  db = new Database(DB_PATH);
-  db.pragma("journal_mode = WAL");
-
-  db.exec(`
+async function init() {
+  const c = rawClient();
+  await c.executeMultiple(`
     CREATE TABLE IF NOT EXISTS suppliers (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL,
@@ -94,13 +111,12 @@ function initDb() {
     );
   `);
 
-  seedSettings();
-  seedSuppliers();
-
-  return db;
+  await seedSettings();
+  await seedSuppliers();
 }
 
-function seedSettings() {
+async function seedSettings() {
+  const c = rawClient();
   const defaults = {
     keepa_key: "",
     notify_email: "",
@@ -115,17 +131,17 @@ function seedSettings() {
     cron_hour: "8",
     plan: "free",
   };
-  const insert = db.prepare(
-    "INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)"
-  );
-  const tx = db.transaction(() => {
-    for (const [k, v] of Object.entries(defaults)) insert.run(k, v);
-  });
-  tx();
+  const stmts = Object.entries(defaults).map(([key, value]) => ({
+    sql: "INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)",
+    args: [key, value],
+  }));
+  await c.batch(stmts, "write");
 }
 
-function seedSuppliers() {
-  const count = db.prepare("SELECT COUNT(*) AS c FROM suppliers").get().c;
+async function seedSuppliers() {
+  const c = rawClient();
+  const countRs = await c.execute("SELECT COUNT(*) AS cnt FROM suppliers");
+  const count = Number(countRs.rows[0].cnt || 0);
   if (count > 0) return;
 
   const presets = [
@@ -201,39 +217,80 @@ function seedSuppliers() {
     },
   ];
 
-  const insert = db.prepare(`
-    INSERT INTO suppliers
+  const stmts = presets.map((p) => ({
+    sql: `INSERT INTO suppliers
       (name, base_url, selector_item, selector_name, selector_price,
        selector_jan, selector_link, selector_image, is_preset, enabled)
-    VALUES
-      (@name, @base_url, @selector_item, @selector_name, @selector_price,
-       @selector_jan, @selector_link, @selector_image, 1, 1)
-  `);
-  const tx = db.transaction(() => {
-    for (const p of presets) insert.run(p);
-  });
-  tx();
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, 1)`,
+    args: [
+      p.name,
+      p.base_url,
+      p.selector_item,
+      p.selector_name,
+      p.selector_price,
+      p.selector_jan,
+      p.selector_link,
+      p.selector_image,
+    ],
+  }));
+  await c.batch(stmts, "write");
 }
 
-export function getDb() {
-  return initDb();
+// 1行を「列名→値」の素直なオブジェクトに変換する（JSON応答・プロパティ参照用）。
+function toObj(row, columns) {
+  const o = {};
+  for (let i = 0; i < columns.length; i++) o[columns[i]] = row[i];
+  return o;
 }
 
-export function getSetting(key) {
-  const row = getDb().prepare("SELECT value FROM settings WHERE key = ?").get(key);
+// ---- 共通クエリ関数（すべて非同期） ----
+
+// 変更系（INSERT / UPDATE / DELETE）。lastId と changes を返す。
+export async function run(sql, args = []) {
+  await ready();
+  const rs = await rawClient().execute({ sql, args });
+  return {
+    lastId: rs.lastInsertRowid != null ? Number(rs.lastInsertRowid) : null,
+    changes: rs.rowsAffected || 0,
+  };
+}
+
+// 1行取得。無ければ null。
+export async function get(sql, args = []) {
+  await ready();
+  const rs = await rawClient().execute({ sql, args });
+  return rs.rows.length ? toObj(rs.rows[0], rs.columns) : null;
+}
+
+// 複数行取得。
+export async function all(sql, args = []) {
+  await ready();
+  const rs = await rawClient().execute({ sql, args });
+  return rs.rows.map((r) => toObj(r, rs.columns));
+}
+
+// 複数の変更系をまとめて実行（トランザクション）。
+export async function batch(stmts) {
+  await ready();
+  return rawClient().batch(stmts, "write");
+}
+
+// ---- 設定の読み書き ----
+
+export async function getSetting(key) {
+  const row = await get("SELECT value FROM settings WHERE key = ?", [key]);
   return row ? row.value : null;
 }
 
-export function setSetting(key, value) {
-  getDb()
-    .prepare(
-      "INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value"
-    )
-    .run(key, value == null ? "" : String(value));
+export async function setSetting(key, value) {
+  await run(
+    "INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+    [key, value == null ? "" : String(value)]
+  );
 }
 
-export function getAllSettings() {
-  const rows = getDb().prepare("SELECT key, value FROM settings").all();
+export async function getAllSettings() {
+  const rows = await all("SELECT key, value FROM settings");
   const out = {};
   for (const r of rows) out[r.key] = r.value;
   return out;

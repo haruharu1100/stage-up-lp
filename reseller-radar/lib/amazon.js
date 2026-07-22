@@ -1,9 +1,9 @@
 import { getSetting } from "./db.js";
 
-function getKey() {
+async function getKey() {
   // 設定画面のキーを優先。無ければ環境変数(KEEPA_KEY)を使う。
   // 環境変数は再起動しても消えないので、無料プランでも入力し直し不要。
-  const key = (getSetting("keepa_key") || process.env.KEEPA_KEY || "").trim();
+  const key = ((await getSetting("keepa_key")) || process.env.KEEPA_KEY || "").trim();
   if (!key) {
     throw new Error("Keepa APIキーが未設定です。設定画面でキーを登録してください。");
   }
@@ -55,7 +55,7 @@ function parseProduct(product) {
 
 // Keepa（domain=5 = Amazon.co.jp）でJAN（バーコード）から商品を照合する
 export async function lookupByJan(jan) {
-  const key = getKey();
+  const key = await getKey();
   const url = `https://api.keepa.com/product?key=${encodeURIComponent(
     key
   )}&domain=5&code=${encodeURIComponent(jan)}&stats=30&history=0`;
@@ -77,7 +77,7 @@ function cleanName(name) {
 
 // バーコードが無い商品を、商品名でAmazon検索して照合する
 export async function searchByName(name) {
-  const key = getKey();
+  const key = await getKey();
   const term = cleanName(name);
   if (!term || term.length < 3) return null;
 
@@ -116,19 +116,19 @@ export async function lookupProduct(item) {
   return null;
 }
 
-export function estimateFees(amazonPrice, shipMethod) {
-  const referralRate = parseFloat(getSetting("referral_rate") || "10") / 100;
-  const fbaFee = parseInt(getSetting("fba_fee") || "450", 10);
-  const selfShipFee = parseInt(getSetting("self_ship_fee") || "300", 10);
+export async function estimateFees(amazonPrice, shipMethod) {
+  const referralRate = parseFloat((await getSetting("referral_rate")) || "10") / 100;
+  const fbaFee = parseInt((await getSetting("fba_fee")) || "450", 10);
+  const selfShipFee = parseInt((await getSetting("self_ship_fee")) || "300", 10);
 
   const referral = Math.round(amazonPrice * referralRate);
   const shipFee = shipMethod === "FBA" ? fbaFee : selfShipFee;
   return referral + shipFee;
 }
 
-export function judge(task, buyPrice, amazonPrice, monthlySales) {
-  const includeFees = (getSetting("include_fees") || "1") === "1";
-  const fees = includeFees ? estimateFees(amazonPrice, task.ship_method) : 0;
+export async function judge(task, buyPrice, amazonPrice, monthlySales) {
+  const includeFees = ((await getSetting("include_fees")) || "1") === "1";
+  const fees = includeFees ? await estimateFees(amazonPrice, task.ship_method) : 0;
 
   const profit = amazonPrice - fees - buyPrice;
   const rate = amazonPrice > 0 ? (profit / amazonPrice) * 100 : 0;

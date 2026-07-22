@@ -3,11 +3,11 @@ import { getSetting } from "./db.js";
 
 // SMTP設定が揃っていればメール送信、未設定ならスキップ
 export async function sendNotificationEmail(taskName, items) {
-  const host = (getSetting("smtp_host") || "").trim();
-  const to = (getSetting("notify_email") || "").trim();
-  const user = (getSetting("smtp_user") || "").trim();
-  const pass = getSetting("smtp_pass") || "";
-  const port = parseInt(getSetting("smtp_port") || "587", 10);
+  const host = ((await getSetting("smtp_host")) || "").trim();
+  const to = ((await getSetting("notify_email")) || "").trim();
+  const user = ((await getSetting("smtp_user")) || "").trim();
+  const pass = (await getSetting("smtp_pass")) || "";
+  const port = parseInt((await getSetting("smtp_port")) || "587", 10);
 
   if (!host || !to) {
     return { sent: false, reason: "SMTP未設定のためメール送信をスキップしました。" };
