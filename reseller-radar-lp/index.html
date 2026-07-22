@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Reseller Radar｜仕入れ先を毎日自動で見張り、儲かる商品だけ通知するせどり支援ツール</title>
+<meta name="description" content="仕入れ先のセールページを毎日自動巡回。Keepaと連携してAmazon価格と比較し、利益条件を満たす商品だけをアプリとメールで通知します。月額980円。" />
+<style>
+  :root{
+    --navy:#0d1b34; --navy2:#12244a; --accent:#1246d8; --accent2:#3b6bf0;
+    --green:#0d8a4f; --bg:#f5f7fa; --border:#e2e6ee; --muted:#5b6577; --ink:#1a2233;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,sans-serif;color:var(--ink);background:#fff;line-height:1.75;-webkit-font-smoothing:antialiased}
+  a{color:inherit;text-decoration:none}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 20px}
+  .mono{font-family:"SF Mono",Menlo,Consolas,monospace}
+
+  /* header */
+  header.site{position:sticky;top:0;z-index:50;background:rgba(13,27,52,.92);backdrop-filter:blur(8px);color:#fff}
+  .site .wrap{display:flex;align-items:center;justify-content:space-between;height:64px}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:700}
+  .brand .mark{background:var(--accent);border-radius:8px;padding:4px 9px;letter-spacing:1px}
+  .site nav{display:flex;gap:22px;align-items:center;font-size:14px;color:#cdd6ea}
+  .site nav a:hover{color:#fff}
+  .btn{display:inline-flex;align-items:center;gap:8px;border:none;border-radius:10px;padding:13px 24px;font-size:15px;font-weight:600;cursor:pointer;transition:.15s}
+  .btn.primary{background:var(--accent);color:#fff}
+  .btn.primary:hover{background:var(--accent2)}
+  .btn.light{background:#fff;color:var(--navy)}
+  .btn.ghost{background:transparent;border:1px solid rgba(255,255,255,.3);color:#fff;padding:9px 16px;font-size:14px}
+  .btn.ghost:hover{background:rgba(255,255,255,.12)}
+
+  /* hero */
+  .hero{background:linear-gradient(160deg,#0d1b34 0%,#132a56 55%,#1a367a 100%);color:#fff;padding:78px 0 90px;position:relative;overflow:hidden}
+  .hero:after{content:"";position:absolute;right:-120px;top:-120px;width:420px;height:420px;background:radial-gradient(circle,rgba(59,107,240,.35),transparent 70%);border-radius:50%}
+  .hero .wrap{position:relative;z-index:2}
+  .tagline{display:inline-block;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);border-radius:999px;padding:6px 16px;font-size:13px;margin-bottom:22px}
+  .hero h1{font-size:44px;line-height:1.32;letter-spacing:.5px;margin-bottom:20px}
+  .hero h1 .hl{color:#7fa8ff}
+  .hero p.lead{font-size:18px;color:#d3ddf2;max-width:620px;margin-bottom:34px}
+  .hero .cta{display:flex;gap:14px;flex-wrap:wrap;align-items:center}
+  .hero .note{font-size:13px;color:#9fb0d4;margin-top:16px}
+  .stats{display:flex;gap:40px;margin-top:52px;flex-wrap:wrap}
+  .stat b{display:block;font-size:30px}
+  .stat span{font-size:13px;color:#9fb0d4}
+
+  section{padding:76px 0}
+  .eyebrow{color:var(--accent);font-weight:700;font-size:14px;letter-spacing:1px;text-align:center;margin-bottom:10px}
+  h2.sec{font-size:30px;text-align:center;margin-bottom:14px;line-height:1.4}
+  p.sub{text-align:center;color:var(--muted);max-width:640px;margin:0 auto 46px}
+
+  /* problem */
+  .problem{background:var(--bg)}
+  .pgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+  .pcard{background:#fff;border:1px solid var(--border);border-radius:14px;padding:26px}
+  .pcard .ic{font-size:26px;margin-bottom:12px}
+  .pcard h3{font-size:17px;margin-bottom:8px}
+  .pcard p{color:var(--muted);font-size:14px}
+
+  /* features */
+  .fgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:22px}
+  .fcard{border:1px solid var(--border);border-radius:14px;padding:28px;display:flex;gap:18px;align-items:flex-start}
+  .fcard .fic{flex-shrink:0;width:48px;height:48px;border-radius:12px;background:#eef3ff;color:var(--accent);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700}
+  .fcard h3{font-size:18px;margin-bottom:6px}
+  .fcard p{color:var(--muted);font-size:14px}
+
+  /* steps */
+  .steps{background:var(--navy);color:#fff}
+  .steps h2.sec,.steps .eyebrow{color:#fff}
+  .steps .eyebrow{color:#7fa8ff}
+  .sgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px}
+  .scard{background:var(--navy2);border:1px solid rgba(255,255,255,.1);border-radius:14px;padding:28px}
+  .scard .num{width:36px;height:36px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-weight:700;margin-bottom:16px}
+  .scard h3{font-size:18px;margin-bottom:8px}
+  .scard p{color:#b9c4dc;font-size:14px}
+
+  /* pricing */
+  .pricing{background:var(--bg)}
+  .plans{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;align-items:stretch;max-width:960px;margin:0 auto}
+  .plan{background:#fff;border:1px solid var(--border);border-radius:16px;padding:32px 26px;display:flex;flex-direction:column}
+  .plan.pop{border:2px solid var(--accent);box-shadow:0 20px 40px -20px rgba(18,70,216,.4);position:relative}
+  .plan.pop .tag{position:absolute;top:-13px;left:50%;transform:translateX(-50%);background:var(--accent);color:#fff;font-size:12px;font-weight:700;padding:5px 16px;border-radius:999px}
+  .plan h3{font-size:18px;margin-bottom:6px}
+  .plan .price{font-size:38px;font-weight:800;margin:10px 0 2px}
+  .plan .price small{font-size:15px;font-weight:600;color:var(--muted)}
+  .plan .pdesc{color:var(--muted);font-size:13px;margin-bottom:20px;min-height:38px}
+  .plan ul{list-style:none;margin-bottom:24px;flex:1}
+  .plan li{font-size:14px;padding:7px 0 7px 26px;position:relative;border-bottom:1px dashed var(--border)}
+  .plan li:before{content:"✓";position:absolute;left:0;color:var(--green);font-weight:700}
+  .plan li.off{color:#aab2c2}
+  .plan li.off:before{content:"—";color:#c7ccd6}
+  .plan .btn{width:100%;justify-content:center}
+  .pricenote{text-align:center;color:var(--muted);font-size:13px;margin-top:26px}
+
+  /* faq */
+  .faq details{border:1px solid var(--border);border-radius:12px;padding:6px 20px;margin-bottom:12px;background:#fff}
+  .faq summary{cursor:pointer;font-weight:600;padding:14px 0;list-style:none;display:flex;justify-content:space-between;align-items:center}
+  .faq summary::-webkit-details-marker{display:none}
+  .faq summary:after{content:"+";color:var(--accent);font-size:22px}
+  .faq details[open] summary:after{content:"–"}
+  .faq p{color:var(--muted);font-size:14px;padding:0 0 16px}
+
+  /* final cta */
+  .final{background:linear-gradient(135deg,#1246d8,#3b6bf0);color:#fff;text-align:center}
+  .final h2{font-size:32px;margin-bottom:14px}
+  .final p{color:#e4ebff;margin-bottom:28px}
+
+  footer{background:var(--navy);color:#9fb0d4;padding:40px 0;font-size:13px}
+  footer .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:16px}
+  .disc{background:#0a1424;color:#6f7d99;font-size:12px;padding:18px 0;line-height:1.7}
+
+  @media(max-width:820px){
+    .site nav{display:none}
+    .hero h1{font-size:32px}
+    .pgrid,.fgrid,.sgrid,.plans{grid-template-columns:1fr}
+    .stats{gap:26px}
+  }
+</style>
+</head>
+<body>
+
+<header class="site">
+  <div class="wrap">
+    <div class="brand"><span class="mark">RR</span> Reseller Radar</div>
+    <nav>
+      <a href="#features">機能</a>
+      <a href="#steps">使い方</a>
+      <a href="#pricing">料金</a>
+      <a href="#faq">よくある質問</a>
+      <a href="#pricing" class="btn ghost">無料で試す</a>
+    </nav>
+  </div>
+</header>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="wrap">
+    <span class="tagline">せどり・物販の仕入れリサーチを自動化</span>
+    <h1>仕入れ先を<span class="hl">毎日自動で見張り</span>、<br>儲かる商品だけを通知する。</h1>
+    <p class="lead">セールページのURLを登録するだけ。あとは毎日自動で巡回し、Keepaと連携してAmazon価格と比較。あなたが決めた利益条件を満たした商品だけを、アプリとメールでお知らせします。</p>
+    <div class="cta">
+      <a href="#pricing" class="btn primary">月額980円ではじめる →</a>
+      <a href="#steps" class="btn ghost">使い方を見る</a>
+    </div>
+    <p class="note">※ ご自身のKeepa APIキーを使う前提のため、低価格で提供できます。</p>
+    <div class="stats">
+      <div class="stat"><b>24時間</b><span>自動で巡回・監視</span></div>
+      <div class="stat"><b>0件の手作業</b><span>リサーチはツールに任せる</span></div>
+      <div class="stat"><b>¥980<small>/月</small></b><span>で使い放題</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- PROBLEM -->
+<section class="problem">
+  <div class="wrap">
+    <p class="eyebrow">こんな悩みはありませんか</p>
+    <h2 class="sec">リサーチに時間を取られ、利益商品を取り逃している</h2>
+    <p class="sub">せどりで一番大変なのは「安く売っている利益商品を探す作業」。その時間を、ツールが肩代わりします。</p>
+    <div class="pgrid">
+      <div class="pcard"><div class="ic">⏰</div><h3>毎日のセール巡回がしんどい</h3><p>複数の仕入れ先を1つずつ開いて、価格を確認して…。この繰り返しに毎日何時間もかかる。</p></div>
+      <div class="pcard"><div class="ic">📉</div><h3>気づいた時には売り切れ</h3><p>おいしい商品ほどすぐ無くなる。手作業で探している間に、他のせどらーに買われてしまう。</p></div>
+      <div class="pcard"><div class="ic">🧮</div><h3>利益計算がめんどう</h3><p>手数料や送料を引いて本当に儲かるのか、1件ずつ電卓を叩くのは非効率。判断ミスも起きやすい。</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section id="features">
+  <div class="wrap">
+    <p class="eyebrow">FEATURES</p>
+    <h2 class="sec">Reseller Radar が、探す・比べる・知らせるを自動化</h2>
+    <p class="sub">登録したら、あとは待つだけ。あなたの代わりに24時間、利益商品を探し続けます。</p>
+    <div class="fgrid">
+      <div class="fcard"><div class="fic">🔎</div><div><h3>仕入れ先を毎日自動巡回</h3><p>セールページのURLを登録するだけ。ヨドバシ・ビックカメラ・楽天・Yahoo!・駿河屋・あみあみなどのプリセット付き。独自サイトも追加できます。</p></div></div>
+      <div class="fcard"><div class="fic">📊</div><div><h3>Keepa連携で利益を自動判定</h3><p>抽出した商品をJANコードでAmazon価格と照合。手数料・送料も差し引いて、本当の利益額・利益率を自動計算します。</p></div></div>
+      <div class="fcard"><div class="fic">🎯</div><div><h3>条件を満たす商品だけ通知</h3><p>「利益率20%以上」「利益額2,000円以上」など条件は自由。ムダな通知はなく、買うべき商品だけが届きます。</p></div></div>
+      <div class="fcard"><div class="fic">✉️</div><div><h3>アプリ＋メールでお知らせ</h3><p>利益商品を見つけたらメールでも通知。外出中でもスマホで確認して、すぐ仕入れに動けます。</p></div></div>
+      <div class="fcard"><div class="fic">🔁</div><div><h3>重複通知なし・履歴管理</h3><p>同じ商品を何度も通知しません。過去の検知も一覧で管理でき、見終わった通知は非表示にできます。</p></div></div>
+      <div class="fcard"><div class="fic">⚙️</div><div><h3>手数料も細かく設定</h3><p>FBA・自己発送の切り替え、販売手数料率、配送代行料などを自分の条件に合わせて調整できます。</p></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- STEPS -->
+<section id="steps" class="steps">
+  <div class="wrap">
+    <p class="eyebrow">HOW IT WORKS</p>
+    <h2 class="sec">はじめ方はカンタン3ステップ</h2>
+    <div class="sgrid">
+      <div class="scard"><div class="num">1</div><h3>仕入れ先とURLを登録</h3><p>見張りたいセールページのURLを登録。プリセットから仕入れ先を選ぶだけで自動入力されます。</p></div>
+      <div class="scard"><div class="num">2</div><h3>利益条件を決める</h3><p>「利益率」「利益額」「月間販売数」など、あなたの基準を設定。あとは毎日自動で巡回します。</p></div>
+      <div class="scard"><div class="num">3</div><h3>通知を受け取って仕入れる</h3><p>条件を満たした商品がアプリとメールに届きます。あとは仕入れて出品するだけ。</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- PRICING -->
+<section id="pricing" class="pricing">
+  <div class="wrap">
+    <p class="eyebrow">PRICING</p>
+    <h2 class="sec">シンプルな料金プラン</h2>
+    <p class="sub">まずは無料で。効果を感じたら有料プランへ。いつでも解約できます。</p>
+    <div class="plans">
+      <div class="plan">
+        <h3>フリー</h3>
+        <div class="price">¥0<small>/月</small></div>
+        <p class="pdesc">まず試したい方に。手動巡回でお試し。</p>
+        <ul>
+          <li>巡回タスク 1件</li>
+          <li>手動巡回（今すぐ巡回）</li>
+          <li>アプリ内通知</li>
+          <li class="off">自動巡回</li>
+          <li class="off">メール通知</li>
+        </ul>
+        <a href="#" class="btn light" style="border:1px solid var(--border)">無料ではじめる</a>
+      </div>
+      <div class="plan pop">
+        <span class="tag">いちばん人気</span>
+        <h3>スタンダード</h3>
+        <div class="price">¥980<small>/月</small></div>
+        <p class="pdesc">個人せどらーの定番プラン。自動化で差をつける。</p>
+        <ul>
+          <li>巡回タスク 10件</li>
+          <li>毎日の自動巡回</li>
+          <li>メール通知</li>
+          <li>利益条件カスタム</li>
+          <li>仕入れ先の追加OK</li>
+        </ul>
+        <a href="#" class="btn primary">このプランを選ぶ</a>
+      </div>
+      <div class="plan">
+        <h3>プロ</h3>
+        <div class="price">¥2,980<small>/月</small></div>
+        <p class="pdesc">本格的に量をこなす方へ。上限なしで攻める。</p>
+        <ul>
+          <li>巡回タスク 無制限</li>
+          <li>毎日の自動巡回（優先）</li>
+          <li>メール通知</li>
+          <li>複数の仕入れ先を一括管理</li>
+          <li>優先サポート</li>
+        </ul>
+        <a href="#" class="btn light" style="border:1px solid var(--border)">このプランを選ぶ</a>
+      </div>
+    </div>
+    <p class="pricenote">Amazon価格の取得には Keepa API（別途・ご自身で取得）が必要です。だから低価格でご提供できます。</p>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section id="faq" class="faq">
+  <div class="wrap" style="max-width:760px">
+    <p class="eyebrow">FAQ</p>
+    <h2 class="sec">よくある質問</h2>
+    <div style="margin-top:36px">
+      <details><summary>初心者でも使えますか？</summary><p>はい。URLを登録して条件を決めるだけなので、専門知識は不要です。プリセットの仕入れ先を選べばURLも自動で入ります。</p></details>
+      <details><summary>Keepa APIキーとは何ですか？必ず必要ですか？</summary><p>Amazonの価格を正確に取得するためのサービスです。当ツールはご自身のKeepaキーを使う仕組みのため、その分だけ月額を安く抑えています。Keepaは keepa.com で取得できます（別途費用）。</p></details>
+      <details><summary>どんな仕入れ先に対応していますか？</summary><p>ヨドバシ・ビックカメラ・楽天・Yahoo!ショッピング・駿河屋・あみあみをプリセットで用意。さらに、商品と価格が一覧で載っているページなら独自サイトも追加できます。</p></details>
+      <details><summary>本当に儲かる商品が見つかりますか？</summary><p>ツールは「あなたが決めた利益条件を満たす商品」を自動で探して通知します。仕入れの最終判断はご自身で行ってください。相場変動や在庫状況により結果は変わります。</p></details>
+      <details><summary>解約はいつでもできますか？</summary><p>はい、いつでも解約可能です。最低利用期間の縛りはありません。</p></details>
+    </div>
+  </div>
+</section>
+
+<!-- FINAL CTA -->
+<section class="final">
+  <div class="wrap">
+    <h2>リサーチの時間を、仕入れと出品に。</h2>
+    <p>面倒な商品探しはツールに任せて、あなたは利益を伸ばすことに集中しましょう。</p>
+    <a href="#pricing" class="btn light">今すぐ無料ではじめる →</a>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="brand" style="color:#fff"><span class="mark">RR</span> Reseller Radar</div>
+    <div>© 2026 Reseller Radar. All rights reserved.</div>
+  </div>
+</footer>
+<div class="disc">
+  <div class="wrap">
+    ※ 本サービスは仕入れリサーチを補助するツールであり、利益を保証するものではありません。各仕入れ先サイトの利用規約・robots.txt を確認のうえ、常識的な頻度でご利用ください。Amazon、Keepa、各ECサイトは各社の商標です。本サービスはこれらと直接の提携関係にあるものではありません。
+  </div>
+</div>
+
+</body>
+</html>

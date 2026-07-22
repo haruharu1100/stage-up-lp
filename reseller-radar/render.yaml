@@ -1,0 +1,39 @@
+# Render Blueprint — Reseller Radar
+# Render のダッシュボードで「New +」→「Blueprint」からこのリポジトリを選ぶと、
+# 下記2つのサービス（Web本体＋毎日の自動巡回）がまとめて作成されます。
+services:
+  # ① Web本体（アプリ画面＋API）。DBは永続ディスクに保存
+  - type: web
+    name: reseller-radar
+    runtime: node
+    rootDir: reseller-radar
+    plan: starter          # 永続ディスク利用には有料インスタンス(Starter)が必要
+    buildCommand: npm install && npm run build
+    startCommand: npm run start
+    healthCheckPath: /
+    autoDeploy: true
+    disk:
+      name: reseller-data
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: DATA_DIR
+        value: /var/data
+      - key: NODE_ENV
+        value: production
+
+  # ② 毎日の自動巡回（JST 8:00 = UTC 23:00 に全タスクを巡回）
+  - type: cron
+    name: reseller-radar-crawl
+    runtime: node
+    rootDir: reseller-radar
+    plan: starter
+    schedule: "0 23 * * *"
+    buildCommand: npm install
+    startCommand: node scripts/crawl-once.mjs
+    envVars:
+      - key: CRAWL_URL
+        fromService:
+          type: web
+          name: reseller-radar
+          property: host
