@@ -23,7 +23,9 @@ function extractJan(text, html) {
 }
 
 // 価格文字列から「実際の値段」を賢く取り出す。
-// ¥／￥／円 の付いた金額を最優先し、無ければ最初の3〜7桁を採用。
+// ¥／￥／円 の付いた金額を最優先する。無い場合の「ただの数字」は、
+// 型番（例: DK-R12101、DK-3925EA）の数字を誤って値段扱いしないよう、
+// 直前が英字やハイフンでない“独立した数字”に限って採用する。
 // 「品切れ」など数字が無ければ null（＝仕入れ対象外として除外）。
 function pickPrice(text) {
   if (!text) return null;
@@ -34,8 +36,9 @@ function pickPrice(text) {
   // 1980円
   const en = s.match(/(\d{3,7})\s?円/);
   if (en) return parseInt(en[1], 10);
-  // それ以外は最初の3〜7桁
-  const any = s.match(/(\d{3,7})/);
+  // 通貨記号が無いときのみ、型番に紛れた数字を避けて独立した数字を拾う。
+  // 直前が「英字・数字・ハイフン」でない3〜7桁だけを候補にする。
+  const any = s.match(/(?:^|[^0-9A-Za-z-])(\d{3,7})(?![0-9])/);
   return any ? parseInt(any[1], 10) : null;
 }
 
@@ -46,6 +49,32 @@ function absUrl(href, base) {
   } catch {
     return "";
   }
+}
+
+// 商品ごとの個別リンクが取れなかったとき、トップページに飛ばすと使えないので、
+// その商品名で「仕入れ先サイト内を検索」するURLを組み立てて、確実に商品へ辿れるようにする。
+// 主要な仕入れ先は各社の検索URL形式に合わせ、未知のサイトは元URL（一覧ページ）へ。
+function supplierSearchUrl(name, base, fallback) {
+  const q = String(name || "").trim();
+  if (!q) return fallback || base || "";
+  const e = encodeURIComponent(q);
+  let host = "";
+  try {
+    host = new URL(base || fallback || "").hostname.replace(/^www\./, "");
+  } catch {
+    return fallback || base || "";
+  }
+  if (host.includes("yodobashi.com")) return `https://www.yodobashi.com/?word=${e}`;
+  if (host.includes("biccamera.com"))
+    return `https://www.biccamera.com/bc/category/?q=${e}`;
+  if (host.includes("rakuten.co.jp"))
+    return `https://search.rakuten.co.jp/search/mall/${e}/`;
+  if (host.includes("yahoo.co.jp")) return `https://shopping.yahoo.co.jp/search?p=${e}`;
+  if (host.includes("suruga-ya.jp"))
+    return `https://www.suruga-ya.jp/search?search_word=${e}`;
+  if (host.includes("amiami.jp"))
+    return `https://www.amiami.jp/search/list/?s_keywords=${e}`;
+  return fallback || base || "";
 }
 
 // 中継サービス(プロキシ)の設定があれば、それ経由の取得URLを組み立てる。
@@ -401,6 +430,15 @@ export async function runTask(taskId) {
 
     const verdict = judge(task, it.price, info.price, info.monthlySales);
 
+    // 商品ごとの個別リンクが取れていればそれを使う。
+    // 取れていない（＝トップページや一覧URLしか無い）場合は、
+    // その商品名で仕入れ先サイト内を検索するURLに切り替えて、確実に商品へ辿れるようにする。
+    const hasProductLink =
+      it.link && it.link !== task.url && it.link !== supplier.base_url;
+    const sourceUrl = hasProductLink
+      ? it.link
+      : supplierSearchUrl(it.name, supplier.base_url, task.url);
+
     const row = {
       task_id: task.id,
       supplier_name: task.supplier_name || "",
@@ -413,7 +451,7 @@ export async function runTask(taskId) {
       profit: verdict.profit,
       profit_rate: verdict.rate,
       monthly_sales: info.monthlySales,
-      source_url: it.link || task.url,
+      source_url: sourceUrl,
       product_url: info.productUrl,
       image_url: info.imageUrl || it.image || "",
     };

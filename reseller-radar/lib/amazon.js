@@ -86,15 +86,21 @@ export async function searchByName(name) {
   )}&domain=5&type=product&term=${encodeURIComponent(term)}&stats=30`;
   const data = await keepaFetch(url);
 
-  // 検索はproducts配列、またはasinListで返る場合がある
+  // 検索はproducts配列、またはasinListで返る場合がある。
+  // 検索エンドポイントの商品オブジェクトは画像(imagesCSV)を含まないことがあるため、
+  // ASINが分かったら必ず /product で取り直して、画像と最新価格を確実に取得する。
   let product = data && data.products && data.products[0];
-  if (!product && data && Array.isArray(data.asinList) && data.asinList[0]) {
-    const asin = data.asinList[0];
+  let asin = product && product.asin;
+  if (!asin && data && Array.isArray(data.asinList) && data.asinList[0]) {
+    asin = data.asinList[0];
+  }
+  if (asin && (!product || !product.imagesCSV)) {
     const purl = `https://api.keepa.com/product?key=${encodeURIComponent(
       key
     )}&domain=5&asin=${encodeURIComponent(asin)}&stats=30&history=0`;
     const pdata = await keepaFetch(purl);
-    product = pdata && pdata.products && pdata.products[0];
+    const full = pdata && pdata.products && pdata.products[0];
+    if (full) product = full;
   }
   return parseProduct(product);
 }
