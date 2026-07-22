@@ -6,6 +6,21 @@ function yen(n) {
   return "¥" + (Number(n) || 0).toLocaleString("ja-JP");
 }
 
+const STEPS = [
+  {
+    t: "仕入れ先を毎日自動で巡回",
+    d: "登録した仕入れ先ページを毎日チェックし、商品と価格を自動で読み取ります。",
+  },
+  {
+    t: "Amazon相場と自動で照合",
+    d: "見つけた商品をAmazonの販売価格・手数料と突き合わせ、利益を自動計算します。",
+  },
+  {
+    t: "利益が出る商品だけを通知",
+    d: "設定した利益条件を満たした商品だけをここに一覧表示。そのまま仕入れられます。",
+  },
+];
+
 export default function ResultsPage() {
   const [items, setItems] = useState([]);
   const [dealOnly, setDealOnly] = useState(false);
@@ -36,11 +51,21 @@ export default function ResultsPage() {
         </div>
       </div>
 
+      <div className="steps">
+        {STEPS.map((s, i) => (
+          <div className="step" key={i}>
+            <div className="step-no">{i + 1}</div>
+            <div className="step-t">{s.t}</div>
+            <div className="step-d">{s.d}</div>
+          </div>
+        ))}
+      </div>
+
       <div className="notice">
         巡回で見つかり、Amazonと照合できた商品の一覧です。各商品の
-        <strong>「商品ページを開く」</strong>から、その場で仕入れ先ページを開いて購入できます。
+        <strong>「商品ページを開く（購入）」</strong>から、その場で仕入れ先ページを開いて購入できます。
         <br />
-        「利益条件 達成」のバッジが付いた商品は、設定した利益条件を満たしています。
+        青い<strong>「利益条件 達成」</strong>バッジが付いた商品は、設定した利益条件を満たしています。
       </div>
 
       {loading ? (
@@ -54,64 +79,93 @@ export default function ResultsPage() {
           </p>
         </div>
       ) : (
-        items.map((it) => (
-          <div className="card notif" key={it.id}>
-            {it.image_url ? (
-              <img className="thumb" src={it.image_url} alt="" />
-            ) : (
-              <div className="thumb" />
-            )}
-            <div className="body">
-              <div className="meta">
-                {it.is_deal ? (
-                  <span className="badge">利益条件 達成</span>
-                ) : (
-                  <span className="badge gray">参考</span>
-                )}
-                <span>{it.supplier_name || "仕入れ先不明"}</span>
-                <span>{it.task_name || ""}</span>
+        items.map((it) => {
+          const plus = it.profit >= 0;
+          return (
+            <div
+              className={"deal-card" + (it.is_deal ? " deal" : "")}
+              key={it.id}
+            >
+              {it.image_url ? (
+                <img className="thumb" src={it.image_url} alt="" />
+              ) : (
+                <div className="thumb empty-thumb">画像なし</div>
+              )}
+
+              <div className="deal-main">
+                <div className="deal-top">
+                  {it.is_deal ? (
+                    <span className="badge blue">利益条件 達成</span>
+                  ) : (
+                    <span className="badge gray">参考</span>
+                  )}
+                  <span>{it.supplier_name || "仕入れ先不明"}</span>
+                  {it.task_name && <span>／ {it.task_name}</span>}
+                </div>
+
+                <div className="deal-name">{it.product_name}</div>
+
+                <div className="deal-flow">
+                  <span className="from">
+                    仕入れ {yen(it.buy_price)}
+                  </span>
+                  <span className="arrow">→</span>
+                  <span className="to">Amazon {yen(it.amazon_price)}</span>
+                </div>
+
+                <div className="deal-sub">
+                  <span className="mono">JAN: {it.jan || "-"}</span>
+                  <span className="mono">ASIN: {it.asin || "-"}</span>
+                  <span className="mono">月販 {it.monthly_sales}</span>
+                </div>
+
+                <div className="deal-actions">
+                  {it.source_url && (
+                    <a
+                      className="btn small"
+                      href={it.source_url}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      商品ページを開く（購入）
+                    </a>
+                  )}
+                  {it.product_url && (
+                    <a
+                      className="btn secondary small"
+                      href={it.product_url}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      Amazonで見る
+                    </a>
+                  )}
+                </div>
               </div>
-              <div className="pname">{it.product_name}</div>
-              <div className="subinfo">
-                <span className="mono">JAN: {it.jan || "-"}</span>
-                <span className="mono">ASIN: {it.asin || "-"}</span>
-                <span className="mono">月販 {it.monthly_sales}</span>
-              </div>
-              <div className="row-actions" style={{ marginTop: 10 }}>
-                {it.source_url && (
-                  <a
-                    className="btn small"
-                    href={it.source_url}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    商品ページを開く（購入）
-                  </a>
-                )}
-                {it.product_url && (
-                  <a
-                    className="btn secondary small"
-                    href={it.product_url}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    Amazonで見る
-                  </a>
-                )}
+
+              <div className="deal-figures">
+                <div className="deal-prices">
+                  <div className="pcol">
+                    <div className="plabel">仕入れ価格</div>
+                    <div className="pval">{yen(it.buy_price)}</div>
+                  </div>
+                  <div className="pcol">
+                    <div className="plabel">Amazon価格</div>
+                    <div className="pval amazon">{yen(it.amazon_price)}</div>
+                  </div>
+                </div>
+                <div className={"deal-profit" + (plus ? "" : " minus")}>
+                  {plus ? "+" : ""}
+                  {yen(it.profit)}
+                </div>
+                <div className={"deal-rate" + (plus ? "" : " minus")}>
+                  利益率 {it.profit_rate}%
+                </div>
+                <div className="deal-fee">手数料 {yen(it.fees)} 込み</div>
               </div>
             </div>
-            <div className="figures">
-              <div className="amazon-price mono">{yen(it.amazon_price)}</div>
-              <div className="profit mono">
-                {it.profit >= 0 ? "+" : ""}
-                {yen(it.profit)}（{it.profit_rate}%）
-              </div>
-              <div className="small-figures mono">
-                仕入 {yen(it.buy_price)} / 手数料 {yen(it.fees)}
-              </div>
-            </div>
-          </div>
-        ))
+          );
+        })
       )}
     </div>
   );
