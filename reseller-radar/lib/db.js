@@ -15,6 +15,11 @@ function rawClient() {
   const authToken = (process.env.TURSO_AUTH_TOKEN || "").trim();
   if (url) {
     client = createClient({ url, authToken: authToken || undefined });
+  } else if (process.env.VERCEL) {
+    // Vercel上でTursoの設定がまだのときの“暫定”運用。
+    // /tmp は書き込みできるが一時的（消えることがある）なので、
+    // 本番では必ず TURSO_DATABASE_URL / TURSO_AUTH_TOKEN を設定すること。
+    client = createClient({ url: "file:/tmp/app.db" });
   } else {
     // 開発用: ローカルのSQLiteファイル
     const DATA_DIR = process.env.DATA_DIR || path.join(process.cwd(), "data");
