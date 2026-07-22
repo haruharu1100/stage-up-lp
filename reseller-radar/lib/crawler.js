@@ -115,88 +115,101 @@ async function fetchHtml(url) {
   );
 }
 
+// セレクタ指定モードで商品を抜き出す
+function extractBySelector($, url, supplier) {
+  const items = [];
+  $(supplier.selector_item).each((_, el) => {
+    const $el = $(el);
+    const name = supplier.selector_name
+      ? $el.find(supplier.selector_name).first().text().trim()
+      : $el.text().trim().slice(0, 80);
+    const priceText = supplier.selector_price
+      ? $el.find(supplier.selector_price).first().text()
+      : $el.text();
+    const price = pickPrice(priceText);
+
+    const linkSel = supplier.selector_link || "a";
+    const href = $el.find(linkSel).first().attr("href") || "";
+    const imgSel = supplier.selector_image || "img";
+    const imgSrc =
+      $el.find(imgSel).first().attr("src") ||
+      $el.find(imgSel).first().attr("data-src") ||
+      "";
+
+    const janText = supplier.selector_jan
+      ? $el.find(supplier.selector_jan).first().text()
+      : $el.text();
+    const jan = extractJan(janText, $.html($el));
+
+    if (!name || !price) return;
+    items.push({
+      name: name.slice(0, 120),
+      price,
+      jan,
+      link: absUrl(href, supplier.base_url || url),
+      image: absUrl(imgSrc, supplier.base_url || url),
+    });
+  });
+  return items;
+}
+
+// 汎用自動検出モード（サイト共通で価格＋商品名を拾う）
+function extractGeneric($, url) {
+  const items = [];
+  const seen = new Set();
+  const containers = $(
+    "li, article, .item, .product, div[class*='item'], div[class*='product'], tr"
+  );
+  containers.each((_, el) => {
+    const $el = $(el);
+    const fullText = $el.text().trim();
+    if (!fullText || fullText.length > 1200) return;
+
+    const price = pickPrice(fullText);
+    if (!price) return;
+
+    let name = "";
+    const nameEl = $el.find("h1, h2, h3, h4, a, .title, .name").first();
+    if (nameEl && nameEl.length) name = nameEl.text().trim();
+    if (!name) name = fullText;
+    name = name.replace(/\s+/g, " ").slice(0, 80);
+    if (!name) return;
+
+    const key = `${name}__${price}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+
+    const href = $el.find("a").first().attr("href") || "";
+    const imgSrc =
+      $el.find("img").first().attr("src") ||
+      $el.find("img").first().attr("data-src") ||
+      "";
+    const jan = extractJan(fullText, $.html($el));
+
+    items.push({
+      name,
+      price,
+      jan,
+      link: absUrl(href, url),
+      image: absUrl(imgSrc, url),
+    });
+  });
+  return items;
+}
+
 export async function extractItems(url, supplier) {
   const html = await fetchHtml(url);
   const $ = cheerio.load(html);
 
-  const items = [];
-
+  let items = [];
   if (supplier && supplier.selector_item) {
-    // セレクタ指定モード
-    $(supplier.selector_item).each((_, el) => {
-      const $el = $(el);
-      const name = supplier.selector_name
-        ? $el.find(supplier.selector_name).first().text().trim()
-        : $el.text().trim().slice(0, 80);
-      const priceText = supplier.selector_price
-        ? $el.find(supplier.selector_price).first().text()
-        : $el.text();
-      const price = pickPrice(priceText);
-
-      const linkSel = supplier.selector_link || "a";
-      const href = $el.find(linkSel).first().attr("href") || "";
-      const imgSel = supplier.selector_image || "img";
-      const imgSrc =
-        $el.find(imgSel).first().attr("src") ||
-        $el.find(imgSel).first().attr("data-src") ||
-        "";
-
-      const janText = supplier.selector_jan
-        ? $el.find(supplier.selector_jan).first().text()
-        : $el.text();
-      const jan = extractJan(janText, $.html($el));
-
-      if (!name || !price) return;
-      items.push({
-        name: name.slice(0, 120),
-        price,
-        jan,
-        link: absUrl(href, supplier.base_url || url),
-        image: absUrl(imgSrc, supplier.base_url || url),
-      });
-    });
-  } else {
-    // 汎用自動検出モード
-    const seen = new Set();
-    const containers = $(
-      "li, article, .item, .product, div[class*='item'], div[class*='product'], tr"
-    );
-    containers.each((_, el) => {
-      const $el = $(el);
-      const fullText = $el.text().trim();
-      if (!fullText || fullText.length > 1200) return;
-
-      const price = pickPrice(fullText);
-      if (!price) return;
-
-      let name = "";
-      const nameEl = $el.find("h1, h2, h3, h4, a, .title, .name").first();
-      if (nameEl && nameEl.length) name = nameEl.text().trim();
-      if (!name) name = fullText;
-      name = name.replace(/\s+/g, " ").slice(0, 80);
-      if (!name) return;
-
-      const key = `${name}__${price}`;
-      if (seen.has(key)) return;
-      seen.add(key);
-
-      const href = $el.find("a").first().attr("href") || "";
-      const imgSrc =
-        $el.find("img").first().attr("src") ||
-        $el.find("img").first().attr("data-src") ||
-        "";
-      const jan = extractJan(fullText, $.html($el));
-
-      items.push({
-        name,
-        price,
-        jan,
-        link: absUrl(href, url),
-        image: absUrl(imgSrc, url),
-      });
-    });
+    items = extractBySelector($, url, supplier);
   }
-
+  // 目印(セレクタ)で1件も取れなかった場合は、自動検出に自動で切り替える。
+  // サイトの作りが変わっても商品が取れるようにするための保険。
+  if (items.length === 0) {
+    items = extractGeneric($, url);
+  }
   return items;
 }
 
