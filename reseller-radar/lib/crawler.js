@@ -48,9 +48,29 @@ function absUrl(href, base) {
   }
 }
 
+// 中継サービス(プロキシ)の設定があれば、それ経由の取得URLを組み立てる。
+// SCRAPER_API_KEY が設定されていれば ScraperAPI 経由（住宅用IP＋日本地域＋
+// 必要に応じてJS描画）でアクセスし、大手通販サイトのブロックを回避する。
+// 未設定なら従来どおりサーバーから直接アクセスする。
+function buildFetchTarget(url) {
+  const key = (process.env.SCRAPER_API_KEY || "").trim();
+  if (!key) return { target: url, viaProxy: false };
+  const params = new URLSearchParams({
+    api_key: key,
+    url,
+    country_code: (process.env.SCRAPER_COUNTRY || "jp").trim(),
+  });
+  // 楽天・Yahoo等のJSで描画されるサイト向け。SCRAPER_RENDER=1 で有効。
+  if ((process.env.SCRAPER_RENDER || "").trim() === "1") {
+    params.set("render", "true");
+  }
+  return { target: `https://api.scraperapi.com/?${params.toString()}`, viaProxy: true };
+}
+
 // 仕入れ先ページを取得する。タイムアウト付きで最大2回まで再試行し、
 // 接続そのものに失敗した場合は「fetch failed」ではなく分かりやすい日本語を返す。
 async function fetchHtml(url) {
+  const { target, viaProxy } = buildFetchTarget(url);
   const headers = {
     "User-Agent": UA,
     Accept:
@@ -58,13 +78,14 @@ async function fetchHtml(url) {
     "Accept-Language": "ja,en-US;q=0.8,en;q=0.6",
     "Cache-Control": "no-cache",
   };
+  // プロキシ（特にJS描画）は時間がかかるためタイムアウトを長めに取る
+  const timeoutMs = viaProxy ? 70000 : 20000;
 
-  let lastErr;
   for (let attempt = 0; attempt < 2; attempt++) {
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 20000);
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
     try {
-      const res = await fetch(url, {
+      const res = await fetch(target, {
         headers,
         redirect: "follow",
         signal: controller.signal,
@@ -78,14 +99,19 @@ async function fetchHtml(url) {
       return await res.text();
     } catch (e) {
       clearTimeout(timer);
-      lastErr = e;
       // HTTPエラー（4xx/5xx）は再試行しても無駄なので即中断
       if (e && e.message && e.message.includes("HTTP")) throw e;
       await sleep(800);
     }
   }
+
+  if (viaProxy) {
+    throw new Error(
+      "中継サービス経由でも仕入れ先ページに接続できませんでした。URLが正しいか、中継サービスの残量・設定をご確認ください。"
+    );
+  }
   throw new Error(
-    "仕入れ先ページに接続できませんでした。サイト側がサーバーからのアクセスを拒否している可能性があります（楽天・Yahoo・あみあみ等の一部サイトは自動巡回をブロックします）。別の仕入れ先URLでお試しください。"
+    "仕入れ先ページに接続できませんでした。サイト側がサーバーからのアクセスを拒否している可能性があります（楽天・Yahoo・あみあみ等の一部サイトは自動巡回をブロックします）。設定画面で中継サービスを有効にすると回避できます。"
   );
 }
 
