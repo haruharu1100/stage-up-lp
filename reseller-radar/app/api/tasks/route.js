@@ -84,6 +84,13 @@ export async function DELETE(req) {
   if (!id) {
     return NextResponse.json({ error: "idが必要です。" }, { status: 400 });
   }
-  db.prepare("DELETE FROM tasks WHERE id = ?").run(id);
+  // タスクには巡回結果(findings)と通知(notifications)が紐づいているため、
+  // 先に子データを消してからタスク本体を消す（外部キー制約でエラーにならないように）。
+  const tx = db.transaction((taskId) => {
+    db.prepare("DELETE FROM findings WHERE task_id = ?").run(taskId);
+    db.prepare("DELETE FROM notifications WHERE task_id = ?").run(taskId);
+    db.prepare("DELETE FROM tasks WHERE id = ?").run(taskId);
+  });
+  tx(id);
   return NextResponse.json({ ok: true });
 }
