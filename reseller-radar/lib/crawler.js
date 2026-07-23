@@ -384,10 +384,10 @@ export async function runTask(taskId) {
   let notified = 0;
   const newItems = [];
 
-  // プランごとに「1回の巡回で見つける利益商品の上限」を決める。
-  // 利益商品がこの件数に達したら、それ以上は照合せず巡回を終了する。
-  // フリー=1件 / スタンダード=10件 / プロ=無制限。
-  const plan = normalizePlan(await getSetting("plan"));
+  // 【テストプレイ中】プランに関係なく常に「プロ（無制限）」で巡回する。
+  // 見つかった利益商品はすべて表示し、途中で打ち切らない。
+  // （課金運用を始めるときは normalizePlan(await getSetting("plan")) に戻す）
+  const plan = normalizePlan("pro");
   const maxDeals = dealLimit(plan);
   let dealCount = 0;
   // 同じ商品（同一ASIN）が仕入れ先ページに複数回出てくることがあるため、

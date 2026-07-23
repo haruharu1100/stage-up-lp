@@ -60,39 +60,11 @@ export default function TasksPage() {
     setForm((f) => ({ ...f, [k]: v }));
   }
 
-  // 仕入れ先ごとの「検索結果ページ」URLの例を作る。
-  // トップページでは商品一覧が取れないため、検索結果ページを既定にする。
-  // 「キーワード」の部分を、探したい商品名やジャンルに書き換えて使う。
-  function exampleSearchUrl(base) {
-    let host = "";
-    try {
-      host = new URL(base || "").hostname.replace(/^www\./, "");
-    } catch {
-      return base || "";
-    }
-    const kw = "キーワード";
-    if (host.includes("yodobashi.com")) return `https://www.yodobashi.com/?word=${kw}`;
-    if (host.includes("biccamera.com"))
-      return `https://www.biccamera.com/bc/category/?q=${kw}`;
-    if (host.includes("rakuten.co.jp"))
-      return `https://search.rakuten.co.jp/search/mall/${kw}/`;
-    if (host.includes("yahoo.co.jp")) return `https://shopping.yahoo.co.jp/search?p=${kw}`;
-    if (host.includes("suruga-ya.jp"))
-      return `https://www.suruga-ya.jp/search?search_word=${kw}`;
-    if (host.includes("amiami.jp"))
-      return `https://www.amiami.jp/search/list/?s_keywords=${kw}`;
-    return base || "";
-  }
-
-  // 仕入れ先を選んだら、その仕入れ先の「検索結果ページ」URLの例を監視URLへ自動入力。
-  // ユーザーは「キーワード」の部分を書き換えるだけで使える。
+  // 仕入れ先を選んでも監視URLは自動で書き換えない（キーワード入力を不要にする）。
+  // ユーザーは「セール・商品一覧・検索結果」など商品が並ぶページのURLを
+  // そのまま貼り付けるだけで巡回できる。
   function selectSupplier(id) {
-    const sup = suppliers.find((s) => String(s.id) === String(id));
-    setForm((f) => ({
-      ...f,
-      supplier_id: id,
-      url: sup && sup.base_url ? exampleSearchUrl(sup.base_url) : f.url,
-    }));
+    setForm((f) => ({ ...f, supplier_id: id }));
   }
 
   async function submit(e) {
@@ -219,12 +191,12 @@ export default function TasksPage() {
               required
             />
             <p style={{ color: "#6b7280", fontSize: 13, margin: "4px 0 0" }}>
-              仕入れ先を選ぶと、その仕入れ先の「検索結果ページ」のURL例が自動で入ります。
-              URL末尾の<strong>「キーワード」</strong>を、探したい商品名やジャンル（例：ポケモンカード、スイッチ）に書き換えてください。
+              <strong>キーワードの入力は不要です。</strong>
+              「セール」「商品一覧」「検索結果」など、<strong>商品が並んでいるページ</strong>のURLをそのまま貼り付けてください。
               <br />
               <span style={{ color: "#a13224" }}>
                 ※ トップページのURL（例：https://www.yodobashi.com/）のままでは、
-                商品一覧が無いため価格・画像・リンクが正しく取得できません。必ず「検索結果ページ」や「セール一覧ページ」のURLにしてください。
+                商品一覧が無いため価格・画像・リンクが正しく取得できません。必ず商品が並んでいるページのURLにしてください。
               </span>
             </p>
           </div>
