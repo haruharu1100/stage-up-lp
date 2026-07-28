@@ -11,9 +11,12 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Trigger crawl
+        # 無料サイトのみを巡回（メルカリ等の有料読み取りは除外＝無料枠を温存）。
+        # 60秒で打ち切られ 504 が返ることがあるが、処理済みの結果は保存される。
+        # 巡回の重複起動を避けるため再試行はしない。504 でもジョブは成功扱い。
         run: |
-          curl -sS --max-time 300 --retry 2 \
+          curl -sS --max-time 120 \
             "https://reseller-radar-nu.vercel.app/api/cron" \
-            -o response.json -w "HTTP %{http_code}\n"
+            -o response.json -w "HTTP %{http_code}\n" || true
           echo "----- response -----"
           cat response.json || true
