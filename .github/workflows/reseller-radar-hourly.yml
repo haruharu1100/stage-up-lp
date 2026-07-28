@@ -1,0 +1,19 @@
+name: Reseller Radar Hourly Crawl
+
+on:
+  schedule:
+    - cron: '0 * * * *'
+  workflow_dispatch:
+
+jobs:
+  crawl:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Trigger crawl
+        run: |
+          curl -sS --max-time 300 --retry 2 \
+            "https://reseller-radar-nu.vercel.app/api/cron" \
+            -o response.json -w "HTTP %{http_code}\n"
+          echo "----- response -----"
+          cat response.json || true
