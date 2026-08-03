@@ -2,8 +2,8 @@ name: Daily AI Ad Report
 
 on:
   schedule:
-    # 毎日 UTC 22:00 = JST 07:00
-    - cron: '0 22 * * *'
+    # 毎月 1・11・21日の UTC 22:00 = JST 07:00（およそ10日に1回）
+    - cron: '0 22 1,11,21 * *'
   workflow_dispatch:  # 手動実行も可能
 
 jobs:
