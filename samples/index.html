@@ -184,9 +184,6 @@ h3{font-family:'Shippori Mincho B1',serif;font-weight:500;
 @media (max-width:900px){.work{grid-template-columns:1fr}}
 .clip{overflow:hidden;border-radius:3px;border:1px solid var(--line);
   clip-path:inset(0 0 100% 0);transition:clip-path 1.4s var(--ease)}
-.shots{display:flex;flex-direction:column;gap:14px}
-.clip.sub{border-radius:3px}
-.clip.sub img{width:100%;height:auto;display:block;object-fit:cover}
 .clip.in{clip-path:inset(0 0 0% 0)}
 .no-motion .clip{clip-path:none!important}
 .clip .ph{aspect-ratio:4/3;overflow:hidden}
@@ -460,20 +457,17 @@ footer a:hover{color:var(--ink)}
       <p data-anim>実際に制作・運用しているサイトのみを掲載します。上のサンプルとは区別して、正直に表示します。</p>
     </div>
     <div class="work">
-      <div class="shots">
-        <div class="clip"><div class="shot" id="shot">
-          <div class="bar"><i></i><i></i><i></i><u>cocohoreone.jp</u></div>
-          <div class="view">
-            <img data-para src="./images/works-cocohoreone.jpg" alt="オンラインガチャ ココホレ・ワンのサイト画面" loading="lazy"
-                 onerror="document.getElementById('shot').classList.add('no-img')">
-            <div class="fb">
-              <img src="https://cocohoreone.jp/assets/brand/logo.png" alt="ココホレ・ワン ロゴ" loading="lazy">
-              <span>ONLINE GACHA SERVICE</span>
-            </div>
+      <div class="clip"><div class="shot" id="shot">
+        <div class="bar"><i></i><i></i><i></i><u>cocohoreone.jp</u></div>
+        <div class="view">
+          <img data-para src="./images/works-cocohoreone.jpg" alt="オンラインガチャ ココホレ・ワンのサイト画面" loading="lazy"
+               onerror="document.getElementById('shot').classList.add('no-img')">
+          <div class="fb">
+            <img src="https://cocohoreone.jp/assets/brand/logo.png" alt="ココホレ・ワン ロゴ" loading="lazy">
+            <span>ONLINE GACHA SERVICE</span>
           </div>
-        </div></div>
-        <div class="clip sub"><img src="./images/works-cocohoreone-2.jpg" alt="ココホレ・ワン キャンペーンバナー" loading="lazy"></div>
-      </div>
+        </div>
+      </div></div>
       <div data-anim>
         <span class="tag">制作・運用実績</span>
         <h3>オンラインガチャ ココホレ・ワン</h3>
