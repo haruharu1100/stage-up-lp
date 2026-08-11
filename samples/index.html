@@ -1,427 +1,896 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <base href="/samples/">
-  <title>株式会社MORIKA｜小規模店舗・個人事業主のLP・HP制作</title>
-  <meta name="description" content="株式会社MORIKAは、小規模店舗・個人事業主向けに、問い合わせにつながるLP・HPを明朗な料金で制作します。LP制作98,000円〜、月額サポート5,000円〜。">
-  <meta property="og:type" content="website">
-  <meta property="og:title" content="株式会社MORIKA｜問い合わせにつながるLP制作">
-  <meta property="og:description" content="GoogleマップやSNSから来たお客様が迷わないWeb導線を設計。LP制作98,000円〜。">
-  <meta property="og:image" content="https://images.unsplash.com/photo-1556761175-b413da4baf72?auto=format&fit=crop&w=1200&q=80">
-  <meta name="twitter:card" content="summary_large_image">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700;800;900&family=Noto+Sans+JP:wght@400;500;700;800;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css">
-  <script type="application/ld+json">
-  {
-    "@context": "https://schema.org",
-    "@type": "Organization",
-    "name": "株式会社MORIKA",
-    "url": "https://stage-up-lp.vercel.app/samples",
-    "email": "info@morika.work",
-    "telephone": "070-3340-3552",
-    "address": {
-      "@type": "PostalAddress",
-      "addressRegion": "奈良県",
-      "addressLocality": "北葛城郡王寺町",
-      "streetAddress": "畠田8丁目1505-1",
-      "addressCountry": "JP"
-    },
-    "foundingDate": "2026",
-    "founder": {
-      "@type": "Person",
-      "name": "森安 真理奈"
-    }
-  }
-  </script>
-  <script type="application/ld+json">
-  {
-    "@context": "https://schema.org",
-    "@type": "ProfessionalService",
-    "name": "株式会社MORIKA",
-    "url": "https://stage-up-lp.vercel.app/samples",
-    "email": "info@morika.work",
-    "telephone": "070-3340-3552",
-    "address": {
-      "@type": "PostalAddress",
-      "addressRegion": "奈良県",
-      "addressLocality": "北葛城郡王寺町",
-      "streetAddress": "畠田8丁目1505-1",
-      "addressCountry": "JP"
-    },
-    "areaServed": "JP",
-    "serviceType": ["LP制作", "ホームページ制作", "Googleマップ改善", "SNS導線設計"],
-    "priceRange": "98000 JPY~"
-  }
-  </script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>株式会社MORIKA｜問い合わせにつながるLP制作</title>
+<meta name="description" content="小規模店舗・個人事業主向けに、問い合わせにつながるLP・HPを明朗な料金で制作します。LP制作98,000円〜、月額サポート5,000円〜。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho+B1:wght@500;700&family=Noto+Sans+JP:wght@400;500&family=Outfit:wght@200;300;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --base:#F7F6F3; --surface:#EDEAE3; --line:rgba(20,24,29,.11);
+  --ink:#14181D; --ink-sub:#5E6670; --accent:#A87A34; --deep:#1B2C42;
+  --ease:cubic-bezier(.22,1,.36,1);
+  --sp-2:8px; --sp-3:16px; --sp-4:24px; --sp-5:40px; --sp-6:64px; --sp-7:96px;
+  --pad:clamp(84px,11vw,180px);
+  --w-narrow:720px; --w-main:1100px; --w-wide:1340px;
+  --gut:clamp(20px,5vw,48px);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%}
+body{background:var(--base);color:var(--ink);
+  font-family:'Noto Sans JP',sans-serif;font-size:1rem;line-height:1.95;letter-spacing:.045em;
+  overflow-x:hidden}
+img{display:block;max-width:100%}
+button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
+a{color:inherit;text-decoration:none}
+:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+.wrap{max-width:var(--w-main);margin-inline:auto;padding-inline:var(--gut)}
+.wide{max-width:var(--w-wide);margin-inline:auto;padding-inline:var(--gut)}
+.narrow{max-width:var(--w-narrow)}
+.num{font-family:'Outfit',sans-serif;font-weight:300;font-feature-settings:'tnum'}
+section{padding-block:var(--pad)}
+
+/* ===== モーション基盤 ===== */
+.ln{display:block;overflow:hidden}
+.ln>i{display:block;font-style:inherit;transform:translateY(105%);
+  transition:transform 1.05s var(--ease)}
+.in .ln>i,.ln.in>i{transform:none}
+[data-anim]{opacity:0;transform:translateY(56px);
+  transition:opacity .9s var(--ease),transform .9s var(--ease)}
+[data-anim].in{opacity:1;transform:none}
+@media (max-width:768px){[data-anim]{transform:translateY(28px)}}
+.no-motion [data-anim]{opacity:1!important;transform:none!important}
+.no-motion .ln>i{transform:none!important}
+
+/* 進行バー */
+#prog{position:fixed;top:0;left:0;height:2px;width:0;background:var(--accent);z-index:100;
+  transition:width .1s linear}
+
+/* ===== nav ===== */
+.nav{position:fixed;inset:0 0 auto;z-index:80;height:70px;display:flex;align-items:center;
+  background:rgba(247,246,243,0);backdrop-filter:blur(0px);
+  border-bottom:1px solid transparent;transition:all .5s var(--ease)}
+.nav.on{background:rgba(247,246,243,.9);backdrop-filter:blur(16px);border-color:var(--line)}
+.nav .in2{display:flex;align-items:center;gap:var(--sp-5);width:100%}
+.nav .logo{font-family:'Shippori Mincho B1',serif;font-size:1rem;letter-spacing:.1em}
+.nav ul{list-style:none;display:flex;gap:var(--sp-5);margin-left:auto;font-size:.8125rem;color:var(--ink-sub)}
+.nav ul a{position:relative;padding-bottom:3px}
+.nav ul a::after{content:'';position:absolute;left:0;bottom:0;width:0;height:1px;
+  background:var(--accent);transition:width .45s var(--ease)}
+.nav ul a:hover::after{width:100%}
+.nav .cta{padding:11px 22px;border-radius:999px;background:var(--ink);color:var(--base);
+  font-size:.8125rem;transition:opacity .4s}
+.nav .cta:hover{opacity:.82}
+@media (max-width:960px){.nav ul{display:none}.nav .cta{margin-left:auto}}
+
+/* ===== 共通パーツ ===== */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:56px;
+  padding:18px 34px;border-radius:999px;font-weight:500;font-size:.9375rem;letter-spacing:.06em;
+  transition:transform .45s var(--ease),opacity .4s}
+.btn:hover{transform:translateY(-2px)}
+.btn-p{background:var(--accent);color:#fff;box-shadow:0 3px 18px rgba(168,122,52,.26)}
+.btn-s{border:1px solid rgba(20,24,29,.26)}
+.btn-t{padding:18px 4px;min-height:auto;color:var(--ink-sub);font-size:.875rem}
+.btn-t:hover{color:var(--ink)}
+.eyebrow{font-family:'Outfit',sans-serif;font-weight:300;font-size:.72rem;
+  letter-spacing:.24em;color:var(--ink-sub);text-transform:uppercase;
+  display:flex;align-items:center;gap:14px}
+.eyebrow::before{content:'';width:28px;height:1px;background:var(--accent)}
+h2{font-family:'Shippori Mincho B1',serif;font-weight:500;
+  font-size:clamp(1.6rem,4vw,2.6rem);line-height:1.48;letter-spacing:.035em}
+h3{font-family:'Shippori Mincho B1',serif;font-weight:500;
+  font-size:clamp(1.08rem,2.1vw,1.28rem);line-height:1.65;letter-spacing:.03em}
+.head{margin-bottom:clamp(48px,7vw,var(--sp-7))}
+.head h2{margin:var(--sp-4) 0 var(--sp-4)}
+.head>p{color:var(--ink-sub);max-width:var(--w-narrow);font-size:.9375rem}
+.alt{background:var(--surface)}
+
+/* ===== FV ===== */
+.fv{padding:calc(70px + clamp(76px,12vw,150px)) 0 clamp(60px,8vw,100px);
+  position:relative;overflow:hidden;
+  background:radial-gradient(115% 85% at 82% 4%,var(--surface) 0%,var(--base) 60%)}
+.fv .glow{position:absolute;width:62vw;height:62vw;right:-18vw;top:-22vw;border-radius:50%;
+  background:radial-gradient(circle,rgba(168,122,52,.13),transparent 66%);pointer-events:none}
+.fv .inr{position:relative}
+.fv h1{font-family:'Shippori Mincho B1',serif;font-weight:500;
+  font-size:clamp(2rem,5.6vw,3.9rem);line-height:1.44;letter-spacing:.02em;
+  margin:var(--sp-5) 0 var(--sp-5)}
+.fv h1 em{font-style:normal;color:var(--accent)}
+.fv .lead{max-width:580px;color:var(--ink-sub);margin-bottom:var(--sp-6);font-size:.9375rem}
+.fv .acts{display:flex;gap:var(--sp-3);flex-wrap:wrap;align-items:center}
+.fv .badges{display:flex;gap:clamp(30px,5vw,70px);flex-wrap:wrap;
+  margin-top:clamp(56px,8vw,var(--sp-7));padding-top:var(--sp-5);border-top:1px solid var(--line)}
+.fv .badges .k{display:block;font-size:.78rem;color:var(--ink-sub)}
+.fv .badges .v{font-family:'Outfit',sans-serif;font-weight:200;
+  font-size:clamp(1.7rem,3.6vw,2.3rem);line-height:1.25}
+.fv .badges .v small{font-family:'Noto Sans JP';font-size:.8125rem;margin-left:5px;color:var(--ink-sub)}
+.scrollhint{position:absolute;left:50%;bottom:22px;transform:translateX(-50%);
+  font-family:'Outfit';font-size:.62rem;letter-spacing:.24em;color:var(--ink-sub);
+  display:flex;flex-direction:column;align-items:center;gap:8px}
+.scrollhint::after{content:'';width:1px;height:38px;background:linear-gradient(var(--accent),transparent);
+  animation:drop 2.4s var(--ease) infinite}
+@keyframes drop{0%{transform:scaleY(0);transform-origin:top}
+  45%{transform:scaleY(1);transform-origin:top}
+  46%{transform:scaleY(1);transform-origin:bottom}
+  100%{transform:scaleY(0);transform-origin:bottom}}
+@media (max-width:768px){.scrollhint{display:none}}
+
+/* marquee */
+.mq{border-block:1px solid var(--line);padding:18px 0;overflow:hidden;background:var(--base)}
+.mq .t{display:flex;gap:var(--sp-5);width:max-content;animation:slide 42s linear infinite}
+.mq span{font-family:'Outfit',sans-serif;font-weight:300;font-size:.8rem;letter-spacing:.2em;
+  color:var(--ink-sub);white-space:nowrap;display:flex;align-items:center;gap:var(--sp-5)}
+.mq span::after{content:'';width:4px;height:4px;border-radius:50%;background:var(--accent);opacity:.6}
+@keyframes slide{to{transform:translateX(-50%)}}
+
+/* ===== グリッド ===== */
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line);
+  border:1px solid var(--line);border-radius:3px;overflow:hidden}
+@media (max-width:960px){.g4{grid-template-columns:repeat(2,1fr)}}
+@media (max-width:560px){.g4{grid-template-columns:1fr}}
+.cell{background:var(--base);padding:var(--sp-5);transition:background .5s var(--ease)}
+.alt .cell{background:var(--surface)}
+.cell:hover{background:#fff}
+.cell .no{font-family:'Outfit',sans-serif;font-weight:200;font-size:1.9rem;color:var(--accent);line-height:1}
+.cell h3{margin:var(--sp-3) 0 var(--sp-2)}
+.cell p{font-size:.885rem;color:var(--ink-sub);line-height:1.85}
+
+/* ===== ギャラリー ===== */
+.filters{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:var(--sp-5)}
+.chip{padding:8px 18px;border:1px solid var(--line);border-radius:999px;background:var(--base);
+  font-size:.8125rem;letter-spacing:.04em;color:var(--ink-sub);transition:all .4s var(--ease)}
+.chip:hover{border-color:var(--ink);color:var(--ink)}
+.chip[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--base)}
+.count{margin-left:auto;font-size:.8125rem;color:var(--ink-sub)}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--sp-5) var(--sp-4)}
+@media (max-width:1024px){.grid{grid-template-columns:repeat(2,1fr)}}
+@media (max-width:600px){.grid{grid-template-columns:1fr}}
+.card.is-out{display:none}
+.thumb{position:relative;aspect-ratio:4/5;overflow:hidden;border-radius:3px;
+  border:1px solid var(--line);background:#fff}
+.thumb .inner{position:absolute;inset:0;transition:transform 1.4s var(--ease)}
+.card:hover .thumb .inner{transform:translateY(-13%)}
+.ov{position:absolute;inset:0;display:flex;align-items:flex-end;justify-content:center;padding:22px;
+  opacity:0;transition:opacity .45s var(--ease);
+  background:linear-gradient(to top,rgba(20,24,29,.76),rgba(20,24,29,0) 46%)}
+.card:hover .ov{opacity:1}
+.ov span{color:#fff;font-size:.8125rem;letter-spacing:.09em;
+  border-bottom:1px solid rgba(255,255,255,.5);padding-bottom:4px}
+.card .info{padding:var(--sp-3) 2px 0}
+.card .tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:9px}
+.card .tags i{font-style:normal;font-size:.68rem;letter-spacing:.06em;color:var(--ink-sub);
+  border:1px solid var(--line);padding:3px 9px;border-radius:999px}
+.sw{display:flex;gap:5px;margin-top:11px}
+.sw b{width:15px;height:15px;border-radius:50%;border:1px solid rgba(0,0,0,.05)}
+.empty{text-align:center;padding:var(--sp-7) 0;color:var(--ink-sub);font-size:.9375rem}
+.mock{position:absolute;inset:0;display:flex;flex-direction:column}
+.mock .fvm{flex:0 0 44%;position:relative;display:flex;flex-direction:column;justify-content:center;padding:0 14%;gap:7px}
+.mock .t{height:8px;border-radius:2px}
+.mock .t.s{width:34%;height:4px;opacity:.55}
+.mock .t.l{width:80%}.mock .t.m{width:56%}
+.mock .btnm{width:44%;height:13px;border-radius:999px;margin-top:6px}
+.mock .body{flex:1;padding:10% 14%;display:flex;flex-direction:column;gap:9px}
+.mock .band{height:5px;border-radius:2px;opacity:.26}
+.mock .band.w1{width:100%}.mock .band.w2{width:88%}.mock .band.w3{width:62%}
+.mock .cards{display:flex;gap:6px;margin-top:6px}
+.mock .cards i{flex:1;aspect-ratio:3/4;border-radius:2px;opacity:.2}
+.mock .strip{margin-top:auto;height:15%;border-radius:2px;opacity:.12}
+
+/* ===== 実績 ===== */
+.work{display:grid;grid-template-columns:1.05fr .95fr;gap:clamp(32px,5vw,var(--sp-6));align-items:center}
+@media (max-width:900px){.work{grid-template-columns:1fr}}
+.clip{overflow:hidden;border-radius:3px;border:1px solid var(--line);
+  clip-path:inset(0 0 100% 0);transition:clip-path 1.4s var(--ease)}
+.clip.in{clip-path:inset(0 0 0% 0)}
+.no-motion .clip{clip-path:none!important}
+.clip .ph{aspect-ratio:4/3;overflow:hidden}
+.clip img{width:100%;height:112%;object-fit:cover;will-change:transform}
+.work .tag{display:inline-block;font-family:'Outfit',sans-serif;font-weight:300;font-size:.7rem;
+  letter-spacing:.18em;color:var(--accent);border:1px solid rgba(168,122,52,.42);
+  padding:4px 13px;border-radius:999px}
+.work h3{margin:var(--sp-4) 0 var(--sp-3);font-size:clamp(1.3rem,2.7vw,1.7rem)}
+.work p{color:var(--ink-sub);font-size:.9375rem;margin-bottom:var(--sp-5)}
+
+/* ===== ★署名：価格スクラブ（ピン留め） ===== */
+.why{background:var(--deep);color:#EDEAE3;position:relative}
+.why-track{height:240vh;position:relative}
+@media (max-width:768px){.why-track{height:200vh}}
+.why-pin{position:sticky;top:0;height:100vh;display:flex;align-items:center}
+.why .eyebrow{color:rgba(237,234,227,.55)}
+.why .eyebrow::before{background:var(--accent)}
+.why h2{margin:var(--sp-4) 0 var(--sp-4)}
+.why .lead{color:rgba(237,234,227,.7);max-width:600px;font-size:.9375rem}
+.bars{margin-top:clamp(40px,6vw,72px);display:grid;gap:clamp(28px,4vw,var(--sp-6))}
+.bar .lbl{display:flex;justify-content:space-between;align-items:baseline;gap:16px;
+  font-size:.8125rem;color:rgba(237,234,227,.6);margin-bottom:13px}
+.bar .amt{font-family:'Outfit',sans-serif;font-weight:200;
+  font-size:clamp(1.5rem,4.2vw,2.6rem);color:#EDEAE3;letter-spacing:.01em;white-space:nowrap}
+.bar .amt small{font-family:'Noto Sans JP';font-size:.8125rem;margin-left:5px;color:rgba(237,234,227,.6)}
+.track{height:14px;border-radius:999px;background:rgba(237,234,227,.09);overflow:hidden}
+.fill{height:100%;border-radius:999px}
+.fill.market{background:rgba(237,234,227,.32);width:100%}
+.fill.ours{background:linear-gradient(90deg,var(--accent),#DCB068);width:100%}
+.why .foot{margin-top:clamp(32px,5vw,var(--sp-6));padding-top:var(--sp-5);
+  border-top:1px solid rgba(237,234,227,.16);display:grid;grid-template-columns:1fr 1fr;gap:var(--sp-5)}
+@media (max-width:768px){.why .foot{grid-template-columns:1fr;gap:var(--sp-3)}}
+.why .foot p{font-size:.85rem;color:rgba(237,234,227,.64);line-height:1.85}
+.why .note{font-size:.72rem;color:rgba(237,234,227,.42);margin-top:var(--sp-4)}
+
+/* ===== 理念 ===== */
+.philo{background:var(--surface)}
+.creed{font-family:'Shippori Mincho B1',serif;font-weight:500;
+  font-size:clamp(1.7rem,4.6vw,3rem);line-height:1.62;letter-spacing:.04em;
+  margin:var(--sp-5) 0 var(--sp-5)}
+.creed em{font-style:normal;color:var(--accent)}
+.philo .said{color:var(--ink-sub);max-width:var(--w-narrow);font-size:.9375rem}
+.creeds{margin-top:clamp(48px,7vw,var(--sp-7));display:grid;grid-template-columns:repeat(3,1fr);
+  gap:1px;background:var(--line);border:1px solid var(--line);border-radius:3px;overflow:hidden}
+@media (max-width:900px){.creeds{grid-template-columns:1fr}}
+.creeds .cell{background:var(--surface)}
+.creeds .kanji{font-family:'Shippori Mincho B1',serif;font-size:.72rem;letter-spacing:.24em;
+  color:var(--accent)}
+.creeds h3{margin:var(--sp-3) 0 var(--sp-3);font-size:clamp(1.1rem,2.3vw,1.35rem)}
+.msg{margin-top:clamp(48px,7vw,var(--sp-7));border-top:1px solid var(--line);padding-top:var(--sp-6);
+  display:grid;grid-template-columns:200px 1fr;gap:var(--sp-5)}
+@media (max-width:768px){.msg{grid-template-columns:1fr;gap:var(--sp-3)}}
+.msg .lbl{font-family:'Outfit',sans-serif;font-weight:300;font-size:.72rem;
+  letter-spacing:.22em;color:var(--ink-sub)}
+.msg p{font-size:.9375rem;color:var(--ink-sub);margin-bottom:var(--sp-3)}
+.msg .sign{font-family:'Shippori Mincho B1',serif;font-size:1rem;color:var(--ink);letter-spacing:.08em}
+.msg .sign span{font-size:.78rem;color:var(--ink-sub);margin-right:12px;letter-spacing:.04em}
+
+/* ===== 実績カード ===== */
+.shot{position:relative;background:#14181D;aspect-ratio:4/3;display:flex;flex-direction:column}
+.shot .bar{height:34px;display:flex;align-items:center;gap:7px;padding:0 14px;
+  background:rgba(255,255,255,.07);flex:0 0 auto}
+.shot .bar i{width:9px;height:9px;border-radius:50%;background:rgba(255,255,255,.22)}
+.shot .bar u{margin-left:10px;flex:1;height:16px;border-radius:999px;background:rgba(255,255,255,.07);
+  text-decoration:none;font-family:'Outfit';font-size:.6rem;letter-spacing:.1em;
+  color:rgba(255,255,255,.42);display:flex;align-items:center;padding:0 10px}
+.shot .view{flex:1;position:relative;overflow:hidden}
+.shot .view img{width:100%;height:100%;object-fit:cover;object-position:top center}
+.shot .fb{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;
+  justify-content:center;gap:18px;background:radial-gradient(120% 90% at 50% 0%,#243349,#14181D 70%)}
+.shot .fb img{width:min(46%,190px);height:auto;object-fit:contain}
+.shot .fb span{font-family:'Outfit';font-size:.62rem;letter-spacing:.22em;color:rgba(255,255,255,.4)}
+.shot.no-img .view img{display:none}
+.shot.no-img .fb{display:flex}
+
+/* ===== 流れ ===== */
+.flow{list-style:none;position:relative}
+.flow .rail{position:absolute;left:31px;top:26px;bottom:26px;width:1px;background:var(--line)}
+.flow .rail i{position:absolute;inset:0 auto 0 0;width:1px;height:0;background:var(--accent);display:block}
+@media (max-width:600px){.flow .rail{left:19px}}
+.flow li{display:grid;grid-template-columns:64px 1fr;gap:var(--sp-4);padding-block:var(--sp-4);position:relative}
+@media (max-width:600px){.flow li{grid-template-columns:40px 1fr;gap:var(--sp-3)}}
+.flow .dot{width:64px;height:64px;border-radius:50%;background:var(--surface);
+  border:1px solid var(--line);display:grid;place-items:center;
+  font-family:'Outfit',sans-serif;font-weight:300;font-size:1.02rem;color:var(--accent);z-index:1}
+@media (max-width:600px){.flow .dot{width:40px;height:40px;font-size:.84rem}}
+.flow .when{font-family:'Outfit',sans-serif;font-weight:300;font-size:.7rem;
+  letter-spacing:.16em;color:var(--ink-sub)}
+.flow p{font-size:.885rem;color:var(--ink-sub);margin-top:5px}
+
+/* ===== 料金 ===== */
+.plans{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--sp-4)}
+@media (max-width:960px){.plans{grid-template-columns:1fr}}
+.plan{background:var(--base);border:1px solid var(--line);border-radius:3px;padding:var(--sp-5);
+  display:flex;flex-direction:column;transition:transform .6s var(--ease),border-color .6s}
+.plan:hover{transform:translateY(-4px)}
+.plan[data-rec]{border-color:var(--accent)}
+.plan .rec{font-family:'Outfit',sans-serif;font-size:.68rem;letter-spacing:.18em;color:var(--ink-sub)}
+.plan[data-rec] .rec{color:var(--accent)}
+.plan .amt{font-family:'Outfit',sans-serif;font-weight:200;font-size:2.5rem;line-height:1.2;margin:var(--sp-3) 0 var(--sp-2)}
+.plan .amt small{font-family:'Noto Sans JP';font-size:.8125rem;margin-left:4px;color:var(--ink-sub)}
+.plan>p{font-size:.885rem;color:var(--ink-sub)}
+.plan ul{list-style:none;margin-top:var(--sp-4);padding-top:var(--sp-4);border-top:1px solid var(--line);
+  font-size:.86rem;color:var(--ink-sub);display:grid;gap:6px}
+.plan ul li{padding-left:1.15em;position:relative}
+.plan ul li::before{content:'—';position:absolute;left:0;color:var(--accent)}
+.monthly{margin-top:var(--sp-4);border:1px solid var(--line);border-radius:3px;
+  padding:var(--sp-4) var(--sp-5);display:flex;align-items:baseline;gap:var(--sp-4);flex-wrap:wrap}
+.monthly .amt{font-family:'Outfit',sans-serif;font-weight:200;font-size:1.6rem}
+.monthly p{font-size:.86rem;color:var(--ink-sub)}
+.note{margin-top:var(--sp-5);font-size:.8rem;color:var(--ink-sub);line-height:1.85}
+
+/* ===== FAQ ===== */
+.faq details{border-bottom:1px solid var(--line)}
+.faq details:first-of-type{border-top:1px solid var(--line)}
+.faq summary{padding:var(--sp-4) 46px var(--sp-4) 0;cursor:pointer;list-style:none;
+  position:relative;font-weight:500;font-size:.9375rem;transition:color .4s}
+.faq summary:hover{color:var(--accent)}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::after{content:'';position:absolute;right:10px;top:50%;width:10px;height:10px;
+  border-right:1px solid var(--ink-sub);border-bottom:1px solid var(--ink-sub);
+  transform:translateY(-70%) rotate(45deg);transition:transform .45s var(--ease)}
+.faq details[open] summary::after{transform:translateY(-20%) rotate(-135deg)}
+.faq .a{padding:0 0 var(--sp-4);color:var(--ink-sub);font-size:.885rem}
+
+/* ===== 会社概要 ===== */
+.dl{border-top:1px solid var(--line)}
+.dl div{display:grid;grid-template-columns:180px 1fr;gap:var(--sp-4);padding:var(--sp-4) 0;
+  border-bottom:1px solid var(--line);font-size:.9375rem}
+@media (max-width:600px){.dl div{grid-template-columns:1fr;gap:2px}}
+.dl dt{color:var(--ink-sub);font-size:.86rem}
+
+/* ===== contact ===== */
+.contact{background:var(--ink);color:var(--base);text-align:center;position:relative;overflow:hidden}
+.contact .glow{position:absolute;width:70vw;height:70vw;left:50%;top:-32vw;transform:translateX(-50%);
+  border-radius:50%;background:radial-gradient(circle,rgba(168,122,52,.20),transparent 62%)}
+.contact .inr{position:relative}
+.contact .eyebrow{justify-content:center;color:rgba(247,246,243,.55)}
+.contact h2{margin:var(--sp-4) 0}
+.contact>.wrap>.inr>p{max-width:540px;margin:0 auto var(--sp-5);color:rgba(247,246,243,.72);font-size:.9375rem}
+.contact .acts{display:flex;gap:var(--sp-3);justify-content:center;flex-wrap:wrap}
+.contact .btn-s{border-color:rgba(247,246,243,.36)}
+.contact .btn-t{color:rgba(247,246,243,.62)}
+
+footer{padding:var(--sp-6) 0 calc(var(--sp-6) + 78px);font-size:.8125rem;color:var(--ink-sub)}
+@media (min-width:769px){footer{padding-bottom:var(--sp-6)}}
+footer .row{display:flex;gap:var(--sp-5);flex-wrap:wrap;justify-content:space-between}
+footer ul{list-style:none;display:flex;gap:var(--sp-4);flex-wrap:wrap}
+footer a:hover{color:var(--ink)}
+
+.sticky{position:fixed;left:0;right:0;bottom:0;z-index:90;display:none;gap:1px;background:var(--line);
+  padding-bottom:env(safe-area-inset-bottom)}
+.sticky a{flex:1;min-height:64px;display:flex;align-items:center;justify-content:center;
+  font-size:.875rem;font-weight:500;letter-spacing:.04em}
+.sticky .tel{background:var(--base)}
+.sticky .line{background:var(--accent);color:#fff}
+@media (max-width:768px){.sticky{display:flex}}
+
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+  [data-anim]{opacity:1!important;transform:none!important}
+  .ln>i{transform:none!important}.clip{clip-path:none!important}
+}
+</style>
 </head>
 <body>
-  <header class="site-header">
-    <div class="inner nav-inner">
-      <a class="brand" href="./" aria-label="株式会社MORIKA トップ">
-        <span class="brand-mark">M</span>
-        <span>株式会社MORIKA</span>
-      </a>
-      <nav class="nav-links" aria-label="サイト内ナビゲーション">
-        <a href="#works">実績</a>
-        <a href="#price">料金</a>
-        <a href="#flow">制作の流れ</a>
-        <a href="#company">会社概要</a>
-        <a class="instagram-link" href="#" target="_blank" rel="noopener noreferrer" data-instagram-link>Instagram</a>
-        <a class="nav-cta" href="#contact">相談する</a>
-      </nav>
+<div id="prog"></div>
+
+<nav class="nav" id="nav"><div class="wide in2">
+  <a class="logo" href="#">株式会社MORIKA</a>
+  <ul>
+    <li><a href="#samples">サンプル</a></li>
+    <li><a href="#works">実績</a></li>
+    <li><a href="#philosophy">理念</a></li>
+    <li><a href="#why">安い理由</a></li>
+    <li><a href="#price">料金</a></li>
+    <li><a href="#flow">制作の流れ</a></li>
+    <li><a href="#company">会社概要</a></li>
+  </ul>
+  <a class="cta" href="#contact">無料で相談する</a>
+</div></nav>
+
+<!-- FV -->
+<header class="fv" id="fv">
+  <span class="glow"></span>
+  <div class="wrap inr">
+    <p class="eyebrow" data-anim>Web Production for Local Business — Nara</p>
+    <h1>
+      <span class="ln"><i>問い合わせにつながるLPを、</i></span>
+      <span class="ln"><i>相場よりかなり<em>手の届く価格</em>で。</i></span>
+    </h1>
+    <p class="lead" data-anim>GoogleマップやSNSから来たお客様が、料金・場所・予約方法で迷わない。成果から逆算してWeb導線を設計します。</p>
+    <div class="acts" data-anim>
+      <a class="btn btn-p" href="https://line.me/R/ti/p/@015vzsdb">LINEで無料相談（1分）</a>
+      <a class="btn btn-s" href="https://calendly.com/morika/30min">30分のオンライン相談を予約</a>
+      <a class="btn btn-t" href="tel:07033403552">電話 070-3340-3552</a>
     </div>
-  </header>
-
-  <main>
-    <section class="hero">
-      <div class="inner hero-grid">
-        <div class="hero-copy">
-          <p class="label">小規模店舗・個人事業主のための Web制作</p>
-          <h1>問い合わせにつながるLPを、相場よりかなり手の届く価格で。</h1>
-          <p class="hero-lead">GoogleマップやSNSから来たお客様が、料金・場所・予約方法で迷わない。成果から逆算してWeb導線を設計します。</p>
-          <p class="price-note">LP制作 98,000円〜 <span>内容により選べるプラン</span></p>
-          <div class="hero-actions">
-            <a class="button primary track-link" data-conversion="line" href="https://line.me/R/ti/p/@015vzsdb" target="_blank" rel="noopener">LINEで無料相談</a>
-            <a class="button secondary track-link" data-conversion="booking" href="https://calendly.com/morika/30min" target="_blank" rel="noopener">30分のオンライン相談を予約</a>
-            <a class="text-link track-link" data-conversion="tel" href="tel:07033403552">電話 070-3340-3552</a>
-          </div>
-          <div class="trust-metrics" aria-label="制作の特徴">
-            <div><strong>98,000円〜</strong><span>明朗な制作費</span></div>
-            <div><strong>7〜14営業日</strong><span>初稿目安</span></div>
-            <div><strong>月5,000円〜</strong><span>運用サポート</span></div>
-          </div>
-        </div>
-        <div class="device-stage" aria-label="制作するLPのデバイスモックアップ">
-          <div class="desktop-device">
-            <div class="device-bar"><span></span><span></span><span></span></div>
-            <div class="mock-site">
-              <div class="mock-hero">
-                <span>Salon LP</span>
-                <h2>予約したくなる導線設計</h2>
-                <p>料金・場所・メニューを1画面で確認。</p>
-              </div>
-              <div class="mock-row"><i></i><i></i><i></i></div>
-              <div class="mock-content">
-                <div></div><div></div><div></div>
-              </div>
-            </div>
-          </div>
-          <div class="phone-device">
-            <div class="phone-notch"></div>
-            <div class="phone-card">
-              <span>Mobile</span>
-              <h3>LINE予約</h3>
-              <p>スマホで迷わず相談へ。</p>
-              <b>無料相談</b>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <section class="summary-strip" aria-label="MORIKAの制作概要">
-      <div class="inner summary-grid">
-        <div><span>Price</span><strong>LP制作 98,000円〜</strong><p>必要な範囲を先に決め、追加費用は事前に明示します。</p></div>
-        <div><span>Support</span><strong>月額 5,000円〜</strong><p>公開後の軽微な更新や相談を、無理なく続けられる価格で。</p></div>
-        <div><span>Area</span><strong>奈良県から全国対応</strong><p>オンライン相談を中心に、店舗・個人事業主の導線を整えます。</p></div>
-      </div>
-    </section>
-
-    <section class="section" id="problems">
-      <div class="inner">
-        <div class="section-head">
-          <p class="label">For you</p>
-          <h2>こんな方へ</h2>
-          <p>集客の入口はあるのに、問い合わせや予約につながらない状態を整理します。</p>
-        </div>
-        <div class="problem-grid">
-          <article class="panel"><span>01</span><h3>見られているのに予約がない</h3><p>GoogleマップやSNSから来た人が、次に何をすればよいか分かる導線に整えます。</p></article>
-          <article class="panel"><span>02</span><h3>料金・場所が伝わっていない</h3><p>初めてのお客様が不安に感じる情報を、スマホで見やすくまとめます。</p></article>
-          <article class="panel"><span>03</span><h3>古いHPを直したい</h3><p>今の印象を崩している文章・構成・表示を、必要な範囲から改善します。</p></article>
-          <article class="panel"><span>04</span><h3>何から始めればいいか分からない</h3><p>LP、HP、Googleマップ、SNSのどこを優先するか一緒に判断します。</p></article>
-        </div>
-      </div>
-    </section>
-
-    <section class="section muted" id="consult">
-      <div class="inner">
-        <div class="section-head">
-          <p class="label">Free consultation</p>
-          <h2>無料相談で見るポイント</h2>
-          <p>いきなり制作を勧めるのではなく、今の状況で一番効果が出やすい場所を整理します。</p>
-        </div>
-        <div class="consult-grid">
-          <article class="panel"><span>01</span><h3>今のページやSNSの見え方</h3><p>お客様目線で、料金・場所・予約方法がすぐ分かるかを確認します。</p></article>
-          <article class="panel"><span>02</span><h3>優先すべき改善順</h3><p>LP、HP、Googleマップ、Instagramのどこから直すべきかを一緒に決めます。</p></article>
-          <article class="panel"><span>03</span><h3>費用と納期の目安</h3><p>必要な制作範囲を切り分け、無理のない料金とスケジュールを提示します。</p></article>
-        </div>
-      </div>
-    </section>
-
-    <section class="section" id="service">
-      <div class="inner">
-        <div class="section-head">
-          <p class="label">What we do</p>
-          <h2>できること</h2>
-          <p>作って終わりではなく、見た人が問い合わせ・予約へ進める情報設計まで整えます。</p>
-        </div>
-        <div class="service-grid">
-          <article class="panel"><span>01</span><h3>LP制作</h3><p>1枚で魅力と導線を完結。問い合わせ・予約につなげます。</p></article>
-          <article class="panel"><span>02</span><h3>ホームページ制作</h3><p>会社・店舗の信頼を伝える基本のHPを制作します。</p></article>
-          <article class="panel"><span>03</span><h3>Googleマップ改善</h3><p>プロフィール整備・写真・口コミ対応で来店導線を強化します。</p></article>
-          <article class="panel"><span>04</span><h3>SNS→問い合わせ導線設計</h3><p>InstagramやLINEから予約・相談までつなげます。</p></article>
-        </div>
-      </div>
-    </section>
-
-    <section class="section muted" id="included">
-      <div class="inner split">
-        <div>
-          <p class="label">Included</p>
-          <h2>LP制作に含まれるもの</h2>
-          <p>必要な範囲を先に明確にして、制作途中で不安が増えない進め方をします。</p>
-        </div>
-        <div class="list-card">
-          <ul class="check-list">
-            <li>1枚構成のLP</li>
-            <li>スマホ最適化</li>
-            <li>構成・文章作成</li>
-            <li>料金・アクセス・予約導線</li>
-            <li>公開サポート</li>
-          </ul>
-          <p class="note">別途になるもの：写真撮影、ロゴ制作、継続的な保守・運用。必要な場合は事前に明示します。</p>
-        </div>
-      </div>
-    </section>
-
-    <section class="section" id="works">
-      <div class="inner">
-        <div class="section-head">
-          <p class="label">Works</p>
-          <h2>制作実績</h2>
-          <p>実際に制作・運用しているサイトを掲載します。サンプルとは区別して、正直に表示します。</p>
-        </div>
-        <div class="work-card">
-          <div class="work-preview">
-            <img src="https://images.unsplash.com/photo-1611996575749-79a3a250f948?auto=format&fit=crop&w=1100&q=80" alt="オンラインガチャサイト制作実績のイメージ" loading="lazy">
-          </div>
-          <div class="work-body">
-            <span class="tag">制作・運用実績</span>
-            <h3>オンラインガチャ ココホレONE</h3>
-            <p>オンライン販売・会員導線を含むWebサービスの制作・運用実績です。</p>
-            <a class="button secondary" href="https://gorogorogacha.com" target="_blank" rel="noopener">サイトを見る</a>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <section class="section muted" id="samples">
-      <div class="inner">
-        <div class="section-head">
-          <p class="label">Samples</p>
-          <h2>業種別サンプル</h2>
-          <p>実績が少ない業種は、完成イメージを確認できるサンプルとして掲載しています。</p>
-        </div>
-        <div class="sample-grid">
-          <a class="sample-card" href="salon-lp.html" target="_blank" rel="noopener"><img src="https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=900&q=80" alt="美容室・サロン向けLP"><div><span>Sample LP</span><h3>美容室・サロン向けLP</h3><p>美容室／ネイル／エステの予約LP。</p><b>サンプルを見る</b></div></a>
-          <a class="sample-card" href="clinic-lp.html" target="_blank" rel="noopener"><img src="https://images.unsplash.com/photo-1576091160550-2173dba999ef?auto=format&fit=crop&w=900&q=80" alt="整体・治療院向けLP"><div><span>Sample LP</span><h3>整体・治療院向けLP</h3><p>初回予約につなげる不安解消LP。</p><b>サンプルを見る</b></div></a>
-          <a class="sample-card" href="restaurant-lp.html" target="_blank" rel="noopener"><img src="https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=900&q=80" alt="飲食店向けLP"><div><span>Sample LP</span><h3>飲食店向けLP</h3><p>写真とメニューで来店につなげる。</p><b>サンプルを見る</b></div></a>
-          <a class="sample-card" href="professional-hp.html" target="_blank" rel="noopener"><img src="https://images.unsplash.com/photo-1450101499163-c8848c66ca85?auto=format&fit=crop&w=900&q=80" alt="士業向けHP"><div><span>Sample HP</span><h3>士業向けHP</h3><p>信頼・料金・相談導線を整える。</p><b>サンプルを見る</b></div></a>
-          <a class="sample-card" href="home-service-hp.html" target="_blank" rel="noopener"><img src="https://images.unsplash.com/photo-1503387762-592deb58ef4e?auto=format&fit=crop&w=900&q=80" alt="住宅サービス向けHP"><div><span>Sample HP</span><h3>住宅サービス向けHP</h3><p>施工事例から見積もりへ。</p><b>サンプルを見る</b></div></a>
-          <a class="sample-card" href="general-lp.html" target="_blank" rel="noopener"><img src="https://images.unsplash.com/photo-1556761175-b413da4baf72?auto=format&fit=crop&w=900&q=80" alt="汎用サービスLP"><div><span>Sample LP</span><h3>汎用サービスLP</h3><p>業種を問わない基本LP。</p><b>サンプルを見る</b></div></a>
-          <a class="sample-card" href="agriculture-hp.html" target="_blank" rel="noopener"><img src="https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=900&q=80" alt="農業向けHP"><div><span>Sample HP</span><h3>農業向けHP</h3><p>作物の魅力・直販・取引相談。</p><b>サンプルを見る</b></div></a>
-          <a class="sample-card" href="sports-lp.html" target="_blank" rel="noopener"><img src="https://images.unsplash.com/photo-1517649763962-0c623066013b?auto=format&fit=crop&w=900&q=80" alt="スポーツ向けLP"><div><span>Sample LP</span><h3>スポーツ向けLP</h3><p>体験申込・入会相談。</p><b>サンプルを見る</b></div></a>
-          <a class="sample-card" href="retail-lp.html" target="_blank" rel="noopener"><img src="https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=900&q=80" alt="小売向けLP"><div><span>Sample LP</span><h3>小売向けLP</h3><p>商品・来店・購入導線。</p><b>サンプルを見る</b></div></a>
-        </div>
-      </div>
-    </section>
-
-    <section class="section" id="reasons">
-      <div class="inner">
-        <div class="section-head">
-          <p class="label">Reasons</p>
-          <h2>選ばれる理由</h2>
-        </div>
-        <div class="reason-grid">
-          <article class="panel"><span>01</span><h3>AI＋エンジニアで効率化</h3><p>作業工程を効率化しながら、構成・デザイン・品質は人の目で仕上げます。</p></article>
-          <article class="panel"><span>02</span><h3>成果から逆算した導線</h3><p>問い合わせ・予約に必要な情報を整理し、迷いにくいページ構成にします。</p></article>
-          <article class="panel"><span>03</span><h3>スマホ最適・表示速度</h3><p>スマホで見やすく、読み込みやすい設計を前提に制作します。</p></article>
-          <article class="panel"><span>04</span><h3>公開後もサポート</h3><p>公開後の表示確認や軽微な調整まで、落ち着いて進めます。</p></article>
-        </div>
-      </div>
-    </section>
-
-    <section class="section muted" id="value">
-      <div class="inner value-card">
-        <div>
-          <p class="label">Why affordable</p>
-          <h2>相場より、手の届く価格で。安い理由があります。</h2>
-          <p>一般的にLP制作は30〜60万円（平均およそ55万円）、ホームページも数十万円〜が相場です。株式会社MORIKAは、エンジニアによる設計とAIの活用で制作工程を効率化。だから、短納期で、相場よりかなり手の届く価格を実現しました。</p>
-          <p class="note">AIは効率化のために使い、構成・デザイン・品質はエンジニアが責任を持って仕上げます。AIに丸投げはしません。</p>
-          <p class="note">※金額は一般的な市場相場の参考値です。内容・規模により変わります。</p>
-        </div>
-        <div class="comparison">
-          <div><span>一般的なLP制作の参考相場</span><strong>30〜60万円</strong></div>
-          <div class="highlight"><span>MORIKAのライトLP</span><strong>98,000円〜</strong></div>
-          <div><span>初稿の目安</span><strong>7〜14営業日</strong></div>
-        </div>
-      </div>
-    </section>
-
-    <section class="section" id="flow">
-      <div class="inner">
-        <div class="section-head">
-          <p class="label">Flow</p>
-          <h2>制作の流れ</h2>
-        </div>
-        <div class="flow-list">
-          <div><span>01</span><h3>無料相談</h3><p>当日〜2営業日。LPかHPか、優先順位を確認します。</p></div>
-          <div><span>02</span><h3>ヒアリング</h3><p>1〜3営業日。強み、料金、写真、予約方法を整理します。</p></div>
-          <div><span>03</span><h3>お見積り</h3><p>1〜3営業日。制作範囲、納期、修正回数を明確にします。</p></div>
-          <div><span>04</span><h3>制作</h3><p>7〜14営業日。構成・文章・デザインをまとめて作成します。</p></div>
-          <div><span>05</span><h3>ご確認・修正</h3><p>2〜5営業日。内容確認後、必要な修正を反映します。</p></div>
-          <div><span>06</span><h3>公開</h3><p>1〜2営業日。スマホ表示やリンクを確認して公開します。</p></div>
-          <div><span>07</span><h3>公開後サポート</h3><p>公開後7日間を目安に、軽微な調整に対応します。</p></div>
-        </div>
-      </div>
-    </section>
-
-    <section class="section muted" id="price">
-      <div class="inner">
-        <div class="section-head">
-          <p class="label">Price</p>
-          <h2>料金</h2>
-          <p>表示価格は税抜です。追加・別料金になる項目は、制作前に必ずお伝えします。</p>
-        </div>
-        <div class="price-grid">
-          <article class="price-panel">
-            <h3>ライトLP</h3>
-            <p class="price">98,000円〜</p>
-            <p>1枚・シンプル構成。スマホ対応、基本構成、問い合わせ導線、公開サポート込み。</p>
-          </article>
-          <article class="price-panel recommended">
-            <span class="plan-badge">おすすめ</span>
-            <h3>スタンダードLP</h3>
-            <p class="price">198,000円〜</p>
-            <p>オリジナル構成、文章作成、問い合わせ導線、公開サポートまで含めた標準プラン。</p>
-          </article>
-          <article class="price-panel">
-            <h3>ホームページ</h3>
-            <p class="price">248,000円〜</p>
-            <p>会社・店舗サイト向け。複数ページ構成で信頼情報と相談導線を整えます。</p>
-          </article>
-          <article class="price-panel">
-            <h3>月額オプション</h3>
-            <p class="price small">月5,000円〜</p>
-            <p>Googleマップ改善、保守、軽微な更新、運用相談。内容に応じて個別にお見積りします。</p>
-          </article>
-        </div>
-        <div class="price-note-card">
-          <h3>含まれるもの／別料金</h3>
-          <p>LP制作には、スマホ最適化、構成・文章作成、料金・アクセス・予約導線、公開サポートを含みます。写真撮影、ロゴ制作、追加ページ、大幅なデザイン変更、広告費、外部有料ツール費は別途お見積りです。</p>
-        </div>
-      </div>
-    </section>
-
-    <section class="section" id="assurance">
-      <div class="inner">
-        <div class="section-head">
-          <p class="label">Assurance</p>
-          <h2>安心して依頼できるように</h2>
-        </div>
-        <div class="assurance-grid">
-          <article class="panel"><span>01</span><h3>修正対応</h3><p>公開前の軽微な修正は2回まで基本料金に含みます。大幅な構成変更は事前にお見積りします。</p></article>
-          <article class="panel"><span>02</span><h3>納品データ・著作権</h3><p>納品物の利用範囲は契約時に確認します。外部素材やフォントは各ライセンス条件に従います。</p></article>
-          <article class="panel"><span>03</span><h3>公開後サポート</h3><p>公開後7日間を目安に、表示崩れやリンク確認など軽微な調整に対応します。</p></article>
-          <article class="panel"><span>04</span><h3>キャンセル・返金</h3><p>制作着手前後で条件が変わるため、お見積り時にキャンセル・返金条件を明記します。</p></article>
-        </div>
-      </div>
-    </section>
-
-    <section class="section" id="faq">
-      <div class="inner narrow">
-        <div class="section-head">
-          <p class="label">FAQ</p>
-          <h2>よくあるご質問</h2>
-        </div>
-        <div class="faq-list">
-          <details open><summary>納期はどれくらいですか？</summary><p>素材がそろってから、LPは7〜14営業日が初稿の目安です。内容量や確認状況により変動します。</p></details>
-          <details><summary>修正は何回できますか？</summary><p>LP制作では2回までを基本料金に含みます。大幅な構成変更や追加ページは別途お見積りです。</p></details>
-          <details><summary>写真やロゴは用意が必要ですか？</summary><p>手元にない場合も相談できます。写真撮影や素材選定、ロゴ制作が必要な場合は事前に費用を明示します。</p></details>
-          <details><summary>データや著作権はどうなりますか？</summary><p>納品物の利用条件は契約時に確認します。外部素材やフォントは各ライセンス条件に従います。</p></details>
-          <details><summary>支払い方法は？</summary><p>銀行振込など、個別の契約時に確認します。</p></details>
-          <details><summary>解約・キャンセルはできますか？</summary><p>制作着手前後で条件が変わるため、お見積り時にキャンセル・返金条件を明記します。</p></details>
-          <details><summary>AIを使うと品質は大丈夫ですか？</summary><p>AIは下調べや工程効率化のために使います。構成、文章、デザイン、公開前チェックはエンジニアが責任を持って確認します。</p></details>
-        </div>
-      </div>
-    </section>
-
-    <section class="section muted" id="company">
-      <div class="inner split">
-        <div>
-          <p class="label">Company</p>
-          <h2>会社概要</h2>
-          <p>小規模店舗・個人事業主のWeb導線づくりを、丁寧に支援します。</p>
-        </div>
-        <div class="company-table">
-          <dl><dt>会社名</dt><dd>株式会社MORIKA</dd></dl>
-          <dl><dt>代表者名</dt><dd>森安 真理奈</dd></dl>
-          <dl><dt>設立</dt><dd>2026年</dd></dl>
-          <dl><dt>所在地</dt><dd>奈良県北葛城郡王寺町畠田8丁目1505-1</dd></dl>
-          <dl><dt>連絡先</dt><dd><a href="tel:07033403552">070-3340-3552</a> / <a href="mailto:info@morika.work">info@morika.work</a></dd></dl>
-          <dl><dt>事業内容</dt><dd>LP/HP制作、Googleマップ（MEO）改善、Web導線設計</dd></dl>
-        </div>
-      </div>
-    </section>
-  </main>
-
-  <section class="contact" id="contact">
-    <div class="inner contact-inner">
-      <p class="label">Contact</p>
-      <h2>まずは無料でご相談ください</h2>
-      <p>LPを作るべきか、HPが必要か。今のページを見ながら改善点をお伝えします。</p>
-      <div class="contact-buttons">
-        <a class="button primary track-link" data-conversion="line" href="https://line.me/R/ti/p/@015vzsdb" target="_blank" rel="noopener">LINEで無料相談</a>
-        <a class="button secondary track-link" data-conversion="booking" href="https://calendly.com/morika/30min" target="_blank" rel="noopener">30分のオンライン相談を予約</a>
-        <a class="button secondary track-link" data-conversion="tel" href="tel:07033403552">電話 070-3340-3552</a>
-        <a class="button secondary track-link" data-conversion="mail" href="mailto:info@morika.work?subject=無料相談について">メールする</a>
-        <a class="button secondary instagram-link track-link" data-conversion="instagram" href="#" target="_blank" rel="noopener noreferrer" data-instagram-link>Instagram</a>
-      </div>
+    <div class="badges" data-anim>
+      <div><span class="k">明朗な制作費</span><span class="v num"><b data-to="98000">0</b><small>円〜</small></span></div>
+      <div><span class="k">初稿の目安</span><span class="v num">7-14<small>営業日</small></span></div>
+      <div><span class="k">運用サポート</span><span class="v num"><b data-to="5000">0</b><small>円／月〜</small></span></div>
     </div>
-  </section>
-
-  <footer class="site-footer">
-    <div class="inner footer-inner">
-      <div>
-        <strong>株式会社MORIKA</strong>
-        <p>代表 森安 真理奈 / 2026年設立</p>
-        <p>奈良県北葛城郡王寺町畠田8丁目1505-1</p>
-        <p>070-3340-3552 / info@morika.work</p>
-      </div>
-      <div class="footer-links">
-        <a href="#company">会社概要</a>
-        <a href="legal.html">特定商取引法に基づく表記</a>
-        <a href="privacy.html">プライバシーポリシー</a>
-        <a class="instagram-link" href="#" target="_blank" rel="noopener noreferrer" data-instagram-link>Instagram</a>
-      </div>
-    </div>
-    <p class="copyright">© 株式会社MORIKA</p>
-    <p class="build-mark">build: morika-2026-06-30-readable</p>
-  </footer>
-
-  <div class="cookie-banner" id="cookie-banner" hidden>
-    <p>サイト改善と広告効果測定のため、Cookie等を利用する場合があります。</p>
-    <button type="button" id="cookie-accept">同意する</button>
   </div>
-  <script>
-    window.siteConfig = {
-      instagramUrl: "https://www.instagram.com/morika.work/"
-    };
-  </script>
-  <script src="script.js"></script>
+  <span class="scrollhint">SCROLL</span>
+</header>
+
+<div class="mq"><div class="t">
+  <span>美容室・サロン</span><span>整体・治療院</span><span>飲食店</span><span>士業</span><span>住宅サービス</span><span>農業</span><span>スポーツ</span><span>小売</span><span>Googleマップ改善</span><span>SNS導線設計</span>
+  <span>美容室・サロン</span><span>整体・治療院</span><span>飲食店</span><span>士業</span><span>住宅サービス</span><span>農業</span><span>スポーツ</span><span>小売</span><span>Googleマップ改善</span><span>SNS導線設計</span>
+</div></div>
+
+<!-- こんな方へ -->
+<section class="alt">
+  <div class="wrap">
+    <div class="head">
+      <p class="eyebrow" data-anim>01 — For you</p>
+      <h2><span class="ln"><i>こんな方へ。</i></span></h2>
+      <p data-anim>集客の入口はあるのに、問い合わせや予約につながらない。その状態を整理するところから始めます。</p>
+    </div>
+    <div class="g4">
+      <div class="cell" data-anim><span class="no num">01</span><h3>見られているのに予約がない</h3><p>GoogleマップやSNSから来た人が、次に何をすればよいか分かる導線に整えます。</p></div>
+      <div class="cell" data-anim><span class="no num">02</span><h3>料金・場所が伝わっていない</h3><p>初めてのお客様が不安に感じる情報を、スマホで見やすくまとめます。</p></div>
+      <div class="cell" data-anim><span class="no num">03</span><h3>古いHPを直したい</h3><p>今の印象を崩している文章・構成・表示を、必要な範囲から改善します。</p></div>
+      <div class="cell" data-anim><span class="no num">04</span><h3>何から始めればいいか分からない</h3><p>LP、HP、Googleマップ、SNSのどこを優先するか一緒に判断します。</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- できること -->
+<section>
+  <div class="wrap">
+    <div class="head">
+      <p class="eyebrow" data-anim>02 — What we do</p>
+      <h2><span class="ln"><i>できること。</i></span></h2>
+      <p data-anim>作って終わりではなく、見た人が問い合わせ・予約へ進める情報設計まで整えます。</p>
+    </div>
+    <div class="g4">
+      <div class="cell" data-anim><span class="no num">01</span><h3>LP制作</h3><p>1枚で魅力と導線を完結。問い合わせ・予約につなげます。</p></div>
+      <div class="cell" data-anim><span class="no num">02</span><h3>ホームページ制作</h3><p>会社・店舗の信頼を伝える基本のHPを制作します。</p></div>
+      <div class="cell" data-anim><span class="no num">03</span><h3>Googleマップ改善</h3><p>プロフィール整備・写真・口コミ対応で来店導線を強化します。</p></div>
+      <div class="cell" data-anim><span class="no num">04</span><h3>SNS→問い合わせ導線設計</h3><p>InstagramやLINEから予約・相談までつなげます。</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- サンプル -->
+<section class="alt" id="samples">
+  <div class="wide">
+    <div class="head">
+      <p class="eyebrow" data-anim>03 — Samples</p>
+      <h2><span class="ln"><i>つくりたい空気感から、</i></span><span class="ln"><i>選んでください。</i></span></h2>
+      <p data-anim>実績が少ない業種は、完成イメージを確認できるサンプルとして掲載しています。近いと感じたものを選んでいただければ、そこから御社の内容に合わせて設計します。</p>
+    </div>
+    <div class="filters" data-anim>
+      <button class="chip" aria-pressed="true" data-v="all">すべて</button>
+      <button class="chip" data-v="lp">LP</button>
+      <button class="chip" data-v="hp">ホームページ</button>
+      <span class="count"><b class="num" id="cnt">9</b> 件</span>
+    </div>
+    <div class="grid" id="grid"></div>
+    <p class="empty" id="empty" hidden>該当するサンプルがありません。</p>
+  </div>
+</section>
+
+<!-- 実績 -->
+<section id="works">
+  <div class="wrap">
+    <div class="head">
+      <p class="eyebrow" data-anim>04 — Works</p>
+      <h2><span class="ln"><i>制作実績。</i></span></h2>
+      <p data-anim>実際に制作・運用しているサイトのみを掲載します。上のサンプルとは区別して、正直に表示します。</p>
+    </div>
+    <div class="work">
+      <div class="clip"><div class="shot" id="shot">
+        <div class="bar"><i></i><i></i><i></i><u>cocohoreone.jp</u></div>
+        <div class="view">
+          <img data-para src="./images/works-cocohoreone.jpg" alt="オンラインガチャ ココホレ・ワンのサイト画面" loading="lazy"
+               onerror="document.getElementById('shot').classList.add('no-img')">
+          <div class="fb">
+            <img src="https://cocohoreone.jp/assets/brand/logo.png" alt="ココホレ・ワン ロゴ" loading="lazy">
+            <span>ONLINE GACHA SERVICE</span>
+          </div>
+        </div>
+      </div></div>
+      <div data-anim>
+        <span class="tag">制作・運用実績</span>
+        <h3>オンラインガチャ ココホレ・ワン</h3>
+        <p>オンライン販売・会員導線を含むWebサービスの制作・運用実績です。決済から発送までを含む運用を、自社で継続しています。</p>
+        <a class="btn btn-s" href="https://cocohoreone.jp/">サイトを見る</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 理念 -->
+<section class="philo" id="philosophy">
+  <div class="wrap">
+    <p class="eyebrow" data-anim>05 — Philosophy</p>
+    <p class="creed">
+      <span class="ln"><i>小さな商いの、</i></span>
+      <span class="ln"><i>はじめの一歩を<em>軽く</em>する。</i></span>
+    </p>
+    <p class="said" data-anim>Webに数十万円をかけられる会社は、そう多くありません。けれど、お客様に見つけてもらえなければ、良いお店も良い仕事も届かない。その最初の一歩が重すぎることが、地方の小さな商いにとって一番の壁だと考えています。だから私たちは、価格ではなく工程を削りました。</p>
+
+    <div class="creeds">
+      <div class="cell" data-anim>
+        <span class="kanji">正 直</span>
+        <h3>書けないことは、書かない。</h3>
+        <p>実績とサンプルを分けて表示するのも、別料金になる項目を先にお伝えするのも、そのためです。あとから話が変わることを、いちばん避けたいと考えています。</p>
+      </div>
+      <div class="cell" data-anim>
+        <span class="kanji">明 朗</span>
+        <h3>値段には、理由をつける。</h3>
+        <p>安さを売りにするのではなく、なぜその金額になるのかを説明できる状態にしておく。削ったのは作業時間であって、品質ではありません。</p>
+      </div>
+      <div class="cell" data-anim>
+        <span class="kanji">継 続</span>
+        <h3>つくって終わりにしない。</h3>
+        <p>公開した日がスタートです。見られているか、問い合わせにつながっているか。そこまで一緒に見ていける距離感でお付き合いします。</p>
+      </div>
+    </div>
+
+    <div class="msg" data-anim>
+      <span class="lbl">Message</span>
+      <div>
+        <p>Webの仕事をしていると、「何を頼めばいいのか分からない」という声を本当によく聞きます。専門用語で見積もりを出されて、金額の妥当性も判断できないまま契約してしまう。そういう経験をされた方に、何度もお会いしてきました。</p>
+        <p>だから私たちは、まず今の状況を一緒に見るところから始めます。作らないほうがいい場合は、そうお伝えします。奈良の小さな会社ですが、目の前の一件を丁寧に積み上げていくことだけは、これからも変えずにいたいと思っています。</p>
+        <p class="sign"><span>株式会社MORIKA 代表取締役</span>森安 真理奈</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ★署名セクション -->
+<section class="why" id="why" style="padding:0">
+  <div class="why-track" id="whyTrack">
+    <div class="why-pin">
+      <div class="wrap" style="width:100%">
+        <p class="eyebrow" data-anim>06 — Why affordable</p>
+        <h2 style="margin:var(--sp-4) 0"><span class="ln"><i>安いのには、理由があります。</i></span></h2>
+        <p class="lead" data-anim>エンジニアによる設計と、AIによる工程の効率化。削ったのは作業時間であって、構成・デザイン・品質ではありません。</p>
+
+        <div class="bars">
+          <div class="bar">
+            <div class="lbl"><span>一般的なLP制作の参考相場</span>
+              <span class="amt"><span class="num">550,000</span><small>円</small></span></div>
+            <div class="track"><div class="fill market"></div></div>
+          </div>
+          <div class="bar">
+            <div class="lbl"><span>MORIKA ライトLP</span>
+              <span class="amt"><span class="num" id="numB">550,000</span><small>円〜</small></span></div>
+            <div class="track"><div class="fill ours" id="fillB"></div></div>
+          </div>
+        </div>
+
+        <div class="foot">
+          <p>削ったのは、見積り・打ち合わせ・下調べ・初稿作成にかかっていた時間です。ここをエンジニアとAIで圧縮しました。</p>
+          <p>削っていないのは、構成の設計、文章、デザイン、公開前チェック。ここは人の目で仕上げます。AIに丸投げはしません。</p>
+        </div>
+        <p class="note">※金額は一般的な市場相場の参考値です。内容・規模により変わります。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 選ばれる理由 -->
+<section>
+  <div class="wrap">
+    <div class="head">
+      <p class="eyebrow" data-anim>07 — Reasons</p>
+      <h2><span class="ln"><i>選ばれる理由。</i></span></h2>
+    </div>
+    <div class="g4">
+      <div class="cell" data-anim><span class="no num">01</span><h3>AI＋エンジニアで効率化</h3><p>作業工程を効率化しながら、構成・デザイン・品質は人の目で仕上げます。</p></div>
+      <div class="cell" data-anim><span class="no num">02</span><h3>成果から逆算した導線</h3><p>問い合わせ・予約に必要な情報を整理し、迷いにくいページ構成にします。</p></div>
+      <div class="cell" data-anim><span class="no num">03</span><h3>スマホ最適・表示速度</h3><p>スマホで見やすく、読み込みやすい設計を前提に制作します。</p></div>
+      <div class="cell" data-anim><span class="no num">04</span><h3>公開後もサポート</h3><p>公開後の表示確認や軽微な調整まで、落ち着いて進めます。</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- 流れ -->
+<section class="alt" id="flow">
+  <div class="wrap narrow">
+    <div class="head">
+      <p class="eyebrow" data-anim>08 — Flow</p>
+      <h2><span class="ln"><i>制作の流れ。</i></span></h2>
+      <p data-anim>ご準備いただくのは、伝えたいことのメモだけで構いません。文章はこちらで整えます。</p>
+    </div>
+    <ol class="flow" id="flow">
+      <span class="rail"><i id="rail"></i></span>
+      <li data-anim><span class="dot num">01</span><div><span class="when">当日〜2営業日</span><h3>無料相談</h3><p>LPかHPか、今どこを優先すべきかを確認します。</p></div></li>
+      <li data-anim><span class="dot num">02</span><div><span class="when">1〜3営業日</span><h3>ヒアリング</h3><p>強み、料金、写真、予約方法を整理します。</p></div></li>
+      <li data-anim><span class="dot num">03</span><div><span class="when">1〜3営業日</span><h3>お見積り</h3><p>制作範囲、納期、修正回数を明確にします。</p></div></li>
+      <li data-anim><span class="dot num">04</span><div><span class="when">7〜14営業日</span><h3>制作</h3><p>構成・文章・デザインをまとめて作成します。</p></div></li>
+      <li data-anim><span class="dot num">05</span><div><span class="when">2〜5営業日</span><h3>ご確認・修正</h3><p>内容確認後、必要な修正を反映します。</p></div></li>
+      <li data-anim><span class="dot num">06</span><div><span class="when">1〜2営業日</span><h3>公開</h3><p>スマホ表示やリンクを確認して公開します。</p></div></li>
+      <li data-anim><span class="dot num">07</span><div><span class="when">公開後7日間</span><h3>公開後サポート</h3><p>表示崩れやリンク確認など、軽微な調整に対応します。</p></div></li>
+    </ol>
+  </div>
+</section>
+
+<!-- 料金 -->
+<section id="price">
+  <div class="wrap">
+    <div class="head">
+      <p class="eyebrow" data-anim>09 — Price</p>
+      <h2><span class="ln"><i>料金。</i></span></h2>
+      <p data-anim>表示価格は税抜です。追加・別料金になる項目は、制作前に必ずお伝えします。</p>
+    </div>
+    <div class="plans">
+      <article class="plan" data-anim>
+        <span class="rec">LIGHT LP</span>
+        <p class="amt num">98,000<small>円〜</small></p>
+        <p>1枚・シンプル構成。まず1本、広告やSNSの受け皿を作りたい方へ。</p>
+        <ul><li>1枚構成のLP</li><li>スマホ最適化</li><li>基本構成・問い合わせ導線</li><li>公開サポート</li><li>修正2回</li></ul>
+      </article>
+      <article class="plan" data-anim data-rec>
+        <span class="rec">STANDARD LP ／ おすすめ</span>
+        <p class="amt num">198,000<small>円〜</small></p>
+        <p>文章づくりから任せたい方へ。ほとんどの方がこちらを選ばれます。</p>
+        <ul><li>ライトLPの内容すべて</li><li>オリジナル構成</li><li>取材・文章作成</li><li>スクロール連動アニメーション</li><li>料金・アクセス・予約導線の設計</li></ul>
+      </article>
+      <article class="plan" data-anim>
+        <span class="rec">WEBSITE</span>
+        <p class="amt num">248,000<small>円〜</small></p>
+        <p>会社・店舗サイト向け。複数ページで信頼情報と相談導線を整えます。</p>
+        <ul><li>複数ページ構成</li><li>会社・店舗情報の整理</li><li>お問い合わせフォーム</li><li>公開サポート</li></ul>
+      </article>
+    </div>
+    <div class="monthly" data-anim>
+      <span class="rec eyebrow">Monthly</span>
+      <span class="amt num">5,000<small>円／月〜</small></span>
+      <p>Googleマップ改善、保守、軽微な更新、運用相談。内容に応じて個別にお見積りします。</p>
+    </div>
+    <p class="note" data-anim>LP制作には、スマホ最適化、構成・文章作成、料金・アクセス・予約導線、公開サポートを含みます。写真撮影、ロゴ制作、追加ページ、大幅なデザイン変更、広告費、外部有料ツール費は別途お見積りです。</p>
+  </div>
+</section>
+
+<!-- 安心 -->
+<section class="alt">
+  <div class="wrap">
+    <div class="head">
+      <p class="eyebrow" data-anim>10 — Assurance</p>
+      <h2><span class="ln"><i>安心して依頼できるように。</i></span></h2>
+    </div>
+    <div class="g4">
+      <div class="cell" data-anim><span class="no num">01</span><h3>修正対応</h3><p>公開前の軽微な修正は2回まで基本料金に含みます。大幅な構成変更は事前にお見積りします。</p></div>
+      <div class="cell" data-anim><span class="no num">02</span><h3>納品データ・著作権</h3><p>納品物の利用範囲は契約時に確認します。外部素材やフォントは各ライセンス条件に従います。</p></div>
+      <div class="cell" data-anim><span class="no num">03</span><h3>公開後サポート</h3><p>公開後7日間を目安に、表示崩れやリンク確認など軽微な調整に対応します。</p></div>
+      <div class="cell" data-anim><span class="no num">04</span><h3>キャンセル・返金</h3><p>制作着手前後で条件が変わるため、お見積り時にキャンセル・返金条件を明記します。</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section class="faq">
+  <div class="wrap narrow">
+    <div class="head">
+      <p class="eyebrow" data-anim>11 — FAQ</p>
+      <h2><span class="ln"><i>よくあるご質問。</i></span></h2>
+    </div>
+    <div data-anim>
+      <details><summary>納期はどれくらいですか？</summary><p class="a">素材がそろってから、LPは7〜14営業日が初稿の目安です。内容量や確認状況により変動します。</p></details>
+      <details><summary>修正は何回できますか？</summary><p class="a">LP制作では2回までを基本料金に含みます。大幅な構成変更や追加ページは別途お見積りです。</p></details>
+      <details><summary>写真やロゴは用意が必要ですか？</summary><p class="a">手元にない場合も相談できます。写真撮影や素材選定、ロゴ制作が必要な場合は事前に費用を明示します。</p></details>
+      <details><summary>データや著作権はどうなりますか？</summary><p class="a">納品物の利用条件は契約時に確認します。外部素材やフォントは各ライセンス条件に従います。</p></details>
+      <details><summary>支払い方法は？</summary><p class="a">銀行振込など、個別の契約時に確認します。</p></details>
+      <details><summary>解約・キャンセルはできますか？</summary><p class="a">制作着手前後で条件が変わるため、お見積り時にキャンセル・返金条件を明記します。</p></details>
+      <details><summary>AIを使うと品質は大丈夫ですか？</summary><p class="a">AIは下調べや工程効率化のために使います。構成、文章、デザイン、公開前チェックはエンジニアが責任を持って確認します。</p></details>
+    </div>
+  </div>
+</section>
+
+<!-- 会社概要 -->
+<section id="company">
+  <div class="wrap narrow">
+    <div class="head">
+      <p class="eyebrow" data-anim>12 — Company</p>
+      <h2><span class="ln"><i>会社概要。</i></span></h2>
+      <p data-anim>小規模店舗・個人事業主のWeb導線づくりを、丁寧に支援します。</p>
+    </div>
+    <dl class="dl" data-anim>
+      <div><dt>会社名</dt><dd>株式会社MORIKA</dd></div>
+      <div><dt>代表者名</dt><dd>森安 真理奈</dd></div>
+      <div><dt>設立</dt><dd>2026年</dd></div>
+      <div><dt>所在地</dt><dd>奈良県北葛城郡王寺町畠田8丁目1505-1</dd></div>
+      <div><dt>連絡先</dt><dd><a href="tel:07033403552">070-3340-3552</a> ／ <a href="mailto:info@morika.work">info@morika.work</a></dd></div>
+      <div><dt>事業内容</dt><dd>LP/HP制作、Googleマップ（MEO）改善、Web導線設計</dd></div>
+    </dl>
+  </div>
+</section>
+
+<!-- contact -->
+<section class="contact" id="contact">
+  <span class="glow"></span>
+  <div class="wrap"><div class="inr">
+    <p class="eyebrow" data-anim>Contact</p>
+    <h2><span class="ln"><i>まずは、今のページを</i></span><span class="ln"><i>見せてください。</i></span></h2>
+    <p data-anim>LPを作るべきか、HPが必要か。今のページを見ながら改善点をお伝えします。ここまでは無料です。無理におすすめすることはありません。</p>
+    <div class="acts" data-anim>
+      <a class="btn btn-p" href="https://line.me/R/ti/p/@015vzsdb">LINEで無料相談（1分）</a>
+      <a class="btn btn-s" href="https://calendly.com/morika/30min">30分のオンライン相談を予約</a>
+      <a class="btn btn-t" href="mailto:info@morika.work?subject=無料相談について">メールで相談する</a>
+    </div>
+  </div></div>
+</section>
+
+<footer>
+  <div class="wrap row">
+    <div><strong>株式会社MORIKA</strong><br>代表 森安 真理奈 ／ 2026年設立<br>
+      奈良県北葛城郡王寺町畠田8丁目1505-1<br>070-3340-3552 ／ info@morika.work</div>
+    <ul>
+      <li><a href="#company">会社概要</a></li>
+      <li><a href="./legal.html">特定商取引法に基づく表記</a></li>
+      <li><a href="./privacy.html">プライバシーポリシー</a></li>
+      <li><a href="#">Instagram</a></li>
+    </ul>
+  </div>
+  <div class="wrap" style="margin-top:var(--sp-5)">© 株式会社MORIKA</div>
+</footer>
+
+<nav class="sticky">
+  <a class="tel" href="tel:07033403552">電話で相談</a>
+  <a class="line" href="https://line.me/R/ti/p/@015vzsdb">LINEで無料相談</a>
+</nav>
+
+<!-- 慣性スクロールは任意。読めなくても他は全て動く -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/lenis/1.1.13/lenis.min.js"></script>
+<script>
+(function(){
+'use strict';
+const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const isSP=matchMedia('(max-width:768px)').matches;
+if(reduce)document.documentElement.classList.add('no-motion');
+
+/* ---------- ギャラリー ---------- */
+const B='./';
+const DATA=[
+ {t:"美容室・サロン向けLP",d:"美容室／ネイル／エステの予約LP。",k:"lp",u:B+"salon-lp.html",tags:["美容室","予約導線"],c:["#FBFAF8","#F1EDE7","#A8785A","#262220"]},
+ {t:"整体・治療院向けLP",d:"初回予約につなげる不安解消LP。",k:"lp",u:B+"clinic-lp.html",tags:["整体・治療院","不安解消"],c:["#FFFFFF","#F2F6F8","#2E7E9B","#1C2A33"]},
+ {t:"飲食店向けLP",d:"写真とメニューで来店につなげる。",k:"lp",u:B+"restaurant-lp.html",tags:["飲食店","写真主役"],c:["#FDFAF5","#F0E4D2","#B4552E","#2A211A"]},
+ {t:"士業向けHP",d:"信頼・料金・相談導線を整える。",k:"hp",u:B+"professional-hp.html",tags:["士業","信頼設計"],c:["#FFFFFF","#EFF1F5","#2E4560","#171C24"]},
+ {t:"住宅サービス向けHP",d:"施工事例から見積もりへ。",k:"hp",u:B+"home-service-hp.html",tags:["住宅","施工事例"],c:["#FAF9F6","#E6E3DA","#6E7B52","#252A20"]},
+ {t:"汎用サービスLP",d:"業種を問わない基本LP。",k:"lp",u:B+"general-lp.html",tags:["汎用","基本構成"],c:["#FFFFFF","#EFEFEF","#4A4A48","#1B1B1A"]},
+ {t:"農業向けHP",d:"作物の魅力・直販・取引相談。",k:"hp",u:B+"agriculture-hp.html",tags:["農業","直販"],c:["#F9F8F2","#E3E9D6","#5E8447","#232B1E"]},
+ {t:"スポーツ向けLP",d:"体験申込・入会相談。",k:"lp",u:B+"sports-lp.html",tags:["スポーツ","体験申込"],c:["#FFFFFF","#ECF1F0","#12796B","#141F1D"]},
+ {t:"小売向けLP",d:"商品・来店・購入導線。",k:"lp",u:B+"retail-lp.html",tags:["小売","購入導線"],c:["#FFFDF7","#FAEEDA","#C1832A","#2B2418"]},
+];
+const mock=c=>'<div class="mock"><div class="fvm" style="background:linear-gradient(160deg,'+c[1]+','+c[0]+')">'
+ +'<span class="t s" style="background:'+c[3]+'"></span><span class="t l" style="background:'+c[3]+'"></span>'
+ +'<span class="t m" style="background:'+c[3]+'"></span><span class="btnm" style="background:'+c[2]+'"></span></div>'
+ +'<div class="body" style="background:'+c[0]+'"><span class="band w2" style="background:'+c[3]+'"></span>'
+ +'<span class="band w1" style="background:'+c[3]+'"></span><span class="band w3" style="background:'+c[3]+'"></span>'
+ +'<div class="cards"><i style="background:'+c[2]+'"></i><i style="background:'+c[2]+'"></i><i style="background:'+c[2]+'"></i></div>'
+ +'<span class="strip" style="background:'+c[3]+'"></span></div></div>';
+
+const grid=document.getElementById('grid');
+grid.innerHTML=DATA.map(d=>'<a class="card" data-anim data-k="'+d.k+'" href="'+d.u+'">'
+ +'<div class="thumb"><div class="inner">'+mock(d.c)+'</div><div class="ov"><span>サンプルを見る</span></div></div>'
+ +'<div class="info"><h3>'+d.t+'</h3><p style="font-size:.875rem;color:var(--ink-sub);margin-top:4px">'+d.d+'</p>'
+ +'<div class="tags">'+d.tags.map(x=>'<i>'+x+'</i>').join('')+'</div>'
+ +'<div class="sw">'+d.c.map(x=>'<b style="background:'+x+'"></b>').join('')+'</div></div></a>').join('');
+
+document.querySelector('.filters').addEventListener('click',e=>{
+  const b=e.target.closest('.chip'); if(!b)return;
+  document.querySelectorAll('.filters .chip').forEach(x=>x.setAttribute('aria-pressed','false'));
+  b.setAttribute('aria-pressed','true');
+  const v=b.dataset.v; let n=0;
+  grid.querySelectorAll('.card').forEach(el=>{
+    const ok=(v==='all'||el.dataset.k===v);
+    el.classList.toggle('is-out',!ok); if(ok){n++;el.classList.add('in');}
+  });
+  document.getElementById('cnt').textContent=n;
+  document.getElementById('empty').hidden=n>0;
+});
+
+/* ---------- 出現アニメ（IntersectionObserver） ---------- */
+if(!reduce){
+  const io=new IntersectionObserver((es)=>{
+    es.forEach(e=>{
+      if(!e.isIntersecting)return;
+      const el=e.target;
+      const sibs=[...(el.parentElement?el.parentElement.children:[])].filter(x=>x.hasAttribute&&x.hasAttribute('data-anim'));
+      const i=Math.min(sibs.indexOf(el),4);
+      el.style.transitionDelay=(i>0?i*0.1:0)+'s';
+      el.classList.add('in');
+      io.unobserve(el);
+    });
+  },{rootMargin:'0px 0px -18% 0px'});
+  document.querySelectorAll('[data-anim]').forEach(el=>io.observe(el));
+
+  /* 見出しのマスク出現 */
+  const io2=new IntersectionObserver((es)=>{
+    es.forEach(e=>{
+      if(!e.isIntersecting)return;
+      const lns=[...e.target.querySelectorAll('.ln')];
+      lns.forEach((l,i)=>{l.querySelector('i').style.transitionDelay=(i*0.11)+'s';l.classList.add('in');});
+      io2.unobserve(e.target);
+    });
+  },{rootMargin:'0px 0px -14% 0px'});
+  document.querySelectorAll('h1,h2').forEach(h=>{if(h.querySelector('.ln'))io2.observe(h)});
+
+  /* clip reveal */
+  const io3=new IntersectionObserver((es)=>{
+    es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io3.unobserve(e.target)}});
+  },{rootMargin:'0px 0px -15% 0px'});
+  document.querySelectorAll('.clip').forEach(el=>io3.observe(el));
+
+  /* FVは即時（LCP保護のため遅延させない） */
+  requestAnimationFrame(()=>{
+    document.querySelectorAll('#fv .ln').forEach((l,i)=>{
+      l.querySelector('i').style.transitionDelay=(i*0.1)+'s'; l.classList.add('in');
+    });
+    document.querySelectorAll('#fv [data-anim]').forEach((el,i)=>{
+      el.style.transitionDelay=(0.12+i*0.08)+'s'; el.classList.add('in');
+    });
+  });
+}else{
+  document.querySelectorAll('.ln').forEach(l=>l.classList.add('in'));
+}
+
+/* ---------- カウントアップ ---------- */
+const ease=t=>1-Math.pow(1-t,3);
+document.querySelectorAll('[data-to]').forEach(el=>{
+  const to=+el.dataset.to;
+  if(reduce){el.textContent=to.toLocaleString('ja-JP');return;}
+  let s=null;
+  const step=t=>{
+    if(!s)s=t;
+    const p=Math.min((t-s)/1400,1);
+    el.textContent=Math.round(to*ease(p)).toLocaleString('ja-JP');
+    if(p<1)requestAnimationFrame(step);
+  };
+  setTimeout(()=>requestAnimationFrame(step),400);
+});
+
+/* ---------- スクロール連動（自前スクラブ） ---------- */
+const prog=document.getElementById('prog');
+const nav=document.getElementById('nav');
+const whyTrack=document.getElementById('whyTrack');
+const fillB=document.getElementById('fillB');
+const numB=document.getElementById('numB');
+const rail=document.getElementById('rail');
+const flowEl=document.getElementById('flow');
+const paras=[...document.querySelectorAll('[data-para]')];
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+
+let ticking=false;
+function update(){
+  ticking=false;
+  const vh=innerHeight, y=scrollY||pageYOffset;
+
+  prog.style.width=(y/(document.documentElement.scrollHeight-vh)*100)+'%';
+  nav.classList.toggle('on',y>24);
+
+  if(!reduce){
+    /* 価格スクラブ */
+    if(whyTrack){
+      const r=whyTrack.getBoundingClientRect();
+      const total=r.height-vh;
+      const p=clamp(-r.top/total,0,1);
+      const e=p<.5?2*p*p:1-Math.pow(-2*p+2,2)/2;   /* easeInOut */
+      const w=100-e*82.2;
+      fillB.style.width=w+'%';
+      numB.textContent=Math.round(550000-(550000-98000)*e).toLocaleString('ja-JP');
+    }
+    /* 流れのレール */
+    if(flowEl&&rail){
+      const r=flowEl.getBoundingClientRect();
+      const p=clamp((vh*0.72-r.top)/r.height,0,1);
+      rail.style.height=(p*100)+'%';
+    }
+    /* パララックス（PCのみ） */
+    if(!isSP){
+      paras.forEach(el=>{
+        const r=el.getBoundingClientRect();
+        if(r.bottom<0||r.top>vh)return;
+        const p=(r.top+r.height/2-vh/2)/vh;
+        el.style.transform='translateY('+(p*-26)+'px)';
+      });
+    }
+  }
+}
+addEventListener('scroll',()=>{if(!ticking){ticking=true;requestAnimationFrame(update)}},{passive:true});
+addEventListener('resize',update);
+update();
+
+/* ---------- 慣性スクロール（任意・PCのみ） ---------- */
+if(!reduce&&!isSP&&window.Lenis){
+  const lenis=new Lenis({duration:1.15,smoothWheel:true});
+  const raf=t=>{lenis.raf(t);requestAnimationFrame(raf)};
+  requestAnimationFrame(raf);
+  lenis.on('scroll',update);
+}
+
+/* アンカーのスムーススクロール（Lenis無しでも動く） */
+document.querySelectorAll('a[href^="#"]').forEach(a=>{
+  a.addEventListener('click',e=>{
+    const id=a.getAttribute('href');
+    if(id.length<2)return;
+    const t=document.querySelector(id); if(!t)return;
+    e.preventDefault();
+    scrollTo({top:t.getBoundingClientRect().top+scrollY-60,behavior:reduce?'auto':'smooth'});
+  });
+});
+})();
+</script>
 </body>
 </html>
