@@ -36,7 +36,7 @@ NEXT_PUBLIC_BRAND=sneaker npm run dev
 ## 実装状況
 
 - [x] **P0** リポジトリ雛形・Supabaseスキーマ・`config/brand.ts`・デザイントークン・ホーム画面（モック）
-- [ ] P1 X OAuth接続
+- [x] **P1** X OAuth接続（`/api/connect/x`）・トークン暗号化保存・自動更新・`/connect` でプロフィール表示。テストモードは疑似接続
 - [ ] P2 投稿機能＋ガード
 - [ ] P3 受信リプ
 - [ ] P4 リプ周り（本命）

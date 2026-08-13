@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { BRAND, IS_TEST_MODE } from "@/config/brand";
 import {
   todayStats,
@@ -39,12 +40,13 @@ export default function Home() {
             <p className="text-sm text-[color:var(--muted)]">{today()}</p>
             <h1 className="font-serif text-2xl">{greeting()}</h1>
           </div>
-          <span
+          <Link
+            href="/connect"
             className="rounded-full px-3 py-1 text-xs font-medium text-white"
             style={{ background: BRAND.accent }}
           >
             @{BRAND.handle}
-          </span>
+          </Link>
         </div>
         <p className="mt-1 text-sm text-[color:var(--muted)]">{BRAND.tagline}</p>
         {IS_TEST_MODE && (
