@@ -32,8 +32,11 @@ export async function GET(req: NextRequest) {
       const profile = await getMe({ mode: "oauth1", oauth1: c });
       await upsertOAuth1Account(profile);
       return NextResponse.redirect(`${origin}/connect?connected=1`);
-    } catch {
-      return NextResponse.redirect(`${origin}/connect?error=oauth1`);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "oauth1";
+      return NextResponse.redirect(
+        `${origin}/connect?error=${encodeURIComponent(msg)}`
+      );
     }
   }
 

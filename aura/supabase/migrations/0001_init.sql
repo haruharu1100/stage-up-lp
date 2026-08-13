@@ -7,7 +7,7 @@ create extension if not exists "pgcrypto";
 -- 運用対象のXアカウント（1インスタンスに1〜2件）
 create table if not exists accounts (
   id uuid primary key default gen_random_uuid(),
-  handle text not null,               -- @なし
+  handle text not null unique,         -- @なし。handleで一意化（upsertのonConflict対象）
   display_name text,
   accent_color text,                  -- UI識別色。誤爆防止の要
   tone_profile jsonb,                 -- 口調・一人称・NGワード・絵文字量
