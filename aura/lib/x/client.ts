@@ -1,3 +1,6 @@
+import type { XCreds } from "./creds";
+import { oauth1Header } from "./oauth1";
+
 // X API v2 のプロフィール取得。
 export interface XProfile {
   id: string;
@@ -9,12 +12,19 @@ export interface XProfile {
   tweetCount: number;
 }
 
-// GET /2/users/me（有効なアクセストークンを渡す）
-export async function getMe(accessToken: string): Promise<XProfile> {
-  const url =
-    "https://api.twitter.com/2/users/me?user.fields=profile_image_url,public_metrics,name,username";
-  const res = await fetch(url, {
-    headers: { Authorization: `Bearer ${accessToken}` },
+// GET /2/users/me（認証方式に応じて Bearer / OAuth1.0a 署名を使い分ける）
+export async function getMe(creds: XCreds): Promise<XProfile> {
+  const baseUrl = "https://api.twitter.com/2/users/me";
+  const params = {
+    "user.fields": "profile_image_url,public_metrics,name,username",
+  };
+  const fullUrl = `${baseUrl}?${new URLSearchParams(params).toString()}`;
+  const authHeader =
+    creds.mode === "oauth2"
+      ? `Bearer ${creds.accessToken}`
+      : oauth1Header("GET", baseUrl, creds.oauth1, params);
+  const res = await fetch(fullUrl, {
+    headers: { Authorization: authHeader },
     cache: "no-store",
   });
   if (!res.ok) {

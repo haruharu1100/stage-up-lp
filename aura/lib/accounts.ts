@@ -1,6 +1,7 @@
 import { supabaseAdmin } from "./supabase";
 import { encrypt, decrypt } from "./crypto";
 import { refreshAccessToken, XTokenResponse } from "./x/oauth";
+import type { XProfile } from "./x/client";
 import { BRAND } from "@/config/brand";
 
 // accounts テーブルの行（section 3）
@@ -37,6 +38,31 @@ export async function upsertAccountTokens(
   const { data, error } = await db
     .from("accounts")
     .upsert(payload, { onConflict: "handle" })
+    .select()
+    .single();
+  if (error) throw new Error(`アカウント保存に失敗: ${error.message}`);
+  return data as AccountRow;
+}
+
+// OAuth1.0a（4点キー）方式の接続。鍵はenv管理のためDBにはトークンを保存せず、
+// プロフィール（handle/表示名/アクセント色）だけを登録する。handleで一意化。
+export async function upsertOAuth1Account(
+  profile: XProfile
+): Promise<AccountRow> {
+  const db = supabaseAdmin();
+  const { data, error } = await db
+    .from("accounts")
+    .upsert(
+      {
+        handle: profile.username,
+        display_name: profile.name,
+        accent_color: BRAND.accent,
+        x_access_token: null,
+        x_refresh_token: null,
+        x_token_expires_at: null,
+      },
+      { onConflict: "handle" }
+    )
     .select()
     .single();
   if (error) throw new Error(`アカウント保存に失敗: ${error.message}`);

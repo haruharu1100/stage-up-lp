@@ -1,4 +1,8 @@
 // X API v2 での投稿（POST /2/tweets）。スレッドは reply.in_reply_to_tweet_id で連結。
+// 認証方式に応じて Bearer(OAuth2) / OAuth1.0a 署名を使い分ける。
+
+import type { XCreds } from "./creds";
+import { oauth1Header } from "./oauth1";
 
 export interface CreatedTweet {
   id: string;
@@ -6,18 +10,24 @@ export interface CreatedTweet {
 }
 
 export async function createTweet(
-  accessToken: string,
+  creds: XCreds,
   text: string,
   replyToId?: string
 ): Promise<CreatedTweet> {
+  const url = "https://api.twitter.com/2/tweets";
   const body: Record<string, unknown> = { text };
   if (replyToId) {
     body.reply = { in_reply_to_tweet_id: replyToId };
   }
-  const res = await fetch("https://api.twitter.com/2/tweets", {
+  // JSONボディは OAuth1.0a 署名の対象外（extraParams なし）
+  const authHeader =
+    creds.mode === "oauth2"
+      ? `Bearer ${creds.accessToken}`
+      : oauth1Header("POST", url, creds.oauth1);
+  const res = await fetch(url, {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${accessToken}`,
+      Authorization: authHeader,
       "Content-Type": "application/json",
     },
     body: JSON.stringify(body),

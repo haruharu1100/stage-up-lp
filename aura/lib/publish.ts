@@ -7,7 +7,8 @@ import {
   logAction,
   getPost,
 } from "./posts";
-import { getAccountById, getValidAccessToken } from "./accounts";
+import { getAccountById } from "./accounts";
+import { getXCreds } from "./x/creds";
 import { createTweet } from "./x/post";
 import { genId } from "./store/testdb";
 
@@ -59,10 +60,10 @@ export async function publishPost(
   if (!account) return { published: false, reason: "アカウント未接続" };
 
   try {
-    const token = await getValidAccessToken(account);
+    const creds = await getXCreds(account);
     let replyTo: string | undefined;
     for (const p of chain) {
-      const created = await createTweet(token, p.body, replyTo);
+      const created = await createTweet(creds, p.body, replyTo);
       await updatePost(p.id, {
         status: "published",
         published_at: new Date().toISOString(),

@@ -47,7 +47,10 @@ export async function GET(req: NextRequest) {
 
   try {
     const token = await exchangeCode(code, verifier);
-    const profile = await getMe(token.access_token);
+    const profile = await getMe({
+      mode: "oauth2",
+      accessToken: token.access_token,
+    });
     await upsertAccountTokens(profile.username, profile.name, token);
 
     const res = NextResponse.redirect(

@@ -5,10 +5,15 @@ import {
   createPkce,
   randomState,
 } from "@/lib/x/oauth";
+import { xAuthMode, envOAuth1Creds } from "@/lib/x/creds";
+import { getMe } from "@/lib/x/client";
+import { upsertOAuth1Account } from "@/lib/accounts";
 import { COOKIE_STATE, COOKIE_VERIFIER } from "@/lib/x/session";
 
-// X接続の開始。PKCEを生成して認可画面へリダイレクトする。
-// テストモードでは外部に出ず、そのままコールバックへ回して疑似接続する。
+// X接続の開始。
+// テストモード：外部に出ず、そのままコールバックへ回して疑似接続する。
+// OAuth1.0a：envの4点キーで本人確認→アカウント登録（ブラウザ認可は不要）。
+// OAuth2：PKCEを生成して認可画面へリダイレクトする。
 export async function GET(req: NextRequest) {
   const origin = req.nextUrl.origin;
 
@@ -16,6 +21,20 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(
       `${origin}/api/connect/x/callback?test=1`
     );
+  }
+
+  if (xAuthMode() === "oauth1") {
+    const c = envOAuth1Creds();
+    if (!c) {
+      return NextResponse.redirect(`${origin}/connect?error=nokeys`);
+    }
+    try {
+      const profile = await getMe({ mode: "oauth1", oauth1: c });
+      await upsertOAuth1Account(profile);
+      return NextResponse.redirect(`${origin}/connect?connected=1`);
+    } catch {
+      return NextResponse.redirect(`${origin}/connect?error=oauth1`);
+    }
   }
 
   const state = randomState();
