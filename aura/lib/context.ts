@@ -20,11 +20,15 @@ export function defaultGuardSettings(accountId: string): GuardSettings {
   };
 }
 
-// 主に使う運用アカウントのIDを返す（テスト=固定、本番=先頭）
+// 主に使う運用アカウントのIDを返す。
+// テスト=固定。本番=この号機のブランド(BRAND.handle)に一致するアカウントを最優先で選ぶ。
+// これにより1つのDBを複数号機で共有しても、各号機は自分のブランドのアカウントだけを扱う
+// （accent色の取り違え＝誤爆を防ぐ）。一致が無い場合のみ先頭にフォールバック。
 export async function getPrimaryAccountId(): Promise<string | null> {
   if (IS_TEST_MODE) return TEST_ACCOUNT_ID;
   const accounts = await listAccounts();
-  return accounts[0]?.id ?? null;
+  const mine = accounts.find((a) => a.handle === BRAND.handle);
+  return (mine ?? accounts[0])?.id ?? null;
 }
 
 const GS_TABLE = "guard_settings";

@@ -17,6 +17,8 @@ export const env = {
   xAccessSecret: process.env.X_ACCESS_SECRET || "",
   // 明示指定したい場合のみ（"oauth1" | "oauth2"）。未指定なら鍵の有無で自動判定。
   xAuthMode: process.env.X_AUTH_MODE || "",
+  // AIによる返信下書き生成に使う
+  anthropicKey: process.env.ANTHROPIC_API_KEY || "",
 };
 
 export function requireEnv(keys: (keyof typeof env)[]): void {

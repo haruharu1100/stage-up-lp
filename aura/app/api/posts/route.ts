@@ -35,15 +35,24 @@ export async function POST(req: NextRequest) {
   }
 
   const sourceType: SourceType = json.source_type ?? "manual";
+  // 画像パス（配列）。先頭投稿へ添付する。ブランド方針：投稿は画像付き。
+  const mediaUrls: string[] | null = Array.isArray(json.media_urls)
+    ? json.media_urls.map((m: unknown) => String(m)).filter(Boolean)
+    : null;
 
-  const items: NewPost[] = cleaned.map((body) => ({
+  const items: NewPost[] = cleaned.map((body, i) => ({
     account_id: accountId,
     body,
     status,
     scheduled_at: scheduledAt,
     source_type: sourceType,
+    media_urls: i === 0 ? mediaUrls : null,
   }));
 
   const created = await createPosts(items);
-  return NextResponse.json({ ok: true, count: created.length });
+  return NextResponse.json({
+    ok: true,
+    count: created.length,
+    posts: created.map((p) => ({ id: p.id, status: p.status })),
+  });
 }

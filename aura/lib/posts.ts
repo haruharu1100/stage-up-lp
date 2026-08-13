@@ -1,7 +1,8 @@
 import { IS_TEST_MODE } from "@/config/brand";
 import { Post, PostStatus, SourceType, ActionLogEntry, ActionType } from "./types";
-import { readTable, writeTable, genId } from "./store/testdb";
+import { readTable, writeTable } from "./store/testdb";
 import { supabaseAdmin } from "./supabase";
+import crypto from "crypto";
 
 const POSTS = "posts";
 const LOG = "action_log";
@@ -15,17 +16,18 @@ export interface NewPost {
   thread_order?: number | null;
   source_type?: SourceType;
   source_ref?: string | null;
+  media_urls?: string[] | null;
 }
 
 function buildRow(p: NewPost): Post {
   const now = new Date().toISOString();
   return {
-    id: genId(),
+    id: crypto.randomUUID(),
     account_id: p.account_id,
     body: p.body,
     thread_parent_id: p.thread_parent_id ?? null,
     thread_order: p.thread_order ?? null,
-    media_urls: null,
+    media_urls: p.media_urls ?? null,
     status: p.status,
     scheduled_at: p.scheduled_at ?? null,
     published_at: null,
@@ -178,7 +180,7 @@ export async function logAction(
   targetRef: string | null
 ): Promise<void> {
   const entry: ActionLogEntry = {
-    id: genId(),
+    id: crypto.randomUUID(),
     account_id: accountId,
     action_type: actionType,
     executed_at: new Date().toISOString(),

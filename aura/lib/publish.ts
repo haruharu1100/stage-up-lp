@@ -10,7 +10,9 @@ import {
 import { getAccountById } from "./accounts";
 import { getXCreds } from "./x/creds";
 import { createTweet } from "./x/post";
+import { uploadMedia } from "./x/media";
 import { genId } from "./store/testdb";
+import fs from "fs";
 
 export interface PublishResult {
   published: boolean;
@@ -63,7 +65,19 @@ export async function publishPost(
     const creds = await getXCreds(account);
     let replyTo: string | undefined;
     for (const p of chain) {
-      const created = await createTweet(creds, p.body, replyTo);
+      // ローカルにある画像ファイルは media/upload してツイートに添付する
+      const mediaIds: string[] = [];
+      for (const m of (p.media_urls ?? []).slice(0, 4)) {
+        if (m && !/^https?:\/\//.test(m) && fs.existsSync(m)) {
+          mediaIds.push(await uploadMedia(creds, m));
+        }
+      }
+      const created = await createTweet(
+        creds,
+        p.body,
+        replyTo,
+        mediaIds.length ? mediaIds : undefined
+      );
       await updatePost(p.id, {
         status: "published",
         published_at: new Date().toISOString(),
