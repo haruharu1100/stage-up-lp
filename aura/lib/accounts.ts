@@ -43,6 +43,16 @@ export async function upsertAccountTokens(
   return data as AccountRow;
 }
 
+export async function getAccountById(id: string): Promise<AccountRow | null> {
+  const db = supabaseAdmin();
+  const { data } = await db
+    .from("accounts")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+  return (data as AccountRow) ?? null;
+}
+
 export async function listAccounts(): Promise<AccountRow[]> {
   const db = supabaseAdmin();
   const { data, error } = await db

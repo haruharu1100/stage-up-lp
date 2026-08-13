@@ -78,7 +78,7 @@ export interface Tile {
 }
 
 export const tiles: Tile[] = [
-  { key: "post", label: "ポスト投稿", href: "#" },
+  { key: "post", label: "ポスト投稿", href: "/post" },
   { key: "reply", label: "リプライ返信", href: "#", badge: pendingApprovals },
   { key: "around", label: "リプ周り", href: "#", badge: 5 },
   { key: "feed", label: "ネタ供給", href: "#" },
