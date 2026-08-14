@@ -308,6 +308,17 @@
           </label>
         </div>
 
+        <div class="try-row try-row-2">
+          <label class="try-field">
+            <span class="try-label">業種<span class="try-opt">（任意）</span></span>
+            <input type="text" id="try-genre" class="try-input" placeholder="例）美容室／整体／工務店／飲食店" autocomplete="off" />
+          </label>
+          <label class="try-field">
+            <span class="try-label">希望の雰囲気<span class="try-opt">（任意）</span></span>
+            <input type="text" id="try-tone" class="try-input" placeholder="例）あたたかく丁寧／さっぱり簡潔" autocomplete="off" />
+          </label>
+        </div>
+
         <label class="try-field">
           <span class="try-label" id="try-text-label">口コミ本文<span class="try-opt">（必須）</span></span>
           <textarea id="try-text" class="try-input try-textarea" rows="5" placeholder="お客様からいただいた口コミの本文を貼り付けてください。"></textarea>
@@ -644,6 +655,8 @@
   var textInput = document.getElementById('try-text');
   var shopInput = document.getElementById('try-shop');
   var starsInput = document.getElementById('try-stars');
+  var genreInput = document.getElementById('try-genre');
+  var toneInput = document.getElementById('try-tone');
   var submitBtn = document.getElementById('try-submit');
   var submitLabel = document.querySelector('.try-submit-label');
   var resultBox = document.getElementById('try-result');
@@ -726,6 +739,8 @@
 
     var payload = { type: currentType, shop: shopInput.value || '', text: text };
     if (TYPE_META[currentType].stars) payload.stars = starsInput.value;
+    if (genreInput && genreInput.value.trim()) payload.genre = genreInput.value.trim();
+    if (toneInput && toneInput.value.trim()) payload.tone = toneInput.value.trim();
 
     fetch('/api/reply', {
       method: 'POST',

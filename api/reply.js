@@ -92,10 +92,16 @@ const TYPES = {
 
 async function generate(type, ctx) {
   const t = TYPES[type];
+  // 業種・希望トーンが指定されていれば、お店らしい文体に寄せるヒントを先頭に足す（3案の形式は維持）
+  let content = t.user(ctx);
+  const extra = [];
+  if (ctx.genre) extra.push(`業種: ${ctx.genre}（この業種の言葉づかい・お客様層に合わせる。医療・美容・健康は効果の断定を避ける）`);
+  if (ctx.tone) extra.push(`希望する雰囲気: ${ctx.tone}（この雰囲気に寄せつつ、指定の3案フォーマットは必ず維持する）`);
+  if (extra.length) content = extra.join('\n') + '\n' + content;
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: { 'x-api-key': API_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
-    body: JSON.stringify({ model: MODEL, max_tokens: 1000, system: t.system, messages: [{ role: 'user', content: t.user(ctx) }] }),
+    body: JSON.stringify({ model: MODEL, max_tokens: 1000, system: t.system, messages: [{ role: 'user', content }] }),
   });
   if (!res.ok) {
     // ステータスのみ伝え、本文やキーは露出させない
@@ -132,7 +138,7 @@ module.exports = async (req, res) => {
     return;
   }
 
-  const { type, shop, stars } = body || {};
+  const { type, shop, stars, genre, tone } = body || {};
   let text = body && body.text;
 
   // ── バリデーション
@@ -153,10 +159,13 @@ module.exports = async (req, res) => {
     return;
   }
 
+  const clean = (v) => (typeof v === 'string' && v.trim()) ? v.trim().slice(0, 40) : '';
   const ctx = {
-    shop: (typeof shop === 'string' && shop.trim()) ? shop.trim() : 'お店',
+    shop: (typeof shop === 'string' && shop.trim()) ? shop.trim().slice(0, 60) : 'お店',
     stars: (stars == null) ? '' : String(stars),
     text: text.trim(),
+    genre: clean(genre),
+    tone: clean(tone),
   };
 
   try {
