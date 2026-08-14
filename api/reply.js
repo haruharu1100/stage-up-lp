@@ -39,6 +39,27 @@ const API_KEY = process.env.ANTHROPIC_API_KEY
   || envVal(path.join(ROOT, 'automation', '.env'), 'ANTHROPIC_API_KEY');
 const MODEL = 'claude-sonnet-4-6';
 
+// ── 簡易レート制限（無駄な課金・いたずら連打を防ぐベストエフォート）
+//    ※ サーバーレスはインスタンスごとにメモリが分かれるため完全ではない。
+//      本番の確実な上限は「AnthropicのSpend上限設定」やKV型の制限で別途担保すること。
+const RL_WINDOW_MS = 60 * 1000;  // 1分窓
+const RL_MAX = 8;                // 同一IPあたり 1分8回まで
+const RL_DAY_MAX = 300;          // 同一IPあたり 1日300回まで
+const rlHits = new Map();        // ip -> number[](リクエスト時刻)
+function rateLimited(ip) {
+  const now = Date.now();
+  const arr = (rlHits.get(ip) || []).filter((t) => now - t < 24 * 60 * 60 * 1000);
+  const inWindow = arr.filter((t) => now - t < RL_WINDOW_MS).length;
+  arr.push(now);
+  rlHits.set(ip, arr);
+  if (rlHits.size > 5000) { for (const k of rlHits.keys()) { rlHits.delete(k); if (rlHits.size <= 5000) break; } } // メモリ肥大の保険
+  return inWindow >= RL_MAX || arr.length > RL_DAY_MAX;
+}
+function clientIp(req) {
+  const xff = (req.headers && (req.headers['x-forwarded-for'] || req.headers['X-Forwarded-For'])) || '';
+  return String(xff).split(',')[0].trim() || (req.socket && req.socket.remoteAddress) || 'unknown';
+}
+
 // 出力の最終ガード（AIが万一やらかしても事業者を守る）
 const NG = ['必ず', '絶対', '日本一', '完治', '治ります', '100%', 'No.1', 'ナンバーワン', '最高峰', '確実に', '確実'];
 function ngCheck(text) { return NG.filter((w) => text.includes(w)); }
@@ -116,6 +137,12 @@ module.exports = async (req, res) => {
 
   if (req.method !== 'POST') {
     res.status(405).send(JSON.stringify({ ok: false, error: 'POSTのみ対応しています。' }));
+    return;
+  }
+
+  // いたずら連打・無駄な課金を防ぐ簡易レート制限
+  if (rateLimited(clientIp(req))) {
+    res.status(429).send(JSON.stringify({ ok: false, error: 'アクセスが集中しています。少し時間をおいて再度お試しください。' }));
     return;
   }
 
