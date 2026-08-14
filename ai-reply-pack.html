@@ -55,6 +55,7 @@
     <nav class="nav-desktop" aria-label="グローバルナビゲーション">
       <a href="#problem">悩み</a>
       <a href="#feature">できること</a>
+      <a href="#try">ためす</a>
       <a href="#safety">安全設計</a>
       <a href="#flow">導入の流れ</a>
       <a href="#pricing">料金</a>
@@ -71,6 +72,7 @@
   <div class="nav-mobile" id="nav-mobile" aria-hidden="true">
     <a href="#problem">悩み</a>
     <a href="#feature">できること</a>
+    <a href="#try">ためす</a>
     <a href="#safety">安全設計</a>
     <a href="#flow">導入の流れ</a>
     <a href="#pricing">料金</a>
@@ -270,6 +272,141 @@
   </div>
 </section>
 
+<!-- ======================== 実際にためす ======================== -->
+<section id="try" class="section">
+  <div class="container">
+    <header class="section-head">
+      <p class="kicker">Try It</p>
+      <h2 class="section-title">この場で、<span class="gold-text">返信案をためす</span></h2>
+      <p class="section-lead">口コミ・問い合わせ・クレームの文章を貼って、ボタンを押すだけ。トーン別の返信案を数秒で下書きします。</p>
+    </header>
+
+    <div class="try-card card">
+      <!-- 機能タブ -->
+      <div class="try-tabs" role="tablist" aria-label="返信の種類">
+        <button type="button" class="try-tab is-active" data-type="review" role="tab" aria-selected="true">Google口コミ</button>
+        <button type="button" class="try-tab" data-type="inquiry" role="tab" aria-selected="false">問い合わせ</button>
+        <button type="button" class="try-tab" data-type="complaint" role="tab" aria-selected="false">クレーム一次対応</button>
+      </div>
+
+      <!-- 入力フォーム -->
+      <div class="try-form">
+        <div class="try-row try-row-2">
+          <label class="try-field">
+            <span class="try-label">店名・会社名<span class="try-opt">（任意）</span></span>
+            <input type="text" id="try-shop" class="try-input" placeholder="例）美容室Bloom" autocomplete="off" />
+          </label>
+          <label class="try-field" id="try-stars-field">
+            <span class="try-label">★評価（1〜5）</span>
+            <select id="try-stars" class="try-input">
+              <option value="5">★★★★★（5）</option>
+              <option value="4">★★★★（4）</option>
+              <option value="3">★★★（3）</option>
+              <option value="2" selected>★★（2）</option>
+              <option value="1">★（1）</option>
+            </select>
+          </label>
+        </div>
+
+        <label class="try-field">
+          <span class="try-label" id="try-text-label">口コミ本文<span class="try-opt">（必須）</span></span>
+          <textarea id="try-text" class="try-input try-textarea" rows="5" placeholder="お客様からいただいた口コミの本文を貼り付けてください。"></textarea>
+        </label>
+
+        <div class="try-actions">
+          <button type="button" id="try-submit" class="btn-gold">
+            <span class="try-submit-label">返信案をつくる</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          </button>
+          <p class="try-hint">※ 最後は必ず担当者が内容を確認してから送信してください。</p>
+        </div>
+      </div>
+
+      <!-- 結果 -->
+      <div id="try-result" class="try-result" aria-live="polite" hidden></div>
+    </div>
+
+    <p class="section-lead" style="margin-top:20px;font-size:0.9rem;opacity:0.8;">
+      ※ 生成される文章はあくまで下書きです。表現・送信の最終判断は利用者が行うものとし、法令適合を保証するものではありません。
+    </p>
+  </div>
+</section>
+
+<!-- 実際にためす セクション用スタイル（既存トークンと調和） -->
+<style>
+  .try-card { max-width: 820px; margin: 0 auto; padding: 22px; }
+  @media (min-width: 768px) { .try-card { padding: 32px; } }
+  .try-tabs {
+    display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 22px;
+    border-bottom: 1px solid var(--white-15); padding-bottom: 16px;
+  }
+  .try-tab {
+    flex: 1 1 auto; min-width: 120px;
+    padding: 11px 14px; border-radius: 10px; cursor: pointer;
+    font-family: inherit; font-size: 0.92rem; font-weight: 600;
+    color: var(--white-70);
+    background: var(--ink-800);
+    border: 1px solid var(--white-15);
+    transition: all 0.18s ease;
+  }
+  .try-tab:hover { color: var(--gold-300); border-color: var(--gold-700); }
+  .try-tab.is-active {
+    color: var(--ink-950);
+    background: var(--gold-grad);
+    border-color: transparent;
+  }
+  .try-field { display: block; margin-bottom: 16px; }
+  .try-row-2 { display: grid; grid-template-columns: 1fr; gap: 16px; }
+  @media (min-width: 640px) { .try-row-2 { grid-template-columns: 2fr 1fr; } }
+  .try-row-2 .try-field { margin-bottom: 0; }
+  .try-label { display: block; margin-bottom: 7px; font-size: 0.88rem; font-weight: 600; color: var(--gold-300); }
+  .try-opt { color: var(--white-60); font-weight: 400; font-size: 0.82rem; margin-left: 4px; }
+  .try-input {
+    width: 100%; box-sizing: border-box;
+    padding: 12px 14px; border-radius: 10px;
+    font-family: inherit; font-size: 0.98rem; line-height: 1.6;
+    color: #fff;
+    background: var(--ink-900);
+    border: 1px solid var(--white-15);
+    transition: border-color 0.18s ease;
+  }
+  .try-input:focus { outline: none; border-color: var(--gold-400); }
+  .try-textarea { resize: vertical; min-height: 120px; }
+  select.try-input { appearance: none; -webkit-appearance: none; cursor: pointer; }
+  .try-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; margin-top: 20px; }
+  .try-hint { font-size: 0.82rem; color: var(--white-60); margin: 0; }
+  #try-submit[disabled] { opacity: 0.6; cursor: progress; }
+  .try-result { margin-top: 26px; }
+  .try-loading { display: flex; align-items: center; gap: 12px; color: var(--white-70); font-size: 0.95rem; }
+  .try-spinner {
+    width: 20px; height: 20px; border-radius: 50%;
+    border: 2px solid var(--white-15); border-top-color: var(--gold-400);
+    animation: try-spin 0.8s linear infinite;
+  }
+  @keyframes try-spin { to { transform: rotate(360deg); } }
+  .try-status { margin: 0 0 16px; padding: 11px 14px; border-radius: 10px; font-size: 0.9rem; font-weight: 600; }
+  .try-status.ok { color: var(--gold-100); background: rgba(212,175,55,0.10); border: 1px solid var(--gold-700); }
+  .try-status.warn { color: #ffd7a8; background: rgba(224,120,60,0.12); border: 1px solid rgba(224,120,60,0.5); }
+  .try-status.err { color: #ffb4b4; background: rgba(200,60,60,0.12); border: 1px solid rgba(200,60,60,0.5); }
+  .try-answer {
+    position: relative;
+    margin-bottom: 14px; padding: 16px 16px 14px;
+    border-radius: 12px;
+    background: var(--ink-800);
+    border: 1px solid var(--white-15);
+  }
+  .try-answer-tone { display: block; margin-bottom: 8px; font-size: 0.86rem; font-weight: 700; color: var(--gold-300); }
+  .try-answer-body { white-space: pre-wrap; line-height: 1.85; color: rgba(255,255,255,0.92); font-size: 0.97rem; }
+  .try-copy {
+    margin-top: 12px; padding: 7px 14px; border-radius: 8px; cursor: pointer;
+    font-family: inherit; font-size: 0.84rem; font-weight: 600;
+    color: var(--gold-300); background: transparent;
+    border: 1px solid var(--gold-700); transition: all 0.18s ease;
+  }
+  .try-copy:hover { color: var(--gold-100); border-color: var(--gold-400); }
+  .try-copy.copied { color: var(--ink-950); background: var(--gold-grad); border-color: transparent; }
+</style>
+
 <!-- ======================== 料金 ======================== -->
 <section id="pricing" class="section section-dark">
   <div class="container">
@@ -445,6 +582,7 @@
       <ul class="footer-menu">
         <li><a href="#problem">悩み</a></li>
         <li><a href="#feature">できること</a></li>
+        <li><a href="#try">ためす</a></li>
         <li><a href="#safety">安全設計</a></li>
         <li><a href="#flow">導入の流れ</a></li>
         <li><a href="#pricing">料金</a></li>
@@ -490,5 +628,141 @@
 </a>
 
 <script src="script.js" defer></script>
+
+<!-- ======================== 実際にためす（フォーム制御） ======================== -->
+<script>
+(function () {
+  var TYPE_META = {
+    review:    { textLabel: '口コミ本文', placeholder: 'お客様からいただいた口コミの本文を貼り付けてください。', stars: true },
+    inquiry:   { textLabel: '問い合わせ内容', placeholder: '受け取った問い合わせメールの内容を貼り付けてください。', stars: false },
+    complaint: { textLabel: 'クレーム内容', placeholder: '受け取ったクレームの内容を貼り付けてください。', stars: false }
+  };
+
+  var tabs = document.querySelectorAll('.try-tab');
+  var starsField = document.getElementById('try-stars-field');
+  var textLabel = document.getElementById('try-text-label');
+  var textInput = document.getElementById('try-text');
+  var shopInput = document.getElementById('try-shop');
+  var starsInput = document.getElementById('try-stars');
+  var submitBtn = document.getElementById('try-submit');
+  var submitLabel = document.querySelector('.try-submit-label');
+  var resultBox = document.getElementById('try-result');
+  var currentType = 'review';
+
+  if (!submitBtn) return;
+
+  function esc(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
+  function setType(type) {
+    currentType = type;
+    var meta = TYPE_META[type];
+    tabs.forEach(function (t) {
+      var on = t.getAttribute('data-type') === type;
+      t.classList.toggle('is-active', on);
+      t.setAttribute('aria-selected', on ? 'true' : 'false');
+    });
+    starsField.style.display = meta.stars ? '' : 'none';
+    textLabel.innerHTML = meta.textLabel + '<span class="try-opt">（必須）</span>';
+    textInput.setAttribute('placeholder', meta.placeholder);
+  }
+
+  tabs.forEach(function (t) {
+    t.addEventListener('click', function () { setType(t.getAttribute('data-type')); });
+  });
+
+  // 生成結果を「【トーン】本文」ごとに分割して整形
+  function renderAnswers(output) {
+    var frag = document.createElement('div');
+    // 【...】をトーン見出しとして分割
+    var parts = output.split(/(?=【)/).map(function (s) { return s.trim(); }).filter(Boolean);
+    if (parts.length === 0) parts = [output];
+    parts.forEach(function (p) {
+      var m = p.match(/^【([^】]+)】\s*([\s\S]*)$/);
+      var tone = m ? m[1] : '返信案';
+      var bodyText = (m ? m[2] : p).trim();
+      var wrap = document.createElement('div');
+      wrap.className = 'try-answer';
+      wrap.innerHTML =
+        '<span class="try-answer-tone">【' + esc(tone) + '】</span>' +
+        '<div class="try-answer-body">' + esc(bodyText) + '</div>' +
+        '<button type="button" class="try-copy">コピー</button>';
+      var btn = wrap.querySelector('.try-copy');
+      btn.addEventListener('click', function () {
+        var doCopied = function () {
+          btn.textContent = 'コピーしました';
+          btn.classList.add('copied');
+          setTimeout(function () { btn.textContent = 'コピー'; btn.classList.remove('copied'); }, 1600);
+        };
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(bodyText).then(doCopied, function () {});
+        } else {
+          var ta = document.createElement('textarea');
+          ta.value = bodyText; document.body.appendChild(ta); ta.select();
+          try { document.execCommand('copy'); doCopied(); } catch (e) {}
+          document.body.removeChild(ta);
+        }
+      });
+      frag.appendChild(wrap);
+    });
+    return frag;
+  }
+
+  submitBtn.addEventListener('click', function () {
+    var text = (textInput.value || '').trim();
+    resultBox.hidden = false;
+    if (!text) {
+      resultBox.innerHTML = '<p class="try-status err">本文を入力してください。</p>';
+      textInput.focus();
+      return;
+    }
+
+    submitBtn.disabled = true;
+    submitLabel.textContent = '作成中…';
+    resultBox.innerHTML = '<div class="try-loading"><span class="try-spinner"></span>AIが返信案を作成しています…</div>';
+
+    var payload = { type: currentType, shop: shopInput.value || '', text: text };
+    if (TYPE_META[currentType].stars) payload.stars = starsInput.value;
+
+    fetch('/api/reply', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    })
+    .then(function (r) { return r.json().then(function (j) { return { status: r.status, json: j }; }); })
+    .then(function (res) {
+      var j = res.json || {};
+      if (!j.ok) {
+        resultBox.innerHTML = '<p class="try-status err">' + esc(j.error || '生成に失敗しました。時間をおいて再度お試しください。') + '</p>';
+        return;
+      }
+      resultBox.innerHTML = '';
+      var ng = j.ngHits || [];
+      var status = document.createElement('p');
+      if (ng.length) {
+        status.className = 'try-status warn';
+        status.textContent = '⚠️ NG語チェック：「' + ng.join('・') + '」を検出しました。該当箇所は使わず、担当者が必ず修正してください。';
+      } else {
+        status.className = 'try-status ok';
+        status.textContent = '✅ NG語チェック：問題なし（景表法・医療広告に配慮）。最後は担当者が確認して送信してください。';
+      }
+      resultBox.appendChild(status);
+      resultBox.appendChild(renderAnswers(j.output || ''));
+    })
+    .catch(function () {
+      resultBox.innerHTML = '<p class="try-status err">通信エラーが発生しました。時間をおいて再度お試しください。</p>';
+    })
+    .then(function () {
+      submitBtn.disabled = false;
+      submitLabel.textContent = '返信案をつくる';
+    });
+  });
+
+  setType('review');
+})();
+</script>
 </body>
 </html>
