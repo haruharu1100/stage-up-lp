@@ -54,6 +54,7 @@ export const AUDIT_LABEL = {
   'report.settings': 'レポート設定の変更',
   'report.run': 'レポートの作成',
   'report.send': 'レポートの送信',
+  'ask.question': '言葉で聞ける検索',
   'tenant.cross_access_denied': '他店舗への不正アクセス試行',
 };
 
