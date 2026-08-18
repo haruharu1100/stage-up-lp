@@ -269,11 +269,70 @@ const MIGRATIONS = [
      created_at TEXT NOT NULL
    )`,
   `CREATE UNIQUE INDEX IF NOT EXISTS ux_daily_reports ON daily_reports(tenant_id, store_id, business_date, kind)`,
+
+  // ---- 仕込みと発注 ----
+  `CREATE TABLE IF NOT EXISTS ingredients (
+     id INTEGER PRIMARY KEY AUTOINCREMENT,
+     tenant_id INTEGER NOT NULL, store_id INTEGER NOT NULL,
+     name TEXT NOT NULL, unit TEXT NOT NULL DEFAULT 'g', category TEXT DEFAULT '',
+     unit_cost REAL DEFAULT 0, pack_name TEXT DEFAULT '', pack_qty REAL DEFAULT 0,
+     supplier TEXT DEFAULT '', lead_days INTEGER DEFAULT 1, min_stock REAL DEFAULT 0,
+     shelf_days INTEGER DEFAULT 0, note TEXT DEFAULT '', active INTEGER DEFAULT 1,
+     created_at TEXT NOT NULL, updated_at TEXT NOT NULL
+   )`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS ux_ingredients ON ingredients(tenant_id, store_id, name)`,
+  `CREATE TABLE IF NOT EXISTS recipe_lines (
+     id INTEGER PRIMARY KEY AUTOINCREMENT,
+     tenant_id INTEGER NOT NULL, store_id INTEGER NOT NULL,
+     item_id INTEGER NOT NULL, ingredient_id INTEGER NOT NULL,
+     qty REAL NOT NULL DEFAULT 0, created_at TEXT NOT NULL
+   )`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS ux_recipe_lines ON recipe_lines(tenant_id, store_id, item_id, ingredient_id)`,
+  `CREATE INDEX IF NOT EXISTS ix_recipe_ing ON recipe_lines(tenant_id, store_id, ingredient_id)`,
+  `CREATE TABLE IF NOT EXISTS stock_moves (
+     id INTEGER PRIMARY KEY AUTOINCREMENT,
+     tenant_id INTEGER NOT NULL, store_id INTEGER NOT NULL,
+     business_date TEXT NOT NULL, ingredient_id INTEGER NOT NULL,
+     kind TEXT NOT NULL, qty REAL NOT NULL DEFAULT 0, amount INTEGER DEFAULT 0,
+     reason TEXT DEFAULT '', staff_id INTEGER, staff_name TEXT DEFAULT '',
+     created_at TEXT NOT NULL
+   )`,
+  `CREATE INDEX IF NOT EXISTS ix_stock_moves ON stock_moves(tenant_id, store_id, ingredient_id, business_date)`,
+  `CREATE INDEX IF NOT EXISTS ix_stock_moves_date ON stock_moves(tenant_id, store_id, business_date, kind)`,
+  `CREATE TABLE IF NOT EXISTS order_plans (
+     id INTEGER PRIMARY KEY AUTOINCREMENT,
+     tenant_id INTEGER NOT NULL, store_id INTEGER NOT NULL,
+     business_date TEXT NOT NULL, target_from TEXT NOT NULL, target_to TEXT NOT NULL,
+     status TEXT NOT NULL DEFAULT 'draft', basis_json TEXT DEFAULT '', note TEXT DEFAULT '',
+     created_by TEXT DEFAULT '', decided_by TEXT DEFAULT '', decided_at TEXT DEFAULT '',
+     created_at TEXT NOT NULL
+   )`,
+  `CREATE INDEX IF NOT EXISTS ix_order_plans ON order_plans(tenant_id, store_id, business_date, status)`,
+  `CREATE TABLE IF NOT EXISTS order_plan_lines (
+     id INTEGER PRIMARY KEY AUTOINCREMENT,
+     tenant_id INTEGER NOT NULL, store_id INTEGER NOT NULL,
+     plan_id INTEGER NOT NULL, ingredient_id INTEGER NOT NULL,
+     name TEXT NOT NULL, unit TEXT DEFAULT '', supplier TEXT DEFAULT '',
+     need_qty REAL DEFAULT 0, stock_qty REAL DEFAULT 0, suggest_qty REAL DEFAULT 0,
+     approved_qty REAL, pack_qty REAL DEFAULT 0, packs REAL DEFAULT 0,
+     unit_cost REAL DEFAULT 0, amount INTEGER DEFAULT 0,
+     urgency TEXT DEFAULT 'normal', reason TEXT DEFAULT '', created_at TEXT NOT NULL
+   )`,
+  `CREATE INDEX IF NOT EXISTS ix_order_plan_lines ON order_plan_lines(tenant_id, store_id, plan_id)`,
+  `CREATE TABLE IF NOT EXISTS stockouts (
+     id INTEGER PRIMARY KEY AUTOINCREMENT,
+     tenant_id INTEGER NOT NULL, store_id INTEGER NOT NULL,
+     business_date TEXT NOT NULL, item_id INTEGER, name TEXT NOT NULL,
+     usual_qty REAL DEFAULT 0, actual_qty REAL DEFAULT 0, miss_qty REAL DEFAULT 0,
+     price INTEGER DEFAULT 0, est_loss INTEGER DEFAULT 0, sample_days INTEGER DEFAULT 0,
+     detected TEXT DEFAULT 'auto', created_at TEXT NOT NULL
+   )`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS ux_stockouts ON stockouts(tenant_id, store_id, business_date, name)`,
 ];
 
 // 「もう追いついているか」を1回で見分けるための問い合わせ。
 // ★項目を足したら、必ずこの1行も最後に足したものへ合わせて更新すること。
-const SCHEMA_PROBE = 'SELECT id FROM daily_reports LIMIT 1';
+const SCHEMA_PROBE = 'SELECT id FROM stockouts LIMIT 1';
 
 async function migrate(db) {
   for (const sql of MIGRATIONS) {

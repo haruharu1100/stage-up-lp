@@ -18,6 +18,8 @@ const MENUS = [
   ['/admin/history', 'お店の記憶', '過去の売上・天気・出来事をさかのぼって調べる', '📚', ['owner', 'admin', 'manager'], 'history'],
   ['/admin/ask', '言葉で聞ける検索', '「先月の雨の土曜、どうだった？」と書けば、根拠つきで答える', '💬', ['owner', 'admin', 'manager'], 'history'],
   ['/admin/reports', '朝と閉店後のレポート', 'その日に必要なことだけをLINEに自動で届ける', '📨', ['owner', 'admin', 'manager'], 'history'],
+  ['/admin/prep', '今日の仕込み', '明日の見込み客数から「何をどれだけ用意するか」を幅つきで出す', '🥕', ['owner', 'admin', 'manager', 'kitchen'], 'history'],
+  ['/admin/inventory', '材料と発注', '在庫を記録し、足りない材料の発注案を出す（発注は必ず人が承認）', '📦', ['owner', 'admin', 'manager', 'kitchen'], 'inventory'],
   ['/admin/coupons', 'クーポン', '割引クーポンの発行と利用状況', '🎟', ['owner', 'admin', 'manager'], 'coupon'],
   ['/admin/staff', 'スタッフ', '出入りに合わせて権限とPINを管理', '👥', ['owner', 'admin'], 'staff'],
   ['/admin/logs', '操作ログ', '誰がいつ何をしたかの記録', '🔍', ['owner', 'admin', 'manager'], 'audit'],

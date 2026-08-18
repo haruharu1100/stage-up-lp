@@ -55,6 +55,16 @@ export const AUDIT_LABEL = {
   'report.run': 'レポートの作成',
   'report.send': 'レポートの送信',
   'ask.question': '言葉で聞ける検索',
+  'prep.detect': '売り逃しの点検',
+  'inventory.move': '在庫の記録',
+  'inventory.ingredient.add': '材料の追加',
+  'inventory.ingredient.edit': '材料の変更',
+  'inventory.recipe': 'レシピの登録',
+  'order.plan': '発注案の作成',
+  'order.approved': '発注案の承認',
+  'order.ordered': '発注済みにした',
+  'order.rejected': '発注案の見送り',
+  'order.receive': '入荷の記録',
   'tenant.cross_access_denied': '他店舗への不正アクセス試行',
 };
 

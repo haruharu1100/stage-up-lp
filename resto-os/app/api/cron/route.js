@@ -4,6 +4,9 @@ import { createCtx } from '../../../lib/tenant-db.js';
 import { ensureCalendar, saveForecast, saveActual, backfillWeather, rebuildDay, addDays } from '../../../lib/learn.js';
 import { saveForecasts, scoreDay } from '../../../lib/forecast.js';
 import { runReport } from '../../../lib/report.js';
+import { detectStockouts } from '../../../lib/prep.js';
+import { consumeDay } from '../../../lib/inventory.js';
+import { hasFeature } from '../../../lib/plans.js';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
@@ -107,6 +110,21 @@ async function runJob(job, slot) {
     // 明日から先の予測を作り直す。今日と過去には触れない（当たり外れの記録を守るため）
     const fc = await saveForecasts(ctx, { days: 10 });
 
+    // 売れた数ぶんの材料を在庫から引く。これをしないと在庫は入荷でしか動かず、いつまでも減らない。
+    // レシピが未登録の店では何もしない（勝手な数字を作らない）。
+    let used = 0;
+    if (hasFeature(ctx.plan, 'inventory')) {
+      const cu = await consumeDay(ctx, y);
+      used = cu.lines || 0;
+    }
+
+    // 「売り逃していないか」を数え直す。ここで出るのは推測であって、売上の数字とは混ぜない。
+    let missed = 0;
+    if (hasFeature(ctx.plan, 'history')) {
+      const so = await detectStockouts(ctx, y);
+      missed = so.saved || 0;
+    }
+
     // 閉店後のレポートを作って残す。
     // ここが動くのは深夜なので、送るかどうかは店ごとの設定に従う（初期は保存のみ）。
     // 送らない設定でも、この内容は翌朝のレポートに「きのうの実績」として必ず入る。
@@ -116,6 +134,7 @@ async function runJob(job, slot) {
       date: y, rebuilt: Boolean(r?.ok), sales: r?.sales ?? null,
       weather: a.saved ?? 0, weatherBackfill: b.saved ?? 0,
       scored: sc.scored ?? 0, forecasts: fc.saved ?? 0,
+      stockUsed: used, missedItems: missed,
       report: rep.ok ? (rep.delivered ? '作成・送信' : '作成のみ') : (rep.skipped || '見送り'),
     };
   });

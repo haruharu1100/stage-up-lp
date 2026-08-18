@@ -645,3 +645,123 @@ CREATE TABLE IF NOT EXISTS daily_reports (
 );
 -- 同じ日・同じ種類は1件だけ。何度動かしても増えないようにする。
 CREATE UNIQUE INDEX IF NOT EXISTS ux_daily_reports ON daily_reports(tenant_id, store_id, business_date, kind);
+
+-- ===== 仕込みと発注（第1層：人が登録した事実／第2層：提案） =====
+
+-- 材料。仕入れる単位（ケース・kgなど）と、使う単位を分けて持つ。
+-- ここを登録しなくても「仕込み量の提案」は動く。発注の提案だけがこの表を使う。
+CREATE TABLE IF NOT EXISTS ingredients (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  tenant_id INTEGER NOT NULL,
+  store_id INTEGER NOT NULL,
+  name TEXT NOT NULL,
+  unit TEXT NOT NULL DEFAULT 'g',      -- 使うときの単位（g / ml / 個 / 枚）
+  category TEXT DEFAULT '',
+  unit_cost REAL DEFAULT 0,            -- 使う単位1あたりの原価（円）
+  pack_name TEXT DEFAULT '',           -- 仕入れの単位の呼び名（例：1ケース）
+  pack_qty REAL DEFAULT 0,             -- 仕入れ1つで何単位ぶんか（0なら端数発注できる扱い）
+  supplier TEXT DEFAULT '',
+  lead_days INTEGER DEFAULT 1,         -- 頼んでから届くまでの日数
+  min_stock REAL DEFAULT 0,            -- 切らしたくない最低量
+  shelf_days INTEGER DEFAULT 0,        -- もつ日数（0＝未設定。仕込みすぎの注意に使う）
+  note TEXT DEFAULT '',
+  active INTEGER DEFAULT 1,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS ux_ingredients ON ingredients(tenant_id, store_id, name);
+
+-- レシピ：商品1つを作るのに材料をどれだけ使うか。
+CREATE TABLE IF NOT EXISTS recipe_lines (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  tenant_id INTEGER NOT NULL,
+  store_id INTEGER NOT NULL,
+  item_id INTEGER NOT NULL,            -- menu_items.id
+  ingredient_id INTEGER NOT NULL,
+  qty REAL NOT NULL DEFAULT 0,         -- 1つ作るのに使う量（ingredients.unit の単位）
+  created_at TEXT NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS ux_recipe_lines ON recipe_lines(tenant_id, store_id, item_id, ingredient_id);
+CREATE INDEX IF NOT EXISTS ix_recipe_ing ON recipe_lines(tenant_id, store_id, ingredient_id);
+
+-- 在庫の動き。今ある量は「いちばん新しい棚卸(count)＋そのあとの増減」で出す。
+-- 在庫の数そのものを上書きしないので、「誰がいつ何をしたか」が必ず残る。
+CREATE TABLE IF NOT EXISTS stock_moves (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  tenant_id INTEGER NOT NULL,
+  store_id INTEGER NOT NULL,
+  business_date TEXT NOT NULL,
+  ingredient_id INTEGER NOT NULL,
+  kind TEXT NOT NULL,                  -- count＝棚卸 / receive＝入荷 / use＝使用 / waste＝廃棄 / adjust＝手直し
+  qty REAL NOT NULL DEFAULT 0,         -- countは「その時点の在庫」、それ以外は増減（廃棄・使用はマイナス）
+  amount INTEGER DEFAULT 0,            -- 金額（円）。廃棄額の集計に使う
+  reason TEXT DEFAULT '',
+  staff_id INTEGER,
+  staff_name TEXT DEFAULT '',
+  created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS ix_stock_moves ON stock_moves(tenant_id, store_id, ingredient_id, business_date);
+CREATE INDEX IF NOT EXISTS ix_stock_moves_date ON stock_moves(tenant_id, store_id, business_date, kind);
+
+-- 発注の提案。★システムは絶対に自分で発注しない。ここに案を置き、人が承認する。
+CREATE TABLE IF NOT EXISTS order_plans (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  tenant_id INTEGER NOT NULL,
+  store_id INTEGER NOT NULL,
+  business_date TEXT NOT NULL,         -- 作った営業日
+  target_from TEXT NOT NULL,           -- 何日から
+  target_to TEXT NOT NULL,             -- 何日までのぶんか
+  status TEXT NOT NULL DEFAULT 'draft',-- draft＝提案のまま / approved＝人が承認 / ordered＝発注済み / rejected＝見送り
+  basis_json TEXT DEFAULT '',          -- 何をもとに出したか
+  note TEXT DEFAULT '',
+  created_by TEXT DEFAULT '',
+  decided_by TEXT DEFAULT '',          -- 承認・見送りをした人
+  decided_at TEXT DEFAULT '',
+  created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS ix_order_plans ON order_plans(tenant_id, store_id, business_date, status);
+
+-- 発注案の中身。提案の数量(suggest_qty)と、人が直した数量(approved_qty)を別に持つ。
+-- こうしておくと「提案がどれだけ直されたか」を後から見直せる。
+CREATE TABLE IF NOT EXISTS order_plan_lines (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  tenant_id INTEGER NOT NULL,
+  store_id INTEGER NOT NULL,
+  plan_id INTEGER NOT NULL,
+  ingredient_id INTEGER NOT NULL,
+  name TEXT NOT NULL,
+  unit TEXT DEFAULT '',
+  supplier TEXT DEFAULT '',
+  need_qty REAL DEFAULT 0,             -- 見込みで使う量
+  stock_qty REAL DEFAULT 0,            -- 今ある量
+  suggest_qty REAL DEFAULT 0,          -- 足りない量（提案）
+  approved_qty REAL,                   -- 人が決めた量（nullなら未決定）
+  pack_qty REAL DEFAULT 0,
+  packs REAL DEFAULT 0,                -- 仕入れ単位でいくつぶんか
+  unit_cost REAL DEFAULT 0,
+  amount INTEGER DEFAULT 0,            -- おおよその金額（円）
+  urgency TEXT DEFAULT 'normal',       -- soon＝早めに / normal＝ふつう
+  reason TEXT DEFAULT '',
+  created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS ix_order_plan_lines ON order_plan_lines(tenant_id, store_id, plan_id);
+
+-- 品切れ（欠品）の記録。★ここに入る損失額は「推測」であって事実ではない。
+-- ふだんの同じ曜日の出数と比べて、売り逃した見込みを出す。画面でも推測と明記する。
+CREATE TABLE IF NOT EXISTS stockouts (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  tenant_id INTEGER NOT NULL,
+  store_id INTEGER NOT NULL,
+  business_date TEXT NOT NULL,
+  item_id INTEGER,
+  name TEXT NOT NULL,
+  usual_qty REAL DEFAULT 0,            -- ふだんの同じ曜日の出数（中央値）
+  actual_qty REAL DEFAULT 0,           -- その日の実際の出数
+  miss_qty REAL DEFAULT 0,             -- 売り逃した見込み数
+  price INTEGER DEFAULT 0,
+  est_loss INTEGER DEFAULT 0,          -- 売り逃した見込み額（推測）
+  sample_days INTEGER DEFAULT 0,       -- 何日ぶんのふだんと比べたか
+  detected TEXT DEFAULT 'auto',        -- auto＝自動で気づいた / manual＝人が入力
+  created_at TEXT NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS ux_stockouts ON stockouts(tenant_id, store_id, business_date, name);

@@ -56,6 +56,8 @@ const SCOPED_TABLES = new Set([
   'forecasts', 'forecast_results', 'ai_insights', 'ai_answers',
   // 朝・閉店後のレポート
   'daily_reports',
+  // 仕込みと発注（材料・レシピ・在庫は第1層、発注案と欠品見込みは第2層）
+  'ingredients', 'recipe_lines', 'stock_moves', 'order_plans', 'order_plan_lines', 'stockouts',
 ]);
 
 export function createCtx({ tenantId, storeId, role, staffId = null, staffName = '', plan = 'standard', tenant = null, store = null, exec = null }) {
