@@ -259,11 +259,21 @@ const MIGRATIONS = [
      engine TEXT DEFAULT 'rule', staff_name TEXT DEFAULT '', created_at TEXT NOT NULL
    )`,
   `CREATE INDEX IF NOT EXISTS ix_ai_answers ON ai_answers(tenant_id, store_id, created_at)`,
+  `CREATE TABLE IF NOT EXISTS daily_reports (
+     id INTEGER PRIMARY KEY AUTOINCREMENT,
+     tenant_id INTEGER NOT NULL, store_id INTEGER NOT NULL,
+     business_date TEXT NOT NULL, kind TEXT NOT NULL,
+     title TEXT DEFAULT '', body TEXT DEFAULT '', data_json TEXT DEFAULT '',
+     delivered INTEGER DEFAULT 0, delivery TEXT DEFAULT '',
+     delivery_error TEXT DEFAULT '', delivered_at TEXT DEFAULT '',
+     created_at TEXT NOT NULL
+   )`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS ux_daily_reports ON daily_reports(tenant_id, store_id, business_date, kind)`,
 ];
 
 // 「もう追いついているか」を1回で見分けるための問い合わせ。
 // ★項目を足したら、必ずこの1行も最後に足したものへ合わせて更新すること。
-const SCHEMA_PROBE = 'SELECT id FROM ai_answers LIMIT 1';
+const SCHEMA_PROBE = 'SELECT id FROM daily_reports LIMIT 1';
 
 async function migrate(db) {
   for (const sql of MIGRATIONS) {

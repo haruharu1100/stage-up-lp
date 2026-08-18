@@ -625,3 +625,23 @@ CREATE TABLE IF NOT EXISTS ai_answers (
   created_at TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS ix_ai_answers ON ai_answers(tenant_id, store_id, created_at);
+
+-- 朝・閉店後のレポート。作った文章をそのまま残す。
+-- 送信に失敗しても消さない（あとから画面で読める／送り直せる）。
+CREATE TABLE IF NOT EXISTS daily_reports (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  tenant_id INTEGER NOT NULL,
+  store_id INTEGER NOT NULL,
+  business_date TEXT NOT NULL,         -- どの営業日についてのレポートか
+  kind TEXT NOT NULL,                  -- morning＝朝 / night＝閉店後
+  title TEXT DEFAULT '',
+  body TEXT DEFAULT '',                -- そのまま送れる文章
+  data_json TEXT DEFAULT '',           -- 画面で組み直すための元データ
+  delivered INTEGER DEFAULT 0,         -- 届いたか
+  delivery TEXT DEFAULT '',            -- line＝LINEに送った / none＝宛先未設定で保存のみ
+  delivery_error TEXT DEFAULT '',
+  delivered_at TEXT DEFAULT '',
+  created_at TEXT NOT NULL
+);
+-- 同じ日・同じ種類は1件だけ。何度動かしても増えないようにする。
+CREATE UNIQUE INDEX IF NOT EXISTS ux_daily_reports ON daily_reports(tenant_id, store_id, business_date, kind);

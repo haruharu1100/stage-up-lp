@@ -16,6 +16,7 @@ const MENUS = [
   ['/admin/tables', 'テーブル・QR', 'テーブルごとのQRコード発行と印刷', '🔳', ['owner', 'admin', 'manager'], 'table'],
   ['/admin/orders', '注文履歴', '取消も含めた全注文の記録', '🗂', ['owner', 'admin', 'manager'], 'history'],
   ['/admin/history', 'お店の記憶', '過去の売上・天気・出来事をさかのぼって調べる', '📚', ['owner', 'admin', 'manager'], 'history'],
+  ['/admin/reports', '朝と閉店後のレポート', 'その日に必要なことだけをLINEに自動で届ける', '📨', ['owner', 'admin', 'manager'], 'history'],
   ['/admin/coupons', 'クーポン', '割引クーポンの発行と利用状況', '🎟', ['owner', 'admin', 'manager'], 'coupon'],
   ['/admin/staff', 'スタッフ', '出入りに合わせて権限とPINを管理', '👥', ['owner', 'admin'], 'staff'],
   ['/admin/logs', '操作ログ', '誰がいつ何をしたかの記録', '🔍', ['owner', 'admin', 'manager'], 'audit'],

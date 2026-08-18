@@ -3,6 +3,7 @@ import { all, one, businessDate, initDb } from '../../../lib/db.js';
 import { createCtx } from '../../../lib/tenant-db.js';
 import { ensureCalendar, saveForecast, saveActual, backfillWeather, rebuildDay, addDays } from '../../../lib/learn.js';
 import { saveForecasts, scoreDay } from '../../../lib/forecast.js';
+import { runReport } from '../../../lib/report.js';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
@@ -20,7 +21,7 @@ export const maxDuration = 60;
  * そこで止めずに次の店へ進む。1店の通信エラーで全店の記録が欠けては困るため。
  */
 
-const JOBS = ['weather', 'nightly', 'calendar'];
+const JOBS = ['weather', 'nightly', 'calendar', 'report'];
 
 function authorized(req) {
   const secret = process.env.CRON_SECRET || '';
@@ -56,6 +57,17 @@ async function eachStore(fn) {
 }
 
 async function runJob(job, slot) {
+  if (job === 'report') {
+    // 朝のレポート。読む人が起きている時間に、昨日の結果と今日の見込みをまとめて送る。
+    // 深夜に通知が飛ぶのを避けるため、閉店後のぶんもここで拾えるようにしてある。
+    return eachStore(async (ctx) => {
+      const kind = slot === 'night' ? 'night' : 'morning';
+      const date = kind === 'night' ? addDays(businessDate(), -1) : businessDate();
+      const r = await runReport(ctx, { kind, date });
+      return { report: kind, date, ok: r.ok, delivered: Boolean(r.delivered), note: r.skipped || r.error || '' };
+    });
+  }
+
   if (job === 'calendar') {
     // 先の予定ぶんの暦を先に用意しておく（売上が無い未来の日も予測の材料になる）
     return eachStore(async (ctx) => {
@@ -95,10 +107,16 @@ async function runJob(job, slot) {
     // 明日から先の予測を作り直す。今日と過去には触れない（当たり外れの記録を守るため）
     const fc = await saveForecasts(ctx, { days: 10 });
 
+    // 閉店後のレポートを作って残す。
+    // ここが動くのは深夜なので、送るかどうかは店ごとの設定に従う（初期は保存のみ）。
+    // 送らない設定でも、この内容は翌朝のレポートに「きのうの実績」として必ず入る。
+    const rep = await runReport(ctx, { kind: 'night', date: y });
+
     return {
       date: y, rebuilt: Boolean(r?.ok), sales: r?.sales ?? null,
       weather: a.saved ?? 0, weatherBackfill: b.saved ?? 0,
       scored: sc.scored ?? 0, forecasts: fc.saved ?? 0,
+      report: rep.ok ? (rep.delivered ? '作成・送信' : '作成のみ') : (rep.skipped || '見送り'),
     };
   });
 }

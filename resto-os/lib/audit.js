@@ -51,6 +51,9 @@ export const AUDIT_LABEL = {
   'campaign.create': '企画・販促の登録',
   'campaign.delete': '企画・販促の取消',
   'history.import': '過去データの取り込み',
+  'report.settings': 'レポート設定の変更',
+  'report.run': 'レポートの作成',
+  'report.send': 'レポートの送信',
   'tenant.cross_access_denied': '他店舗への不正アクセス試行',
 };
 

@@ -54,6 +54,8 @@ const SCOPED_TABLES = new Set([
   'daily_facts', 'daily_hour_facts', 'daily_item_facts',
   // 第2層（AIの見解）
   'forecasts', 'forecast_results', 'ai_insights', 'ai_answers',
+  // 朝・閉店後のレポート
+  'daily_reports',
 ]);
 
 export function createCtx({ tenantId, storeId, role, staffId = null, staffName = '', plan = 'standard', tenant = null, store = null, exec = null }) {

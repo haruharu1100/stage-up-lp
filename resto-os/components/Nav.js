@@ -15,6 +15,7 @@ const LINKS = [
   ['/admin/tables', 'テーブル・QR', ['owner', 'admin', 'manager'], 'table'],
   ['/admin/orders', '注文履歴', ['owner', 'admin', 'manager'], 'history'],
   ['/admin/history', 'お店の記憶', ['owner', 'admin', 'manager'], 'history'],
+  ['/admin/reports', 'レポート', ['owner', 'admin', 'manager'], 'history'],
   ['/admin/coupons', 'クーポン', ['owner', 'admin', 'manager'], 'coupon'],
   ['/admin/staff', 'スタッフ', ['owner', 'admin'], 'staff'],
   ['/admin/printers', 'プリンター', ['owner', 'admin', 'manager'], 'pos'],
