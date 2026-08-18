@@ -7,8 +7,9 @@ import Nav from '../../../components/Nav';
 /**
  * お店の記憶をたどる画面。
  *
- * ここに出るのはすべて「実際に起きたこと」だけ。予測や推測は1つも混ざらない。
- * （予測はこのあと別の場所に、はっきり分けて出す）
+ * 「実際に起きたこと」と「これからの見込み」は、タブごと・色ごとに分けている。
+ * 事実は白い枠、見込みは紫の枠。見込みには必ず範囲と根拠と自信の度合いを添える。
+ * 見た目で混ざらないようにするのが、この画面のいちばん大事な役目。
  */
 
 const yen = (n) => `${Number(n || 0).toLocaleString()}円`;
@@ -71,6 +72,12 @@ export default function HistoryPage() {
   const [impBusy, setImpBusy] = useState(false);
   const [batches, setBatches] = useState(null);
 
+  const [fc, setFc] = useState(null);
+  const [fcErr, setFcErr] = useState('');
+  const [fcBusy, setFcBusy] = useState(false);
+  const [anom, setAnom] = useState(null);
+  const [openFc, setOpenFc] = useState('');
+
   const qs = useMemo(() => {
     const p = new URLSearchParams();
     p.set('from', f.from);
@@ -119,6 +126,38 @@ export default function HistoryPage() {
   }, []);
 
   useEffect(() => { if (tab === 'camp') loadCamps(); }, [tab, loadCamps]);
+
+  const loadForecast = useCallback(async () => {
+    setFcBusy(true);
+    try {
+      const [a, b] = await Promise.all([
+        fetch('/api/history/forecast?days=7').then((x) => x.json()),
+        fetch('/api/history/forecast?view=anomaly').then((x) => x.json()),
+      ]);
+      if (!a.ok) return setFcErr(a.error || '見込みを出せませんでした');
+      setFcErr('');
+      setFc(a);
+      setAnom(b.ok ? b : null);
+    } finally {
+      setFcBusy(false);
+    }
+  }, []);
+
+  useEffect(() => { if (tab === 'fc') loadForecast(); }, [tab, loadForecast]);
+
+  /** 見込みの作り直し。明日から先だけが変わり、過ぎた日の当たり外れは動かない */
+  async function remakeForecast() {
+    if (fcBusy) return;
+    setFcBusy(true);
+    setFcErr('');
+    try {
+      const r = await fetch('/api/history/forecast', { method: 'POST' }).then((x) => x.json());
+      if (!r.ok) setFcErr(r.error || '作り直せませんでした');
+    } finally {
+      setFcBusy(false);
+    }
+    loadForecast();
+  }
 
   async function saveCampaign() {
     if (campBusy) return;
@@ -243,8 +282,8 @@ export default function HistoryPage() {
       <div className="wrap">
         <div className="h1">お店の記憶（過去データ）</div>
         <div className="muted">
-          営業日ごとの売上・客数・商品・天気・出来事を、そのまま残しています。
-          ここに出るのは実際に起きたことだけで、予測は混ざりません。日付をクリックすると、その日の全部が見られます。
+          営業日ごとの売上・客数・商品・天気・出来事を、そのまま残しています。日付をクリックすると、その日の全部が見られます。
+          「明日を読む」だけがこれからの見込みで、そこは紫の枠で分けています。それ以外の欄には、実際に起きたことしか出ません。
         </div>
 
         {/* ── 学習状況 ───────────────────────────── */}
@@ -297,6 +336,7 @@ export default function HistoryPage() {
         )}
 
         <div className="tabs" style={{ marginTop: 14 }}>
+          <button className={tab === 'fc' ? 'on' : ''} onClick={() => setTab('fc')}>明日を読む（見込み）</button>
           <button className={tab === 'list' ? 'on' : ''} onClick={() => setTab('list')}>日ごとに見る</button>
           <button className={tab === 'compare' ? 'on' : ''} onClick={() => setTab('compare')}>年・月で比べる</button>
           <button className={tab === 'similar' ? 'on' : ''} onClick={() => setTab('similar')}>似た日を探す</button>
@@ -305,6 +345,19 @@ export default function HistoryPage() {
         </div>
 
         {err && <div className="alert" style={{ marginTop: 14 }}>{err}</div>}
+
+        {/* ── 明日を読む（ここだけが「推測」。事実の欄とは色を変える） ── */}
+        {tab === 'fc' && (
+          <ForecastTab
+            fc={fc}
+            anom={anom}
+            busy={fcBusy}
+            err={fcErr}
+            open={openFc}
+            setOpen={setOpenFc}
+            onRemake={remakeForecast}
+          />
+        )}
 
         {/* ── 日ごとに見る ───────────────────────── */}
         {tab === 'list' && (
@@ -843,6 +896,283 @@ function Stat({ label, value }) {
       <div className="muted" style={{ fontSize: 12 }}>{label}</div>
       <div className="mono" style={{ fontSize: 22, fontWeight: 800 }}>{value}</div>
     </div>
+  );
+}
+
+// ===== 見込み（推測）の表示 =====
+// 事実の欄と区別するため、この中はすべて紫の枠で囲む。
+const FC_BG = '#faf5ff';
+const FC_LINE = '#a142f4';
+
+const confColor = (p) => (p >= 70 ? '#0f9d58' : p >= 45 ? '#e8710a' : '#80868b');
+
+/**
+ * 「根拠の強さ」の表示。
+ * わざと「的中率」とは呼ばない。似た日の記録がどれだけそろっているかを表す目安であって、
+ * 何%当たるという意味ではないため。実際の当たり具合は下の「答え合わせ」に出す。
+ */
+function ConfBadge({ pct, label }) {
+  return (
+    <span
+      className="mono"
+      style={{
+        fontSize: 11, fontWeight: 800, padding: '2px 8px', borderRadius: 999,
+        color: '#fff', background: confColor(pct),
+      }}
+      title="似た日の記録がどれだけあるか、その日どうしがどれだけそろっているかの目安です。的中率ではありません。"
+    >
+      根拠の強さ {label}（{pct}／100）
+    </span>
+  );
+}
+
+/** 見込みの1日ぶん。数字だけを大きく出さず、必ず範囲と根拠をそばに置く */
+function ForecastCard({ row, open, setOpen }) {
+  const d = row.date;
+  const c = row.context || {};
+  const s = row.sales;
+  const g = row.guests;
+  const isOpen = open === d;
+
+  return (
+    <div
+      style={{
+        border: `1px solid ${isOpen ? FC_LINE : '#e6d9f7'}`, borderRadius: 10,
+        background: FC_BG, padding: 12, marginBottom: 8,
+      }}
+    >
+      <div className="row-between" style={{ flexWrap: 'wrap', gap: 8 }}>
+        <div>
+          <div style={{ fontWeight: 800 }}>
+            {d}
+            <span className="muted" style={{ marginLeft: 8, fontWeight: 500 }}>
+              {c.dayLabel || `${c.dowName || ''}曜日`}
+            </span>
+            {row.fixed
+              ? <span className="badge b-gray" style={{ marginLeft: 8 }}>前日までに確定</span>
+              : <span className="badge b-out" style={{ marginLeft: 8 }}>参考（いま計算）</span>}
+          </div>
+          <div className="muted" style={{ marginTop: 3, fontSize: 12 }}>
+            {c.weatherText ? `${c.weatherText}${c.weatherFrom ? `（${c.weatherFrom}）` : ''}` : '天気の情報なし'}
+            {c.tempMax !== null && c.tempMax !== undefined ? ` ／ 最高${Math.round(c.tempMax)}℃` : ''}
+            {(c.campaigns || []).length ? ` ／ 実施中：${c.campaigns.join('、')}` : ''}
+          </div>
+        </div>
+        {s?.ok && <ConfBadge pct={s.confidencePct} label={s.confidence} />}
+      </div>
+
+      {row.notEnough && <div className="muted" style={{ marginTop: 8 }}>{row.message}</div>}
+
+      {s?.ok && (
+        <div className="grid g2" style={{ marginTop: 10, gap: 12 }}>
+          <div>
+            <div className="muted" style={{ fontSize: 12 }}>売上の見込み</div>
+            <div className="mono" style={{ fontSize: 24, fontWeight: 800, color: FC_LINE }}>
+              {yen(s.low)} 〜 {yen(s.high)}
+            </div>
+            <div className="muted" style={{ fontSize: 12 }}>真ん中を取ると {yen(s.value)} くらい</div>
+          </div>
+          {g?.ok && (
+            <div>
+              <div className="muted" style={{ fontSize: 12 }}>客数の見込み</div>
+              <div className="mono" style={{ fontSize: 24, fontWeight: 800, color: FC_LINE }}>
+                {num(g.low)} 〜 {num(g.high)}人
+              </div>
+              <div className="muted" style={{ fontSize: 12 }}>真ん中を取ると {num(g.value)}人くらい</div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {s?.ok && (
+        <>
+          <button
+            className="btn btn-sm"
+            style={{ marginTop: 10 }}
+            onClick={() => setOpen(isOpen ? '' : d)}
+          >
+            {isOpen ? '根拠を閉じる' : 'なぜこの数字になったか'}
+          </button>
+          {isOpen && (
+            <div style={{ marginTop: 10, borderTop: '1px dashed #d9c7f0', paddingTop: 10 }}>
+              <table className="table">
+                <tbody>
+                  {(s.basis || []).map((b, i) => (
+                    <tr key={`${b.label}-${i}`}>
+                      <td style={{ width: 200, fontWeight: 700 }}>{b.label}</td>
+                      <td className="muted">{b.detail}</td>
+                      <td className="mono" style={{ width: 90, textAlign: 'right', fontWeight: 800 }}>
+                        {b.value !== null && b.value !== undefined
+                          ? yen(b.value)
+                          : b.effect > 0 ? `＋${b.effect}%` : b.effect < 0 ? `${b.effect}%` : '—'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <div className="muted" style={{ marginTop: 8, fontSize: 12 }}>
+                ここに出るのは「一緒に起きていた傾向」であって、原因ではありません。
+                最後に決めるのは、お店の状況を知っている人です。
+              </div>
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+/** 予測が当たったかの記録。都合の良い日だけを選ばず、直近をそのまま出す */
+function AccuracyBox({ acc }) {
+  if (!acc || !acc.days) {
+    return (
+      <div className="muted">
+        まだ答え合わせができていません。予測を出した日が過ぎると、翌朝に自動で採点され、ここに出ます。
+      </div>
+    );
+  }
+  return (
+    <>
+      <div className="grid g4">
+        <Stat label="答え合わせできた日" value={`${num(acc.days)}日`} />
+        <Stat label="ずれの真ん中" value={`${acc.medErrorPct}%`} />
+        <Stat label="ずれ10%以内だった割合" value={`${acc.within10}%`} />
+        <Stat label="示した範囲に収まった割合" value={`${acc.inRangePct}%`} />
+      </div>
+      <div className="muted" style={{ marginTop: 8, fontSize: 12 }}>
+        外れた日もそのまま数えています。記録がたまるほど、この数字自体があてになります。
+      </div>
+      <table className="table table-wide" style={{ marginTop: 10 }}>
+        <thead>
+          <tr><th>日付</th><th style={{ textAlign: 'right' }}>予測</th><th style={{ textAlign: 'right' }}>実際</th><th style={{ textAlign: 'right' }}>ずれ</th><th>範囲内</th></tr>
+        </thead>
+        <tbody>
+          {acc.rows.slice(0, 14).map((r) => (
+            <tr key={r.date}>
+              <td className="mono">{r.date}</td>
+              <td className="mono" style={{ textAlign: 'right' }}>{yen(r.predicted)}</td>
+              <td className="mono" style={{ textAlign: 'right' }}>{yen(r.actual)}</td>
+              <td className="mono" style={{ textAlign: 'right', color: Math.abs(r.errorPct) <= 10 ? '#0f9d58' : Math.abs(r.errorPct) <= 20 ? '#e8710a' : '#d93025' }}>
+                {r.errorPct > 0 ? `＋${r.errorPct}` : r.errorPct}%
+              </td>
+              <td>{r.inRange ? <span className="badge b-green">収まった</span> : <span className="badge b-out">外れた</span>}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </>
+  );
+}
+
+function ForecastTab({ fc, anom, busy, err, open, setOpen, onRemake }) {
+  const rows = fc?.rows || [];
+  const plan = fc?.plan;
+  const notEnough = rows.length && rows.every((r) => r.notEnough);
+
+  return (
+    <>
+      <div className="card" style={{ marginTop: 14, background: FC_BG, borderColor: '#e6d9f7' }}>
+        <div className="row-between" style={{ flexWrap: 'wrap', gap: 8 }}>
+          <div>
+            <div className="h2" style={{ marginBottom: 4, color: FC_LINE }}>ここから先は「見込み」です</div>
+            <div className="muted">
+              過ぎた日の記録（事実）とは分けています。数字は必ず幅で出し、そう考えた理由も一緒に出します。
+              当たり外れは毎朝ひとりでに採点され、下に残ります。
+            </div>
+          </div>
+          <button className="btn btn-sm" disabled={busy} onClick={onRemake}>
+            {busy ? '計算しています…' : '見込みを作り直す'}
+          </button>
+        </div>
+      </div>
+
+      {err && <div className="alert" style={{ marginTop: 14 }}>{err}</div>}
+
+      {/* 今日の作戦 */}
+      {plan?.ok && (
+        <div className="card" style={{ marginTop: 14 }}>
+          <div className="h2">今日の作戦（{plan.date}）</div>
+          <div className="muted" style={{ marginBottom: 10 }}>
+            {plan.context?.dayLabel}
+            {plan.context?.weatherText ? ` ／ ${plan.context.weatherText}` : ''}
+          </div>
+          {plan.sales?.ok && (
+            <div className="grid g3">
+              <Stat label="売上の見込み（幅）" value={`${yen(plan.sales.low)}〜${yen(plan.sales.high)}`} />
+              <Stat label="客数の見込み（幅）" value={plan.guests?.ok ? `${num(plan.guests.low)}〜${num(plan.guests.high)}人` : '—'} />
+              <Stat label="いつものこの曜日" value={yen(plan.sales.base)} />
+            </div>
+          )}
+          <ul style={{ marginTop: 12, paddingLeft: 20, lineHeight: 1.9 }}>
+            {(plan.notes || []).map((n, i) => <li key={`${n.kind}-${i}`}>{n.text}</li>)}
+          </ul>
+        </div>
+      )}
+      {plan && !plan.ok && (
+        <div className="card" style={{ marginTop: 14 }}>
+          <div className="h2">今日の作戦</div>
+          <div className="muted">{plan.message || 'まだ記録が足りないため、見込みは出しません。'}</div>
+        </div>
+      )}
+
+      {/* これから7日 */}
+      <div className="card" style={{ marginTop: 14 }}>
+        <div className="h2">これから7日の見込み</div>
+        {busy && !rows.length && <div className="muted">計算しています…</div>}
+        {notEnough ? (
+          <div className="muted">
+            まだ記録が足りません。営業日が14日ぶんたまると、ここに見込みが出ます。
+            過去の売上を取り込むと、その日から出せるようになります。
+          </div>
+        ) : (
+          rows.map((r) => <ForecastCard key={r.date} row={r} open={open} setOpen={setOpen} />)
+        )}
+      </div>
+
+      {/* 答え合わせ */}
+      <div className="card" style={{ marginTop: 14 }}>
+        <div className="h2">予測はどれくらい当たっているか</div>
+        <AccuracyBox acc={fc?.accuracy} />
+      </div>
+
+      {/* いつもと違った日 */}
+      <div className="card" style={{ marginTop: 14 }}>
+        <div className="h2">いつもと違った日</div>
+        <div className="muted" style={{ marginBottom: 10 }}>
+          同じ曜日のふだんと3割以上ちがった日です。理由は決めつけず、その日にあった事実だけを並べています。
+        </div>
+        {!anom?.ok ? (
+          <div className="muted">まだ見比べられるだけの記録がありません。</div>
+        ) : !anom.rows.length ? (
+          <div className="muted">大きく外れた日はありませんでした。</div>
+        ) : (
+          <table className="table table-wide">
+            <thead>
+              <tr><th>日付</th><th>曜日</th><th style={{ textAlign: 'right' }}>売上</th><th style={{ textAlign: 'right' }}>いつも</th><th style={{ textAlign: 'right' }}>差</th><th>その日にあったこと</th></tr>
+            </thead>
+            <tbody>
+              {anom.rows.map((r) => (
+                <tr key={r.date}>
+                  <td className="mono">
+                    <Link href={`/admin/history/${r.date}`}>{r.date}</Link>
+                  </td>
+                  <td>{r.dowName}</td>
+                  <td className="mono" style={{ textAlign: 'right' }}>{yen(r.sales)}</td>
+                  <td className="mono muted" style={{ textAlign: 'right' }}>{yen(r.normal)}</td>
+                  <td className="mono" style={{ textAlign: 'right', fontWeight: 800, color: r.diffPct > 0 ? '#0f9d58' : '#d93025' }}>
+                    {r.diffPct > 0 ? `＋${r.diffPct}` : r.diffPct}%
+                  </td>
+                  <td className="muted">
+                    {[r.holiday, r.weather, r.tempMax !== null ? `${Math.round(r.tempMax)}℃` : '', ...(r.events || [])]
+                      .filter(Boolean).join('／') || '—'}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </>
   );
 }
 

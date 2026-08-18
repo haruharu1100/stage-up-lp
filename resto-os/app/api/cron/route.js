@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { all, one, businessDate, initDb } from '../../../lib/db.js';
 import { createCtx } from '../../../lib/tenant-db.js';
 import { ensureCalendar, saveForecast, saveActual, backfillWeather, rebuildDay, addDays } from '../../../lib/learn.js';
+import { saveForecasts, scoreDay } from '../../../lib/forecast.js';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
@@ -72,7 +73,9 @@ async function runJob(job, slot) {
       // 昨日ぶんの実測値も、この時点で分かる範囲で押さえておく
       const y = addDays(businessDate(), -1);
       const a = await saveActual(ctx, y, y, { confirmed: 1 });
-      return { forecast: f.saved, actual: a.saved ?? 0 };
+      // 天気の予報が変わったぶん、明日から先の見込みも取り直す（今日と過去には触れない）
+      const fc = await saveForecasts(ctx, { days: 8 });
+      return { forecast: f.saved, actual: a.saved ?? 0, forecasts: fc.saved ?? 0 };
     });
   }
 
@@ -85,9 +88,17 @@ async function runJob(job, slot) {
     // 天気が抜けている過去の日も、毎晩すこしずつ埋めていく
     // （導入前の営業日や、あとから取り込んだ過去の売上ぶん）
     const b = await backfillWeather(ctx, { days: 400, cap: 60 });
+
+    // 昨日ぶんの「予測 対 実際」を採点する。
+    // 実際の数字が確定したあとに採点するので、あとから都合よく直すことはできない。
+    const sc = await scoreDay(ctx, y);
+    // 明日から先の予測を作り直す。今日と過去には触れない（当たり外れの記録を守るため）
+    const fc = await saveForecasts(ctx, { days: 10 });
+
     return {
       date: y, rebuilt: Boolean(r?.ok), sales: r?.sales ?? null,
       weather: a.saved ?? 0, weatherBackfill: b.saved ?? 0,
+      scored: sc.scored ?? 0, forecasts: fc.saved ?? 0,
     };
   });
 }
