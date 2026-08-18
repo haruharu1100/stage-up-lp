@@ -1,0 +1,111 @@
+import { NextResponse } from 'next/server';
+import { all, one, businessDate, initDb } from '../../../lib/db.js';
+import { createCtx } from '../../../lib/tenant-db.js';
+import { ensureCalendar, saveForecast, saveActual, backfillWeather, rebuildDay, addDays } from '../../../lib/learn.js';
+
+export const dynamic = 'force-dynamic';
+export const maxDuration = 60;
+
+/**
+ * 決まった時刻にひとりでに動く処理のまとめ口。
+ *
+ * 店ごとにログインする人がいない処理なので、ここだけは全店をまわる。
+ * そのかわり合言葉（CRON_SECRET）が合わないと1行も動かない。
+ * 店ごとの読み書きは、いつもどおり店舗を限定した入口を通すので、
+ * 「別の店の数字が混ざる」ことは仕組み上起こらない。
+ *
+ * どの仕事も、同じ日に何度動いても結果が変わらない作りにしている
+ * （二重に数えない・上書きするだけ）。途中で失敗した店があっても、
+ * そこで止めずに次の店へ進む。1店の通信エラーで全店の記録が欠けては困るため。
+ */
+
+const JOBS = ['weather', 'nightly', 'calendar'];
+
+function authorized(req) {
+  const secret = process.env.CRON_SECRET || '';
+  if (!secret) return false;
+  const auth = req.headers.get('authorization') || '';
+  if (auth === `Bearer ${secret}`) return true;
+  return new URL(req.url).searchParams.get('key') === secret;
+}
+
+async function eachStore(fn) {
+  await initDb();
+  const stores = await all(`SELECT * FROM stores WHERE status = 'active'`);
+  const out = [];
+  for (const store of stores) {
+    try {
+      const tenant = await one('SELECT * FROM tenants WHERE id = ?', [Number(store.tenant_id)]);
+      if (!tenant || tenant.status === 'canceled') continue;
+      const ctx = createCtx({
+        tenantId: Number(store.tenant_id),
+        storeId: Number(store.id),
+        role: 'system',
+        staffName: '自動処理',
+        plan: tenant.plan,
+        tenant,
+        store,
+      });
+      out.push({ store: store.name, ...(await fn(ctx, store)) });
+    } catch (e) {
+      out.push({ store: store.name, error: String(e?.message || e).slice(0, 200) });
+    }
+  }
+  return out;
+}
+
+async function runJob(job, slot) {
+  if (job === 'calendar') {
+    // 先の予定ぶんの暦を先に用意しておく（売上が無い未来の日も予測の材料になる）
+    return eachStore(async (ctx) => {
+      const from = businessDate();
+      const added = await ensureCalendar(ctx, addDays(from, -370), addDays(from, 120));
+      return { calendar: added };
+    });
+  }
+
+  if (job === 'weather') {
+    // 予報を取り直す。朝・昼・夕で別々に残すので、あとから「予報がどう変わったか」も追える。
+    return eachStore(async (ctx) => {
+      const f = await saveForecast(ctx, { slot: slot || 'am6', days: 7 });
+      if (!f.ok) return { weather: '位置が未設定のため見送り' };
+      // 昨日ぶんの実測値も、この時点で分かる範囲で押さえておく
+      const y = addDays(businessDate(), -1);
+      const a = await saveActual(ctx, y, y, { confirmed: 1 });
+      return { forecast: f.saved, actual: a.saved ?? 0 };
+    });
+  }
+
+  // nightly：昨日を「お店の記憶」として確定させる
+  return eachStore(async (ctx) => {
+    const y = addDays(businessDate(), -1);
+    const r = await rebuildDay(ctx, y);
+    const a = await saveActual(ctx, y, y, { confirmed: 1, overwrite: true });
+    await ensureCalendar(ctx, y, addDays(businessDate(), 60));
+    // 天気が抜けている過去の日も、毎晩すこしずつ埋めていく
+    // （導入前の営業日や、あとから取り込んだ過去の売上ぶん）
+    const b = await backfillWeather(ctx, { days: 400, cap: 60 });
+    return {
+      date: y, rebuilt: Boolean(r?.ok), sales: r?.sales ?? null,
+      weather: a.saved ?? 0, weatherBackfill: b.saved ?? 0,
+    };
+  });
+}
+
+export async function GET(req) {
+  if (!authorized(req)) {
+    return NextResponse.json({ ok: false, error: '実行できません' }, { status: 401 });
+  }
+  const sp = new URL(req.url).searchParams;
+  const job = String(sp.get('job') || 'nightly');
+  if (!JOBS.includes(job)) {
+    return NextResponse.json({ ok: false, error: '不明な処理です' }, { status: 400 });
+  }
+  const started = Date.now();
+  const result = await runJob(job, sp.get('slot'));
+  return NextResponse.json({ ok: true, job, ms: Date.now() - started, result });
+}
+
+export async function POST(req) {
+  return GET(req);
+}

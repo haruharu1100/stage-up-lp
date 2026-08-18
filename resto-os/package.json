@@ -1,0 +1,22 @@
+{
+  "name": "resto-os",
+  "version": "0.1.0",
+  "private": true,
+  "description": "飲食店まるごと管理OS (セルフオーダー / KDS / POS / 売上分析 / AIおすすめ)",
+  "scripts": {
+    "dev": "next dev -p 3800",
+    "build": "next build",
+    "start": "next start -p 3800",
+    "seed": "node scripts/seed.mjs",
+    "demo": "node scripts/demo-orders.mjs"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.30.1",
+    "@libsql/client": "^0.14.0",
+    "iconv-lite": "^0.7.3",
+    "next": "14.2.35",
+    "qrcode": "^1.5.4",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  }
+}
