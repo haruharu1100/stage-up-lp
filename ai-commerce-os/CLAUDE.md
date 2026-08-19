@@ -6,7 +6,7 @@
 2. 同フォルダ内の全ファイル
    - 01_DB設計案 / 02_Phase0_外部連携調査 / 03_安全設計と事故防止 / 04_ロードマップ / 05_Obsidianナレッジ構造
    - 06_商品大量生成とパイプライン / 07_価格戦略設計 / 08_仕入先ネットワークと勝ち筋拡張
-   - 09_Phase1実装記録 / 10_Phase2実装記録
+   - 09_Phase1実装記録 / 10_Phase2実装記録 / 11_Phase3実装記録
 3. `../事業Vault/DIGEST.md`
 
 矛盾したら **最新のユーザー指示 > DIGEST > 設計書フォルダ** の順で優先する。
@@ -50,14 +50,25 @@
 
 ## 現状
 
-**Phase 2 実装済み（2026-08-20）。** 範囲は 取得 → 比較 → Route生成 → 利益計算 → SHADOW記録 まで。
+**Phase 3 実装済み（2026-08-20）。** 範囲は 取得 → 比較 → Route生成 → 利益計算 → SHADOW記録
+→ **7/30/90日の答え合わせ → 予測誤差 → Route勝率 → 実績によるスコア補正** まで。
 実購入・実出品・実決済・実発送・外部サイトへの自動ログイン・自動値上げは**コードごと存在しない**（フラグOFFではなく未実装）。
 所有していない商品の先行販売もしない（`ownership_state` は全件 `NOT_OWNED`）。
 
-- 実装記録：`../事業Vault/AI Commerce OS/09_Phase1実装記録.md` → `10_Phase2実装記録.md`
-- 受け入れテスト：`npm run test:phase1`（66項目）と `npm run test:phase2`（49項目）。
-  **仕様を変えたら両方通す。片方だけ通して満足しない。**
-- Phase 3 へ進む前に `04_ロードマップ.md` の卒業条件を確認する。
+- 実装記録：`09_Phase1実装記録.md` → `10_Phase2実装記録.md` → `11_Phase3実装記録.md`（`../事業Vault/AI Commerce OS/`）
+- 受け入れテスト：`npm run test:phase1`（66項目）／`npm run test:phase2`（50項目）／`npm run test:phase3`（113項目）。
+  **仕様を変えたら3つとも通す。1つだけ通して満足しない。**
+- Phase 4 へ進む前に `04_ロードマップ.md` の卒業条件を確認する。
+  **2026-08-20 時点で卒業条件は1つも満たしていない**（SHADOW 11件／手数料18件すべて概算／仕入相場は全件未観測）。
+
+## 環境
+
+Next.js **15**（App Router）+ React 19 + TypeScript + libsql。
+2026-08-20 に 14.2.35 から更新した（14系の最終版で、脆弱性の修正版が14系に存在しなかったため）。
+
+- `searchParams` / `params` は **Promise**。`await` してから使う。
+- `next` が抱える `postcss` / `sharp` は `package.json` の `overrides` で修正版に固定してある。
+  **外さない**（`npm audit` が0件でなくなる）。
 
 ### 実装済みで壊してはいけないもの
 
@@ -80,7 +91,35 @@ Phase 2（全市場双方向アービトラージ）で追加。**ここも崩�
 - **手数料は市場ごと×BUY/SELL別。** 一律◯%にまとめない。`is_estimated=1` のままで自動購入しない。
 - **使えない市場（BLOCKED / NOT_ALLOWED）の取り逃しは、実際の相場観測がある時だけ出す。** 参考相場で金額をでっちあげない。
 - **利益が最大のRouteをベストにしない。** 利益 × 売却確率 × 資金回転 × リスクで選ぶ。
-- ルール版は Phase 1 が `v1-`、Phase 2 が `r1-`。**混ぜない。**
+
+Phase 3（SHADOW学習・答え合わせ）で追加。**ここも崩さない。**
+
+19. **SHADOWの3テーブルは `ON CONFLICT DO NOTHING`。`DO UPDATE` を書かない。**
+    `route_shadow_trades` / `shadow_market_snapshots` / `shadow_evaluations`。
+    後から現在値で上書きすると、常に自分が正しかったことになり学習が成立しない。
+20. **「売れた」と数えるのは6条件をすべて満たす時だけ。**
+    観測あり／`observed_at` あり／観測が判断より後／`price_basis='SOLD_MEDIAN'`／
+    `sold_count_30d>=1`／`avg_days_to_sell` あり。
+    足りなければ `ACTUAL_SALE_UNCONFIRMED`。**勝ちにも負けにもしない。**
+21. **観測できなかった相場は `NO_OBSERVATION` と記録する。参考値で埋めない。**
+22. **実績によるスコア補正は件数で強さを変える**（5件未満=補正なし／5〜19=0.3／20〜49=0.6／50以上=1.0）。
+    補正幅は上下 **±10点**（`MAX_SCORE_ADJUSTMENT`）。少ない実績で点数を動かさない。
+23. **データ信頼度の止め方は2種類あり、混同しない。**
+    手数料が概算 → データ信頼度が下がり**そもそも90点に届かない**。
+    同一商品未確認 → **90点近くても蓋をして** `WATCH` へ落とす（`confidenceCapped`）。
+24. **旧料金で過去利益を再計算しない。** 変更は `fee_change_log` に記録するだけ。
+    取引時点の `fee_version`（`f{E|V}-{ハッシュ8桁}`）を保持する。
+    Fee Version のハッシュには**金額に影響する14項目だけ**を含める。
+25. **`hit_rate` は「売れた割合」ではない。** `AVG(probability_correct)`＝
+    売却確率の予測が当たったかどうか。ここを取り違えると集計が全部おかしくなる。
+26. テーブル名に注意：**`prediction_accuracy`**（`route_accuracy` ではない）／
+    `shadow_market_snapshots` の列は **`role`**（`side` ではない）／
+    手数料は **`venue_fee_profiles`** ／ `ownership_state` は **`supplier_products`** にある。
+27. `calcFreshness(observedAt, opts)` の第2引数は **オブジェクト** `{freshHours, normalHours, now}`。位置引数ではない。
+28. リポジトリのパスに日本語が含まれる。`new URL(...).pathname` はパーセントエンコードされるので、
+    **URLオブジェクトをそのまま `fs` に渡す**。
+
+- ルール版は Phase 1 が `v1-`、Phase 2 が `r1-`、Phase 3 が `r2-`。**混ぜない。**
 
 ## ポート
 
