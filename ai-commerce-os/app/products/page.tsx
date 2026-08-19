@@ -12,15 +12,16 @@ function s(v: string | string[] | undefined): string | undefined {
   return v && v !== '' ? v : undefined;
 }
 
-export default async function ProductsPage({ searchParams }: { searchParams: Search }) {
-  const page = Number(s(searchParams.page) ?? '1') || 1;
+export default async function ProductsPage({ searchParams }: { searchParams: Promise<Search> }) {
+  const sp = await searchParams;
+  const page = Number(s(sp.page) ?? '1') || 1;
   const filter = {
-    decision: s(searchParams.decision),
-    supplier: s(searchParams.supplier),
-    brand: s(searchParams.brand),
-    q: s(searchParams.q),
-    minScore: s(searchParams.minScore) ? Number(s(searchParams.minScore)) : undefined,
-    sort: s(searchParams.sort) ?? 'score',
+    decision: s(sp.decision),
+    supplier: s(sp.supplier),
+    brand: s(sp.brand),
+    q: s(sp.q),
+    minScore: s(sp.minScore) ? Number(s(sp.minScore)) : undefined,
+    sort: s(sp.sort) ?? 'score',
     page,
   };
 
@@ -29,7 +30,7 @@ export default async function ProductsPage({ searchParams }: { searchParams: Sea
 
   const qs = (over: Record<string, string | number | undefined>) => {
     const p = new URLSearchParams();
-    const merged = { ...searchParams, ...over } as Record<string, string | number | undefined>;
+    const merged = { ...sp, ...over } as Record<string, string | number | undefined>;
     for (const [k, v] of Object.entries(merged)) {
       if (v !== undefined && v !== '' && !Array.isArray(v)) p.set(k, String(v));
     }

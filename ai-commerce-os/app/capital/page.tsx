@@ -10,10 +10,15 @@ export const dynamic = 'force-dynamic';
 
 const PRESETS = [300000, 500000, 1000000, 3000000];
 
-export default async function CapitalPage({ searchParams }: { searchParams: { budget?: string } }) {
+export default async function CapitalPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ budget?: string }>;
+}) {
   await ensureReady();
   const t = await getThresholds();
-  const raw = Number(searchParams.budget ?? 1000000);
+  const sp = await searchParams;
+  const raw = Number(sp.budget ?? 1000000);
   const budget = Number.isFinite(raw) && raw > 0 ? Math.min(Math.round(raw), 100000000) : 1000000;
 
   const [venuesRaw, plan] = await Promise.all([

@@ -29,8 +29,9 @@ const SCORE_LABELS: Record<string, string> = {
 
 const SCORE_MAX: Record<string, number> = { profit: 30, roi: 30, market: 20, reliability: 10, stock: 10 };
 
-export default async function ProductDetail({ params }: { params: { id: string } }) {
-  const data = await getProduct(Number(params.id));
+export default async function ProductDetail({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const data = await getProduct(Number(id));
   if (!data) notFound();
   const { product: p, analysis: a, plan, shadowTrade, supplier, fee, siblings } = data;
 
@@ -61,7 +62,7 @@ export default async function ProductDetail({ params }: { params: { id: string }
         </div>
       )}
 
-      <RoutePanels supplierProductId={Number(params.id)} />
+      <RoutePanels supplierProductId={Number(id)} />
 
       <div className="split">
         <div>
