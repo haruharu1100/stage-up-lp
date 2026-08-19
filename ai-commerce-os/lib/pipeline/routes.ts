@@ -1,7 +1,11 @@
+import { loadRouteAdjustments } from '../accuracy';
 import { all, batch, nowIso, run, today } from '../db/client';
+import { syncFeeVersions } from '../fees';
 import { loadObservations, type ObservationMap } from '../marketdata';
+import { classifyCause, recordOpportunities, type OpportunityObservation } from '../opportunity';
 import { calcRoute, loadFeeProfiles, pickFee, type FeeProfile, type MarketObservation, type RouteResult } from '../route';
 import { getThresholds, routeRuleVersion, type Thresholds } from '../settings';
+import { buildShadow, type ShadowSource } from '../shadow';
 import { ensureVenues, routeBlockedReason, type Venue } from '../venues';
 
 /**
@@ -55,14 +59,23 @@ type Candidate = {
   human_verified: number;
 };
 
-type BuyOption = { venue: Venue; price: number; basis: string };
+type BuyOption = { venue: Venue; price: number; basis: string; obs: MarketObservation | null };
 type SellOption = { venue: Venue; price: number; basis: string; obs: MarketObservation | null };
+type Row = {
+  buy: BuyOption; sell: SellOption; res: RouteResult; blocked: string | null;
+  buyFee: FeeProfile; sellFee: FeeProfile;
+};
 
 export async function runRoutes(opts: { onlyIds?: number[] } = {}): Promise<RouteRunStats> {
   await ensureVenues();
+  // 手数料の版を先に確定させる。判断した時の手数料を後から特定できないと、§11の再計算が嘘になる。
+  await syncFeeVersions();
   const t = await getThresholds();
   const rv = await routeRuleVersion();
   const now = nowIso();
+
+  // 過去のSHADOWの答え合わせから出た補正。実績が少ない組み合わせは 0 が返る。
+  const adjustments = await loadRouteAdjustments(30);
 
   const runId = Number(
     (await run('INSERT INTO pipeline_runs (kind, started_at) VALUES (?, ?)', ['routes', now])).lastInsertRowid,
@@ -106,7 +119,9 @@ export async function runRoutes(opts: { onlyIds?: number[] } = {}): Promise<Rout
 
   const routeStmts: { sql: string; args: unknown[] }[] = [];
   const shadowStmts: { sql: string; args: unknown[] }[] = [];
+  const shadowChildStmts: { sql: string; args: unknown[] }[] = [];
   const productStmts: { sql: string; args: unknown[] }[] = [];
+  const opportunities: OpportunityObservation[] = [];
   const rois: number[] = [];
 
   for (const r of rows) {
@@ -115,7 +130,7 @@ export async function runRoutes(opts: { onlyIds?: number[] } = {}): Promise<Rout
     const sellOptions = collectSellOptions(c, sellVenues, obsMap);
     if (buyOptions.length === 0 || sellOptions.length === 0) continue;
 
-    const results: { buy: BuyOption; sell: SellOption; res: RouteResult; blocked: string | null }[] = [];
+    const results: Row[] = [];
 
     for (const b of buyOptions) {
       const buyFee = pickFee(fees, b.venue.code, 'BUY', c.category_key);
@@ -126,6 +141,10 @@ export async function runRoutes(opts: { onlyIds?: number[] } = {}): Promise<Rout
         if (blocked === 'SAME_VENUE') continue; // 同一市場内の自己売買は最初から対象外
         const sellFee = pickFee(fees, s.venue.code, 'SELL', c.category_key);
         if (!sellFee) continue;
+
+        const adj = adjustments.get(`${b.venue.code}→${s.venue.code}`);
+        const crossBorder = b.venue.currency !== 'JPY' || s.venue.currency !== 'JPY'
+          || buyFee.currency_fee_rate > 0 || sellFee.currency_fee_rate > 0;
 
         const res = calcRoute({
           buyVenueCode: b.venue.code,
@@ -141,11 +160,36 @@ export async function runRoutes(opts: { onlyIds?: number[] } = {}): Promise<Rout
           isBrandedHighValue: Boolean(c.brand) && b.price >= 100000,
           sellVenueAuthentication: s.venue.authentication_model,
           sellVenueTermsStatus: s.venue.terms_status,
-          crossBorder: b.venue.currency !== 'JPY' || s.venue.currency !== 'JPY'
-            || buyFee.currency_fee_rate > 0 || sellFee.currency_fee_rate > 0,
+          crossBorder,
           humanVerified: c.human_verified === 1,
+          // --- Phase 3 ---
+          identityKey: c.identity_key,
+          scoreAdjustment: adj?.adjustment ?? 0,
+          adjustmentTier: adj?.tier ?? null,
+          freshHours: t.marketFreshHours,
+          normalHours: t.marketNormalHours,
         });
-        results.push({ buy: b, sell: s, res, blocked });
+        results.push({ buy: b, sell: s, res, blocked, buyFee, sellFee });
+
+        // 価格差の寿命と原因を記録する（§14〜§16）。実行できる組み合わせだけを対象にする。
+        if (blocked === null && c.identity_key) {
+          opportunities.push({
+            identityKey: c.identity_key,
+            buyVenueCode: b.venue.code,
+            sellVenueCode: s.venue.code,
+            netProfit: res.expectedNetProfit,
+            cause: classifyCause({
+              buyPrice: b.price,
+              sellPrice: s.price,
+              buyMarketMedian: b.obs?.median_price ?? null,
+              sellObservedAt: s.obs?.observed_at ?? null,
+              buyObservedAt: b.obs?.observed_at ?? null,
+              sellListingCount: s.obs?.listing_count ?? null,
+              crossBorder,
+            }),
+            seenAt: now,
+          });
+        }
       }
     }
 
@@ -159,7 +203,7 @@ export async function runRoutes(opts: { onlyIds?: number[] } = {}): Promise<Rout
       ...blockedProfitable.sort((a, b) => b.res.expectedNetProfit - a.res.expectedNetProfit).slice(0, 3),
     ];
 
-    let best: (typeof keep)[number] | null = null;
+    let best: Row | null = null;
     for (const k of keep) {
       const isOk = k.blocked === null && k.res.decision !== 'SKIP';
       if (isOk && (!best || k.res.routeScore > best.res.routeScore)) best = k;
@@ -173,7 +217,7 @@ export async function runRoutes(opts: { onlyIds?: number[] } = {}): Promise<Rout
       if (k.res.skipReason) stats.bySkipReason[k.res.skipReason] = (stats.bySkipReason[k.res.skipReason] ?? 0) + 1;
       if (status === 'OK' && k.res.expectedRoi !== null) rois.push(k.res.expectedRoi);
 
-      routeStmts.push(routeStatement(c, k.buy, k.sell, k.res, rv, status, k.blocked, now));
+      routeStmts.push(routeStatement(c, k, rv, status, k.blocked, now));
     }
 
     if (best) {
@@ -187,38 +231,31 @@ export async function runRoutes(opts: { onlyIds?: number[] } = {}): Promise<Rout
         ],
       });
 
-      // SHADOW：買うと判断したものは必ず記録する。実際には買わない。
-      if (best.res.decision === 'STRONG_BUY' || best.res.decision === 'BUY') {
+      // SHADOW（§1・§2）。
+      // 「買う」と判断したものだけでなく、迷った水準（WATCH以上）まで記録する。
+      // 買わなかったものが後で儲かっていたのかを知らないと、判定が甘いのか辛いのか分からない。
+      if (best.res.routeScore >= t.shadowMinRouteScore) {
         stats.shadowOpened++;
-        const due = new Date(Date.now() + 30 * 86400000).toISOString();
-        shadowStmts.push({
-          sql: `INSERT INTO route_shadow_trades
-            (supplier_product_id, route_id, decided_at, rule_version, buy_venue_code, sell_venue_code,
-             acquisition_total_cost, expected_sell_price, expected_net_receipt, expected_net_profit,
-             expected_roi, route_score, sell_probability_30d, status, verify_due_at, snapshot_json)
-           VALUES (?,NULL,?,?,?,?, ?,?,?,?, ?,?,?, 'OPEN', ?, ?)
-           ON CONFLICT(supplier_product_id, buy_venue_code, sell_venue_code, rule_version) DO UPDATE SET
-             decided_at = excluded.decided_at,
-             acquisition_total_cost = excluded.acquisition_total_cost,
-             expected_sell_price = excluded.expected_sell_price,
-             expected_net_receipt = excluded.expected_net_receipt,
-             expected_net_profit = excluded.expected_net_profit,
-             expected_roi = excluded.expected_roi,
-             route_score = excluded.route_score,
-             sell_probability_30d = excluded.sell_probability_30d,
-             verify_due_at = excluded.verify_due_at,
-             snapshot_json = excluded.snapshot_json`,
-          args: [
-            c.id, now, rv, best.buy.venue.code, best.sell.venue.code,
-            best.res.buy.total, best.res.sell.sellPrice, best.res.sell.netReceipt, best.res.expectedNetProfit,
-            best.res.expectedRoi, best.res.routeScore, best.res.sellProbability30d, due,
-            JSON.stringify({
-              name: c.name, brand: c.brand, category: c.category_key,
-              buyBasis: best.buy.basis, sellBasis: best.sell.basis,
-              liquidity: best.res.liquidity, risk: best.res.riskScore, confidence: best.res.dataConfidence,
-            }),
-          ],
-        });
+        const src: ShadowSource = {
+          supplierProductId: c.id,
+          productId: c.product_id,
+          identityKey: c.identity_key,
+          name: c.name, brand: c.brand, categoryKey: c.category_key,
+          ruleVersion: rv,
+          buyVenueCode: best.buy.venue.code,
+          sellVenueCode: best.sell.venue.code,
+          buyPriceBasis: best.buy.basis,
+          sellPriceBasis: best.sell.basis,
+          buyObservation: best.buy.obs,
+          sellObservation: best.sell.obs,
+          buyFeeVersion: best.buyFee.fee_version ?? null,
+          sellFeeVersion: best.sellFee.fee_version ?? null,
+          result: best.res,
+          decidedAt: now,
+        };
+        const built = buildShadow(src);
+        shadowStmts.push(built.main);
+        shadowChildStmts.push(...built.children);
       }
     } else {
       productStmts.push({
@@ -231,7 +268,11 @@ export async function runRoutes(opts: { onlyIds?: number[] } = {}): Promise<Rout
 
   for (let i = 0; i < routeStmts.length; i += CHUNK) await batch(routeStmts.slice(i, i + CHUNK));
   for (let i = 0; i < shadowStmts.length; i += CHUNK) await batch(shadowStmts.slice(i, i + CHUNK));
+  // スナップショットと答え合わせ枠は shadow_id を副問い合わせで引くので、必ず親の後に流す。
+  for (let i = 0; i < shadowChildStmts.length; i += CHUNK) await batch(shadowChildStmts.slice(i, i + CHUNK));
   for (let i = 0; i < productStmts.length; i += CHUNK) await batch(productStmts.slice(i, i + CHUNK));
+
+  await recordOpportunities(opportunities, { fastHours: t.opportunityFastHours, now });
 
   // best_route_id は行が確定してから紐づける
   await run(`
@@ -275,13 +316,17 @@ export async function runRoutes(opts: { onlyIds?: number[] } = {}): Promise<Rout
 function collectBuyOptions(c: Candidate, byCode: Map<string, Venue>, obs: ObservationMap): BuyOption[] {
   const out: BuyOption[] = [];
   const own = byCode.get(c.supplier_code);
-  if (own && own.can_buy === 1) out.push({ venue: own, price: c.purchase_price, basis: 'SUPPLIER_PRICE' });
+  if (own && own.can_buy === 1) {
+    // 仕入先の提示価格そのもの。その市場の相場観測があれば、原因分類の材料として一緒に持つ。
+    const o = c.identity_key ? obs.get(`${c.identity_key}|${own.code}|BUY`) : undefined;
+    out.push({ venue: own, price: c.purchase_price, basis: 'SUPPLIER_PRICE', obs: o ?? null });
+  }
 
   if (c.identity_key) {
     for (const v of byCode.values()) {
       if (v.can_buy !== 1 || v.code === c.supplier_code) continue;
       const o = obs.get(`${c.identity_key}|${v.code}|BUY`);
-      if (o) out.push({ venue: v, price: o.price, basis: o.price_basis });
+      if (o) out.push({ venue: v, price: o.price, basis: o.price_basis, obs: o });
     }
   }
   return out;
@@ -311,9 +356,10 @@ function collectSellOptions(c: Candidate, sellVenues: Venue[], obs: ObservationM
 }
 
 function routeStatement(
-  c: Candidate, b: BuyOption, s: SellOption, r: RouteResult,
+  c: Candidate, k: Row,
   rv: string, status: string, blocked: string | null, now: string,
 ): { sql: string; args: unknown[] } {
+  const { buy: b, sell: s, res: r } = k;
   return {
     sql: `INSERT INTO arbitrage_routes
       (supplier_product_id, product_id, buy_venue_code, sell_venue_code, rule_version,
@@ -325,8 +371,10 @@ function routeStatement(
        sell_probability_7d, sell_probability_30d, sell_probability_90d,
        liquidity_score, liquidity_basis, capital_velocity, expected_30d_return, expected_annualized_return,
        route_score, risk_score, data_confidence, decision, price_basis, buy_price_basis,
-       fees_estimated, status, blocked_reason, skip_reason, breakdown_json, created_at)
-     VALUES (?,?,?,?,?, ?,?,?,?,?, ?,?,?,?,?, ?,?,?,?,?, ?,?,?,?,?, ?,?,?,?, ?,?,?, ?,?,?,?,?, ?,?,?,?,?,?, ?,?,?,?,?,?)
+       fees_estimated, status, blocked_reason, skip_reason, breakdown_json, created_at,
+       buy_fee_version, sell_fee_version, market_data_confidence, fee_data_confidence, match_confidence,
+       data_age_hours, freshness_tier, base_route_score, score_adjustment, adjustment_tier, confidence_capped)
+     VALUES (?,?,?,?,?, ?,?,?,?,?, ?,?,?,?,?, ?,?,?,?,?, ?,?,?,?,?, ?,?,?,?, ?,?,?, ?,?,?,?,?, ?,?,?,?,?,?, ?,?,?,?,?,?, ?,?,?,?,?, ?,?,?,?,?,?)
      ON CONFLICT(supplier_product_id, buy_venue_code, sell_venue_code, rule_version) DO UPDATE SET
        acquisition_price = excluded.acquisition_price,
        acquisition_total_cost = excluded.acquisition_total_cost,
@@ -340,7 +388,14 @@ function routeStatement(
        data_confidence = excluded.data_confidence, decision = excluded.decision,
        status = excluded.status, blocked_reason = excluded.blocked_reason,
        skip_reason = excluded.skip_reason, breakdown_json = excluded.breakdown_json,
-       created_at = excluded.created_at`,
+       created_at = excluded.created_at,
+       buy_fee_version = excluded.buy_fee_version, sell_fee_version = excluded.sell_fee_version,
+       market_data_confidence = excluded.market_data_confidence,
+       fee_data_confidence = excluded.fee_data_confidence,
+       match_confidence = excluded.match_confidence,
+       data_age_hours = excluded.data_age_hours, freshness_tier = excluded.freshness_tier,
+       base_route_score = excluded.base_route_score, score_adjustment = excluded.score_adjustment,
+       adjustment_tier = excluded.adjustment_tier, confidence_capped = excluded.confidence_capped`,
     args: [
       c.id, c.product_id, b.venue.code, s.venue.code, rv,
       r.buy.itemPrice, r.buy.buyerFee, r.buy.paymentFee, r.buy.domesticShipping, r.buy.authenticationFee,
@@ -353,6 +408,10 @@ function routeStatement(
       r.routeScore, r.riskScore, r.dataConfidence, r.decision, s.basis, b.basis,
       r.feesEstimated ? 1 : 0, status, blocked, r.skipReason,
       JSON.stringify({ buy: r.buy, sell: r.sell, liquidity: r.liquidity }), now,
+      k.buyFee.fee_version ?? null, k.sellFee.fee_version ?? null,
+      r.confidence.market, r.confidence.fee, r.confidence.match,
+      r.freshness.ageHours, r.freshness.tier, r.baseRouteScore, r.scoreAdjustment,
+      r.adjustmentTier, r.confidenceCapped ? 1 : 0,
     ],
   };
 }

@@ -36,7 +36,15 @@ const ALIASES: Record<string, string[]> = {
   price_stddev_ratio: ['price_stddev_ratio', 'stddev', '価格ばらつき', 'ばらつき'],
   observed_at: ['observed_at', 'date', '取得日', '観測日', '日付'],
   source: ['source', 'source_note', '出典', 'ソース'],
+  // Phase 3。1点の代表値だけでなく、その日の相場の広がりも保存する。
+  low_price: ['low_price', 'min_price', 'low', '最安値', '最安', '下限'],
+  median_price: ['median_price', 'median', '中央値価格', '中央'],
+  avg_price: ['avg_price', 'average', 'mean', '平均値', '平均価格'],
+  source_type: ['source_type', '取得元', 'データ取得元', '取得方法'],
 };
+
+/** データの出どころ。CSVで指定が無ければ手入力CSV扱いにする（自動取得を装わない）。 */
+const SOURCE_TYPES = new Set(['CSV_MANUAL', 'CSV_FEED', 'API', 'WEBHOOK', 'PARTNER_FEED']);
 
 function canon(h: string): string {
   return h.trim().toLowerCase().replace(/[\s_\-　]/g, '');
@@ -121,23 +129,31 @@ export async function importMarketData(text: string): Promise<MarketImportResult
     const sd = get('price_stddev_ratio');
     const days = get('avg_days_to_sell');
 
+    const srcRaw = get('source_type').toUpperCase().replace(/[\s-]/g, '_');
+    const sourceType = SOURCE_TYPES.has(srcRaw) ? srcRaw : 'CSV_MANUAL';
+
     stmts.push({
       sql: `INSERT INTO venue_market_prices
         (venue_code, side, product_id, identity_key, price, price_basis,
          sold_count_30d, listing_count, avg_days_to_sell, price_stddev_ratio,
-         observed_at, source_note, is_estimated, created_at)
-       VALUES (?,?,NULL,?,?,?, ?,?,?,?, ?,?,?,?)
+         observed_at, source_note, is_estimated, created_at,
+         low_price, median_price, avg_price, source_type)
+       VALUES (?,?,NULL,?,?,?, ?,?,?,?, ?,?,?,?, ?,?,?,?)
        ON CONFLICT(venue_code, side, identity_key) DO UPDATE SET
          price = excluded.price, price_basis = excluded.price_basis,
          sold_count_30d = excluded.sold_count_30d, listing_count = excluded.listing_count,
          avg_days_to_sell = excluded.avg_days_to_sell, price_stddev_ratio = excluded.price_stddev_ratio,
          observed_at = excluded.observed_at, source_note = excluded.source_note,
-         is_estimated = excluded.is_estimated`,
+         is_estimated = excluded.is_estimated,
+         low_price = excluded.low_price, median_price = excluded.median_price,
+         avg_price = excluded.avg_price, source_type = excluded.source_type`,
       args: [
         venue, side, key, price, basis,
         parseIntOrNull(get('sold_count_30d')), parseIntOrNull(get('listing_count')),
         days === '' ? null : Number(days), sd === '' ? null : Number(sd),
         observedAt, cleanText(get('source')) || null, basis === 'SOLD_MEDIAN' ? 0 : 1, now,
+        parseMoney(get('low_price')), parseMoney(get('median_price')), parseMoney(get('avg_price')),
+        sourceType,
       ],
     });
     out.inserted++;
@@ -158,19 +174,25 @@ export type ObservationMap = Map<string, MarketObservation>;
 export async function loadObservations(): Promise<ObservationMap> {
   const rows = await all(
     `SELECT venue_code, side, identity_key, price, price_basis, sold_count_30d, listing_count,
-            avg_days_to_sell, price_stddev_ratio, observed_at
+            avg_days_to_sell, price_stddev_ratio, observed_at,
+            low_price, median_price, avg_price, source_type
        FROM venue_market_prices`,
   );
   const m: ObservationMap = new Map();
+  const numOrNull = (v: unknown) => (v === null || v === undefined ? null : Number(v));
   for (const r of rows) {
     m.set(`${r.identity_key}|${r.venue_code}|${r.side}`, {
       price: Number(r.price),
       price_basis: String(r.price_basis),
-      sold_count_30d: r.sold_count_30d === null ? null : Number(r.sold_count_30d),
-      listing_count: r.listing_count === null ? null : Number(r.listing_count),
-      avg_days_to_sell: r.avg_days_to_sell === null ? null : Number(r.avg_days_to_sell),
-      price_stddev_ratio: r.price_stddev_ratio === null ? null : Number(r.price_stddev_ratio),
+      sold_count_30d: numOrNull(r.sold_count_30d),
+      listing_count: numOrNull(r.listing_count),
+      avg_days_to_sell: numOrNull(r.avg_days_to_sell),
+      price_stddev_ratio: numOrNull(r.price_stddev_ratio),
       observed_at: r.observed_at === null ? null : String(r.observed_at),
+      low_price: numOrNull(r.low_price),
+      median_price: numOrNull(r.median_price),
+      avg_price: numOrNull(r.avg_price),
+      source_type: r.source_type === null || r.source_type === undefined ? null : String(r.source_type),
     });
   }
   return m;
@@ -187,7 +209,7 @@ export async function marketDataCoverage() {
   `);
 }
 
-export const MARKET_CSV_TEMPLATE = `市場,区分,ブランド,型番,JAN,価格,価格の種類,成約件数,出品件数,平均売却日数,価格ばらつき,取得日
-MERCARI,SELL,NIKE,DZ5485-612,,105000,成約,18,42,11,0.08,2026-08-20
-SNKRDUNK,BUY,NIKE,DZ5485-612,,80000,出品,,25,,0.05,2026-08-20
-EBAY,SELL,NIKE,DZ5485-612,,132000,出品,3,17,38,0.22,2026-08-20`;
+export const MARKET_CSV_TEMPLATE = `市場,区分,ブランド,型番,JAN,価格,価格の種類,成約件数,出品件数,平均売却日数,価格ばらつき,最安値,中央値,平均値,取得元,取得日
+MERCARI,SELL,NIKE,DZ5485-612,,105000,成約,18,42,11,0.08,92000,105000,107500,CSV_MANUAL,2026-08-20
+SNKRDUNK,BUY,NIKE,DZ5485-612,,80000,出品,,25,,0.05,78000,80000,81200,CSV_MANUAL,2026-08-20
+EBAY,SELL,NIKE,DZ5485-612,,132000,出品,3,17,38,0.22,110000,132000,135000,CSV_MANUAL,2026-08-20`;

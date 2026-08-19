@@ -1,5 +1,6 @@
 import { all } from '@/lib/db/client';
 import { ensureReady } from '@/lib/queries';
+import { FEE_SOURCE_JA } from '@/lib/fees';
 import { AUTOMATION_JA, TERMS_STATUS_JA, VENUE_KIND_JA, type Venue } from '@/lib/venues';
 import { num, pct } from '@/lib/format';
 
@@ -18,15 +19,29 @@ function TermsBadge({ status }: { status: string }) {
   return <span className={cls}>{TERMS_STATUS_JA[status] ?? status}</span>;
 }
 
+/** 日付は「いつ確認したか」だけ分かればよい。時刻まで出すと表が読みにくくなる。 */
+function day(v: unknown): string {
+  const s = v === null || v === undefined ? '' : String(v);
+  return s === '' ? '' : s.slice(0, 10);
+}
+
 export default async function VenuesPage() {
   await ensureReady();
   const venues = (await all('SELECT * FROM venues ORDER BY kind, code')) as unknown as Venue[];
-  const fees = await all('SELECT * FROM venue_fee_profiles ORDER BY venue_code, side');
+  // 概算のままの手数料を上に集める。目立たせないと「確認したつもり」で使い続けてしまう。
+  const fees = await all(
+    'SELECT * FROM venue_fee_profiles ORDER BY is_estimated DESC, venue_code, side',
+  );
+  const feeChanges = await all(
+    'SELECT * FROM fee_change_log ORDER BY detected_at DESC, id DESC LIMIT 20',
+  );
 
   const buyable = venues.filter((v) => v.can_buy === 1).length;
   const sellable = venues.filter((v) => v.can_sell === 1 && v.terms_status !== 'BLOCKED').length;
   const blocked = venues.filter((v) => v.terms_status === 'BLOCKED').length;
   const estimated = fees.filter((f) => Number(f.is_estimated) === 1).length;
+  const verified = fees.length - estimated;
+  const withUrl = fees.filter((f) => f.source_url).length;
 
   return (
     <main>
@@ -123,12 +138,47 @@ export default async function VenuesPage() {
       <h2>手数料（買う側と売る側を分けて持つ）</h2>
       <p className="lead small">
         同じ市場でも、買うときと売るときで費用は違います。一律10%のような扱いはしていません。
-        「概算」と付いているものは公式の料金を確認できていないため、その市場を使う自動購入は許可されません。
       </p>
-      <div className="scroll">
+
+      {estimated > 0 && (
+        <div className="note danger">
+          <strong>手数料 {num(fees.length)} 件のうち {num(estimated)} 件が「概算」のままです。</strong>
+          <div className="small" style={{ marginTop: 6 }}>
+            概算とは、公式の料金ページ・契約書・請求書のどれでもまだ確認できていない数字のことです。
+            この状態の市場は、利益の見込みがどれだけ良く出ても「最優先で買う（STRONG BUY）」には上がりません。
+            自動購入も許可されません。数字を良く見せるために概算のまま進めることはしません。
+          </div>
+        </div>
+      )}
+
+      <div className="cards" style={{ marginTop: 12 }}>
+        <div className="card">
+          <div className="k">手数料の設定数</div>
+          <div className="v">{num(fees.length)}</div>
+          <div className="sub">市場 × 買う／売る</div>
+        </div>
+        <div className="card">
+          <div className="k">概算のまま</div>
+          <div className="v">{num(estimated)}</div>
+          <div className="sub">要・公式確認</div>
+        </div>
+        <div className="card">
+          <div className="k">確認済み</div>
+          <div className="v">{num(verified)}</div>
+          <div className="sub">公式ページ／契約書／請求書</div>
+        </div>
+        <div className="card">
+          <div className="k">出典URLあり</div>
+          <div className="v">{num(withUrl)}</div>
+          <div className="sub">あとから見返せる</div>
+        </div>
+      </div>
+
+      <div className="scroll" style={{ marginTop: 12 }}>
         <table>
           <thead>
             <tr>
+              <th>確からしさ</th>
               <th>市場</th>
               <th>区分</th>
               <th className="num">手数料率</th>
@@ -141,12 +191,21 @@ export default async function VenuesPage() {
               <th className="num">鑑定料</th>
               <th className="num">梱包</th>
               <th className="num">保管</th>
-              <th>根拠</th>
+              <th>出どころ</th>
+              <th>確認日</th>
+              <th>確認した人</th>
+              <th>版</th>
+              <th>備考</th>
             </tr>
           </thead>
           <tbody>
             {fees.map((f) => (
               <tr key={String(f.id)}>
+                <td>
+                  {Number(f.is_estimated) === 1
+                    ? <span className="badge est">概算</span>
+                    : <span className="badge strong">確認済み</span>}
+                </td>
                 <td>{String(f.venue_code)}</td>
                 <td>{f.side === 'BUY' ? '買う' : '売る'}</td>
                 <td className="num">{pct(Number(f.fee_rate))}</td>
@@ -163,14 +222,85 @@ export default async function VenuesPage() {
                 <td className="num">{num(Number(f.packing_cost))}</td>
                 <td className="num">{num(Number(f.warehouse_cost))}</td>
                 <td className="small">
-                  {Number(f.is_estimated) === 1 && <span className="badge est">概算</span>}{' '}
-                  <span className="muted">{String(f.source_note ?? '')}</span>
+                  {f.source_url
+                    ? <a href={String(f.source_url)} target="_blank" rel="noreferrer">
+                        {FEE_SOURCE_JA[String(f.source_type ?? '')] ?? String(f.source_type ?? '未記入')}
+                      </a>
+                    : (FEE_SOURCE_JA[String(f.source_type ?? '')] ?? <span className="muted">未記入</span>)}
+                  {!f.source_url && <div className="small muted">出典URLなし</div>}
                 </td>
+                <td className="small">
+                  {f.verified_at ? day(f.verified_at) : <span className="muted">未確認</span>}
+                </td>
+                <td className="small">
+                  {f.manually_verified_by
+                    ? String(f.manually_verified_by)
+                    : <span className="muted">—</span>}
+                </td>
+                <td className="small muted">{String(f.fee_version ?? '—')}</td>
+                <td className="small muted">{String(f.source_note ?? '')}</td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+
+      <h2>手数料が変わったときの記録</h2>
+      <p className="lead small">
+        手数料は変わります。変わったあとの料金で過去の利益を計算し直すと、
+        「当時いくらの利益を見込んで買うと判断したのか」が消えてしまい、答え合わせが嘘になります。
+        そのため過去の判断は当時の版のまま残し、変更はここに記録だけします。
+      </p>
+      {feeChanges.length === 0 ? (
+        <div className="note">まだ手数料の変更は検知されていません。</div>
+      ) : (
+        <div className="scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>検知日</th>
+                <th>市場</th>
+                <th>区分</th>
+                <th>変わった項目</th>
+                <th>旧版</th>
+                <th>新版</th>
+              </tr>
+            </thead>
+            <tbody>
+              {feeChanges.map((c) => (
+                <tr key={String(c.id)}>
+                  <td className="small">{day(c.detected_at)}</td>
+                  <td>{String(c.venue_code)}</td>
+                  <td className="small">{c.side === 'BUY' ? '買う' : '売る'}</td>
+                  <td className="small">{changedFieldsJa(c.changed_fields)}</td>
+                  <td className="small muted">{String(c.old_fee_version ?? '—')}</td>
+                  <td className="small muted">{String(c.new_fee_version ?? '—')}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </main>
   );
+}
+
+const FEE_FIELD_JA: Record<string, string> = {
+  fee_rate: '手数料率', payment_fee_rate: '決済手数料', currency_fee_rate: '為替',
+  tax_rate: '税', import_duty_rate: '関税', advertising_fee_rate: '広告費',
+  return_loss_rate: '返品見込', fixed_fee: '固定費', shipping_cost: '送料',
+  authentication_fee: '鑑定料', packing_cost: '梱包費', warehouse_cost: '保管費',
+  return_loss_fixed: '返品固定費', other_cost: 'その他費用',
+};
+
+function changedFieldsJa(raw: unknown): string {
+  if (typeof raw !== 'string' || raw === '') return '—';
+  try {
+    const j = JSON.parse(raw);
+    const fields: string[] = Array.isArray(j?.fields) ? j.fields : [];
+    if (fields.length === 0) return '金額に影響する項目';
+    return fields.map((f) => FEE_FIELD_JA[f] ?? f).join('・');
+  } catch {
+    return '—';
+  }
 }

@@ -283,8 +283,15 @@ async function main() {
   section('10. SHADOW記録（実購入なし）');
   const shadow = await n('route_shadow_trades');
   check('Route SHADOWが記録されている', shadow > 0, `${shadow}件`);
-  const shadowOpen = await n(`route_shadow_trades WHERE status = 'OPEN'`);
-  check('SHADOWは未検証（OPEN）で置かれている', shadowOpen > 0, `${shadowOpen}件`);
+  // 答え合わせを済ませたものは CLOSED になる（Phase 3）。
+  // ここで見たいのは「まだ答え合わせしていないのに、勝手に決着済みにされていないか」。
+  const shadowFakeClosed = await n(
+    `route_shadow_trades WHERE status <> 'OPEN' AND verified_at IS NULL`);
+  check('答え合わせしていないSHADOWが決着済みにされていない', shadowFakeClosed === 0, `${shadowFakeClosed}件`);
+  const shadowStatus = await all(`SELECT DISTINCT status FROM route_shadow_trades`);
+  check('SHADOWの状態がOPEN/CLOSEDのみ',
+    shadowStatus.every((r) => ['OPEN', 'CLOSED'].includes(String(r.status))),
+    shadowStatus.map((r) => r.status).join(', '));
   const shadowRule = await all(`SELECT DISTINCT rule_version FROM route_shadow_trades`);
   const rv = await routeRuleVersion();
   check('SHADOWにルール版が記録されている（後で条件を復元できる）',

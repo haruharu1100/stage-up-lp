@@ -224,6 +224,82 @@ export const SETTING_DEFS: SettingDef[] = [
     group_key: 'ルート',
     hint: '1つの販売先に依存しないようにする。',
   },
+
+  // --- データ品質（Phase 3） ---
+  {
+    key: 'MIN_CONFIDENCE_STRONG_BUY',
+    value: '65',
+    value_type: 'int',
+    label: 'STRONG BUY に必要なデータ信頼度',
+    group_key: 'データ品質',
+    hint: '相場・手数料・同一商品特定のうち一番低い値がこれ未満なら、利益がいくら大きくても STRONG BUY にしない。',
+  },
+  {
+    key: 'MIN_CONFIDENCE_BUY',
+    value: '30',
+    value_type: 'int',
+    label: 'BUY に必要なデータ信頼度',
+    group_key: 'データ品質',
+    hint: 'これ未満なら BUY にもしない（WATCH まで下げる）。数字の出どころが弱すぎる状態で買う判断をしないための下限。',
+  },
+  {
+    key: 'MARKET_FRESH_HOURS',
+    value: '24',
+    value_type: 'int',
+    label: '相場データが「新しい」とみなす時間',
+    group_key: 'データ品質',
+    hint: 'これ以内に取得した相場は減点しない。',
+  },
+  {
+    key: 'MARKET_NORMAL_HOURS',
+    value: '72',
+    value_type: 'int',
+    label: '相場データが「通常」とみなす時間',
+    group_key: 'データ品質',
+    hint: 'これを超えた相場は古いとみなし、経過日数に応じて信頼度を下げる。',
+  },
+
+  // --- 学習（Phase 3・SHADOW の答え合わせ） ---
+  {
+    key: 'SHADOW_MIN_ROUTE_SCORE',
+    value: '70',
+    value_type: 'int',
+    label: 'SHADOW に記録する最低ルート点数',
+    group_key: '学習',
+    hint: 'この点数以上のルートは、買うと判断しなくても仮想取引として記録し、後で答え合わせする。迷ったものこそ学習の材料になる。',
+  },
+  {
+    key: 'ACCURACY_MIN_SAMPLES',
+    value: '5',
+    value_type: 'int',
+    label: '実績補正を始める最低件数',
+    group_key: '学習',
+    hint: 'これ未満の実績しかない組み合わせは、点数を一切補正しない。数件の偶然で順位を動かさないため。',
+  },
+  {
+    key: 'ACCURACY_MID_SAMPLES',
+    value: '20',
+    value_type: 'int',
+    label: '中程度の補正に切り替える件数',
+    group_key: '学習',
+    hint: 'これ以上で補正の効きを強める。',
+  },
+  {
+    key: 'ACCURACY_FULL_SAMPLES',
+    value: '50',
+    value_type: 'int',
+    label: '通常の補正に切り替える件数',
+    group_key: '学習',
+    hint: 'これ以上たまってはじめて、実績を全幅で点数へ反映する。',
+  },
+  {
+    key: 'OPPORTUNITY_FAST_HOURS',
+    value: '24',
+    value_type: 'int',
+    label: '「短時間で消える」とみなす時間',
+    group_key: '学習',
+    hint: '利益が出る状態がこれ以内で消えた価格差は、速度スコアを高くする（見つけても間に合わない可能性が高い）。',
+  },
 ];
 
 let cache: Map<string, string> | null = null;
@@ -296,6 +372,15 @@ export type Thresholds = {
   minDaysForAnnualized: number;
   capitalMaxPerBrandRatio: number;
   capitalMaxPerVenueRatio: number;
+  minConfidenceStrongBuy: number;
+  minConfidenceBuy: number;
+  marketFreshHours: number;
+  marketNormalHours: number;
+  shadowMinRouteScore: number;
+  accuracyMinSamples: number;
+  accuracyMidSamples: number;
+  accuracyFullSamples: number;
+  opportunityFastHours: number;
 };
 
 export async function getThresholds(): Promise<Thresholds> {
@@ -330,6 +415,15 @@ export async function getThresholds(): Promise<Thresholds> {
     minDaysForAnnualized: num('MIN_DAYS_FOR_ANNUALIZED'),
     capitalMaxPerBrandRatio: num('CAPITAL_MAX_PER_BRAND_RATIO'),
     capitalMaxPerVenueRatio: num('CAPITAL_MAX_PER_VENUE_RATIO'),
+    minConfidenceStrongBuy: num('MIN_CONFIDENCE_STRONG_BUY'),
+    minConfidenceBuy: num('MIN_CONFIDENCE_BUY'),
+    marketFreshHours: num('MARKET_FRESH_HOURS'),
+    marketNormalHours: num('MARKET_NORMAL_HOURS'),
+    shadowMinRouteScore: num('SHADOW_MIN_ROUTE_SCORE'),
+    accuracyMinSamples: num('ACCURACY_MIN_SAMPLES'),
+    accuracyMidSamples: num('ACCURACY_MID_SAMPLES'),
+    accuracyFullSamples: num('ACCURACY_FULL_SAMPLES'),
+    opportunityFastHours: num('OPPORTUNITY_FAST_HOURS'),
   };
 }
 
@@ -374,8 +468,15 @@ export async function routeRuleVersion(): Promise<string> {
     t.scoreBuy,
     t.scoreWatch,
     t.scoreLowPriority,
+    // Phase 3。データ品質の天井と鮮度は判定そのものを変えるので、版に必ず含める。
+    t.minConfidenceStrongBuy,
+    t.minConfidenceBuy,
+    t.marketFreshHours,
+    t.marketNormalHours,
   ].join('|');
   let h = 0;
   for (let i = 0; i < sig.length; i++) h = (h * 31 + sig.charCodeAt(i)) >>> 0;
-  return `r1-${h.toString(16)}`;
+  // Phase 3 で判定式が変わった（データ品質による上限・実績補正）。
+  // 過去の r1- 記録と混ざると「同じ条件で出した判断」と誤解するので版を上げる。
+  return `r2-${h.toString(16)}`;
 }

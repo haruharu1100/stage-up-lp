@@ -533,6 +533,140 @@ export const SCHEMA: string[] = [
     shadow_opened    INTEGER NOT NULL DEFAULT 0,
     updated_at       TEXT NOT NULL
   )`,
+
+  // ============================================================ Phase 3
+  // 「AIが買うと判断した商品が、本当にその後利益になったのか」を答え合わせする層。
+  // ここでも実購入・実出品はしない。記録と検証だけ。
+
+  // 判断した瞬間の市場の姿。
+  // 後から現在値だけ見ても「当時なぜそう判断したか」は分からない。だから凍結して保存する。
+  `CREATE TABLE IF NOT EXISTS shadow_market_snapshots (
+    id                 INTEGER PRIMARY KEY AUTOINCREMENT,
+    shadow_id          INTEGER NOT NULL,
+    role               TEXT NOT NULL,
+    venue_code         TEXT NOT NULL,
+    identity_key       TEXT,
+    price              INTEGER NOT NULL,
+    price_basis        TEXT NOT NULL,
+    low_price          INTEGER,
+    median_price       INTEGER,
+    avg_price          INTEGER,
+    listing_count      INTEGER,
+    sold_count_30d     INTEGER,
+    avg_days_to_sell   REAL,
+    price_stddev_ratio REAL,
+    source_type        TEXT,
+    source_note        TEXT,
+    observed_at        TEXT,
+    data_age_hours     REAL,
+    captured_at        TEXT NOT NULL,
+    UNIQUE(shadow_id, role, venue_code)
+  )`,
+
+  `CREATE INDEX IF NOT EXISTS ix_snapshot_shadow ON shadow_market_snapshots(shadow_id)`,
+
+  // 7日 / 30日 / 90日の答え合わせ地点。
+  // outcome は SOLD / NOT_SOLD / ACTUAL_SALE_UNCONFIRMED / PENDING の4つだけ。
+  // 出品価格しか無い市場を「売れた」と数えない。無理に勝敗を決めない。
+  `CREATE TABLE IF NOT EXISTS shadow_evaluations (
+    id                     INTEGER PRIMARY KEY AUTOINCREMENT,
+    shadow_id              INTEGER NOT NULL,
+    horizon_days           INTEGER NOT NULL,
+    due_at                 TEXT NOT NULL,
+    evaluated_at           TEXT,
+    outcome                TEXT NOT NULL DEFAULT 'PENDING',
+    evidence_basis         TEXT,
+    evidence_note          TEXT,
+    actual_sell_price      INTEGER,
+    actual_days_to_sell    REAL,
+    actual_net_receipt     INTEGER,
+    actual_net_profit      INTEGER,
+    actual_roi             REAL,
+    sell_price_error       INTEGER,
+    sell_price_error_ratio REAL,
+    days_to_sell_error     REAL,
+    net_profit_error       INTEGER,
+    roi_error              REAL,
+    predicted_probability  REAL,
+    probability_correct    INTEGER,
+    route_score_at_decision INTEGER,
+    score_verdict          TEXT,
+    market_data_confidence INTEGER,
+    fee_data_confidence    INTEGER,
+    created_at             TEXT NOT NULL,
+    UNIQUE(shadow_id, horizon_days)
+  )`,
+
+  `CREATE INDEX IF NOT EXISTS ix_eval_due ON shadow_evaluations(outcome, due_at)`,
+  `CREATE INDEX IF NOT EXISTS ix_eval_shadow ON shadow_evaluations(shadow_id, horizon_days)`,
+
+  // 予測精度の集計。Route別／市場別／ブランド別／カテゴリ別。
+  // 判定保留（ACTUAL_SALE_UNCONFIRMED）は的中率の分母に入れない。
+  `CREATE TABLE IF NOT EXISTS prediction_accuracy (
+    id                    INTEGER PRIMARY KEY AUTOINCREMENT,
+    segment_type          TEXT NOT NULL,
+    segment_key           TEXT NOT NULL,
+    horizon_days          INTEGER NOT NULL,
+    sample_count          INTEGER NOT NULL DEFAULT 0,
+    decided_count         INTEGER NOT NULL DEFAULT 0,
+    sold_count            INTEGER NOT NULL DEFAULT 0,
+    not_sold_count        INTEGER NOT NULL DEFAULT 0,
+    unconfirmed_count     INTEGER NOT NULL DEFAULT 0,
+    hit_rate              REAL,
+    avg_sell_price_error  REAL,
+    avg_sell_price_error_ratio REAL,
+    avg_days_error        REAL,
+    avg_net_profit_error  REAL,
+    avg_roi_error         REAL,
+    avg_predicted_roi     REAL,
+    avg_actual_roi        REAL,
+    calibration_ratio     REAL,
+    score_adjustment      INTEGER NOT NULL DEFAULT 0,
+    adjustment_tier       TEXT NOT NULL DEFAULT 'NONE',
+    updated_at            TEXT NOT NULL,
+    UNIQUE(segment_type, segment_key, horizon_days)
+  )`,
+
+  // 利益機会の寿命。価格差は永遠には続かない。
+  // 「この種類の価格差は何時間以内に買わないと消えるか」を後から学習するための記録。
+  `CREATE TABLE IF NOT EXISTS opportunity_lifetimes (
+    id                 INTEGER PRIMARY KEY AUTOINCREMENT,
+    identity_key       TEXT NOT NULL,
+    buy_venue_code     TEXT NOT NULL,
+    sell_venue_code    TEXT NOT NULL,
+    first_seen_at      TEXT NOT NULL,
+    best_seen_at       TEXT,
+    best_net_profit    INTEGER,
+    first_net_profit   INTEGER,
+    last_net_profit    INTEGER,
+    last_profitable_at TEXT,
+    last_seen_at       TEXT NOT NULL,
+    expired_at         TEXT,
+    observation_count  INTEGER NOT NULL DEFAULT 1,
+    lifetime_hours     REAL,
+    speed_score        INTEGER,
+    cause_class        TEXT NOT NULL DEFAULT 'UNKNOWN',
+    cause_note         TEXT,
+    updated_at         TEXT NOT NULL,
+    UNIQUE(identity_key, buy_venue_code, sell_venue_code)
+  )`,
+
+  `CREATE INDEX IF NOT EXISTS ix_opp_pair ON opportunity_lifetimes(buy_venue_code, sell_venue_code)`,
+
+  // 手数料の変更検知。旧料金で過去の利益を再計算してはいけない。
+  // 取引時点の fee_version を Route / SHADOW 側に持たせ、ここで版の移り変わりを追う。
+  `CREATE TABLE IF NOT EXISTS fee_change_log (
+    id               INTEGER PRIMARY KEY AUTOINCREMENT,
+    venue_code       TEXT NOT NULL,
+    side             TEXT NOT NULL,
+    category_key     TEXT NOT NULL,
+    old_fee_version  TEXT,
+    new_fee_version  TEXT NOT NULL,
+    changed_fields   TEXT,
+    source_type      TEXT,
+    detected_at      TEXT NOT NULL,
+    note             TEXT
+  )`,
 ];
 
 /**
@@ -550,4 +684,50 @@ export const ADD_COLUMNS: string[] = [
   `ALTER TABLE supplier_products ADD COLUMN route_count INTEGER NOT NULL DEFAULT 0`,
   // §15 在庫を持たない販売の管理。Phase 2 は購入しないので全件 NOT_OWNED。
   `ALTER TABLE supplier_products ADD COLUMN ownership_state TEXT NOT NULL DEFAULT 'NOT_OWNED'`,
+
+  // ---- Phase 3 ----
+  // 相場データの中身を厚くする（最安値・中央値・平均値・取得元）。
+  // 「価格1つ」だけでは、当時の市場の姿を再現できない。
+  `ALTER TABLE venue_market_prices ADD COLUMN low_price INTEGER`,
+  `ALTER TABLE venue_market_prices ADD COLUMN median_price INTEGER`,
+  `ALTER TABLE venue_market_prices ADD COLUMN avg_price INTEGER`,
+  `ALTER TABLE venue_market_prices ADD COLUMN source_type TEXT NOT NULL DEFAULT 'CSV_MANUAL'`,
+
+  // 手数料の出どころ管理を強化する。公式確認が取れていないものを見分けられるようにする。
+  `ALTER TABLE venue_fee_profiles ADD COLUMN source_type TEXT NOT NULL DEFAULT 'ESTIMATE'`,
+  `ALTER TABLE venue_fee_profiles ADD COLUMN manually_verified_by TEXT`,
+  `ALTER TABLE venue_fee_profiles ADD COLUMN fee_version TEXT`,
+
+  // Route に、判断時点の手数料版とデータ品質を残す。
+  `ALTER TABLE arbitrage_routes ADD COLUMN buy_fee_version TEXT`,
+  `ALTER TABLE arbitrage_routes ADD COLUMN sell_fee_version TEXT`,
+  `ALTER TABLE arbitrage_routes ADD COLUMN market_data_confidence INTEGER`,
+  `ALTER TABLE arbitrage_routes ADD COLUMN fee_data_confidence INTEGER`,
+  `ALTER TABLE arbitrage_routes ADD COLUMN match_confidence INTEGER`,
+  `ALTER TABLE arbitrage_routes ADD COLUMN data_age_hours REAL`,
+  `ALTER TABLE arbitrage_routes ADD COLUMN freshness_tier TEXT`,
+  `ALTER TABLE arbitrage_routes ADD COLUMN base_route_score INTEGER`,
+  `ALTER TABLE arbitrage_routes ADD COLUMN score_adjustment INTEGER NOT NULL DEFAULT 0`,
+  `ALTER TABLE arbitrage_routes ADD COLUMN adjustment_tier TEXT`,
+  `ALTER TABLE arbitrage_routes ADD COLUMN opportunity_speed_score INTEGER`,
+  `ALTER TABLE arbitrage_routes ADD COLUMN confidence_capped INTEGER NOT NULL DEFAULT 0`,
+
+  // SHADOW を Route 単位で厚く残す（§1 の保存項目）。
+  `ALTER TABLE route_shadow_trades ADD COLUMN product_id INTEGER`,
+  `ALTER TABLE route_shadow_trades ADD COLUMN identity_key TEXT`,
+  `ALTER TABLE route_shadow_trades ADD COLUMN brand TEXT`,
+  `ALTER TABLE route_shadow_trades ADD COLUMN category_key TEXT`,
+  `ALTER TABLE route_shadow_trades ADD COLUMN decision TEXT`,
+  `ALTER TABLE route_shadow_trades ADD COLUMN acquisition_price INTEGER`,
+  `ALTER TABLE route_shadow_trades ADD COLUMN liquidity_score INTEGER`,
+  `ALTER TABLE route_shadow_trades ADD COLUMN expected_days_to_sell REAL`,
+  `ALTER TABLE route_shadow_trades ADD COLUMN sell_probability_7d REAL`,
+  `ALTER TABLE route_shadow_trades ADD COLUMN sell_probability_90d REAL`,
+  `ALTER TABLE route_shadow_trades ADD COLUMN market_data_confidence INTEGER`,
+  `ALTER TABLE route_shadow_trades ADD COLUMN fee_data_confidence INTEGER`,
+  `ALTER TABLE route_shadow_trades ADD COLUMN match_confidence INTEGER`,
+  `ALTER TABLE route_shadow_trades ADD COLUMN buy_fee_version TEXT`,
+  `ALTER TABLE route_shadow_trades ADD COLUMN sell_fee_version TEXT`,
+  `ALTER TABLE route_shadow_trades ADD COLUMN final_outcome TEXT`,
+  `ALTER TABLE route_shadow_trades ADD COLUMN final_horizon INTEGER`,
 ];

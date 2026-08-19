@@ -1,3 +1,7 @@
+import {
+  calcFreshness, combineConfidence, feeDataConfidence, marketDataConfidence, matchConfidence,
+  type ConfidenceSet, type Freshness,
+} from './confidence';
 import { all } from './db/client';
 import type { Thresholds } from './settings';
 import type { Decision } from './score';
@@ -37,6 +41,10 @@ export type FeeProfile = {
   source_url: string | null;
   verified_at: string | null;
   source_note: string | null;
+  // Phase 3。既存の呼び出し側を壊さないよう任意項目にしてある。
+  source_type?: string | null;
+  manually_verified_by?: string | null;
+  fee_version?: string | null;
 };
 
 // ---------------------------------------------------------------- BUY 側
@@ -120,6 +128,11 @@ export type MarketObservation = {
   avg_days_to_sell: number | null;
   price_stddev_ratio: number | null;
   observed_at: string | null;
+  // Phase 3。判断した瞬間の相場の姿を凍結保存するために持つ（利益計算には使わない）。
+  low_price?: number | null;
+  median_price?: number | null;
+  avg_price?: number | null;
+  source_type?: string | null;
 };
 
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
@@ -190,24 +203,13 @@ export function sellProbabilities(liquidityScore: number, priceRatio: number | n
 }
 
 /**
- * データ信頼度（0〜100）。
- * 「現在の出品価格しか取れていない」を「成約実績がある」と同じ顔で扱わない。
+ * データ信頼度（0〜100）。Phase 2 までの単一指標。
+ * Phase 3 からは lib/confidence.ts の3本立て（相場・手数料・同一商品）に置き換えた。
+ * Phase 1 側の互換のために残してある。
  */
 export function calcDataConfidence(obs: MarketObservation | null, priceBasis: string): number {
-  let c = 30;
-  if (priceBasis === 'SOLD_MEDIAN') c = 80;
-  else if (priceBasis === 'ASK_MEDIAN') c = 55;
-  else if (priceBasis === 'BID') c = 50;
-  else c = 30; // REFERENCE_FALLBACK
-  if (obs) {
-    if ((obs.sold_count_30d ?? 0) >= 5) c += 10;
-    if ((obs.listing_count ?? 0) > 0) c += 5;
-    if (obs.observed_at) {
-      const ageDays = (Date.now() - Date.parse(obs.observed_at)) / 86400000;
-      if (Number.isFinite(ageDays) && ageDays > 30) c -= 20;
-    }
-  }
-  return Math.round(clamp(c, 0, 100));
+  const fresh = calcFreshness(obs?.observed_at ?? null, { freshHours: 24 * 30, normalHours: 24 * 30 });
+  return marketDataConfidence(obs, priceBasis, fresh);
 }
 
 // ---------------------------------------------------------------- Route
@@ -234,6 +236,18 @@ export type RouteInput = {
   crossBorder: boolean;
   /** 人間が現物・出典を確認済みなら、異常価格チェックを通す */
   humanVerified: boolean;
+
+  // ---- Phase 3（省略可。既存の呼び出しを壊さない） ----
+  /** 同一商品の特定に使ったキー。JAN一致か、ブランド＋型番かで信頼度が変わる */
+  identityKey?: string | null;
+  /** 過去のSHADOW実績による補正（点）。サンプルが少なければ呼び出し側が 0 を渡す */
+  scoreAdjustment?: number;
+  adjustmentTier?: string | null;
+  /** 相場の鮮度しきい値。カテゴリごとに変えられるようにしてある */
+  freshHours?: number;
+  normalHours?: number;
+  /** テストで時刻を固定するため */
+  now?: number;
 };
 
 export type RouteResult = {
@@ -255,6 +269,16 @@ export type RouteResult = {
   decision: Decision;
   skipReason: string | null;
   feesEstimated: boolean;
+
+  // ---- Phase 3 ----
+  confidence: ConfidenceSet;
+  freshness: Freshness;
+  /** 実績補正を当てる前の点数。補正の効き具合を後から検証できるように両方残す */
+  baseRouteScore: number;
+  scoreAdjustment: number;
+  adjustmentTier: string | null;
+  /** データ品質が理由で判定を1段下げたか（§9） */
+  confidenceCapped: boolean;
 };
 
 export function calcRoute(input: RouteInput): RouteResult {
@@ -283,7 +307,17 @@ export function calcRoute(input: RouteInput): RouteResult {
   const expected30dReturn = roi * (30 / daysEff) * probs.p30;
   const expectedAnnualizedReturn = roi * (365 / daysEff) * probs.p30;
 
-  const dataConfidence = calcDataConfidence(input.sellObservation, input.sellPriceBasis);
+  // --- データ品質（§9・§13）。相場・手数料・同一商品の3本を別々に測る ---
+  const now = input.now ?? Date.now();
+  const freshness = calcFreshness(input.sellObservation?.observed_at ?? null, {
+    freshHours: input.freshHours, normalHours: input.normalHours, now,
+  });
+  const confidence = combineConfidence(
+    marketDataConfidence(input.sellObservation, input.sellPriceBasis, freshness),
+    feeDataConfidence(input.buyFee, input.sellFee, now),
+    matchConfidence(input.identityKey ?? null),
+  );
+  const dataConfidence = confidence.overall;
   const feesEstimated = input.buyFee.is_estimated === 1 || input.sellFee.is_estimated === 1;
 
   // --- リスク（高いほど危ない） ---
@@ -295,6 +329,9 @@ export function calcRoute(input: RouteInput): RouteResult {
   if (input.isBrandedHighValue && input.sellVenueAuthentication === 'NONE') risk += 10;
   if (input.sellVenueTermsStatus !== 'VERIFIED') risk += 10;
   if (expectedDaysToSell > 60) risk += 10;
+  // 古い相場で「今も儲かる」と判断しない（§13）
+  if (freshness.tier === 'STALE') risk += 10;
+  else if (freshness.tier === 'UNKNOWN') risk += 5;
   const riskScore = Math.round(clamp(risk, 0, 100));
 
   // --- 除外条件 ---
@@ -319,7 +356,12 @@ export function calcRoute(input: RouteInput): RouteResult {
   const sVelocity = clamp(expected30dReturn / 0.1, 0, 1) * 15;
   const sConfidence = (dataConfidence / 100) * 15;
   const penalty = (riskScore / 100) * 20;
-  const routeScore = Math.round(clamp(sProfit + sRoi + sProb + sVelocity + sConfidence - penalty, 0, 100));
+  const baseRouteScore = Math.round(clamp(sProfit + sRoi + sProb + sVelocity + sConfidence - penalty, 0, 100));
+
+  // 過去のSHADOW実績による補正（§8）。サンプルが少ないうちは呼び出し側が 0 を渡す。
+  // 補正幅は上限を置く。実績が数件あるだけで順位がひっくり返るのは学習ではなく偶然。
+  const scoreAdjustment = Math.round(clamp(input.scoreAdjustment ?? 0, -MAX_SCORE_ADJUSTMENT, MAX_SCORE_ADJUSTMENT));
+  const routeScore = Math.round(clamp(baseRouteScore + scoreAdjustment, 0, 100));
 
   let decision: Decision;
   if (skipReason) decision = 'SKIP';
@@ -328,6 +370,18 @@ export function calcRoute(input: RouteInput): RouteResult {
   else if (routeScore >= t.scoreWatch) decision = 'WATCH';
   else if (routeScore >= t.scoreLowPriority) decision = 'LOW_PRIORITY';
   else { decision = 'SKIP'; skipReason = skipReason ?? 'LOW_SCORE'; }
+
+  // §9 データ品質による上限。点数を下げるだけでなく、判定そのものに天井を作る。
+  // 「利益が大きい」は「その数字が正しい」の理由にならない。
+  let confidenceCapped = false;
+  if (decision === 'STRONG_BUY' && confidence.weakest < t.minConfidenceStrongBuy) {
+    decision = 'BUY';
+    confidenceCapped = true;
+  }
+  if ((decision === 'BUY' || decision === 'STRONG_BUY') && confidence.weakest < t.minConfidenceBuy) {
+    decision = 'WATCH';
+    confidenceCapped = true;
+  }
 
   return {
     buy, sell,
@@ -347,8 +401,17 @@ export function calcRoute(input: RouteInput): RouteResult {
     decision,
     skipReason,
     feesEstimated,
+    confidence,
+    freshness,
+    baseRouteScore,
+    scoreAdjustment,
+    adjustmentTier: input.adjustmentTier ?? null,
+    confidenceCapped,
   };
 }
+
+/** 実績補正の上限（点）。これ以上は動かさない。 */
+export const MAX_SCORE_ADJUSTMENT = 10;
 
 // ---------------------------------------------------------------- 手数料の読み込み
 
