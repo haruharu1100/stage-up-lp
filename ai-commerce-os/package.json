@@ -1,0 +1,29 @@
+{
+  "name": "ai-commerce-os",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AI Commerce OS — 仕入→販売→学習を回すAI物販経営システム（Phase 1: Research / Calculation / Simulation のみ）",
+  "scripts": {
+    "dev": "next dev -p 3910",
+    "build": "next build",
+    "start": "next start -p 3910",
+    "seed": "tsx scripts/seed.ts",
+    "test:phase1": "tsx scripts/test-phase1.ts",
+    "reanalyze": "tsx scripts/reanalyze.ts",
+    "routes": "tsx scripts/routes.ts",
+    "test:phase2": "tsx scripts/test-phase2.ts"
+  },
+  "dependencies": {
+    "@libsql/client": "^0.14.0",
+    "next": "14.2.35",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.5.4"
+  }
+}

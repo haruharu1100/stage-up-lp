@@ -1,0 +1,345 @@
+管理番号,商品名,ブランド,カテゴリ,型番,サイズ,カラー,ランク,仕入価格,相場,在庫,商品URL,相場出典,相場取得日
+KMH-00001,ルイヴィトン モノグラム スピーディ30 ハンドバッグ,ルイヴィトン,バッグ,M41526,,ブラウン,Aランク,54610,98000,1,https://example.invalid/kmh/1,メルカリ売却済み中央値,2026-06-20
+KMH-00002,ルイヴィトン モノグラム スピーディ30 ハンドバッグ,ルイヴィトン,バッグ,M41526,,ブラウン,Bランク,60000,98000,1,https://example.invalid/kmh/2,メルカリ売却済み中央値,2026-08-18
+KMH-00003,ルイヴィトン モノグラム スピーディ30 ハンドバッグ,ルイヴィトン,バッグ,M41526,,ブラウン,ABランク,63920,98000,1,https://example.invalid/kmh/3,メルカリ売却済み中央値,2026-08-18
+KMH-00004,シャネル マトラッセ チェーンショルダー 25,シャネル,バッグ,A01112,,ブラック,Sランク,448250,620000,1,https://example.invalid/kmh/4,メルカリ売却済み中央値,2026-08-18
+KMH-00005,シャネル マトラッセ チェーンショルダー 25,シャネル,バッグ,A01112,,ブラック,Cランク,494750,620000,1,https://example.invalid/kmh/5,メルカリ売却済み中央値,2026-08-18
+KMH-00006,シャネル マトラッセ チェーンショルダー 25,シャネル,バッグ,A01112,,ブラック,Aランク,531950,620000,1,https://example.invalid/kmh/6,メルカリ売却済み中央値,2026-06-20
+KMH-00007,グッチ GGマーモント ミニバッグ,グッチ,バッグ,446744,,ブラック,Bランク,139350,148000,1,https://example.invalid/kmh/7,メルカリ売却済み中央値,2026-08-18
+KMH-00008,グッチ GGマーモント ミニバッグ,グッチ,バッグ,446744,,ブラック,ABランク,91250,148000,1,https://example.invalid/kmh/8,メルカリ売却済み中央値,2026-08-18
+KMH-00009,グッチ GGマーモント ミニバッグ,グッチ,バッグ,446744,,ブラック,Sランク,83110,148000,1,https://example.invalid/kmh/9,メルカリ売却済み中央値,2026-08-18
+KMH-00010,エルメス ガーデンパーティ PM,エルメス,バッグ,GP-PM,,エトゥープ,Cランク,236250,380000,1,https://example.invalid/kmh/10,メルカリ売却済み中央値,2026-08-18
+KMH-00011,エルメス ガーデンパーティ PM,エルメス,バッグ,GP-PM,,エトゥープ,Aランク,251450,380000,1,https://example.invalid/kmh/11,メルカリ売却済み中央値,2026-06-20
+KMH-00012,エルメス ガーデンパーティ PM,エルメス,バッグ,GP-PM,,エトゥープ,Bランク,274250,380000,1,https://example.invalid/kmh/12,メルカリ売却済み中央値,2026-08-18
+KMH-00013,プラダ サフィアーノ 二つ折り財布,プラダ,財布,1ML018,,ネイビー,ABランク,32350,42000,1,https://example.invalid/kmh/13,メルカリ売却済み中央値,2026-08-18
+KMH-00014,プラダ サフィアーノ 二つ折り財布,プラダ,財布,1ML018,,ネイビー,Sランク,34870,42000,1,https://example.invalid/kmh/14,メルカリ売却済み中央値,2026-08-18
+KMH-00015,プラダ サフィアーノ 二つ折り財布,プラダ,財布,1ML018,,ネイビー,Cランク,38650,42000,1,https://example.invalid/kmh/15,メルカリ売却済み中央値,2026-08-18
+KMH-00016,ロレックス デイトジャスト 36 自動巻,ロレックス,時計,126234,,シルバー,Aランク,736250,1180000,1,https://example.invalid/kmh/16,メルカリ売却済み中央値,2026-06-20
+KMH-00017,ロレックス デイトジャスト 36 自動巻,ロレックス,時計,126234,,シルバー,Bランク,671350,1180000,1,https://example.invalid/kmh/17,メルカリ売却済み中央値,2026-08-18
+KMH-00018,ロレックス デイトジャスト 36 自動巻,ロレックス,時計,126234,,シルバー,ABランク,736250,1180000,1,https://example.invalid/kmh/18,メルカリ売却済み中央値,2026-08-18
+KMH-00019,オメガ シーマスター アクアテラ,オメガ,時計,220.10.38,,ブルー,Sランク,317950,480000,1,https://example.invalid/kmh/19,メルカリ売却済み中央値,2026-08-18
+KMH-00020,オメガ シーマスター アクアテラ,オメガ,時計,220.10.38,,ブルー,Cランク,346750,480000,1,https://example.invalid/kmh/20,メルカリ売却済み中央値,2026-08-18
+KMH-00021,オメガ シーマスター アクアテラ,オメガ,時計,220.10.38,,ブルー,Aランク,382750,480000,1,https://example.invalid/kmh/21,メルカリ売却済み中央値,2026-06-20
+KMH-00022,セイコー グランドセイコー クオーツ,セイコー,時計,SBGX261,,ホワイト,Bランク,179350,210000,1,https://example.invalid/kmh/22,メルカリ売却済み中央値,2026-08-18
+KMH-00023,セイコー グランドセイコー クオーツ,セイコー,時計,SBGX261,,ホワイト,ABランク,198250,210000,1,https://example.invalid/kmh/23,メルカリ売却済み中央値,2026-08-18
+KMH-00024,セイコー グランドセイコー クオーツ,セイコー,時計,SBGX261,,ホワイト,Sランク,130000,210000,1,https://example.invalid/kmh/24,メルカリ売却済み中央値,2026-08-18
+KMH-00025,ルイヴィトン ダミエ ジッピーウォレット,ルイヴィトン,財布,N60015,,ブラウン,Cランク,34090,62000,1,https://example.invalid/kmh/25,メルカリ売却済み中央値,2026-08-18
+KMH-00026,ルイヴィトン ダミエ ジッピーウォレット,ルイヴィトン,財布,N60015,,ブラウン,Aランク,37500,62000,1,https://example.invalid/kmh/26,メルカリ売却済み中央値,2026-06-20
+KMH-00027,ルイヴィトン ダミエ ジッピーウォレット,ルイヴィトン,財布,N60015,,ブラウン,Bランク,39980,62000,1,https://example.invalid/kmh/27,メルカリ売却済み中央値,2026-08-18
+KMH-00028,グッチ GGスプリーム ラウンドファスナー財布,グッチ,財布,456117,,ベージュ,ABランク,32100,46000,1,https://example.invalid/kmh/28,メルカリ売却済み中央値,2026-08-18
+KMH-00029,グッチ GGスプリーム ラウンドファスナー財布,グッチ,財布,456117,,ベージュ,Sランク,35550,46000,1,https://example.invalid/kmh/29,メルカリ売却済み中央値,2026-08-18
+KMH-00030,グッチ GGスプリーム ラウンドファスナー財布,グッチ,財布,456117,,ベージュ,Cランク,38310,46000,1,https://example.invalid/kmh/30,メルカリ売却済み中央値,2026-08-18
+KMH-00031,シャネル ココマーク ピアス,シャネル,アクセサリー,A88429,,ゴールド,Aランク,82350,88000,1,https://example.invalid/kmh/31,メルカリ売却済み中央値,2026-06-20
+KMH-00032,シャネル ココマーク ピアス,シャネル,アクセサリー,A88429,,ゴールド,Bランク,53750,88000,1,https://example.invalid/kmh/32,メルカリ売却済み中央値,2026-08-18
+KMH-00033,シャネル ココマーク ピアス,シャネル,アクセサリー,A88429,,ゴールド,ABランク,48910,88000,1,https://example.invalid/kmh/33,メルカリ売却済み中央値,2026-08-18
+KMH-00034,エルメス エールライン トートMM,エルメス,バッグ,HL-MM,,ブラック,Sランク,58750,96000,1,https://example.invalid/kmh/34,メルカリ売却済み中央値,2026-08-18
+KMH-00035,エルメス エールライン トートMM,エルメス,バッグ,HL-MM,,ブラック,Cランク,62590,96000,1,https://example.invalid/kmh/35,メルカリ売却済み中央値,2026-08-18
+KMH-00036,エルメス エールライン トートMM,エルメス,バッグ,HL-MM,,ブラック,Aランク,68350,96000,1,https://example.invalid/kmh/36,メルカリ売却済み中央値,2026-06-20
+KMH-00037,ロレックス サブマリーナー デイト,ロレックス,時計,126610LN,,,Aランク,90000,1800000,1,https://example.invalid/kmh/37,相場サイト,2026-08-18
+KMH-00038,グッチ ホースビット ローファー,グッチ,靴,406994,,,Bランク,152000,38000,1,https://example.invalid/kmh/38,相場サイト,2026-08-18
+KMH-00039,ボッテガヴェネタ イントレチャート 長財布,ボッテガヴェネタ,財布,,,,Aランク,38000,,1,https://example.invalid/kmh/39,,
+KMH-00040,カルティエ タンクフランセーズ SM,カルティエ,時計,W51008Q3,,,当社基準 特A,261250,420000,1,https://example.invalid/kmh/40,メルカリ売却済み中央値,2026-08-18
+KMH-00041,ティファニー オープンハート ネックレス,ティファニー,アクセサリー,,,,Aランク,,24000,1,https://example.invalid/kmh/41,,
+KMH-00042,エルメス ボリード31,エルメス,バッグ,,,,Bランク,295150,520000,0,https://example.invalid/kmh/42,メルカリ売却済み中央値,2026-08-18
+KMH-00001,ルイヴィトン モノグラム スピーディ30 ハンドバッグ,ルイヴィトン,バッグ,M41526,,ブラウン,Aランク,54610,98000,1,https://example.invalid/kmh/1,メルカリ売却済み中央値,2026-06-20
+KMH-DUP-0002,ルイヴィトン モノグラム スピーディ30 ハンドバッグ,ルイヴィトン,バッグ,M41526,,ブラウン,Aランク,54610,98000,1,https://example.invalid/kmh/1,メルカリ売却済み中央値,2026-06-20
+KMH-00043,中古 ノートパソコン 15型 #1,NEC,家電,PC-GN-1,,,Aランク,25950,34000,4,https://example.invalid/kmh/43,相場サイト 直近30日中央値,2026-08-18
+KMH-00044,中古 電子レンジ #2,SHARP,生活家電,RE-SS-2,,,Bランク,9500,12500,1,https://example.invalid/kmh/44,,
+KMH-00045,中古 掃除機 コードレス #3,DYSON,生活家電,V8-3,,,Sランク,19650,22000,1,https://example.invalid/kmh/45,,
+KMH-00046,中古 炊飯器 5.5合 #4,ZOJIRUSHI,生活家電,NP-BK-4,,,Cランク,11950,16500,1,https://example.invalid/kmh/46,,
+KMH-00047,中古 液晶モニタ 24型 #5,IODATA,家電,LCD-MF-5,,,Aランク,11100,13000,1,https://example.invalid/kmh/47,相場サイト 直近30日中央値,2026-08-18
+KMH-00048,中古 コンパクトデジタルカメラ #6,CANON,カメラ,IXY650-6,,,Bランク,12080,15500,1,https://example.invalid/kmh/48,,
+KMH-00049,中古 ミラーレス標準ズームレンズ #7,NIKON,カメラ,NIKKOR-Z-7,,,Sランク,23550,31000,1,https://example.invalid/kmh/49,,
+KMH-00050,中古 ブルートゥーススピーカー #8,JBL,オーディオ,FLIP6-8,,,Cランク,10625,12500,1,https://example.invalid/kmh/50,,
+KMH-00051,中古 腕時計 ソーラー電波 #9,CASIO,時計,OCW-S-9,,,Aランク,41750,50000,1,https://example.invalid/kmh/51,相場サイト 直近30日中央値,2026-08-18
+KMH-00052,中古 ダウンジャケット #10,UNIQLO,アパレル,DWN-01-10,,,Bランク,5710,8700,4,https://example.invalid/kmh/52,,
+KMH-00053,中古 ランニングシューズ #11,ASICS,スニーカー,GEL-KAYANO-11,,,Sランク,11670,13600,1,https://example.invalid/kmh/53,,
+KMH-00054,中古 ビジネスバッグ 本革 #12,PORTER,バッグ,PT-BIZ-12,,,Cランク,18960,23500,1,https://example.invalid/kmh/54,,
+KMH-00055,中古 二つ折り財布 #13,COACH,財布,CH-W2-13,,,Aランク,10205,15800,1,https://example.invalid/kmh/55,相場サイト 直近30日中央値,2026-08-18
+KMH-00056,中古 アコースティックギター #14,YAMAHA,楽器,FG830-14,,,Bランク,29625,32500,1,https://example.invalid/kmh/56,,
+KMH-00057,中古 キーボード 61鍵 #15,CASIO,楽器,CT-S300-15,,,Sランク,15550,21000,1,https://example.invalid/kmh/57,,
+KMH-00058,中古 ゲームソフト 人気タイトル #16,NINTENDO,ゲームソフト,HAC-GEN-16,,,Cランク,6265,11300,1,https://example.invalid/kmh/58,,
+KMH-00059,中古 家庭用ゲーム機 旧型 #17,SONY,ゲーム機,CUH-2200-17,,,Aランク,20250,25000,1,https://example.invalid/kmh/59,相場サイト 直近30日中央値,2026-08-18
+KMH-00060,中古 タブレット 10型 #18,LENOVO,タブレット,TB-J606-18,,,Bランク,13950,16000,1,https://example.invalid/kmh/60,,
+KMH-00061,中古 スマートウォッチ #19,GARMIN,時計,FR-255-19,,,Sランク,18350,24500,4,https://example.invalid/kmh/61,,
+KMH-00062,中古 空気清浄機 #20,PANASONIC,生活家電,F-VXR-20,,,Cランク,17750,20000,1,https://example.invalid/kmh/62,,
+KMH-00063,中古 コーヒーメーカー #21,DELONGHI,生活家電,ECAM-21,,,Aランク,25550,33500,1,https://example.invalid/kmh/63,相場サイト 直近30日中央値,2026-08-18
+KMH-00064,中古 電動アシスト自転車 バッテリー #22,YAMAHA,その他,X0T-82-22,,,Bランク,19390,24000,1,https://example.invalid/kmh/64,,
+KMH-00065,中古 プロジェクター 小型 #23,EPSON,家電,EF-12-23,,,Sランク,40075,43500,1,https://example.invalid/kmh/65,,
+KMH-00066,中古 マイク コンデンサー #24,AUDIOTECHNICA,オーディオ,AT2020-24,,,Cランク,8190,11800,1,https://example.invalid/kmh/66,,
+KMH-00067,中古 トートバッグ ナイロン #25,PRADA,バッグ,BR4001-25,,,Aランク,51475,55500,1,https://example.invalid/kmh/67,相場サイト 直近30日中央値,2026-08-18
+KMH-00068,中古 ノートパソコン 15型 #26,NEC,家電,PC-GN-26,,,Bランク,31430,38000,1,https://example.invalid/kmh/68,,
+KMH-00069,中古 電子レンジ #27,SHARP,生活家電,RE-SS-27,,,Sランク,11950,16500,1,https://example.invalid/kmh/69,,
+KMH-00070,中古 掃除機 コードレス #28,DYSON,生活家電,V8-28,,,Cランク,23450,26000,4,https://example.invalid/kmh/70,,
+KMH-00071,中古 炊飯器 5.5合 #29,ZOJIRUSHI,生活家電,NP-BK-29,,,Aランク,16380,20500,1,https://example.invalid/kmh/71,相場サイト 直近30日中央値,2026-08-18
+KMH-00072,中古 液晶モニタ 24型 #30,IODATA,家電,LCD-MF-30,,,Bランク,12350,17000,1,https://example.invalid/kmh/72,,
+KMH-00073,中古 コンパクトデジタルカメラ #31,CANON,カメラ,IXY650-31,,,Sランク,17275,19500,1,https://example.invalid/kmh/73,,
+KMH-00074,中古 ミラーレス標準ズームレンズ #32,NIKON,カメラ,NIKKOR-Z-32,,,Cランク,28850,35000,1,https://example.invalid/kmh/74,,
+KMH-00075,中古 ブルートゥーススピーカー #33,JBL,オーディオ,FLIP6-33,,,Aランク,10713,16500,1,https://example.invalid/kmh/75,相場サイト 直近30日中央値,2026-08-18
+KMH-00076,中古 腕時計 ソーラー電波 #34,CASIO,時計,OCW-S-34,,,Bランク,50050,54000,1,https://example.invalid/kmh/76,,
+KMH-00077,中古 ダウンジャケット #35,UNIQLO,アパレル,DWN-01-35,,,Sランク,2110,4200,1,https://example.invalid/kmh/77,,
+KMH-00078,中古 ランニングシューズ #36,ASICS,スニーカー,GEL-KAYANO-36,,,Cランク,4802,9100,1,https://example.invalid/kmh/78,,
+KMH-00079,中古 ビジネスバッグ 本革 #37,PORTER,バッグ,PT-BIZ-37,,,Aランク,15090,19000,4,https://example.invalid/kmh/79,相場サイト 直近30日中央値,2026-08-18
+KMH-00080,中古 二つ折り財布 #38,COACH,財布,CH-W2-38,,,Bランク,9485,11300,1,https://example.invalid/kmh/80,,
+KMH-00081,中古 アコースティックギター #39,YAMAHA,楽器,FG830-39,,,Sランク,21150,28000,1,https://example.invalid/kmh/81,,
+KMH-00082,中古 キーボード 61鍵 #40,CASIO,楽器,CT-S300-40,,,Cランク,14425,16500,1,https://example.invalid/kmh/82,,
+KMH-00083,中古 ゲームソフト 人気タイトル #41,NINTENDO,ゲームソフト,HAC-GEN-41,,,Aランク,4190,6800,1,https://example.invalid/kmh/83,相場サイト 直近30日中央値,2026-08-18
+KMH-00084,中古 家庭用ゲーム機 旧型 #42,SONY,ゲーム機,CUH-2200-42,,,Bランク,16380,20500,1,https://example.invalid/kmh/84,,
+KMH-00085,中古 タブレット 10型 #43,LENOVO,タブレット,TB-J606-43,,,Sランク,17750,20000,1,https://example.invalid/kmh/85,,
+KMH-00086,中古 スマートウォッチ #44,GARMIN,時計,FR-255-44,,,Cランク,21550,28500,1,https://example.invalid/kmh/86,,
+KMH-00087,中古 空気清浄機 #45,PANASONIC,生活家電,F-VXR-45,,,Aランク,21550,24000,1,https://example.invalid/kmh/87,相場サイト 直近30日中央値,2026-08-18
+KMH-00088,中古 コーヒーメーカー #46,DELONGHI,生活家電,ECAM-46,,,Bランク,31000,37500,4,https://example.invalid/kmh/88,,
+KMH-00089,中古 電動アシスト自転車 バッテリー #47,YAMAHA,その他,X0T-82-47,,,Sランク,21150,28000,1,https://example.invalid/kmh/89,,
+KMH-00090,中古 プロジェクター 小型 #48,EPSON,家電,EF-12-48,,,Cランク,43875,47500,1,https://example.invalid/kmh/90,,
+KMH-00091,中古 マイク コンデンサー #49,AUDIOTECHNICA,オーディオ,AT2020-49,,,Aランク,12338,15800,1,https://example.invalid/kmh/91,相場サイト 直近30日中央値,2026-08-18
+KMH-00092,中古 トートバッグ ナイロン #50,PRADA,バッグ,BR4001-50,,,Bランク,46350,59500,1,https://example.invalid/kmh/92,,
+KMH-00093,中古 ノートパソコン 15型 #51,NEC,家電,PC-GN-51,,,Sランク,38650,42000,1,https://example.invalid/kmh/93,,
+KMH-00094,中古 電子レンジ #52,SHARP,生活家電,RE-SS-52,,,Cランク,9070,12000,1,https://example.invalid/kmh/94,,
+KMH-00095,中古 掃除機 コードレス #53,DYSON,生活家電,V8-53,,,Aランク,14338,21500,1,https://example.invalid/kmh/95,相場サイト 直近30日中央値,2026-08-18
+KMH-00096,中古 炊飯器 5.5合 #54,ZOJIRUSHI,生活家電,NP-BK-54,,,Bランク,13950,16000,1,https://example.invalid/kmh/96,,
+KMH-00097,中古 液晶モニタ 24型 #55,IODATA,家電,LCD-MF-55,,,Sランク,8750,12500,4,https://example.invalid/kmh/97,,
+KMH-00098,中古 コンパクトデジタルカメラ #56,CANON,カメラ,IXY650-56,,,Cランク,8725,15000,1,https://example.invalid/kmh/98,,
+KMH-00099,中古 ミラーレス標準ズームレンズ #57,NIKON,カメラ,NIKKOR-Z-57,,,Aランク,24980,30500,1,https://example.invalid/kmh/99,相場サイト 直近30日中央値,2026-08-18
+KMH-00100,中古 ブルートゥーススピーカー #58,JBL,オーディオ,FLIP6-58,,,Bランク,10150,12000,1,https://example.invalid/kmh/100,,
+KMH-00101,中古 腕時計 ソーラー電波 #59,CASIO,時計,OCW-S-59,,,Sランク,38350,49500,1,https://example.invalid/kmh/101,,
+KMH-00102,中古 ダウンジャケット #60,UNIQLO,アパレル,DWN-01-60,,,Cランク,6540,8200,1,https://example.invalid/kmh/102,,
+KMH-00103,中古 ランニングシューズ #61,ASICS,スニーカー,GEL-KAYANO-61,,,Aランク,9230,13100,1,https://example.invalid/kmh/103,相場サイト 直近30日中央値,2026-08-18
+KMH-00104,中古 ビジネスバッグ 本革 #62,PORTER,バッグ,PT-BIZ-62,,,Bランク,18530,23000,1,https://example.invalid/kmh/104,,
+KMH-00105,中古 二つ折り財布 #63,COACH,財布,CH-W2-63,,,Sランク,13285,15300,1,https://example.invalid/kmh/105,,
+KMH-00106,中古 アコースティックギター #64,YAMAHA,楽器,FG830-64,,,Cランク,24350,32000,4,https://example.invalid/kmh/106,,
+KMH-00107,中古 キーボード 61鍵 #65,CASIO,楽器,CT-S300-65,,,Aランク,18225,20500,1,https://example.invalid/kmh/107,相場サイト 直近30日中央値,2026-08-18
+KMH-00108,中古 ゲームソフト 人気タイトル #66,NINTENDO,ゲームソフト,HAC-GEN-66,,,Bランク,8038,10800,1,https://example.invalid/kmh/108,,
+KMH-00109,中古 家庭用ゲーム機 旧型 #67,SONY,ゲーム機,CUH-2200-67,,,Sランク,18350,24500,1,https://example.invalid/kmh/109,,
+KMH-00110,中古 タブレット 10型 #68,LENOVO,タブレット,TB-J606-68,,,Cランク,21550,24000,1,https://example.invalid/kmh/110,,
+KMH-00111,中古 スマートウォッチ #69,GARMIN,時計,FR-255-69,,,Aランク,19390,24000,1,https://example.invalid/kmh/111,相場サイト 直近30日中央値,2026-08-18
+KMH-00112,中古 空気清浄機 #70,PANASONIC,生活家電,F-VXR-70,,,Bランク,14350,19500,1,https://example.invalid/kmh/112,,
+KMH-00113,中古 コーヒーメーカー #71,DELONGHI,生活家電,ECAM-71,,,Sランク,30100,33000,1,https://example.invalid/kmh/113,,
+KMH-00114,中古 電動アシスト自転車 バッテリー #72,YAMAHA,その他,X0T-82-72,,,Cランク,18960,23500,1,https://example.invalid/kmh/114,,
+KMH-00115,中古 プロジェクター 小型 #73,EPSON,家電,EF-12-73,,,Aランク,29925,43000,4,https://example.invalid/kmh/115,相場サイト 直近30日中央値,2026-08-18
+KMH-00116,中古 マイク コンデンサー #74,AUDIOTECHNICA,オーディオ,AT2020-74,,,Bランク,9485,11300,1,https://example.invalid/kmh/116,,
+KMH-00117,中古 トートバッグ ナイロン #75,PRADA,バッグ,BR4001-75,,,Sランク,42750,55000,1,https://example.invalid/kmh/117,,
+KMH-00118,中古 ノートパソコン 15型 #76,NEC,家電,PC-GN-76,,,Cランク,23688,37500,1,https://example.invalid/kmh/118,,
+KMH-00119,中古 電子レンジ #77,SHARP,生活家電,RE-SS-77,,,Aランク,12510,16000,1,https://example.invalid/kmh/119,相場サイト 直近30日中央値,2026-08-18
+KMH-00120,中古 掃除機 コードレス #78,DYSON,生活家電,V8-78,,,Bランク,22975,25500,1,https://example.invalid/kmh/120,,
+KMH-00121,中古 炊飯器 5.5合 #79,ZOJIRUSHI,生活家電,NP-BK-79,,,Sランク,14750,20000,1,https://example.invalid/kmh/121,,
+KMH-00122,中古 液晶モニタ 24型 #80,IODATA,家電,LCD-MF-80,,,Cランク,14425,16500,1,https://example.invalid/kmh/122,,
+KMH-00123,中古 コンパクトデジタルカメラ #81,CANON,カメラ,IXY650-81,,,Aランク,13950,19000,1,https://example.invalid/kmh/123,相場サイト 直近30日中央値,2026-08-18
+KMH-00124,中古 ミラーレス標準ズームレンズ #82,NIKON,カメラ,NIKKOR-Z-82,,,Bランク,28420,34500,4,https://example.invalid/kmh/124,,
+KMH-00125,中古 ブルートゥーススピーカー #83,JBL,オーディオ,FLIP6-83,,,Sランク,13950,16000,1,https://example.invalid/kmh/125,,
+KMH-00126,中古 腕時計 ソーラー電波 #84,CASIO,時計,OCW-S-84,,,Cランク,41550,53500,1,https://example.invalid/kmh/126,,
+KMH-00127,中古 ダウンジャケット #85,UNIQLO,アパレル,DWN-01-85,,,Aランク,10340,12200,1,https://example.invalid/kmh/127,相場サイト 直近30日中央値,2026-08-18
+KMH-00128,中古 ランニングシューズ #86,ASICS,スニーカー,GEL-KAYANO-86,,,Bランク,6146,8600,1,https://example.invalid/kmh/128,,
+KMH-00129,中古 ビジネスバッグ 本革 #87,PORTER,バッグ,PT-BIZ-87,,,Sランク,13550,18500,1,https://example.invalid/kmh/129,,
+KMH-00130,中古 二つ折り財布 #88,COACH,財布,CH-W2-88,,,Cランク,9010,10800,1,https://example.invalid/kmh/130,,
+KMH-00131,中古 アコースティックギター #89,YAMAHA,楽器,FG830-89,,,Aランク,22400,27500,1,https://example.invalid/kmh/131,相場サイト 直近30日中央値,2026-08-18
+KMH-00132,中古 キーボード 61鍵 #90,CASIO,楽器,CT-S300-90,,,Bランク,11550,16000,1,https://example.invalid/kmh/132,,
+KMH-00133,中古 ゲームソフト 人気タイトル #91,NINTENDO,ゲームソフト,HAC-GEN-91,,,Sランク,4735,6300,4,https://example.invalid/kmh/133,,
+KMH-00134,中古 家庭用ゲーム機 旧型 #92,SONY,ゲーム機,CUH-2200-92,,,Cランク,15950,20000,1,https://example.invalid/kmh/134,,
+KMH-00135,中古 タブレット 10型 #93,LENOVO,タブレット,TB-J606-93,,,Aランク,12888,19500,1,https://example.invalid/kmh/135,相場サイト 直近30日中央値,2026-08-18
+KMH-00136,中古 スマートウォッチ #94,GARMIN,時計,FR-255-94,,,Bランク,25350,28000,1,https://example.invalid/kmh/136,,
+KMH-00137,中古 空気清浄機 #95,PANASONIC,生活家電,F-VXR-95,,,Sランク,17550,23500,1,https://example.invalid/kmh/137,,
+KMH-00138,中古 コーヒーメーカー #96,DELONGHI,生活家電,ECAM-96,,,Cランク,23355,37000,1,https://example.invalid/kmh/138,,
+KMH-00139,中古 電動アシスト自転車 バッテリー #97,YAMAHA,その他,X0T-82-97,,,Aランク,22400,27500,1,https://example.invalid/kmh/139,相場サイト 直近30日中央値,2026-08-18
+KMH-00140,中古 プロジェクター 小型 #98,EPSON,家電,EF-12-98,,,Bランク,43400,47000,1,https://example.invalid/kmh/140,,
+KMH-00141,中古 マイク コンデンサー #99,AUDIOTECHNICA,オーディオ,AT2020-99,,,Sランク,10990,15300,1,https://example.invalid/kmh/141,,
+KMH-00142,中古 トートバッグ ナイロン #100,PRADA,バッグ,BR4001-100,,,Cランク,54800,59000,4,https://example.invalid/kmh/142,,
+KMH-00143,中古 ノートパソコン 15型 #101,NEC,家電,PC-GN-101,,,Aランク,31950,41500,1,https://example.invalid/kmh/143,相場サイト 直近30日中央値,2026-08-18
+KMH-00144,中古 電子レンジ #102,SHARP,生活家電,RE-SS-102,,,Bランク,15950,20000,1,https://example.invalid/kmh/144,,
+KMH-00145,中古 掃除機 コードレス #103,DYSON,生活家電,V8-103,,,Sランク,18700,21000,1,https://example.invalid/kmh/145,,
+KMH-00146,中古 炊飯器 5.5合 #104,ZOJIRUSHI,生活家電,NP-BK-104,,,Cランク,11150,15500,1,https://example.invalid/kmh/146,,
+KMH-00147,中古 液晶モニタ 24型 #105,IODATA,家電,LCD-MF-105,,,Aランク,10150,12000,1,https://example.invalid/kmh/147,相場サイト 直近30日中央値,2026-08-18
+KMH-00148,中古 コンパクトデジタルカメラ #106,CANON,カメラ,IXY650-106,,,Bランク,11220,14500,1,https://example.invalid/kmh/148,,
+KMH-00149,中古 ミラーレス標準ズームレンズ #107,NIKON,カメラ,NIKKOR-Z-107,,,Sランク,22750,30000,1,https://example.invalid/kmh/149,,
+KMH-00150,中古 ブルートゥーススピーカー #108,JBL,オーディオ,FLIP6-108,,,Cランク,9675,11500,1,https://example.invalid/kmh/150,,
+KMH-00151,中古 腕時計 ソーラー電波 #109,CASIO,時計,OCW-S-109,,,Aランク,40890,49000,4,https://example.invalid/kmh/151,相場サイト 直近30日中央値,2026-08-18
+KMH-00152,中古 ダウンジャケット #110,UNIQLO,アパレル,DWN-01-110,,,Bランク,4910,7700,1,https://example.invalid/kmh/152,,
+KMH-00153,中古 ランニングシューズ #111,ASICS,スニーカー,GEL-KAYANO-111,,,Sランク,10720,12600,1,https://example.invalid/kmh/153,,
+KMH-00154,中古 ビジネスバッグ 本革 #112,PORTER,バッグ,PT-BIZ-112,,,Cランク,18100,22500,1,https://example.invalid/kmh/154,,
+KMH-00155,中古 二つ折り財布 #113,COACH,財布,CH-W2-113,,,Aランク,9480,14800,1,https://example.invalid/kmh/155,相場サイト 直近30日中央値,2026-08-18
+KMH-00156,中古 アコースティックギター #114,YAMAHA,楽器,FG830-114,,,Bランク,28675,31500,1,https://example.invalid/kmh/156,,
+KMH-00157,中古 キーボード 61鍵 #115,CASIO,楽器,CT-S300-115,,,Sランク,14750,20000,1,https://example.invalid/kmh/157,,
+KMH-00158,中古 ゲームソフト 人気タイトル #116,NINTENDO,ゲームソフト,HAC-GEN-116,,,Cランク,5600,10300,1,https://example.invalid/kmh/158,,
+KMH-00159,中古 家庭用ゲーム機 旧型 #117,SONY,ゲーム機,CUH-2200-117,,,Aランク,19390,24000,1,https://example.invalid/kmh/159,相場サイト 直近30日中央値,2026-08-18
+KMH-00160,中古 タブレット 10型 #118,LENOVO,タブレット,TB-J606-118,,,Bランク,21075,23500,4,https://example.invalid/kmh/160,,
+KMH-00161,中古 スマートウォッチ #119,GARMIN,時計,FR-255-119,,,Sランク,24350,32000,1,https://example.invalid/kmh/161,,
+KMH-00162,中古 空気清浄機 #120,PANASONIC,生活家電,F-VXR-120,,,Cランク,16800,19000,1,https://example.invalid/kmh/162,,
+KMH-00163,中古 コーヒーメーカー #121,DELONGHI,生活家電,ECAM-121,,,Aランク,24750,32500,1,https://example.invalid/kmh/163,相場サイト 直近30日中央値,2026-08-18
+KMH-00164,中古 電動アシスト自転車 バッテリー #122,YAMAHA,その他,X0T-82-122,,,Bランク,18530,23000,1,https://example.invalid/kmh/164,,
+KMH-00165,中古 プロジェクター 小型 #123,EPSON,家電,EF-12-123,,,Sランク,39125,42500,1,https://example.invalid/kmh/165,,
+KMH-00166,中古 マイク コンデンサー #124,AUDIOTECHNICA,オーディオ,AT2020-124,,,Cランク,7390,10800,1,https://example.invalid/kmh/166,,
+KMH-00167,中古 トートバッグ ナイロン #125,PRADA,バッグ,BR4001-125,,,Aランク,50525,54500,1,https://example.invalid/kmh/167,相場サイト 直近30日中央値,2026-08-18
+KMH-00168,中古 ノートパソコン 15型 #126,NEC,家電,PC-GN-126,,,Bランク,30570,37000,1,https://example.invalid/kmh/168,,
+KMH-00169,中古 電子レンジ #127,SHARP,生活家電,RE-SS-127,,,Sランク,11150,15500,4,https://example.invalid/kmh/169,,
+KMH-00170,中古 掃除機 コードレス #128,DYSON,生活家電,V8-128,,,Cランク,22500,25000,1,https://example.invalid/kmh/170,,
+KMH-00171,中古 炊飯器 5.5合 #129,ZOJIRUSHI,生活家電,NP-BK-129,,,Aランク,15520,19500,1,https://example.invalid/kmh/171,相場サイト 直近30日中央値,2026-08-18
+KMH-00172,中古 液晶モニタ 24型 #130,IODATA,家電,LCD-MF-130,,,Bランク,11550,16000,1,https://example.invalid/kmh/172,,
+KMH-00173,中古 コンパクトデジタルカメラ #131,CANON,カメラ,IXY650-131,,,Sランク,16325,18500,1,https://example.invalid/kmh/173,,
+KMH-00174,中古 ミラーレス標準ズームレンズ #132,NIKON,カメラ,NIKKOR-Z-132,,,Cランク,27990,34000,1,https://example.invalid/kmh/174,,
+KMH-00175,中古 ブルートゥーススピーカー #133,JBL,オーディオ,FLIP6-133,,,Aランク,9988,15500,1,https://example.invalid/kmh/175,相場サイト 直近30日中央値,2026-08-18
+KMH-00176,中古 腕時計 ソーラー電波 #134,CASIO,時計,OCW-S-134,,,Bランク,49100,53000,1,https://example.invalid/kmh/176,,
+KMH-00177,中古 ダウンジャケット #135,UNIQLO,アパレル,DWN-01-135,,,Sランク,8110,11700,1,https://example.invalid/kmh/177,,
+KMH-00178,中古 ランニングシューズ #136,ASICS,スニーカー,GEL-KAYANO-136,,,Cランク,9789,16600,4,https://example.invalid/kmh/178,,
+KMH-00179,中古 ビジネスバッグ 本革 #137,PORTER,バッグ,PT-BIZ-137,,,Aランク,14230,18000,1,https://example.invalid/kmh/179,相場サイト 直近30日中央値,2026-08-18
+KMH-00180,中古 二つ折り財布 #138,COACH,財布,CH-W2-138,,,Bランク,8535,10300,1,https://example.invalid/kmh/180,,
+KMH-00181,中古 アコースティックギター #139,YAMAHA,楽器,FG830-139,,,Sランク,20350,27000,1,https://example.invalid/kmh/181,,
+KMH-00182,中古 キーボード 61鍵 #140,CASIO,楽器,CT-S300-140,,,Cランク,13475,15500,1,https://example.invalid/kmh/182,,
+KMH-00183,中古 ゲームソフト 人気タイトル #141,NINTENDO,ゲームソフト,HAC-GEN-141,,,Aランク,3390,5800,1,https://example.invalid/kmh/183,相場サイト 直近30日中央値,2026-08-18
+KMH-00184,中古 家庭用ゲーム機 旧型 #142,SONY,ゲーム機,CUH-2200-142,,,Bランク,15520,19500,1,https://example.invalid/kmh/184,,
+KMH-00185,中古 タブレット 10型 #143,LENOVO,タブレット,TB-J606-143,,,Sランク,16800,19000,1,https://example.invalid/kmh/185,,
+KMH-00186,中古 スマートウォッチ #144,GARMIN,時計,FR-255-144,,,Cランク,20750,27500,1,https://example.invalid/kmh/186,,
+KMH-00187,中古 空気清浄機 #145,PANASONIC,生活家電,F-VXR-145,,,Aランク,20600,23000,4,https://example.invalid/kmh/187,相場サイト 直近30日中央値,2026-08-18
+KMH-00188,中古 コーヒーメーカー #146,DELONGHI,生活家電,ECAM-146,,,Bランク,30140,36500,1,https://example.invalid/kmh/188,,
+KMH-00189,中古 電動アシスト自転車 バッテリー #147,YAMAHA,その他,X0T-82-147,,,Sランク,20350,27000,1,https://example.invalid/kmh/189,,
+KMH-00190,中古 プロジェクター 小型 #148,EPSON,家電,EF-12-148,,,Cランク,42925,46500,1,https://example.invalid/kmh/190,,
+KMH-00191,中古 マイク コンデンサー #149,AUDIOTECHNICA,オーディオ,AT2020-149,,,Aランク,11478,14800,1,https://example.invalid/kmh/191,相場サイト 直近30日中央値,2026-08-18
+KMH-00192,中古 トートバッグ ナイロン #150,PRADA,バッグ,BR4001-150,,,Bランク,45550,58500,1,https://example.invalid/kmh/192,,
+KMH-00193,中古 ノートパソコン 15型 #151,NEC,家電,PC-GN-151,,,Sランク,37700,41000,1,https://example.invalid/kmh/193,,
+KMH-00194,中古 電子レンジ #152,SHARP,生活家電,RE-SS-152,,,Cランク,15520,19500,1,https://example.invalid/kmh/194,,
+KMH-00195,中古 掃除機 コードレス #153,DYSON,生活家電,V8-153,,,Aランク,19775,29000,1,https://example.invalid/kmh/195,相場サイト 直近30日中央値,2026-08-18
+KMH-00196,中古 炊飯器 5.5合 #154,ZOJIRUSHI,生活家電,NP-BK-154,,,Bランク,13000,15000,4,https://example.invalid/kmh/196,,
+KMH-00197,中古 液晶モニタ 24型 #155,IODATA,家電,LCD-MF-155,,,Sランク,7950,11500,1,https://example.invalid/kmh/197,,
+KMH-00198,中古 コンパクトデジタルカメラ #156,CANON,カメラ,IXY650-156,,,Cランク,8060,14000,1,https://example.invalid/kmh/198,,
+KMH-00199,中古 ミラーレス標準ズームレンズ #157,NIKON,カメラ,NIKKOR-Z-157,,,Aランク,24120,29500,1,https://example.invalid/kmh/199,相場サイト 直近30日中央値,2026-08-18
+KMH-00200,中古 ブルートゥーススピーカー #158,JBL,オーディオ,FLIP6-158,,,Bランク,9200,11000,1,https://example.invalid/kmh/200,,
+KMH-00201,中古 腕時計 ソーラー電波 #159,CASIO,時計,OCW-S-159,,,Sランク,37550,48500,1,https://example.invalid/kmh/201,,
+KMH-00202,中古 ダウンジャケット #160,UNIQLO,アパレル,DWN-01-160,,,Cランク,5590,7200,1,https://example.invalid/kmh/202,,
+KMH-00203,中古 ランニングシューズ #161,ASICS,スニーカー,GEL-KAYANO-161,,,Aランク,8430,12100,1,https://example.invalid/kmh/203,相場サイト 直近30日中央値,2026-08-18
+KMH-00204,中古 ビジネスバッグ 本革 #162,PORTER,バッグ,PT-BIZ-162,,,Bランク,17670,22000,1,https://example.invalid/kmh/204,,
+KMH-00205,中古 二つ折り財布 #163,COACH,財布,CH-W2-163,,,Sランク,12335,14300,4,https://example.invalid/kmh/205,,
+KMH-00206,中古 アコースティックギター #164,YAMAHA,楽器,FG830-164,,,Cランク,23550,31000,1,https://example.invalid/kmh/206,,
+KMH-00207,中古 キーボード 61鍵 #165,CASIO,楽器,CT-S300-165,,,Aランク,17275,19500,1,https://example.invalid/kmh/207,相場サイト 直近30日中央値,2026-08-18
+KMH-00208,中古 ゲームソフト 人気タイトル #166,NINTENDO,ゲームソフト,HAC-GEN-166,,,Bランク,7178,9800,1,https://example.invalid/kmh/208,,
+KMH-00209,中古 家庭用ゲーム機 旧型 #167,SONY,ゲーム機,CUH-2200-167,,,Sランク,17550,23500,1,https://example.invalid/kmh/209,,
+KMH-00210,中古 タブレット 10型 #168,LENOVO,タブレット,TB-J606-168,,,Cランク,20600,23000,1,https://example.invalid/kmh/210,,
+KMH-00211,中古 スマートウォッチ #169,GARMIN,時計,FR-255-169,,,Aランク,25840,31500,1,https://example.invalid/kmh/211,相場サイト 直近30日中央値,2026-08-18
+KMH-00212,中古 空気清浄機 #170,PANASONIC,生活家電,F-VXR-170,,,Bランク,20350,27000,1,https://example.invalid/kmh/212,,
+KMH-00213,中古 コーヒーメーカー #171,DELONGHI,生活家電,ECAM-171,,,Sランク,29150,32000,1,https://example.invalid/kmh/213,,
+KMH-00214,中古 電動アシスト自転車 バッテリー #172,YAMAHA,その他,X0T-82-172,,,Cランク,18100,22500,4,https://example.invalid/kmh/214,,
+KMH-00215,中古 プロジェクター 小型 #173,EPSON,家電,EF-12-173,,,Aランク,29200,42000,1,https://example.invalid/kmh/215,相場サイト 直近30日中央値,2026-08-18
+KMH-00216,中古 マイク コンデンサー #174,AUDIOTECHNICA,オーディオ,AT2020-174,,,Bランク,8535,10300,1,https://example.invalid/kmh/216,,
+KMH-00217,中古 トートバッグ ナイロン #175,PRADA,バッグ,BR4001-175,,,Sランク,41950,54000,1,https://example.invalid/kmh/217,,
+KMH-00218,中古 ノートパソコン 15型 #176,NEC,家電,PC-GN-176,,,Cランク,23023,36500,1,https://example.invalid/kmh/218,,
+KMH-00219,中古 電子レンジ #177,SHARP,生活家電,RE-SS-177,,,Aランク,11650,15000,1,https://example.invalid/kmh/219,相場サイト 直近30日中央値,2026-08-18
+KMH-00220,中古 掃除機 コードレス #178,DYSON,生活家電,V8-178,,,Bランク,22025,24500,1,https://example.invalid/kmh/220,,
+KMH-00221,中古 炊飯器 5.5合 #179,ZOJIRUSHI,生活家電,NP-BK-179,,,Sランク,13950,19000,1,https://example.invalid/kmh/221,,
+KMH-00222,中古 液晶モニタ 24型 #180,IODATA,家電,LCD-MF-180,,,Cランク,13475,15500,1,https://example.invalid/kmh/222,,
+KMH-00223,中古 コンパクトデジタルカメラ #181,CANON,カメラ,IXY650-181,,,Aランク,13150,18000,4,https://example.invalid/kmh/223,相場サイト 直近30日中央値,2026-08-18
+KMH-00224,中古 ミラーレス標準ズームレンズ #182,NIKON,カメラ,NIKKOR-Z-182,,,Bランク,27560,33500,1,https://example.invalid/kmh/224,,
+KMH-00225,中古 ブルートゥーススピーカー #183,JBL,オーディオ,FLIP6-183,,,Sランク,13000,15000,1,https://example.invalid/kmh/225,,
+KMH-00226,中古 腕時計 ソーラー電波 #184,CASIO,時計,OCW-S-184,,,Cランク,40750,52500,1,https://example.invalid/kmh/226,,
+KMH-00227,中古 ダウンジャケット #185,UNIQLO,アパレル,DWN-01-185,,,Aランク,9390,11200,1,https://example.invalid/kmh/227,相場サイト 直近30日中央値,2026-08-18
+KMH-00228,中古 ランニングシューズ #186,ASICS,スニーカー,GEL-KAYANO-186,,,Bランク,12596,16100,1,https://example.invalid/kmh/228,,
+KMH-00229,中古 ビジネスバッグ 本革 #187,PORTER,バッグ,PT-BIZ-187,,,Sランク,19550,26000,1,https://example.invalid/kmh/229,,
+KMH-00230,中古 二つ折り財布 #188,COACH,財布,CH-W2-188,,,Cランク,8060,9800,1,https://example.invalid/kmh/230,,
+KMH-00231,中古 アコースティックギター #189,YAMAHA,楽器,FG830-189,,,Aランク,21540,26500,1,https://example.invalid/kmh/231,相場サイト 直近30日中央値,2026-08-18
+KMH-00232,中古 キーボード 61鍵 #190,CASIO,楽器,CT-S300-190,,,Bランク,10750,15000,4,https://example.invalid/kmh/232,,
+KMH-00233,中古 ゲームソフト 人気タイトル #191,NINTENDO,ゲームソフト,HAC-GEN-191,,,Sランク,3785,5300,1,https://example.invalid/kmh/233,,
+KMH-00234,中古 家庭用ゲーム機 旧型 #192,SONY,ゲーム機,CUH-2200-192,,,Cランク,15090,19000,1,https://example.invalid/kmh/234,,
+KMH-00235,中古 タブレット 10型 #193,LENOVO,タブレット,TB-J606-193,,,Aランク,12163,18500,1,https://example.invalid/kmh/235,相場サイト 直近30日中央値,2026-08-18
+KMH-00236,中古 スマートウォッチ #194,GARMIN,時計,FR-255-194,,,Bランク,24400,27000,1,https://example.invalid/kmh/236,,
+KMH-00237,中古 空気清浄機 #195,PANASONIC,生活家電,F-VXR-195,,,Sランク,16750,22500,1,https://example.invalid/kmh/237,,
+KMH-00238,中古 コーヒーメーカー #196,DELONGHI,生活家電,ECAM-196,,,Cランク,22690,36000,1,https://example.invalid/kmh/238,,
+KMH-00239,中古 電動アシスト自転車 バッテリー #197,YAMAHA,その他,X0T-82-197,,,Aランク,21540,26500,1,https://example.invalid/kmh/239,相場サイト 直近30日中央値,2026-08-18
+KMH-00240,中古 プロジェクター 小型 #198,EPSON,家電,EF-12-198,,,Bランク,42450,46000,1,https://example.invalid/kmh/240,,
+KMH-00241,中古 マイク コンデンサー #199,AUDIOTECHNICA,オーディオ,AT2020-199,,,Sランク,10190,14300,4,https://example.invalid/kmh/241,,
+KMH-00242,中古 トートバッグ ナイロン #200,PRADA,バッグ,BR4001-200,,,Cランク,53850,58000,1,https://example.invalid/kmh/242,,
+KMH-00243,中古 ノートパソコン 15型 #201,NEC,家電,PC-GN-201,,,Aランク,31150,40500,1,https://example.invalid/kmh/243,相場サイト 直近30日中央値,2026-08-18
+KMH-00244,中古 電子レンジ #202,SHARP,生活家電,RE-SS-202,,,Bランク,15090,19000,1,https://example.invalid/kmh/244,,
+KMH-00245,中古 掃除機 コードレス #203,DYSON,生活家電,V8-203,,,Sランク,25825,28500,1,https://example.invalid/kmh/245,,
+KMH-00246,中古 炊飯器 5.5合 #204,ZOJIRUSHI,生活家電,NP-BK-204,,,Cランク,17150,23000,1,https://example.invalid/kmh/246,,
+KMH-00247,中古 液晶モニタ 24型 #205,IODATA,家電,LCD-MF-205,,,Aランク,9200,11000,1,https://example.invalid/kmh/247,相場サイト 直近30日中央値,2026-08-18
+KMH-00248,中古 コンパクトデジタルカメラ #206,CANON,カメラ,IXY650-206,,,Bランク,10360,13500,1,https://example.invalid/kmh/248,,
+KMH-00249,中古 ミラーレス標準ズームレンズ #207,NIKON,カメラ,NIKKOR-Z-207,,,Sランク,21950,29000,1,https://example.invalid/kmh/249,,
+KMH-00250,中古 ブルートゥーススピーカー #208,JBL,オーディオ,FLIP6-208,,,Cランク,8725,10500,4,https://example.invalid/kmh/250,,
+KMH-00251,中古 腕時計 ソーラー電波 #209,CASIO,時計,OCW-S-209,,,Aランク,40030,48000,1,https://example.invalid/kmh/251,相場サイト 直近30日中央値,2026-08-18
+KMH-00252,中古 ダウンジャケット #210,UNIQLO,アパレル,DWN-01-210,,,Bランク,4110,6700,1,https://example.invalid/kmh/252,,
+KMH-00253,中古 ランニングシューズ #211,ASICS,スニーカー,GEL-KAYANO-211,,,Sランク,9770,11600,1,https://example.invalid/kmh/253,,
+KMH-00254,中古 ビジネスバッグ 本革 #212,PORTER,バッグ,PT-BIZ-212,,,Cランク,17240,21500,1,https://example.invalid/kmh/254,,
+KMH-00255,中古 二つ折り財布 #213,COACH,財布,CH-W2-213,,,Aランク,8755,13800,1,https://example.invalid/kmh/255,相場サイト 直近30日中央値,2026-08-18
+KMH-00256,中古 アコースティックギター #214,YAMAHA,楽器,FG830-214,,,Bランク,27725,30500,1,https://example.invalid/kmh/256,,
+KMH-00257,中古 キーボード 61鍵 #215,CASIO,楽器,CT-S300-215,,,Sランク,13950,19000,1,https://example.invalid/kmh/257,,
+KMH-00258,中古 ゲームソフト 人気タイトル #216,NINTENDO,ゲームソフト,HAC-GEN-216,,,Cランク,4935,9300,1,https://example.invalid/kmh/258,,
+KMH-00259,中古 家庭用ゲーム機 旧型 #217,SONY,ゲーム機,CUH-2200-217,,,Aランク,18530,23000,4,https://example.invalid/kmh/259,相場サイト 直近30日中央値,2026-08-18
+KMH-00260,中古 タブレット 10型 #218,LENOVO,タブレット,TB-J606-218,,,Bランク,20125,22500,1,https://example.invalid/kmh/260,,
+KMH-00261,中古 スマートウォッチ #219,GARMIN,時計,FR-255-219,,,Sランク,23550,31000,1,https://example.invalid/kmh/261,,
+KMH-00262,中古 空気清浄機 #220,PANASONIC,生活家電,F-VXR-220,,,Cランク,23925,26500,1,https://example.invalid/kmh/262,,
+KMH-00263,中古 コーヒーメーカー #221,DELONGHI,生活家電,ECAM-221,,,Aランク,30750,40000,1,https://example.invalid/kmh/263,相場サイト 直近30日中央値,2026-08-18
+KMH-00264,中古 電動アシスト自転車 バッテリー #222,YAMAHA,その他,X0T-82-222,,,Bランク,17670,22000,1,https://example.invalid/kmh/264,,
+KMH-00265,中古 プロジェクター 小型 #223,EPSON,家電,EF-12-223,,,Sランク,38175,41500,1,https://example.invalid/kmh/265,,
+KMH-00266,中古 マイク コンデンサー #224,AUDIOTECHNICA,オーディオ,AT2020-224,,,Cランク,6590,9800,1,https://example.invalid/kmh/266,,
+KMH-00267,中古 トートバッグ ナイロン #225,PRADA,バッグ,BR4001-225,,,Aランク,49575,53500,1,https://example.invalid/kmh/267,相場サイト 直近30日中央値,2026-08-18
+KMH-00268,中古 ノートパソコン 15型 #226,NEC,家電,PC-GN-226,,,Bランク,29710,36000,4,https://example.invalid/kmh/268,,
+KMH-00269,中古 電子レンジ #227,SHARP,生活家電,RE-SS-227,,,Sランク,10350,14500,1,https://example.invalid/kmh/269,,
+KMH-00270,中古 掃除機 コードレス #228,DYSON,生活家電,V8-228,,,Cランク,21550,24000,1,https://example.invalid/kmh/270,,
+KMH-00271,中古 炊飯器 5.5合 #229,ZOJIRUSHI,生活家電,NP-BK-229,,,Aランク,14660,18500,1,https://example.invalid/kmh/271,相場サイト 直近30日中央値,2026-08-18
+KMH-00272,中古 液晶モニタ 24型 #230,IODATA,家電,LCD-MF-230,,,Bランク,10750,15000,1,https://example.invalid/kmh/272,,
+KMH-00273,中古 コンパクトデジタルカメラ #231,CANON,カメラ,IXY650-231,,,Sランク,15375,17500,1,https://example.invalid/kmh/273,,
+KMH-00274,中古 ミラーレス標準ズームレンズ #232,NIKON,カメラ,NIKKOR-Z-232,,,Cランク,27130,33000,1,https://example.invalid/kmh/274,,
+KMH-00275,中古 ブルートゥーススピーカー #233,JBL,オーディオ,FLIP6-233,,,Aランク,9263,14500,1,https://example.invalid/kmh/275,相場サイト 直近30日中央値,2026-08-18
+KMH-00276,中古 腕時計 ソーラー電波 #234,CASIO,時計,OCW-S-234,,,Bランク,48150,52000,1,https://example.invalid/kmh/276,,
+KMH-00277,中古 ダウンジャケット #235,UNIQLO,アパレル,DWN-01-235,,,Sランク,7310,10700,4,https://example.invalid/kmh/277,,
+KMH-00278,中古 ランニングシューズ #236,ASICS,スニーカー,GEL-KAYANO-236,,,Cランク,9124,15600,1,https://example.invalid/kmh/278,,
+KMH-00279,中古 ビジネスバッグ 本革 #237,PORTER,バッグ,PT-BIZ-237,,,Aランク,20680,25500,1,https://example.invalid/kmh/279,相場サイト 直近30日中央値,2026-08-18
+KMH-00280,中古 二つ折り財布 #238,COACH,財布,CH-W2-238,,,Bランク,15660,17800,1,https://example.invalid/kmh/280,,
+KMH-00281,中古 アコースティックギター #239,YAMAHA,楽器,FG830-239,,,Sランク,19550,26000,1,https://example.invalid/kmh/281,,
+KMH-00282,中古 キーボード 61鍵 #240,CASIO,楽器,CT-S300-240,,,Cランク,12525,14500,1,https://example.invalid/kmh/282,,
+KMH-00283,中古 ゲームソフト 人気タイトル #241,NINTENDO,ゲームソフト,HAC-GEN-241,,,Aランク,2590,4800,1,https://example.invalid/kmh/283,相場サイト 直近30日中央値,2026-08-18
+KMH-00284,中古 家庭用ゲーム機 旧型 #242,SONY,ゲーム機,CUH-2200-242,,,Bランク,14660,18500,1,https://example.invalid/kmh/284,,
+KMH-00285,中古 タブレット 10型 #243,LENOVO,タブレット,TB-J606-243,,,Sランク,15850,18000,1,https://example.invalid/kmh/285,,
+KMH-00286,中古 スマートウォッチ #244,GARMIN,時計,FR-255-244,,,Cランク,19950,26500,4,https://example.invalid/kmh/286,,
+KMH-00287,中古 空気清浄機 #245,PANASONIC,生活家電,F-VXR-245,,,Aランク,19650,22000,1,https://example.invalid/kmh/287,相場サイト 直近30日中央値,2026-08-18
+KMH-00288,中古 コーヒーメーカー #246,DELONGHI,生活家電,ECAM-246,,,Bランク,29280,35500,1,https://example.invalid/kmh/288,,
+KMH-00289,中古 電動アシスト自転車 バッテリー #247,YAMAHA,その他,X0T-82-247,,,Sランク,19550,26000,1,https://example.invalid/kmh/289,,
+KMH-00290,中古 プロジェクター 小型 #248,EPSON,家電,EF-12-248,,,Cランク,41975,45500,1,https://example.invalid/kmh/290,,
+KMH-00291,中古 マイク コンデンサー #249,AUDIOTECHNICA,オーディオ,AT2020-249,,,Aランク,10618,13800,1,https://example.invalid/kmh/291,相場サイト 直近30日中央値,2026-08-18
+KMH-00292,中古 トートバッグ ナイロン #250,PRADA,バッグ,BR4001-250,,,Bランク,44750,57500,1,https://example.invalid/kmh/292,,
+KMH-00293,中古 ノートパソコン 15型 #251,NEC,家電,PC-GN-251,,,Sランク,36750,40000,1,https://example.invalid/kmh/293,,
+KMH-00294,中古 電子レンジ #252,SHARP,生活家電,RE-SS-252,,,Cランク,14660,18500,1,https://example.invalid/kmh/294,,
+KMH-00295,中古 掃除機 コードレス #253,DYSON,生活家電,V8-253,,,Aランク,19050,28000,4,https://example.invalid/kmh/295,相場サイト 直近30日中央値,2026-08-18
+KMH-00296,中古 炊飯器 5.5合 #254,ZOJIRUSHI,生活家電,NP-BK-254,,,Bランク,20125,22500,1,https://example.invalid/kmh/296,,
+KMH-00297,中古 液晶モニタ 24型 #255,IODATA,家電,LCD-MF-255,,,Sランク,13950,19000,1,https://example.invalid/kmh/297,,
+KMH-00298,中古 コンパクトデジタルカメラ #256,CANON,カメラ,IXY650-256,,,Cランク,7395,13000,1,https://example.invalid/kmh/298,,
+KMH-00299,中古 ミラーレス標準ズームレンズ #257,NIKON,カメラ,NIKKOR-Z-257,,,Aランク,23260,28500,1,https://example.invalid/kmh/299,相場サイト 直近30日中央値,2026-08-18
+KMH-00300,中古 ブルートゥーススピーカー #258,JBL,オーディオ,FLIP6-258,,,Bランク,8250,10000,1,https://example.invalid/kmh/300,,
+KMH-00301,中古 腕時計 ソーラー電波 #259,CASIO,時計,OCW-S-259,,,Sランク,36750,47500,1,https://example.invalid/kmh/301,,
+KMH-00302,中古 ダウンジャケット #260,UNIQLO,アパレル,DWN-01-260,,,Cランク,4640,6200,1,https://example.invalid/kmh/302,,
+KMH-00303,中古 ランニングシューズ #261,ASICS,スニーカー,GEL-KAYANO-261,,,Aランク,7630,11100,1,https://example.invalid/kmh/303,相場サイト 直近30日中央値,2026-08-18
+KMH-00304,中古 ビジネスバッグ 本革 #262,PORTER,バッグ,PT-BIZ-262,,,Bランク,16810,21000,4,https://example.invalid/kmh/304,,
+KMH-00305,中古 二つ折り財布 #263,COACH,財布,CH-W2-263,,,Sランク,11385,13300,1,https://example.invalid/kmh/305,,
+KMH-00306,中古 アコースティックギター #264,YAMAHA,楽器,FG830-264,,,Cランク,22750,30000,1,https://example.invalid/kmh/306,,
+KMH-00307,中古 キーボード 61鍵 #265,CASIO,楽器,CT-S300-265,,,Aランク,16325,18500,1,https://example.invalid/kmh/307,相場サイト 直近30日中央値,2026-08-18
+KMH-00308,中古 ゲームソフト 人気タイトル #266,NINTENDO,ゲームソフト,HAC-GEN-266,,,Bランク,6318,8800,1,https://example.invalid/kmh/308,,
+KMH-00309,中古 家庭用ゲーム機 旧型 #267,SONY,ゲーム機,CUH-2200-267,,,Sランク,16750,22500,1,https://example.invalid/kmh/309,,
+KMH-00310,中古 タブレット 10型 #268,LENOVO,タブレット,TB-J606-268,,,Cランク,19650,22000,1,https://example.invalid/kmh/310,,
+KMH-00311,中古 スマートウォッチ #269,GARMIN,時計,FR-255-269,,,Aランク,24980,30500,1,https://example.invalid/kmh/311,相場サイト 直近30日中央値,2026-08-18
+KMH-00312,中古 空気清浄機 #270,PANASONIC,生活家電,F-VXR-270,,,Bランク,19550,26000,1,https://example.invalid/kmh/312,,
+KMH-00313,中古 コーヒーメーカー #271,DELONGHI,生活家電,ECAM-271,,,Sランク,36275,39500,4,https://example.invalid/kmh/313,,
+KMH-00314,中古 電動アシスト自転車 バッテリー #272,YAMAHA,その他,X0T-82-272,,,Cランク,24550,30000,1,https://example.invalid/kmh/314,,
+KMH-00315,中古 プロジェクター 小型 #273,EPSON,家電,EF-12-273,,,Aランク,28475,41000,1,https://example.invalid/kmh/315,相場サイト 直近30日中央値,2026-08-18
+KMH-00316,中古 マイク コンデンサー #274,AUDIOTECHNICA,オーディオ,AT2020-274,,,Bランク,7585,9300,1,https://example.invalid/kmh/316,,
+KMH-00317,中古 トートバッグ ナイロン #275,PRADA,バッグ,BR4001-275,,,Sランク,41150,53000,1,https://example.invalid/kmh/317,,
+KMH-00318,中古 ノートパソコン 15型 #276,NEC,家電,PC-GN-276,,,Cランク,22358,35500,1,https://example.invalid/kmh/318,,
+KMH-00319,中古 電子レンジ #277,SHARP,生活家電,RE-SS-277,,,Aランク,10790,14000,1,https://example.invalid/kmh/319,相場サイト 直近30日中央値,2026-08-18
+KMH-00320,中古 掃除機 コードレス #278,DYSON,生活家電,V8-278,,,Bランク,21075,23500,1,https://example.invalid/kmh/320,,
+KMH-00321,中古 炊飯器 5.5合 #279,ZOJIRUSHI,生活家電,NP-BK-279,,,Sランク,13150,18000,1,https://example.invalid/kmh/321,,
+KMH-00322,中古 液晶モニタ 24型 #280,IODATA,家電,LCD-MF-280,,,Cランク,12525,14500,4,https://example.invalid/kmh/322,,
+KMH-00323,中古 コンパクトデジタルカメラ #281,CANON,カメラ,IXY650-281,,,Aランク,12350,17000,1,https://example.invalid/kmh/323,相場サイト 直近30日中央値,2026-08-18
+KMH-00324,中古 ミラーレス標準ズームレンズ #282,NIKON,カメラ,NIKKOR-Z-282,,,Bランク,26700,32500,1,https://example.invalid/kmh/324,,
+KMH-00325,中古 ブルートゥーススピーカー #283,JBL,オーディオ,FLIP6-283,,,Sランク,12050,14000,1,https://example.invalid/kmh/325,,
+KMH-00326,中古 腕時計 ソーラー電波 #284,CASIO,時計,OCW-S-284,,,Cランク,39950,51500,1,https://example.invalid/kmh/326,,
+KMH-00327,中古 ダウンジャケット #285,UNIQLO,アパレル,DWN-01-285,,,Aランク,8440,10200,1,https://example.invalid/kmh/327,相場サイト 直近30日中央値,2026-08-18
+KMH-00328,中古 ランニングシューズ #286,ASICS,スニーカー,GEL-KAYANO-286,,,Bランク,11736,15100,1,https://example.invalid/kmh/328,,
+KMH-00329,中古 ビジネスバッグ 本革 #287,PORTER,バッグ,PT-BIZ-287,,,Sランク,18750,25000,1,https://example.invalid/kmh/329,,
+KMH-00330,中古 二つ折り財布 #288,COACH,財布,CH-W2-288,,,Cランク,15185,17300,1,https://example.invalid/kmh/330,,
+KMH-00331,中古 アコースティックギター #289,YAMAHA,楽器,FG830-289,,,Aランク,27990,34000,4,https://example.invalid/kmh/331,相場サイト 直近30日中央値,2026-08-18
+KMH-00332,中古 キーボード 61鍵 #290,CASIO,楽器,CT-S300-290,,,Bランク,9950,14000,1,https://example.invalid/kmh/332,,
+KMH-00333,中古 ゲームソフト 人気タイトル #291,NINTENDO,ゲームソフト,HAC-GEN-291,,,Sランク,2835,4300,1,https://example.invalid/kmh/333,,
+KMH-00334,中古 家庭用ゲーム機 旧型 #292,SONY,ゲーム機,CUH-2200-292,,,Cランク,14230,18000,1,https://example.invalid/kmh/334,,
+KMH-00335,中古 タブレット 10型 #293,LENOVO,タブレット,TB-J606-293,,,Aランク,11438,17500,1,https://example.invalid/kmh/335,相場サイト 直近30日中央値,2026-08-18
+KMH-00336,中古 スマートウォッチ #294,GARMIN,時計,FR-255-294,,,Bランク,23450,26000,1,https://example.invalid/kmh/336,,
+KMH-00337,中古 空気清浄機 #295,PANASONIC,生活家電,F-VXR-295,,,Sランク,15950,21500,1,https://example.invalid/kmh/337,,
+KMH-00338,中古 コーヒーメーカー #296,DELONGHI,生活家電,ECAM-296,,,Cランク,22025,35000,1,https://example.invalid/kmh/338,,
+KMH-00339,中古 電動アシスト自転車 バッテリー #297,YAMAHA,その他,X0T-82-297,,,Aランク,20680,25500,1,https://example.invalid/kmh/339,相場サイト 直近30日中央値,2026-08-18
+KMH-00340,中古 プロジェクター 小型 #298,EPSON,家電,EF-12-298,,,Bランク,41500,45000,4,https://example.invalid/kmh/340,,
+KMH-00341,中古 マイク コンデンサー #299,AUDIOTECHNICA,オーディオ,AT2020-299,,,Sランク,9390,13300,1,https://example.invalid/kmh/341,,
+KMH-00342,中古 トートバッグ ナイロン #300,PRADA,バッグ,BR4001-300,,,Cランク,52900,57000,1,https://example.invalid/kmh/342,,
