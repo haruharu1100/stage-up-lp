@@ -22,16 +22,17 @@ const SORT_LABELS: Record<string, string> = {
 export default async function RoutesPage({
   searchParams,
 }: {
-  searchParams: { sort?: string; buy?: string; sell?: string; status?: string };
+  searchParams: Promise<{ sort?: string; buy?: string; sell?: string; status?: string }>;
 }) {
   await ensureReady();
-  const sort = searchParams.sort ?? 'score';
-  const status = searchParams.status ?? 'OK';
+  const sp = await searchParams;
+  const sort = sp.sort ?? 'score';
+  const status = sp.status ?? 'OK';
 
   const [venuesRaw, o, rows, ranking, strengths, lost, shadow] = await Promise.all([
     all('SELECT * FROM venues ORDER BY code'),
     routeOverview(),
-    listRoutes({ sort, status, buy: searchParams.buy, sell: searchParams.sell, limit: 80 }),
+    listRoutes({ sort, status, buy: sp.buy, sell: sp.sell, limit: 80 }),
     routeRanking(20),
     routeStrengths(25),
     blockedOpportunities(15),
@@ -102,13 +103,13 @@ export default async function RoutesPage({
             <option key={k} value={k}>{v}</option>
           ))}
         </select>
-        <select name="buy" defaultValue={searchParams.buy ?? ''}>
+        <select name="buy" defaultValue={sp.buy ?? ''}>
           <option value="">仕入先：すべて</option>
           {venues.filter((v) => v.can_buy === 1).map((v) => (
             <option key={v.code} value={v.code}>{v.name}</option>
           ))}
         </select>
-        <select name="sell" defaultValue={searchParams.sell ?? ''}>
+        <select name="sell" defaultValue={sp.sell ?? ''}>
           <option value="">販売先：すべて</option>
           {venues.filter((v) => v.can_sell === 1).map((v) => (
             <option key={v.code} value={v.code}>{v.name}</option>
