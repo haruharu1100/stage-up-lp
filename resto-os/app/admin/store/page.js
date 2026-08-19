@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import Nav from '../../../components/Nav';
+import MapPicker from '../../../components/MapPicker';
 
 const yen = (n) => `${Number(n || 0).toLocaleString()}円`;
 
@@ -192,6 +193,22 @@ export default function StoreSettings() {
           </div>
           {geoMsg && <div className="muted" style={{ marginTop: 8 }}>{geoMsg}</div>}
 
+          <div className="card" style={{ marginTop: 12, background: '#fafbfc' }}>
+            <div style={{ fontWeight: 700, marginBottom: 6 }}>この位置で正しいですか？</div>
+            <div className="muted" style={{ marginBottom: 8 }}>
+              ピンがお店の建物からずれていたら、正しい場所を押して直してください。押した場所がそのまま保存されます。
+              （保存を押すまでは変わりません）
+            </div>
+            <MapPicker
+              lat={s.lat}
+              lng={s.lng}
+              onChange={({ lat, lng }) => {
+                setS({ ...s, lat, lng, geoSource: 'manual' });
+                setGeoMsg('ピンを動かしました。下の「設定を保存する」を押すと確定します。');
+              }}
+            />
+          </div>
+
           <div className="grid g4" style={{ marginTop: 12 }}>
             <div>
               <label className="field">緯度</label>
@@ -204,11 +221,34 @@ export default function StoreSettings() {
             <div style={{ gridColumn: 'span 2', display: 'flex', alignItems: 'flex-end' }}>
               {s.lat && s.lng ? (
                 <a className="btn" href={`https://www.openstreetmap.org/?mlat=${s.lat}&mlon=${s.lng}#map=17/${s.lat}/${s.lng}`} target="_blank" rel="noreferrer">
-                  地図でこの位置を確認する
+                  大きな地図で開く
                 </a>
               ) : (
-                <span className="muted">住所から探すと、ここに地図のボタンが出ます。</span>
+                <span className="muted">住所から探すと、ピンが地図に立ちます。</span>
               )}
+            </div>
+          </div>
+        </div>
+
+        <div className="card" style={{ marginTop: 14 }}>
+          <div className="h2">人手の目安（何人で回せるか）</div>
+          <div className="muted" style={{ marginBottom: 10 }}>
+            「この時間は何人いれば足りそうか」を出すときに使います。カウンターだけのお店と、広い座敷のお店では
+            1人で見られる人数が違うので、お店の実感に合わせて調整してください。
+          </div>
+          <div className="grid g4">
+            <div>
+              <label className="field">ホール1人で見られる人数</label>
+              <input className="input mono" type="number" value={s.guestsPerStaff ?? 12} onChange={(e) => setS({ ...s, guestsPerStaff: Number(e.target.value) })} />
+            </div>
+            <div>
+              <label className="field">お客様が少なくても必要な人数</label>
+              <input className="input mono" type="number" value={s.minStaff ?? 2} onChange={(e) => setS({ ...s, minStaff: Number(e.target.value) })} />
+            </div>
+            <div style={{ gridColumn: 'span 2', display: 'flex', alignItems: 'flex-end' }}>
+              <span className="muted">
+                例：この設定だと、40名のご来店で {Math.max(Number(s.minStaff) || 2, Math.ceil(40 / (Number(s.guestsPerStaff) || 12)))} 人が目安になります。
+              </span>
             </div>
           </div>
         </div>

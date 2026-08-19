@@ -56,6 +56,9 @@ CREATE TABLE IF NOT EXISTS stores (
   timezone TEXT DEFAULT 'Asia/Tokyo',
   geo_source TEXT DEFAULT '',          -- geocode＝住所から自動 / manual＝地図で手直し
   geo_updated_at TEXT DEFAULT '',
+  -- 人手の目安。店の作り（カウンターだけ／広い座敷）で必要人数は変わるので店ごとに持つ。
+  guests_per_staff INTEGER DEFAULT 12,  -- ホール1人がだいたい何人まで見られるか
+  min_staff INTEGER DEFAULT 2,          -- 客が少なくても最低これだけは要る人数
   created_at TEXT NOT NULL
 );
 
@@ -397,6 +400,15 @@ CREATE TABLE IF NOT EXISTS weather_forecast (
   temp_max REAL, temp_min REAL, temp_avg REAL,
   precip_mm REAL, precip_prob INTEGER,
   humidity INTEGER, wind_speed REAL,
+  -- ここから下は「暑さ・寒さの体感」に効くもの。
+  -- 気温だけでは、同じ30℃でも「湿気て蒸す日」と「からっとした日」の区別がつかない。
+  -- 飲み物の出方はそこで大きく変わるので、体感温度と湿度・日射をそろえて残す。
+  temp_now REAL,                       -- いま何度か（当日の予報を取り直したときだけ入る）
+  feels_like REAL,                     -- 体感温度
+  cloud_pct INTEGER,                   -- 雲量（%）
+  solar_mj REAL,                       -- 日射量（MJ/㎡）
+  snow_cm REAL,                        -- 積雪・降雪（cm）
+  pressure_hpa REAL,                   -- 気圧（hPa）
   fetched_at TEXT NOT NULL
 );
 CREATE UNIQUE INDEX IF NOT EXISTS ux_wfc ON weather_forecast(tenant_id, store_id, business_date, slot);
@@ -413,6 +425,12 @@ CREATE TABLE IF NOT EXISTS weather_actual (
   temp_max REAL, temp_min REAL, temp_avg REAL,
   precip_mm REAL,
   humidity INTEGER, wind_speed REAL,
+  temp_now REAL,                       -- 取りに行った時点の気温（営業中の更新で入る）
+  feels_like REAL,
+  cloud_pct INTEGER,
+  solar_mj REAL,
+  snow_cm REAL,
+  pressure_hpa REAL,
   confirmed INTEGER DEFAULT 0,         -- 1＝確定値。0＝まだ営業中などの暫定
   fetched_at TEXT NOT NULL
 );
@@ -535,7 +553,8 @@ CREATE TABLE IF NOT EXISTS daily_hour_facts (
   hour INTEGER NOT NULL,
   sales INTEGER DEFAULT 0,
   qty INTEGER DEFAULT 0,
-  orders_count INTEGER DEFAULT 0
+  orders_count INTEGER DEFAULT 0,
+  guests INTEGER DEFAULT 0             -- その時間に席についた人数（必要な人手を出すのに使う）
 );
 CREATE UNIQUE INDEX IF NOT EXISTS ux_dhf ON daily_hour_facts(tenant_id, store_id, business_date, hour);
 
@@ -765,3 +784,46 @@ CREATE TABLE IF NOT EXISTS stockouts (
   created_at TEXT NOT NULL
 );
 CREATE UNIQUE INDEX IF NOT EXISTS ux_stockouts ON stockouts(tenant_id, store_id, business_date, name);
+
+-- ===== 周辺の会場と、そこでの開催予定（第1層：人が登録した事実） =====
+
+-- 近くの大きな会場を、店からの距離つきで持つ。
+-- 「京セラドームでライブ」がある日に来客が増えるかどうかは、店の場所と会場の距離で全く変わる。
+-- 徒歩5分の店と、電車で30分の店を同じに扱ってはいけないので、会場は店ごとに登録する。
+CREATE TABLE IF NOT EXISTS venues (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  tenant_id INTEGER NOT NULL,
+  store_id INTEGER NOT NULL,
+  name TEXT NOT NULL,                  -- 京セラドーム大阪 など
+  kind TEXT DEFAULT 'other',           -- stadium / hall / park / expo / school / shrine / other
+  lat REAL, lng REAL,
+  distance_km REAL,                    -- 店からの直線距離（緯度経度から自動で出す）
+  capacity INTEGER DEFAULT 0,          -- だいたいの収容人数（分かる範囲で）
+  note TEXT DEFAULT '',
+  active INTEGER DEFAULT 1,
+  created_at TEXT NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS ux_venues ON venues(tenant_id, store_id, name);
+
+-- その会場で、いつ何があるか。
+-- ★外部から自動で取ってくる仕組みは、日本の催し物を網羅して正確に出せる無料の窓口が
+--   見当たらないため、いまは作っていない。分からないものを推測で埋めるより、
+--   店長が知っていることを登録できるほうが確かなので、まず手で登録する形にしている。
+--   将来、信頼できる窓口が用意できたときに source を 'api' にして流し込めるようにしてある。
+CREATE TABLE IF NOT EXISTS venue_events (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  tenant_id INTEGER NOT NULL,
+  store_id INTEGER NOT NULL,
+  venue_id INTEGER NOT NULL,
+  business_date TEXT NOT NULL,
+  end_date TEXT DEFAULT '',
+  title TEXT NOT NULL,
+  kind TEXT DEFAULT 'other',           -- live / concert / baseball / soccer / fireworks / festival / expo / school / other
+  expected_people INTEGER DEFAULT 0,   -- 見込み来場者数（分かれば）
+  start_time TEXT DEFAULT '',          -- 開演時刻。終演後に流れてくる時間帯を読むのに使う
+  end_time TEXT DEFAULT '',
+  source TEXT DEFAULT 'manual',        -- manual＝人が登録 / api＝外部から取得（将来）
+  staff_name TEXT DEFAULT '',
+  created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS ix_venue_events ON venue_events(tenant_id, store_id, business_date);

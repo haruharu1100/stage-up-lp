@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { businessDate } from '../../../../lib/db.js';
 import { requireAuth, requireRole, requireFeature, apiFail } from '../../../../lib/auth.js';
 import { addDays, learningStatus } from '../../../../lib/learn.js';
-import { predictDay, saveForecasts, accuracy, anomalies, todayPlan, confLabel } from '../../../../lib/forecast.js';
+import { predictDay, saveForecasts, accuracy, anomalies, todayPlan, hourlyPlan, confLabel } from '../../../../lib/forecast.js';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
@@ -108,6 +108,11 @@ export async function GET(req) {
     }
     if (view === 'today') {
       return NextResponse.json({ ok: true, plan: await todayPlan(ctx) });
+    }
+    if (view === 'hourly') {
+      // 何時が忙しいか・何人いれば回りそうか。日付を指定しなければ今日ぶん。
+      const date = String(sp.get('date') || businessDate()).slice(0, 10);
+      return NextResponse.json({ ok: true, hourly: await hourlyPlan(ctx, date) });
     }
     if (view === 'day') {
       const date = String(sp.get('date') || businessDate()).slice(0, 10);

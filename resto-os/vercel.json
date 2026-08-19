@@ -5,6 +5,7 @@
     { "path": "/api/cron?job=weather&slot=am6", "schedule": "0 21 * * *" },
     { "path": "/api/cron?job=weather&slot=am11", "schedule": "0 2 * * *" },
     { "path": "/api/cron?job=weather&slot=pm16", "schedule": "0 7 * * *" },
+    { "path": "/api/cron?job=live", "schedule": "0 8-16 * * *" },
     { "path": "/api/cron?job=nightly", "schedule": "0 18 * * *" },
     { "path": "/api/cron?job=report&slot=morning", "schedule": "10 2 * * *" },
     { "path": "/api/cron?job=calendar", "schedule": "0 20 * * 0" }

@@ -24,7 +24,30 @@ export const maxDuration = 60;
  * そこで止めずに次の店へ進む。1店の通信エラーで全店の記録が欠けては困るため。
  */
 
-const JOBS = ['weather', 'nightly', 'calendar', 'report'];
+const JOBS = ['weather', 'live', 'nightly', 'calendar', 'report'];
+
+/**
+ * いま、その店の営業時間の中かどうか（日本時間で見る）。
+ *
+ * 営業中だけ天気を取り直したいので使う。閉まっている時間まで毎時取りに行っても
+ * 使い道がないうえ、取り寄せ先に無駄な負担をかけるだけなので、開いている店だけにする。
+ * 24時をまたぐ店（17:00〜26:00 のような書き方）にも合わせてある。
+ */
+function isOpenNow(store) {
+  const jst = new Date(Date.now() + 9 * 3600 * 1000);
+  const nowMin = jst.getUTCHours() * 60 + jst.getUTCMinutes();
+  const toMin = (s, fallback) => {
+    const m = String(s || '').match(/^(\d{1,2}):(\d{2})$/);
+    if (!m) return fallback;
+    return Number(m[1]) * 60 + Number(m[2]);
+  };
+  const open = toMin(store?.open_time, 17 * 60);
+  let close = toMin(store?.close_time, 24 * 60);
+  if (close <= open) close += 24 * 60; // 深夜まで営業している店
+  // 開店1時間前から見る。開ける前の判断（仕込み・人手）にも使うため。
+  const from = open - 60;
+  return (nowMin >= from && nowMin <= close) || (nowMin + 24 * 60 >= from && nowMin + 24 * 60 <= close);
+}
 
 function authorized(req) {
   const secret = process.env.CRON_SECRET || '';
@@ -91,6 +114,23 @@ async function runJob(job, slot) {
       // 天気の予報が変わったぶん、明日から先の見込みも取り直す（今日と過去には触れない）
       const fc = await saveForecasts(ctx, { days: 8 });
       return { forecast: f.saved, actual: a.saved ?? 0, forecasts: fc.saved ?? 0 };
+    });
+  }
+
+  // live：営業中に1時間ごと。いまの空模様と、今日ぶんの最新の予報を取り直す。
+  //
+  // ★ここで入る今日の天気は「まだ確定していない値（confirmed=0）」。
+  //   夜の処理で改めて取り直して確定させる。営業中の暫定値を、
+  //   そのまま「その日の記録」にしてしまうと、19時に雨が降った日を
+  //   「晴れの日」として覚えたままになるため。
+  if (job === 'live') {
+    return eachStore(async (ctx, store) => {
+      if (!isOpenNow(store)) return { live: '営業時間外のため見送り' };
+      const today = businessDate();
+      const f = await saveForecast(ctx, { slot: 'live', days: 2 });
+      if (!f.ok) return { live: '位置が未設定のため見送り' };
+      const a = await saveActual(ctx, today, today, { confirmed: 0, overwrite: true });
+      return { live: '更新', date: today, forecast: f.saved, actual: a.saved ?? 0 };
     });
   }
 

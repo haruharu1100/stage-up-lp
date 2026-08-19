@@ -295,6 +295,48 @@ export default function PrepPage() {
             </div>
           </div>
         )}
+
+        {data?.wasteDow && (
+          <div className="card">
+            <h2 className="h2">曜日ごとの偏り（廃棄・直近90日）</h2>
+            {!data.wasteDow.ok ? (
+              <p className="muted">{data.wasteDow.message}</p>
+            ) : (
+              <>
+                <p className="muted" style={{ fontSize: 12 }}>
+                  売れた金額に対して、どれくらい捨てているかの割合で比べています（売上の大きい日は捨てる量も増えるため、金額そのままでは比べません）。
+                </p>
+                <div style={{ overflowX: 'auto' }}>
+                  <table className="table">
+                    <thead><tr><th>曜日</th><th className="mono">記録日数</th><th className="mono">1日あたりの廃棄</th><th>ほかの曜日と比べて</th></tr></thead>
+                    <tbody>
+                      {data.wasteDow.rows.map((r) => (
+                        <tr key={r.dow}>
+                          <td>{r.dowName}曜日</td>
+                          <td className="mono">{r.days}日</td>
+                          <td className="mono">{yen(r.avgAmount)}</td>
+                          <td>
+                            {!r.enough
+                              ? <span className="muted">記録が少ないため判断しません</span>
+                              : (Math.abs(r.diffPct) < 15
+                                ? <span className="muted">ほぼ同じ</span>
+                                : <b style={{ color: r.diffPct > 0 ? 'var(--red)' : 'var(--green)' }}>
+                                    {r.diffPct > 0 ? `約${Math.round(r.diffPct)}%多い` : `約${Math.round(Math.abs(r.diffPct))}%少ない`}
+                                  </b>)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <ul style={{ marginTop: 10, paddingLeft: 20, lineHeight: 1.9 }}>
+                  {data.wasteDow.notes.map((n, i) => <li key={i}>{n}</li>)}
+                </ul>
+                <p className="muted" style={{ fontSize: 12 }}>{data.wasteDow.caution}</p>
+              </>
+            )}
+          </div>
+        )}
       </div>
     </>
   );

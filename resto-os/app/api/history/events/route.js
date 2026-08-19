@@ -15,7 +15,8 @@ const MANAGE_ROLES = ['owner', 'admin', 'manager'];
  * ここに入るのは人が書いた事実であって、AIの推測ではない。
  */
 
-const KINDS = ['reserved', 'media', 'buzz', 'newmenu', 'pricing', 'nearby', 'trouble', 'other'];
+// weather＝天候（大雨・台風など）。数字だけでは分からない「その日の事情」を、あとから読み返せるように残す。
+const KINDS = ['reserved', 'media', 'buzz', 'newmenu', 'pricing', 'nearby', 'trouble', 'weather', 'other'];
 const IMPACTS = ['up', 'down', 'unknown'];
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import Nav from '../../../components/Nav';
 
@@ -76,7 +76,9 @@ export default function HistoryPage() {
   const [fcErr, setFcErr] = useState('');
   const [fcBusy, setFcBusy] = useState(false);
   const [anom, setAnom] = useState(null);
+  const [hourly, setHourly] = useState(null);
   const [openFc, setOpenFc] = useState('');
+  const [ven, setVen] = useState(null);
 
   const qs = useMemo(() => {
     const p = new URLSearchParams();
@@ -130,14 +132,16 @@ export default function HistoryPage() {
   const loadForecast = useCallback(async () => {
     setFcBusy(true);
     try {
-      const [a, b] = await Promise.all([
+      const [a, b, c] = await Promise.all([
         fetch('/api/history/forecast?days=7').then((x) => x.json()),
         fetch('/api/history/forecast?view=anomaly').then((x) => x.json()),
+        fetch('/api/history/forecast?view=hourly').then((x) => x.json()),
       ]);
       if (!a.ok) return setFcErr(a.error || '見込みを出せませんでした');
       setFcErr('');
       setFc(a);
       setAnom(b.ok ? b : null);
+      setHourly(c.ok ? c.hourly : null);
     } finally {
       setFcBusy(false);
     }
@@ -176,6 +180,13 @@ export default function HistoryPage() {
       setCampBusy(false);
     }
   }
+
+  const loadVenues = useCallback(async () => {
+    const r = await fetch('/api/history/venues').then((x) => x.json());
+    if (r.ok) setVen(r);
+  }, []);
+
+  useEffect(() => { if (tab === 'venue') loadVenues(); }, [tab, loadVenues]);
 
   const loadBatches = useCallback(async () => {
     const r = await fetch('/api/history/import').then((x) => x.json());
@@ -341,6 +352,7 @@ export default function HistoryPage() {
           <button className={tab === 'compare' ? 'on' : ''} onClick={() => setTab('compare')}>年・月で比べる</button>
           <button className={tab === 'similar' ? 'on' : ''} onClick={() => setTab('similar')}>似た日を探す</button>
           <button className={tab === 'camp' ? 'on' : ''} onClick={() => setTab('camp')}>打った手（企画・販促）</button>
+          <button className={tab === 'venue' ? 'on' : ''} onClick={() => setTab('venue')}>近くの催し</button>
           <button className={tab === 'imp' ? 'on' : ''} onClick={() => setTab('imp')}>昔の売上を取り込む</button>
         </div>
 
@@ -351,6 +363,7 @@ export default function HistoryPage() {
           <ForecastTab
             fc={fc}
             anom={anom}
+            hourly={hourly}
             busy={fcBusy}
             err={fcErr}
             open={openFc}
@@ -689,6 +702,9 @@ export default function HistoryPage() {
             </div>
           </>
         )}
+
+        {/* ── 近くの催し（会場と開催予定） ───────────── */}
+        {tab === 'venue' && <VenueTab data={ven} reload={loadVenues} />}
 
         {/* ── 昔の売上を取り込む ─────────────────── */}
         {tab === 'imp' && (
@@ -1064,7 +1080,65 @@ function AccuracyBox({ acc }) {
   );
 }
 
-function ForecastTab({ fc, anom, busy, err, open, setOpen, onRemake }) {
+/**
+ * 何時が忙しそうか、そのとき何人いれば回りそうか。
+ * 棒の長さは「その日の中での多い・少ない」を表していて、他の日とは比べていない。
+ */
+function HourlyCard({ hourly }) {
+  if (!hourly) return null;
+  if (!hourly.ok) {
+    return (
+      <div className="card" style={{ marginTop: 14 }}>
+        <div className="h2">時間帯ごとの見込み</div>
+        <div className="muted">{hourly.message || 'まだ記録が足りないため、時間帯の見込みは出しません。'}</div>
+      </div>
+    );
+  }
+  const rows = hourly.rows || [];
+  const maxSales = Math.max(1, ...rows.map((r) => r.sales));
+  return (
+    <div className="card" style={{ marginTop: 14 }}>
+      <div className="h2">時間帯ごとの見込みと人手（{hourly.date}）</div>
+      <div className="muted" style={{ marginBottom: 10 }}>
+        {hourly.basis}の「何時に何割売れたか」の形に、今日の見込みを重ねたものです。
+        人手は、ホール1人で{hourly.perStaff}人・最低{hourly.minStaff}人という設定から出しています（お店の設定で変えられます）。
+      </div>
+      <table className="table table-wide">
+        <thead>
+          <tr>
+            <th>時間</th><th>売上の見込み</th><th style={{ width: '32%' }}>多い・少ない</th>
+            <th>ご来店</th><th>在店の目安</th><th>人手の目安</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r) => (
+            <tr key={r.hour} style={r.hour === hourly.peakHour ? { background: '#fffaf0' } : undefined}>
+              <td className="mono">{r.hour}時台</td>
+              <td className="mono">{yen(r.salesLow)}〜{yen(r.salesHigh)}</td>
+              <td>
+                <div style={{ background: '#eef1f4', borderRadius: 6, height: 10 }}>
+                  <div style={{ width: `${Math.round((r.sales / maxSales) * 100)}%`, background: FC_LINE, height: 10, borderRadius: 6 }} />
+                </div>
+              </td>
+              <td className="mono">{num(r.arrivals)}人</td>
+              <td className="mono">{num(r.inStore)}人{r.nearFull ? <span className="badge b-out" style={{ marginLeft: 6 }}>満席に近い</span> : null}</td>
+              <td className="mono">{num(r.staff)}人</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <ul style={{ marginTop: 10, paddingLeft: 20, lineHeight: 1.9 }}>
+        {(hourly.notes || []).map((n, i) => <li key={i}>{n}</li>)}
+      </ul>
+      <div className="muted" style={{ fontSize: 12 }}>
+        ※「在店の目安」は、その時間にご来店した人数と、前の1時間にご来店した人数から見積もっています。
+        実際にお待たせした時間は記録していないため、待ち時間を分数ではお出ししません。
+      </div>
+    </div>
+  );
+}
+
+function ForecastTab({ fc, anom, hourly, busy, err, open, setOpen, onRemake }) {
   const rows = fc?.rows || [];
   const plan = fc?.plan;
   const notEnough = rows.length && rows.every((r) => r.notEnough);
@@ -1115,6 +1189,9 @@ function ForecastTab({ fc, anom, busy, err, open, setOpen, onRemake }) {
         </div>
       )}
 
+      <HourlyCard hourly={hourly} />
+
+
       {/* これから7日 */}
       <div className="card" style={{ marginTop: 14 }}>
         <div className="h2">これから7日の見込み</div>
@@ -1136,23 +1213,85 @@ function ForecastTab({ fc, anom, busy, err, open, setOpen, onRemake }) {
       </div>
 
       {/* いつもと違った日 */}
-      <div className="card" style={{ marginTop: 14 }}>
-        <div className="h2">いつもと違った日</div>
-        <div className="muted" style={{ marginBottom: 10 }}>
-          同じ曜日のふだんと3割以上ちがった日です。理由は決めつけず、その日にあった事実だけを並べています。
-        </div>
-        {!anom?.ok ? (
-          <div className="muted">まだ見比べられるだけの記録がありません。</div>
-        ) : !anom.rows.length ? (
-          <div className="muted">大きく外れた日はありませんでした。</div>
-        ) : (
-          <table className="table table-wide">
-            <thead>
-              <tr><th>日付</th><th>曜日</th><th style={{ textAlign: 'right' }}>売上</th><th style={{ textAlign: 'right' }}>いつも</th><th style={{ textAlign: 'right' }}>差</th><th>その日にあったこと</th></tr>
-            </thead>
-            <tbody>
-              {anom.rows.map((r) => (
-                <tr key={r.date}>
+      <AnomalyCard anom={anom} onSaved={onRemake} />
+    </>
+  );
+}
+
+// ふだんと違った日に「何があったか」を聞くときの選び方。
+// 数字だけでは分からない事情は人にしか書けないので、押すだけで残せるようにする。
+const WHY_KINDS = [
+  ['nearby', '近くでイベント'],
+  ['reserved', '団体・貸切'],
+  ['buzz', 'SNSで話題'],
+  ['media', 'テレビ・取材'],
+  ['weather', '天候（大雨・台風など）'],
+  ['newmenu', '新メニュー・変更'],
+  ['trouble', '設備・人手のトラブル'],
+  ['other', 'その他'],
+];
+
+/**
+ * ふだんと違った日を並べ、その場で理由を聞く。
+ *
+ * ここで登録されるのは「人が書いた事実」で、AIの推測ではない。
+ * 一度書いておくと、次に似た日が来たときの見込みが、そのぶん確かになる。
+ */
+function AnomalyCard({ anom, onSaved }) {
+  const [askDate, setAskDate] = useState('');
+  const [form, setForm] = useState({ kind: 'nearby', title: '', impact: 'unknown' });
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState('');
+
+  async function save(date, diffPct) {
+    if (busy) return;
+    const title = form.title.trim() || WHY_KINDS.find(([k]) => k === form.kind)?.[1] || '';
+    if (!title) return;
+    setBusy(true);
+    setMsg('');
+    try {
+      const r = await fetch('/api/history/events', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          date,
+          kind: form.kind,
+          title,
+          impact: form.impact !== 'unknown' ? form.impact : (diffPct > 0 ? 'up' : 'down'),
+          detail: '「いつもと違った日」から登録',
+        }),
+      }).then((x) => x.json());
+      if (!r.ok) return setMsg(r.error || '登録できませんでした');
+      setAskDate('');
+      setForm({ kind: 'nearby', title: '', impact: 'unknown' });
+      setMsg(`${date} のできごとを記録しました。次から、似た日を見つける材料になります。`);
+      onSaved?.();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="card" style={{ marginTop: 14 }}>
+      <div className="h2">いつもと違った日</div>
+      <div className="muted" style={{ marginBottom: 10 }}>
+        同じ曜日のふだんと3割以上ちがった日です。理由は決めつけません。
+        心当たりがあれば「何があった？」から残しておくと、あとで同じような日を読むときの手がかりになります。
+      </div>
+      {msg && <div className="alert" style={{ marginBottom: 10 }}>{msg}</div>}
+      {!anom?.ok ? (
+        <div className="muted">まだ見比べられるだけの記録がありません。</div>
+      ) : !anom.rows.length ? (
+        <div className="muted">大きく外れた日はありませんでした。</div>
+      ) : (
+        <table className="table table-wide">
+          <thead>
+            <tr><th>日付</th><th>曜日</th><th style={{ textAlign: 'right' }}>売上</th><th style={{ textAlign: 'right' }}>いつも</th><th style={{ textAlign: 'right' }}>差</th><th>その日にあったこと</th></tr>
+          </thead>
+          <tbody>
+            {anom.rows.map((r) => (
+              <Fragment key={r.date}>
+                <tr>
                   <td className="mono">
                     <Link href={`/admin/history/${r.date}`}>{r.date}</Link>
                   </td>
@@ -1163,8 +1302,263 @@ function ForecastTab({ fc, anom, busy, err, open, setOpen, onRemake }) {
                     {r.diffPct > 0 ? `＋${r.diffPct}` : r.diffPct}%
                   </td>
                   <td className="muted">
-                    {[r.holiday, r.weather, r.tempMax !== null ? `${Math.round(r.tempMax)}℃` : '', ...(r.events || [])]
-                      .filter(Boolean).join('／') || '—'}
+                    <div className="row wrapflex" style={{ gap: 8, alignItems: 'center' }}>
+                      <span>
+                        {[r.holiday, r.weather, r.tempMax !== null ? `${Math.round(r.tempMax)}℃` : '', ...(r.events || [])]
+                          .filter(Boolean).join('／') || '—'}
+                      </span>
+                      {!(r.events || []).length && (
+                        <button className="btn btn-sm" onClick={() => setAskDate(askDate === r.date ? '' : r.date)}>
+                          {askDate === r.date ? '閉じる' : '何があった？'}
+                        </button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+                {askDate === r.date && (
+                  <tr>
+                    <td colSpan={6} style={{ background: '#fafbfc' }}>
+                      <div style={{ fontWeight: 700, marginBottom: 6 }}>
+                        {r.date}（{r.dowName}）は、いつもより{r.diffPct > 0 ? '多い' : '少ない'}日でした。何か特別な出来事がありましたか？
+                      </div>
+                      <div className="row wrapflex" style={{ gap: 6, marginBottom: 8 }}>
+                        {WHY_KINDS.map(([k, label]) => (
+                          <button
+                            key={k}
+                            className={`btn btn-sm${form.kind === k ? ' btn-primary' : ''}`}
+                            onClick={() => setForm({ ...form, kind: k })}
+                          >{label}</button>
+                        ))}
+                      </div>
+                      <div className="row wrapflex" style={{ gap: 8, alignItems: 'center' }}>
+                        <input
+                          className="input"
+                          style={{ maxWidth: 420 }}
+                          placeholder="ひとことで（例：近所のドームでライブ）"
+                          value={form.title}
+                          onChange={(e) => setForm({ ...form, title: e.target.value })}
+                        />
+                        <button className="btn btn-primary" disabled={busy} onClick={() => save(r.date, r.diffPct)}>
+                          {busy ? '記録しています…' : 'この日の出来事として記録する'}
+                        </button>
+                        <span className="muted" style={{ fontSize: 12 }}>入れなくても、選んだ種類だけで記録できます。</span>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+              </Fragment>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </div>
+  );
+}
+
+const VENUE_KINDS = [
+  ['live', 'ライブ・コンサート'],
+  ['sports', '野球・サッカーなど'],
+  ['festival', '祭り'],
+  ['fireworks', '花火'],
+  ['expo', '展示会・イベント'],
+  ['school', '学園祭・学校行事'],
+  ['other', 'その他'],
+];
+const venueKindLabel = (k) => VENUE_KINDS.find(([x]) => x === k)?.[1] || 'その他';
+
+/**
+ * 近くの会場と、そこでの開催予定。
+ *
+ * 自動では取ってこない。日本中の催しを正しく拾える無料の窓口が見当たらないため、
+ * 「たぶんこの日にライブがある」といった当てずっぽうを入れるより、
+ * 店長が知っている確かな予定を1件入れてもらうほうが役に立つ。
+ */
+function VenueTab({ data, reload }) {
+  const [vForm, setVForm] = useState({ name: '', kind: 'live', address: '', capacity: '', note: '' });
+  const [eForm, setEForm] = useState({ venueId: '', date: todayStr(), endDate: '', title: '', kind: 'live', people: '', startTime: '', endTime: '' });
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState('');
+  const [err, setErr] = useState('');
+
+  const venues = (data?.venues || []).filter((v) => v.active);
+
+  async function post(body, okMsg) {
+    if (busy) return null;
+    setBusy(true); setErr(''); setMsg('');
+    try {
+      const r = await fetch('/api/history/venues', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+      }).then((x) => x.json());
+      if (!r.ok) { setErr(r.error || '登録できませんでした'); return null; }
+      setMsg(okMsg(r));
+      reload();
+      return r;
+    } finally { setBusy(false); }
+  }
+
+  async function remove(kind, id) {
+    setErr(''); setMsg('');
+    const r = await fetch(`/api/history/venues?kind=${kind}&id=${id}`, { method: 'DELETE' }).then((x) => x.json());
+    if (!r.ok) return setErr(r.error || '消せませんでした');
+    reload();
+  }
+
+  return (
+    <>
+      <div className="card" style={{ marginTop: 14 }}>
+        <div className="h2">近くの会場を登録する</div>
+        <div className="muted" style={{ marginBottom: 12 }}>
+          ドーム・ホール・球場・学校など、人がたくさん集まる場所を登録します。
+          お店からの距離も一緒に記録するので、「歩いて行ける会場」と「電車で行く会場」を分けて見られます。
+          催しの予定は、こちらでは自動で取ってきません（日本の催しを正確に集められる公の窓口が無いためです）。
+          ご存じの予定を入れていただくと、その日の見込みに反映されるようになります。
+        </div>
+        {!data?.hasStoreLocation && (
+          <div className="alert" style={{ marginBottom: 10 }}>
+            お店の場所がまだ設定されていないため、距離は出せません。「お店の設定」で位置をご指定ください。
+          </div>
+        )}
+        <div className="grid g4">
+          <div style={{ gridColumn: 'span 2' }}>
+            <label className="lbl">会場の名前</label>
+            <input className="input" value={vForm.name} onChange={(e) => setVForm({ ...vForm, name: e.target.value })} placeholder="京セラドーム大阪" />
+          </div>
+          <div>
+            <label className="lbl">種類</label>
+            <select className="input" value={vForm.kind} onChange={(e) => setVForm({ ...vForm, kind: e.target.value })}>
+              {VENUE_KINDS.map(([k, l]) => <option key={k} value={k}>{l}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="lbl">収容人数（分かれば）</label>
+            <input className="input mono" type="number" value={vForm.capacity} onChange={(e) => setVForm({ ...vForm, capacity: e.target.value })} placeholder="36000" />
+          </div>
+          <div style={{ gridColumn: 'span 3' }}>
+            <label className="lbl">住所（空欄なら会場名から探します）</label>
+            <input className="input" value={vForm.address} onChange={(e) => setVForm({ ...vForm, address: e.target.value })} placeholder="大阪市西区千代崎3丁目中2-1" />
+          </div>
+          <div style={{ display: 'flex', alignItems: 'flex-end' }}>
+            <button
+              className="btn btn-primary"
+              disabled={busy || !vForm.name.trim()}
+              onClick={async () => {
+                const r = await post({ action: 'venue', ...vForm }, (res) => (
+                  res.distanceKm !== null && res.distanceKm !== undefined
+                    ? `登録しました。お店からおよそ${res.distanceKm}kmです。`
+                    : '登録しました（位置が分からなかったため、距離は出していません）。'
+                ));
+                if (r) setVForm({ name: '', kind: 'live', address: '', capacity: '', note: '' });
+              }}
+            >{busy ? '登録しています…' : '会場を登録する'}</button>
+          </div>
+        </div>
+      </div>
+
+      {err && <div className="alert" style={{ marginTop: 14 }}>{err}</div>}
+      {msg && <div className="card" style={{ marginTop: 14, background: '#f2fbf5' }}>{msg}</div>}
+
+      <div className="card" style={{ marginTop: 14 }}>
+        <div className="h2">登録した会場</div>
+        {!venues.length ? (
+          <div className="muted">まだ登録がありません。近所のホールやドーム、大きな学校などを入れてみてください。</div>
+        ) : (
+          <table className="table table-wide">
+            <thead><tr><th>会場</th><th>種類</th><th style={{ textAlign: 'right' }}>お店から</th><th style={{ textAlign: 'right' }}>収容</th><th></th></tr></thead>
+            <tbody>
+              {venues.map((v) => (
+                <tr key={v.id}>
+                  <td>{v.name}</td>
+                  <td>{venueKindLabel(v.kind)}</td>
+                  <td className="mono" style={{ textAlign: 'right' }}>{v.distanceKm === null ? '—' : `${v.distanceKm}km`}</td>
+                  <td className="mono" style={{ textAlign: 'right' }}>{v.capacity ? num(v.capacity) : '—'}</td>
+                  <td style={{ textAlign: 'right' }}>
+                    <button className="btn btn-sm" onClick={() => remove('venue', v.id)}>使わない</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      <div className="card" style={{ marginTop: 14 }}>
+        <div className="h2">開催の予定を入れる</div>
+        {!venues.length ? (
+          <div className="muted">先に会場を登録してください。</div>
+        ) : (
+          <div className="grid g4">
+            <div>
+              <label className="lbl">会場</label>
+              <select className="input" value={eForm.venueId} onChange={(e) => setEForm({ ...eForm, venueId: e.target.value })}>
+                <option value="">選んでください</option>
+                {venues.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}
+              </select>
+            </div>
+            <div style={{ gridColumn: 'span 2' }}>
+              <label className="lbl">催しの名前</label>
+              <input className="input" value={eForm.title} onChange={(e) => setEForm({ ...eForm, title: e.target.value })} placeholder="○○ライブツアー" />
+            </div>
+            <div>
+              <label className="lbl">種類</label>
+              <select className="input" value={eForm.kind} onChange={(e) => setEForm({ ...eForm, kind: e.target.value })}>
+                {VENUE_KINDS.map(([k, l]) => <option key={k} value={k}>{l}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="lbl">日付</label>
+              <input className="input mono" type="date" value={eForm.date} onChange={(e) => setEForm({ ...eForm, date: e.target.value })} />
+            </div>
+            <div>
+              <label className="lbl">終わりの日（何日か続くとき）</label>
+              <input className="input mono" type="date" value={eForm.endDate} onChange={(e) => setEForm({ ...eForm, endDate: e.target.value })} />
+            </div>
+            <div>
+              <label className="lbl">開演（分かれば）</label>
+              <input className="input mono" value={eForm.startTime} onChange={(e) => setEForm({ ...eForm, startTime: e.target.value })} placeholder="18:00" />
+            </div>
+            <div>
+              <label className="lbl">終演（分かれば）</label>
+              <input className="input mono" value={eForm.endTime} onChange={(e) => setEForm({ ...eForm, endTime: e.target.value })} placeholder="21:00" />
+            </div>
+            <div>
+              <label className="lbl">想定の人数</label>
+              <input className="input mono" type="number" value={eForm.people} onChange={(e) => setEForm({ ...eForm, people: e.target.value })} placeholder="30000" />
+            </div>
+            <div style={{ gridColumn: 'span 3', display: 'flex', alignItems: 'flex-end' }}>
+              <button
+                className="btn btn-primary"
+                disabled={busy || !eForm.venueId || !eForm.title.trim()}
+                onClick={async () => {
+                  const r = await post({ action: 'event', ...eForm }, () => '予定を記録しました。その日の見込みに出るようになります。');
+                  if (r) setEForm({ ...eForm, title: '', people: '', startTime: '', endTime: '', endDate: '' });
+                }}
+              >{busy ? '記録しています…' : '予定を記録する'}</button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="card" style={{ marginTop: 14 }}>
+        <div className="h2">記録した予定</div>
+        <div className="muted" style={{ marginBottom: 10 }}>
+          過去の開催日がたまるほど、「催しがある日はどうだったか」を見込みに反映できるようになります。
+          少ないうちは、見込みには足さず「参考」としてだけ出します。
+        </div>
+        {!(data?.events || []).length ? (
+          <div className="muted">まだ記録がありません。</div>
+        ) : (
+          <table className="table table-wide">
+            <thead><tr><th>日付</th><th>会場</th><th>催し</th><th>時間</th><th style={{ textAlign: 'right' }}>想定人数</th><th></th></tr></thead>
+            <tbody>
+              {data.events.map((e) => (
+                <tr key={e.id}>
+                  <td className="mono">{e.date}{e.endDate ? `〜${e.endDate}` : ''}</td>
+                  <td>{e.venue}</td>
+                  <td>{e.title}<span className="muted" style={{ marginLeft: 6, fontSize: 12 }}>{venueKindLabel(e.kind)}</span></td>
+                  <td className="mono">{e.startTime ? `${e.startTime}${e.endTime ? `〜${e.endTime}` : ''}` : '—'}</td>
+                  <td className="mono" style={{ textAlign: 'right' }}>{e.people ? num(e.people) : '—'}</td>
+                  <td style={{ textAlign: 'right' }}>
+                    <button className="btn btn-sm" onClick={() => remove('event', e.id)}>消す</button>
                   </td>
                 </tr>
               ))}

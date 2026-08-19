@@ -328,11 +328,50 @@ const MIGRATIONS = [
      detected TEXT DEFAULT 'auto', created_at TEXT NOT NULL
    )`,
   `CREATE UNIQUE INDEX IF NOT EXISTS ux_stockouts ON stockouts(tenant_id, store_id, business_date, name)`,
+
+  // ---- 天気をこまかく残す ----
+  // 気温だけでは「蒸し暑い日」と「からっとした日」の区別がつかず、飲み物の出方を読み違える。
+  `ALTER TABLE weather_forecast ADD COLUMN temp_now REAL`,
+  `ALTER TABLE weather_forecast ADD COLUMN feels_like REAL`,
+  `ALTER TABLE weather_forecast ADD COLUMN cloud_pct INTEGER`,
+  `ALTER TABLE weather_forecast ADD COLUMN solar_mj REAL`,
+  `ALTER TABLE weather_forecast ADD COLUMN snow_cm REAL`,
+  `ALTER TABLE weather_forecast ADD COLUMN pressure_hpa REAL`,
+  `ALTER TABLE weather_actual ADD COLUMN temp_now REAL`,
+  `ALTER TABLE weather_actual ADD COLUMN feels_like REAL`,
+  `ALTER TABLE weather_actual ADD COLUMN cloud_pct INTEGER`,
+  `ALTER TABLE weather_actual ADD COLUMN solar_mj REAL`,
+  `ALTER TABLE weather_actual ADD COLUMN snow_cm REAL`,
+  `ALTER TABLE weather_actual ADD COLUMN pressure_hpa REAL`,
+
+  // ---- 時間帯ごとの客数と、人手の目安 ----
+  `ALTER TABLE daily_hour_facts ADD COLUMN guests INTEGER DEFAULT 0`,
+  `ALTER TABLE stores ADD COLUMN guests_per_staff INTEGER DEFAULT 12`,
+  `ALTER TABLE stores ADD COLUMN min_staff INTEGER DEFAULT 2`,
+
+  // ---- 周辺の会場と開催予定 ----
+  `CREATE TABLE IF NOT EXISTS venues (
+     id INTEGER PRIMARY KEY AUTOINCREMENT,
+     tenant_id INTEGER NOT NULL, store_id INTEGER NOT NULL,
+     name TEXT NOT NULL, kind TEXT DEFAULT 'other',
+     lat REAL, lng REAL, distance_km REAL, capacity INTEGER DEFAULT 0,
+     note TEXT DEFAULT '', active INTEGER DEFAULT 1, created_at TEXT NOT NULL
+   )`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS ux_venues ON venues(tenant_id, store_id, name)`,
+  `CREATE TABLE IF NOT EXISTS venue_events (
+     id INTEGER PRIMARY KEY AUTOINCREMENT,
+     tenant_id INTEGER NOT NULL, store_id INTEGER NOT NULL,
+     venue_id INTEGER NOT NULL, business_date TEXT NOT NULL, end_date TEXT DEFAULT '',
+     title TEXT NOT NULL, kind TEXT DEFAULT 'other', expected_people INTEGER DEFAULT 0,
+     start_time TEXT DEFAULT '', end_time TEXT DEFAULT '',
+     source TEXT DEFAULT 'manual', staff_name TEXT DEFAULT '', created_at TEXT NOT NULL
+   )`,
+  `CREATE INDEX IF NOT EXISTS ix_venue_events ON venue_events(tenant_id, store_id, business_date)`,
 ];
 
 // 「もう追いついているか」を1回で見分けるための問い合わせ。
 // ★項目を足したら、必ずこの1行も最後に足したものへ合わせて更新すること。
-const SCHEMA_PROBE = 'SELECT id FROM stockouts LIMIT 1';
+const SCHEMA_PROBE = 'SELECT id FROM venue_events LIMIT 1';
 
 async function migrate(db) {
   for (const sql of MIGRATIONS) {

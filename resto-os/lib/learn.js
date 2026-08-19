@@ -103,6 +103,9 @@ export async function saveForecast(ctx, { slot = 'am6', days = 7 } = {}) {
         temp_max: num(w.tempMax), temp_min: num(w.tempMin), temp_avg: num(w.tempAvg),
         precip_mm: num(w.precipMm), precip_prob: num(w.precipProb),
         humidity: num(w.humidity), wind_speed: num(w.windSpeed),
+        temp_now: num(w.tempNow), feels_like: num(w.feelsLike),
+        cloud_pct: num(w.cloudPct), solar_mj: num(w.solarMj),
+        snow_cm: num(w.snowCm), pressure_hpa: num(w.pressureHpa),
         fetched_at: ts,
       });
     }
@@ -145,6 +148,9 @@ export async function saveActual(ctx, from, to, { confirmed = 1, overwrite = fal
         temp_max: num(w.tempMax), temp_min: num(w.tempMin), temp_avg: num(w.tempAvg),
         precip_mm: num(w.precipMm),
         humidity: num(w.humidity), wind_speed: num(w.windSpeed),
+        temp_now: num(w.tempNow), feels_like: num(w.feelsLike),
+        cloud_pct: num(w.cloudPct), solar_mj: num(w.solarMj),
+        snow_cm: num(w.snowCm), pressure_hpa: num(w.pressureHpa),
         confirmed: confirmed ? 1 : 0,
         fetched_at: ts,
       });
@@ -270,6 +276,23 @@ export async function rebuildDay(ctx, date) {
       GROUP BY h`,
     [s, e]
   );
+  // 「何時に何人が席についたか」。
+  // 会計の時刻ではなく、その伝票の“最初の注文”が入った時刻で数える。
+  // 会計時刻で数えると、19時に来て22時に払ったお客様が「22時の客」になってしまい、
+  // 人手がいちばん要る時間を読み違えるため。
+  const hourGuests = await ctx.query(
+    `SELECT CAST(strftime('%H', datetime(f.first_at, '+9 hours')) AS INTEGER) AS h,
+            COALESCE(SUM(c.guests),0) AS guests
+       FROM checks c
+       JOIN (SELECT check_id, MIN(created_at) AS first_at
+               FROM order_items
+              WHERE SCOPE() AND status <> 'void' AND check_id IS NOT NULL
+              GROUP BY check_id) f ON f.check_id = c.id
+      WHERE SCOPE(c) AND c.status = 'closed' AND c.created_at >= ? AND c.created_at < ?
+      GROUP BY h`,
+    [s, e]
+  );
+  const guestsByHour = new Map(hourGuests.map((r) => [Number(r.h), Number(r.guests)]));
   const items = await ctx.query(
     `SELECT oi.name AS name, MIN(oi.item_id) AS item_id, MIN(oi.station) AS station,
             COALESCE(SUM(oi.qty),0) AS qty,
@@ -349,6 +372,7 @@ export async function rebuildDay(ctx, date) {
         sales: Number(h.sales),
         qty: Number(h.qty),
         orders_count: Number(h.orders),
+        guests: guestsByHour.get(Number(h.h)) || 0,
       });
     }
 

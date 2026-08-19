@@ -90,6 +90,25 @@ async function loadHistory(ctx, from, to) {
     `SELECT business_date, weather_code, temp_max, precip_mm FROM weather_actual
       WHERE SCOPE() AND business_date >= ? AND business_date <= ?`, [from, to]
   );
+  // 近くの会場で催しがあった日。店が自分で登録した会場だけを見る
+  // （どこを「近く」と考えるかは、店によって違うため）
+  const ves = await ctx.query(
+    `SELECT e.business_date, e.end_date, e.expected_people, v.distance_km
+       FROM venue_events e JOIN venues v ON v.id = e.venue_id
+      WHERE SCOPE(e) AND v.active = 1 AND e.business_date <= ? AND (e.end_date = '' OR e.end_date >= ?)`,
+    [to, from]
+  );
+  const veMap = new Map();
+  for (const e of ves) {
+    const last = e.end_date && e.end_date > e.business_date ? e.end_date : e.business_date;
+    for (let d = e.business_date; d <= last; d = addDays(d, 1)) {
+      const cur = veMap.get(d) || { n: 0, people: 0 };
+      cur.n += 1;
+      cur.people += Number(e.expected_people || 0);
+      veMap.set(d, cur);
+    }
+  }
+
   const calMap = new Map(cals.map((r) => [r.business_date, r]));
   const wxMap = new Map(wxs.map((r) => [r.business_date, r]));
 
@@ -110,6 +129,8 @@ async function loadHistory(ctx, from, to) {
       group: code === null || code === undefined ? '' : weatherGroup(code),
       tempMax: wx?.temp_max === null || wx?.temp_max === undefined ? null : Number(wx.temp_max),
       precip: wx?.precip_mm === null || wx?.precip_mm === undefined ? null : Number(wx.precip_mm),
+      venue: (veMap.get(f.business_date)?.n || 0) > 0,
+      venuePeople: veMap.get(f.business_date)?.people || 0,
     };
   });
 }
@@ -139,6 +160,14 @@ async function targetContext(ctx, date) {
   const events = await ctx.query(
     `SELECT kind, title, impact FROM day_events WHERE SCOPE() AND business_date = ?`, [date]
   );
+  // 近くの会場の催し（店が登録したもの）。何時からかも一緒に見る
+  const venueEvents = await ctx.query(
+    `SELECT v.name AS venue, v.distance_km, e.title, e.kind, e.expected_people, e.start_time, e.end_time
+       FROM venue_events e JOIN venues v ON v.id = e.venue_id
+      WHERE SCOPE(e) AND v.active = 1 AND e.business_date <= ? AND (e.end_date = '' OR e.end_date >= ?) AND e.business_date >= ?
+      ORDER BY v.distance_km`,
+    [date, date, addDays(date, -14)]
+  );
 
   return {
     date,
@@ -157,6 +186,15 @@ async function targetContext(ctx, date) {
     tempMax: wx?.temp_max === null || wx?.temp_max === undefined ? null : Number(wx.temp_max),
     campaigns: camps.map((c) => ({ name: c.name, kind: c.kind })),
     events: events.map((e) => ({ kind: e.kind, title: e.title, impact: e.impact })),
+    venueEvents: venueEvents.map((e) => ({
+      venue: e.venue,
+      distanceKm: e.distance_km === null || e.distance_km === undefined ? null : Number(e.distance_km),
+      title: e.title,
+      kind: e.kind,
+      people: Number(e.expected_people || 0),
+      startTime: e.start_time || '',
+      endTime: e.end_time || '',
+    })),
   };
 }
 
@@ -360,6 +398,28 @@ function predictMetric(rows, t, m, date, acc = null) {
     }
   }
 
+  // 近くの会場で催しがある日。
+  // ★これも「催しがあったから増えた」とは書かない。過去の開催日にどうだったかを並べるだけ。
+  //   会場を登録した直後は開催日の記録が少ないので、そのあいだは何も足さない（当てずっぽうを混ぜない）。
+  if (t.venueEvents && t.venueEvents.length) {
+    const v = ratioOf(rel, (r) => r.venue, { min: 4, lo: 0.6, hi: 1.8 });
+    if (v) {
+      factors.push({
+        k: 'venue',
+        ratio: v.ratio,
+        label: `近くの会場の催し（${t.venueEvents[0].venue}）`,
+        detail: `近くで催しがあった日は、ほかの日より${pct(v.ratio)}傾向（過去${v.n}日との相関）`,
+      });
+    } else {
+      basis.push({
+        label: `近くの会場の催し（${t.venueEvents[0].venue}）`,
+        detail: '登録された開催日の記録がまだ少ないため、見込みには足していません（記録がたまると反映されます）',
+        effect: 0,
+        value: null,
+      });
+    }
+  }
+
   if (t.special) {
     const sp = ratioOf(rel, (r) => r.special === t.special, { min: 4, lo: 0.5, hi: 2.0 });
     if (sp) {
@@ -512,6 +572,7 @@ function pickContext(t) {
     special: t.special, dayLabel: t.dayLabel,
     weatherText: t.weatherText, weatherFrom: t.weatherFrom, tempMax: t.tempMax,
     campaigns: t.campaigns.map((c) => c.name),
+    venueEvents: (t.venueEvents || []).map((v) => `${v.venue}：${v.title}`),
   };
 }
 
@@ -644,6 +705,153 @@ export async function anomalies(ctx, { days = 90, limit = 12 } = {}) {
   return { ok: true, rows: out.slice(0, limit), checked: rows.length };
 }
 
+// ===== 時間帯ごとの見込みと、必要な人手 =====
+
+/** 同じ曜日で、時間帯の記録がある日を集める（何時に何人・いくら） */
+async function hourHistory(ctx, date, dow) {
+  const to = addDays(date, -1);
+  const from = addDays(to, -180);
+  const rows = await ctx.query(
+    `SELECT h.business_date, h.hour, h.sales, h.guests
+       FROM daily_hour_facts h
+      WHERE SCOPE(h) AND h.business_date >= ? AND h.business_date <= ?
+      ORDER BY h.business_date, h.hour`,
+    [from, to]
+  );
+  if (!rows.length) return { days: [], usedLabel: '' };
+
+  const byDay = new Map();
+  for (const r of rows) {
+    const list = byDay.get(r.business_date) || [];
+    list.push({ hour: Number(r.hour), sales: Number(r.sales || 0), guests: Number(r.guests || 0) });
+    byDay.set(r.business_date, list);
+  }
+  const all = [...byDay.entries()]
+    .map(([d, hours]) => ({ date: d, dow: new Date(`${d}T00:00:00Z`).getUTCDay(), hours }))
+    .filter((d) => d.hours.some((h) => h.sales > 0));
+
+  // まずは同じ曜日だけで見る。足りなければ全曜日に広げる（無いものを作らない）
+  const same = all.filter((d) => d.dow === dow);
+  if (same.length >= 4) return { days: same, usedLabel: `${dowLabel(dow)}曜日の過去${same.length}日` };
+  if (all.length >= 4) return { days: all, usedLabel: `曜日を問わず過去${all.length}日` };
+  return { days: [], usedLabel: '', haveDays: all.length };
+}
+
+/**
+ * 時間帯ごとの見込みと、その時間に必要な人手の目安。
+ *
+ * やっていることは単純で、
+ *  1. 過去の同じ曜日で「1日のうち何時に何％売れたか」の割合を出し（真ん中の値）、
+ *  2. その日の見込み合計に、その割合をかけている。
+ *
+ * 時間帯の売上をそのまま平均しないのは、
+ * 「よく売れた日」と「静かな日」が混ざると山の高さがぼやけ、
+ * ピークの時間そのものがずれて見えてしまうため。割合で見れば山の形は崩れない。
+ *
+ * 必要な人手は「その時間に席についた人数」ではなく「そのときお店にいる人数」で出す。
+ * 19時に来たお客様は20時にもまだ席にいるので、席についた人数だけで数えると
+ * いちばん忙しい時間の人手が足りなくなる。
+ */
+export async function hourlyPlan(ctx, date = null) {
+  const d = date || todayJst();
+  const day = await predictDay(ctx, d);
+  if (!day.ok) return { ok: false, date: d, reason: day.reason, message: day.message };
+
+  const dow = day.context.dow;
+  const { days, usedLabel, haveDays } = await hourHistory(ctx, d, dow);
+  if (!days.length) {
+    return {
+      ok: false, date: d, reason: 'NOT_ENOUGH_HOURS', haveDays: haveDays || 0,
+      message: '時間帯ごとの記録がまだ足りません。数日ぶん営業すると、何時が忙しいかを出せます。',
+    };
+  }
+
+  // 各日を「1日の合計に対する割合」に直してから重ねる
+  const hours = new Set();
+  const shareSales = new Map();
+  const shareGuests = new Map();
+  for (const dd of days) {
+    const totS = dd.hours.reduce((s, h) => s + h.sales, 0);
+    const totG = dd.hours.reduce((s, h) => s + h.guests, 0);
+    for (const h of dd.hours) {
+      hours.add(h.hour);
+      if (totS > 0) {
+        const l = shareSales.get(h.hour) || [];
+        l.push(h.sales / totS);
+        shareSales.set(h.hour, l);
+      }
+      if (totG > 0) {
+        const l = shareGuests.get(h.hour) || [];
+        l.push(h.guests / totG);
+        shareGuests.set(h.hour, l);
+      }
+    }
+  }
+  const hourList = [...hours].sort((a, b) => a - b);
+  const medOf = (map, h) => median(map.get(h) || []) || 0;
+  const sumS = hourList.reduce((s, h) => s + medOf(shareSales, h), 0) || 1;
+  const sumG = hourList.reduce((s, h) => s + medOf(shareGuests, h), 0) || 0;
+
+  const totalSales = day.metrics.sales?.ok ? day.metrics.sales.value : 0;
+  const totalGuests = day.metrics.guests?.ok ? day.metrics.guests.value : 0;
+  const lowRate = day.metrics.sales?.ok && day.metrics.sales.value
+    ? day.metrics.sales.low / day.metrics.sales.value : 0.8;
+  const highRate = day.metrics.sales?.ok && day.metrics.sales.value
+    ? day.metrics.sales.high / day.metrics.sales.value : 1.2;
+
+  const perStaff = Math.max(4, Number(ctx.store?.guests_per_staff) || 12);
+  const minStaff = Math.max(1, Number(ctx.store?.min_staff) || 2);
+  const seatRow = await ctx.first(`SELECT COALESCE(SUM(seats),0) AS seats FROM tables WHERE SCOPE()`);
+  const seats = Number(seatRow?.seats || 0);
+
+  const arrivals = hourList.map((h) => (sumG ? (medOf(shareGuests, h) / sumG) * totalGuests : 0));
+  const rows = hourList.map((h, i) => {
+    const sales = (medOf(shareSales, h) / sumS) * totalSales;
+    // そのときお店にいる人数の目安＝この時間に来た人＋前の時間に来た人（2時間ほど滞在するとみて）
+    const inStore = arrivals[i] + (i > 0 ? arrivals[i - 1] * 0.6 : 0);
+    const staff = Math.max(minStaff, Math.ceil(inStore / perStaff));
+    return {
+      hour: h,
+      sales: Math.round(sales / 100) * 100,
+      salesLow: Math.round((sales * lowRate) / 100) * 100,
+      salesHigh: Math.round((sales * highRate) / 100) * 100,
+      arrivals: Math.round(arrivals[i]),
+      inStore: Math.round(inStore),
+      staff,
+      // 席がいっぱいに近づきそうかどうか。待ち時間そのものは測っていないので、分数では言わない。
+      nearFull: seats > 0 && inStore >= seats * 0.9,
+      samples: (shareSales.get(h) || []).length,
+    };
+  });
+
+  const peak = rows.reduce((a, b) => (b.sales > (a?.sales ?? -1) ? b : a), null);
+  const busiest = rows.reduce((a, b) => (b.inStore > (a?.inStore ?? -1) ? b : a), null);
+  const notes = [];
+  if (peak) notes.push(`いちばん売上が立ちそうなのは ${peak.hour}時台（${usedLabel}の形から）です。`);
+  if (busiest && busiest.staff > minStaff) {
+    notes.push(`${busiest.hour}時台がいちばん混みそうです。目安として ${busiest.staff}人いると回しやすい見込みです。`);
+  }
+  const full = rows.filter((r) => r.nearFull).map((r) => `${r.hour}時台`);
+  if (full.length) {
+    notes.push(`${full.join('・')}は満席に近づく可能性があります（お待たせする時間そのものは記録していないため、分数では出せません）。`);
+  }
+
+  return {
+    ok: true,
+    date: d,
+    basis: usedLabel,
+    seats,
+    perStaff,
+    minStaff,
+    totalSales,
+    totalGuests,
+    rows,
+    peakHour: peak?.hour ?? null,
+    busiestHour: busiest?.hour ?? null,
+    notes,
+  };
+}
+
 // ===== 今日の作戦 =====
 
 /**
@@ -673,6 +881,16 @@ export async function todayPlan(ctx, date = null) {
   }
   if (p.context.weatherFrom === '予報' && p.context.group === 'rain') {
     notes.push({ kind: 'weather', text: '雨の予報です。過去の雨の日と似た動きになるかもしれません（断定はできません）。' });
+  }
+  if (p.context.venueEvents?.length) {
+    const v = p.context.venueEvents[0];
+    const when = v.startTime ? `${v.startTime}〜` : '';
+    const km = v.distanceKm ? `徒歩・車で${v.distanceKm}kmほど` : '';
+    const people = v.people ? `想定${v.people.toLocaleString()}人` : '';
+    notes.push({
+      kind: 'venue',
+      text: `近くの${v.venue}で「${v.title}」があります（${[when, people, km].filter(Boolean).join('・')}）。終わったあとの時間帯に人が動く可能性があります。`,
+    });
   }
   if (p.context.campaigns.length) {
     notes.push({ kind: 'campaign', text: `いま動いている企画：${p.context.campaigns.map((c) => c.name).join('、')}。効果は後日、同じ条件の日と比べて確かめられます。` });

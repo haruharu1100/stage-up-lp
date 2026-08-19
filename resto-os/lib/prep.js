@@ -449,4 +449,102 @@ export async function wasteSummary(ctx, { days = 30 } = {}) {
   return { items, total, recordedDays, from, to };
 }
 
+/**
+ * 曜日ごとに「捨てている量」が偏っていないかを見る。
+ *
+ * 出したいのは「火曜日の仕込みが多すぎるのでは」という気づきだが、
+ * ★言い切らない。捨てた理由は仕込み過多とは限らない（届いた材料の傷み、
+ *   予約の急なお取り消しなど）。ここで言えるのは「その曜日に多い傾向がある」までで、
+ *   原因を決めるのは店の人。
+ *
+ * 廃棄の入力が無い日は数に入れない。入っていない日を0として混ぜると、
+ * 実際より少なく見えてしまい、「問題なし」と誤って安心してしまうため。
+ */
+export async function wasteByDow(ctx, { days = 90 } = {}) {
+  const to = todayJst();
+  const from = addDays(to, -Math.max(14, Math.min(365, days)));
+  const rows = await ctx.query(
+    `SELECT m.business_date AS date, SUM(m.amount) AS amount, SUM(-m.qty) AS qty
+       FROM stock_moves m
+      WHERE SCOPE(m) AND m.kind = 'waste' AND m.business_date BETWEEN ? AND ?
+      GROUP BY m.business_date`,
+    [from, to],
+  );
+  if (rows.length < 8) {
+    return {
+      ok: false,
+      reason: 'NOT_ENOUGH',
+      recordedDays: rows.length,
+      message: rows.length
+        ? `廃棄の記録が${rows.length}日ぶんしかないため、曜日ごとの傾向はまだ出せません。`
+        : '廃棄の記録がまだありません。捨てたぶんを入力すると、曜日ごとの多い少ないが分かるようになります。',
+    };
+  }
+
+  // 売上の大きい日は廃棄も増えて当然なので、売上に対する割合で見る（金額そのものでは比べない）
+  const facts = await ctx.query(
+    `SELECT business_date, sales FROM daily_facts WHERE SCOPE() AND business_date BETWEEN ? AND ?`,
+    [from, to],
+  );
+  const salesOf = new Map(facts.map((r) => [r.business_date, Number(r.sales || 0)]));
+
+  const byDow = new Map();
+  const ratios = [];
+  for (const r of rows) {
+    const sales = salesOf.get(r.date) || 0;
+    if (sales <= 0) continue; // 休業日や売上未確定の日は比べられない
+    const ratio = Number(r.amount || 0) / sales;
+    ratios.push(ratio);
+    const d = dowOf(r.date);
+    const list = byDow.get(d) || [];
+    list.push({ date: r.date, amount: Number(r.amount || 0), ratio });
+    byDow.set(d, list);
+  }
+  if (ratios.length < 8) {
+    return { ok: false, reason: 'NOT_ENOUGH', recordedDays: ratios.length, message: '売上と突き合わせられる廃棄の記録が、まだ足りません。' };
+  }
+  const overall = median(ratios) || 0;
+
+  const out = [];
+  for (const [d, list] of byDow) {
+    // 少ない日数で「この曜日が悪い」と決めつけない
+    if (list.length < 3) {
+      out.push({ dow: d, dowName: DOW[d], days: list.length, enough: false, avgAmount: Math.round(median(list.map((x) => x.amount)) || 0) });
+      continue;
+    }
+    const m = median(list.map((x) => x.ratio)) || 0;
+    const diff = overall ? (m - overall) / overall : 0;
+    out.push({
+      dow: d,
+      dowName: DOW[d],
+      days: list.length,
+      enough: true,
+      avgAmount: Math.round(median(list.map((x) => x.amount)) || 0),
+      diffPct: Math.round(diff * 1000) / 10,
+    });
+  }
+  out.sort((a, b) => a.dow - b.dow);
+
+  const notes = [];
+  for (const r of out) {
+    if (!r.enough || Math.abs(r.diffPct) < 15) continue;
+    if (r.diffPct > 0) {
+      notes.push(`${r.dowName}曜日は、売上に対して捨てている量が他の曜日より約${Math.round(r.diffPct)}%多い傾向があります（${r.days}日ぶんの記録）。仕込みの量を見直すと減らせるかもしれません。`);
+    } else {
+      notes.push(`${r.dowName}曜日は、売上に対して捨てている量が他の曜日より約${Math.round(Math.abs(r.diffPct))}%少なめです（${r.days}日ぶんの記録）。`);
+    }
+  }
+  if (!notes.length) notes.push('いまのところ、曜日による大きな偏りは見当たりません。');
+
+  return {
+    ok: true,
+    from,
+    to,
+    recordedDays: ratios.length,
+    rows: out,
+    notes,
+    caution: 'ここで分かるのは「その曜日に多い・少ない」という傾向だけです。捨てた理由まではこの数字からは分かりません。',
+  };
+}
+
 export { DOW };

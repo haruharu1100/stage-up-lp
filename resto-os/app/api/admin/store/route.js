@@ -46,6 +46,9 @@ export async function GET() {
         timezone: s.timezone || 'Asia/Tokyo',
         geoSource: s.geo_source || '',
         geoUpdatedAt: s.geo_updated_at || '',
+        // 必要な人手を出すときの目安（店の作りで変わるので店ごとに持つ）
+        guestsPerStaff: Number(s.guests_per_staff) || 12,
+        minStaff: Number(s.min_staff) || 2,
       },
     });
   } catch (e) {
@@ -106,12 +109,22 @@ export async function PATCH(req) {
     const geoSource = geoMoved ? String(b.geoSource || 'manual') : (before.geo_source || '');
     const geoUpdatedAt = geoMoved ? nowIso() : (before.geo_updated_at || '');
 
+    // ── 人手の目安。0人や100人といった値が入ると、必要人数の目安が意味をなさなくなるので幅を決めておく。
+    const clamp = (v, lo, hi, prev) => {
+      if (v === undefined || v === null || v === '') return prev;
+      return Math.max(lo, Math.min(hi, Math.floor(Number(v) || prev)));
+    };
+    const guestsPerStaff = clamp(b.guestsPerStaff, 4, 40, Number(before.guests_per_staff) || 12);
+    const minStaff = clamp(b.minStaff, 1, 20, Number(before.min_staff) || 2);
+
     await run(
       `UPDATE stores SET otoshi_name = ?, otoshi_price = ?, seat_charge = ?, service_rate = ?, invoice_no = ?, receipt_note = ?, tel = ?, address = ?,
-              postal_code = ?, prefecture = ?, city = ?, building = ?, lat = ?, lng = ?, geo_source = ?, geo_updated_at = ?
+              postal_code = ?, prefecture = ?, city = ?, building = ?, lat = ?, lng = ?, geo_source = ?, geo_updated_at = ?,
+              guests_per_staff = ?, min_staff = ?
         WHERE id = ? AND tenant_id = ?`,
       [otoshiName, otoshiPrice, seatCharge, serviceRate, invoiceNo, receiptNote, tel, address,
        postalCode, prefecture, city, building, lat, lng, geoSource, geoUpdatedAt,
+       guestsPerStaff, minStaff,
        ctx.storeId, ctx.tenantId]
     );
 

@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { businessDate } from '../../../lib/db.js';
 import { requireAuth, requireRole, requireFeature, canSeeCost, apiFail, ApiError } from '../../../lib/auth.js';
 import { hasFeature } from '../../../lib/plans.js';
-import { prepPlan, listStockouts, detectStockouts, wasteSummary } from '../../../lib/prep.js';
+import { prepPlan, listStockouts, detectStockouts, wasteSummary, wasteByDow } from '../../../lib/prep.js';
 import { logAudit } from '../../../lib/audit.js';
 
 export const dynamic = 'force-dynamic';
@@ -30,9 +30,14 @@ export async function GET(req) {
     // 欠品と廃棄の振り返りは、店長より上だけに出す（数字の読み違いを避けるため）
     let stockouts = null;
     let waste = null;
+    let wasteDow = null;
     if (MANAGE_ROLES.includes(ctx.role)) {
       stockouts = await listStockouts(ctx, { days: 30 });
-      if (hasFeature(ctx.plan, 'inventory')) waste = await wasteSummary(ctx, { days: 30 });
+      if (hasFeature(ctx.plan, 'inventory')) {
+        waste = await wasteSummary(ctx, { days: 30 });
+        // 曜日ごとの偏り（「火曜は多め」など）。原因までは決めつけない
+        wasteDow = await wasteByDow(ctx, { days: 90 });
+      }
     }
 
     return NextResponse.json({
@@ -40,6 +45,7 @@ export async function GET(req) {
       plan,
       stockouts,
       waste,
+      wasteDow,
       seeCost,
       canOrder: hasFeature(ctx.plan, 'inventory') && MANAGE_ROLES.includes(ctx.role),
       today: businessDate(),

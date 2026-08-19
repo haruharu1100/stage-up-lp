@@ -58,6 +58,8 @@ const SCOPED_TABLES = new Set([
   'daily_reports',
   // 仕込みと発注（材料・レシピ・在庫は第1層、発注案と欠品見込みは第2層）
   'ingredients', 'recipe_lines', 'stock_moves', 'order_plans', 'order_plan_lines', 'stockouts',
+  // 周辺の会場と、そこでの開催予定（第1層：人が登録した事実）
+  'venues', 'venue_events',
 ]);
 
 export function createCtx({ tenantId, storeId, role, staffId = null, staffName = '', plan = 'standard', tenant = null, store = null, exec = null }) {
