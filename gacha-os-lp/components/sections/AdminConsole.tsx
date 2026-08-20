@@ -88,7 +88,7 @@ export default function AdminConsole() {
   return (
     <Section
       id="admin"
-      no="14"
+      no="15"
       eyebrow="OPERATION CONSOLE"
       title={
         <>

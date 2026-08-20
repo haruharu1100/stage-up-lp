@@ -56,7 +56,7 @@ export default function OsOverview() {
   return (
     <Section
       id="os"
-      no="05"
+      no="06"
       eyebrow="AI GACHA OPERATING SYSTEM"
       title={
         <>

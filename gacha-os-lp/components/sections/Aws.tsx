@@ -13,7 +13,7 @@ export default function Aws() {
   return (
     <Section
       id="infra"
-      no="19"
+      no="21"
       eyebrow="AWS INFRASTRUCTURE"
       title={
         <>

@@ -28,6 +28,39 @@ const script: Msg[] = [
   },
 ];
 
+/**
+ * AI OPERATOR の「持ち場」。
+ * いま何を見ているかを先に出す。チャット窓に見せないための土台。
+ */
+const watching: { l: string; v: string; u: string; tone: string }[] = [
+  { l: "販売中のガチャ", v: "18", u: "本", tone: "text-slate" },
+  { l: "価格警告", v: "3", u: "件", tone: "text-danger-ink" },
+  { l: "未発送", v: "26", u: "件", tone: "text-blue-ink" },
+  { l: "人へ回った問い合わせ", v: "4", u: "件", tone: "text-warn-ink" },
+];
+
+/** 上から順に片付ければいい形にした、その日の指示 */
+const briefing = [
+  {
+    no: "01",
+    t: "価格が上昇したガチャを確認",
+    d: "#128 スニーカーBOX の実還元率が 108.7%（しきい値 105%）。販売停止・景品差し替え・口数調整のいずれかを選んでください。",
+    cost: "5分",
+  },
+  {
+    no: "02",
+    t: "発送 26件 を処理",
+    d: "うち 18 件は伝票データをそのまま書き出せます。同一住所へのまとめ対象が 3 件あります。",
+    cost: "15分",
+  },
+  {
+    no: "03",
+    t: "問い合わせ 4件 を確認",
+    d: "本日 37 件のうち 33 件はAIが一次回答済み。返金・補償にあたる 4 件だけが担当者に回っています。",
+    cost: "10分",
+  },
+];
+
 const escalations = [
   "返金・キャンセル",
   "法的トラブル",
@@ -53,18 +86,82 @@ export default function AiSupport() {
   return (
     <Section
       id="support"
-      no="13"
-      eyebrow="SUPPORT ENGINE"
+      no="14"
+      eyebrow="AI OPERATOR"
       title={
         <>
-          「発送はいつですか？」に、
+          聞かれてから探すAIではなく、
           <br />
-          AIがその人の状況で答える。
+          持ち場を見ているAIにする。
         </>
       }
-      lead="よくある質問を並べただけのFAQではありません。ログイン中のお客様に紐づく発送依頼・注文履歴・追跡番号を、権限の範囲内で参照して回答する設計です。答えてはいけない領域は人へ渡す運用にします。"
+      lead="AI OPERATOR は、販売中のガチャ・価格の警告・未発送・問い合わせを同じ画面で見ています。聞けば、いま何から手を付けるかを順番にして返します。お客様からの問い合わせは、権限の範囲内で一次対応し、答えてはいけない領域は担当者へ渡す設計です。"
     >
       <BeforeAfter id="support" className="mb-3" />
+
+      <Reveal>
+        <div className="mb-3 overflow-hidden rounded-3xl border border-edge bg-white shadow-lift">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-edge2 bg-paper2 px-5 py-3.5 sm:px-6">
+            <div className="flex items-center gap-2.5">
+              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-blue-deep to-blue text-[10px] font-bold text-white">
+                AI
+              </span>
+              <span className="text-note font-semibold text-slate">AI OPERATOR</span>
+            </div>
+            <span className="flex items-center gap-2">
+              <span className="h-1.5 w-1.5 animate-pulseline rounded-full bg-ok" />
+              <span className="num text-label text-slate3">現在監視中</span>
+            </span>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 border-b border-edge2 px-5 py-5 sm:grid-cols-4 sm:px-6 sm:py-6">
+            {watching.map((w) => (
+              <div
+                key={w.l}
+                className="rounded-2xl border border-edge2 bg-paper2 px-4 py-4 sm:px-5"
+              >
+                <span className="num text-label text-slate3">{w.l}</span>
+                <p className={`num mt-2.5 text-h3 font-semibold ${w.tone}`}>
+                  {w.v}
+                  <span className="ml-1 text-note font-normal text-slate3">{w.u}</span>
+                </p>
+              </div>
+            ))}
+          </div>
+
+          <div className="px-5 py-6 sm:px-6 sm:py-7">
+            <div className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
+              <span className="num text-label text-slate3">質問</span>
+              <p className="text-note font-semibold text-slate">今日は何をしたらいい？</p>
+            </div>
+
+            <ol className="mt-6 space-y-3">
+              {briefing.map((b) => (
+                <li
+                  key={b.no}
+                  className="flex gap-4 rounded-2xl border border-edge2 bg-paper2 px-5 py-5 sm:gap-5 sm:px-6"
+                >
+                  <span className="num shrink-0 text-h3 font-semibold leading-none text-blue-ink">
+                    {b.no}
+                  </span>
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                      <h4 className="text-note font-bold text-slate">{b.t}</h4>
+                      <span className="num text-label text-slate3">想定 {b.cost}</span>
+                    </div>
+                    <p className="mt-2.5 text-note text-slate2">{b.d}</p>
+                  </div>
+                </li>
+              ))}
+            </ol>
+
+            <p className="mt-6 border-t border-edge2 pt-5 text-note text-slate3">
+              AI OPERATOR は状況を整理して優先順位を提案します。実行するかどうかは運営者が判断します。
+              上の件数と所要時間は、架空のサンプルデータによる表示例です。
+            </p>
+          </div>
+        </div>
+      </Reveal>
 
       <div className="grid gap-3 lg:grid-cols-[1fr_340px]">
         <Reveal>
@@ -77,7 +174,9 @@ export default function AiSupport() {
                 <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-blue-deep to-blue text-[10px] font-bold text-white">
                   AI
                 </span>
-                <span className="text-[12px] font-semibold text-slate">サポートAI</span>
+                <span className="text-[12px] font-semibold text-slate">
+                  AI OPERATOR ／ お客様対応
+                </span>
               </div>
               <span className="num text-[10px] text-slate3">user_2841 でログイン中</span>
             </div>

@@ -33,7 +33,7 @@ export default function Footer() {
               { label: "FAQ", href: "/#faq" },
               { label: "導入フロー", href: "/#flow" },
               { label: "営業資料ページ", href: "/sales" },
-              { label: "導入相談", href: "/#contact" },
+              { label: "導入について相談する", href: "/#contact" },
             ].map((l) => (
               <Link
                 key={l.href + l.label}

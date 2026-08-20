@@ -15,7 +15,7 @@ export default function TimeSaving() {
   return (
     <Section
       id="time"
-      no="15"
+      no="17"
       eyebrow="TIME SAVED"
       title={
         <>

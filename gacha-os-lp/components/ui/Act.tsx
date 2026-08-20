@@ -52,7 +52,15 @@ export default function Act({
   const reveal = {
     initial: reduce ? false : { opacity: 0, y: 26 },
     whileInView: { opacity: 1, y: 0 },
-    viewport: { once: true, amount: 0.35 },
+    /**
+     * ★「画面の何％が入ったら表示する」という指定は使わないこと。
+     * 中身が縦に長い幕（発送・還元率・バックテストなど）は
+     * スマホの画面よりずっと背が高いため、
+     * 「何％入ったか」の条件が一生満たされず、
+     * その部分が真っ白のまま表示されない事故が起きます（実際に起きました）。
+     * 「少しでも画面に入ったら表示する」に統一します。
+     */
+    viewport: { once: true, margin: "-10% 0px -10% 0px" },
     transition: { duration: 0.8, ease },
   } as const;
 
@@ -125,7 +133,7 @@ export default function Act({
           <motion.div
             initial={reduce ? false : { opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, amount: 0.15 }}
+            viewport={{ once: true, margin: "-8% 0px -8% 0px" }}
             transition={{ duration: 0.85, delay: 0.1, ease }}
             className="mt-14 sm:mt-16 lg:mt-20"
           >

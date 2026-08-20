@@ -30,6 +30,20 @@ const INCLUDED_WORK = [
   "赤字リスクの監視",
 ];
 
+/**
+ * 3プランの違いを1行だけで示す要約。
+ * 細かい機能の対照表は作らず、「どこから入ればよいか」が分かる粒度に留めます。
+ * 金額は書きません（金額の出どころは config/pricing.ts の1か所だけ）。
+ */
+const TIER_SUMMARY = [
+  { key: "STARTER", diff: "ガチャ運営に必要な機能ひと通り。まずここから始められます。" },
+  { key: "GROWTH", diff: "STARTERに、複数ガチャの横断分析と自動警告・優先サポートが加わります。" },
+  { key: "ENTERPRISE", diff: "GROWTHに、複数サイトの一括管理と独自開発・専任サポートが加わります。" },
+];
+
+/** カードに最初から見せる機能の数。残りは開いた人にだけ出す */
+const VISIBLE_POINTS = 5;
+
 const EQUATION = [
   { k: "SYSTEM", j: "ガチャの土台" },
   { k: "AI", j: "設計と判断の支援" },
@@ -41,7 +55,7 @@ export default function Pricing() {
   return (
     <Section
       id="pricing"
-      no="22"
+      no="24"
       eyebrow="PRICING"
       title={
         <>
@@ -52,6 +66,24 @@ export default function Pricing() {
       }
       lead={pricingStructure.lead}
     >
+      {/* ── 金額を出す前に、比べる相手を示す（ROIセクションへ戻す） ── */}
+      <Reveal>
+        <div className="mb-5 flex flex-col gap-6 rounded-3xl border border-blue-ink/20 bg-gradient-to-b from-blue-pale/70 to-white px-7 py-8 shadow-lift sm:px-10 sm:py-9 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <span className="num text-label text-blue-ink">BEFORE YOU LOOK</span>
+            <p className="mt-5 text-h3 font-semibold leading-[1.6] text-slate">
+              金額を見る前に、いまの運営コストと比べてください。
+            </p>
+            <p className="mt-4 max-w-[38em] text-note text-slate2">
+              比べる相手は、他社システムの月額ではありません。いま実際にかかっている人の時間と人件費です。導入効果の試算に自社の数字を入れると、その差額が出ます。
+            </p>
+          </div>
+          <a href="#roi" className="btn-outline shrink-0 lg:min-w-[260px]">
+            今の運営コストを試算する
+          </a>
+        </div>
+      </Reveal>
+
       {/* AI GACHA OS = SYSTEM + AI + AUTOMATION + SUPPORT */}
       <Reveal>
         <div className="lp-tint overflow-hidden rounded-3xl px-7 py-8 sm:px-10 sm:py-9">
@@ -142,7 +174,32 @@ export default function Pricing() {
         </div>
       </Reveal>
 
-      <div className="mt-9 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+      {/* 3プランの違いを1行で。表を細かくしないための要約 */}
+      <Reveal delay={0.06} className="mt-9">
+        <div className="grid gap-3 sm:grid-cols-3">
+          {TIER_SUMMARY.map((s, i) => (
+            <div
+              key={s.key}
+              className={`rounded-2xl border px-6 py-5 ${
+                i === 0
+                  ? "border-blue-ink/25 bg-blue-pale"
+                  : "border-edge bg-paper2"
+              }`}
+            >
+              <span
+                className={`num text-label ${
+                  i === 0 ? "text-blue-ink" : "text-slate3"
+                }`}
+              >
+                {s.key}
+              </span>
+              <p className="mt-3 text-note text-slate2">{s.diff}</p>
+            </div>
+          ))}
+        </div>
+      </Reveal>
+
+      <div className="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
         {activeTiers.map((t, i) => (
           <Reveal key={t.key} delay={0.08 + i * 0.05}>
             <TierCard tier={t} />
@@ -198,7 +255,7 @@ export default function Pricing() {
               {initialSetup.lead}
             </p>
             <a href="#contact" className="btn-outline mt-8 w-full">
-              自社の場合の初期費用を聞く
+              自社の場合の費用を相談する
             </a>
           </div>
 
@@ -339,29 +396,39 @@ function GroupHead({
 }
 
 function TierCard({ tier }: { tier: OsTier }) {
+  /** 入口として示すプラン。位置（先頭）とバッジの両方で分かるようにする */
+  const isEntry = tier.key === "starter";
+  const badge = isEntry ? "まずここから" : tier.note;
+  const visible = tier.points.slice(0, VISIBLE_POINTS);
+  const rest = tier.points.slice(VISIBLE_POINTS);
+
   return (
     <div
       className={`relative flex h-full flex-col rounded-3xl border p-7 transition-all duration-300 sm:p-8 ${
-        tier.featured
-          ? "border-blue-ink/20 bg-gradient-to-b from-blue-pale/70 to-white shadow-lift2 hover:shadow-blue-lift"
-          : "border-edge bg-white shadow-lift hover:shadow-lift2"
+        isEntry
+          ? "border-blue-ink/30 bg-white shadow-lift2 hover:shadow-blue-lift"
+          : tier.featured
+            ? "border-blue-ink/20 bg-gradient-to-b from-blue-pale/70 to-white shadow-lift2 hover:shadow-blue-lift"
+            : "border-edge bg-white shadow-lift hover:shadow-lift2"
       }`}
     >
-      {tier.note && (
+      {badge && (
         <span
-          className={`absolute -top-3.5 left-7 rounded-full border bg-white px-4 py-1.5 text-note font-semibold leading-normal shadow-lift ${
-            tier.featured
-              ? "border-blue-ink/25 text-blue-ink"
-              : "border-gold-deep/30 text-gold-deep"
+          className={`absolute -top-3.5 left-7 rounded-full border px-4 py-1.5 text-note font-semibold leading-normal shadow-lift ${
+            isEntry
+              ? "border-blue-ink/25 bg-blue-ink text-white"
+              : tier.featured
+                ? "border-blue-ink/25 bg-white text-blue-ink"
+                : "border-gold-deep/30 bg-white text-gold-deep"
           }`}
         >
-          {tier.note}
+          {badge}
         </span>
       )}
 
       <p
         className={`num text-label font-bold ${
-          tier.featured ? "text-blue-ink" : "text-slate3"
+          tier.featured || isEntry ? "text-blue-ink" : "text-slate3"
         }`}
       >
         {tier.name}
@@ -384,16 +451,41 @@ function TierCard({ tier }: { tier: OsTier }) {
             {tier.inherits}
           </li>
         )}
-        {tier.points.map((t) => (
+        {visible.map((t) => (
           <li key={t} className="flex gap-3.5 text-note text-slate2">
             <span
               className={`mt-[13px] h-1.5 w-1.5 shrink-0 rounded-full ${
-                tier.featured ? "bg-blue-ink/70" : "bg-slate3/45"
+                tier.featured || isEntry ? "bg-blue-ink/70" : "bg-slate3/45"
               }`}
             />
             {t}
           </li>
         ))}
+
+        {/* 残りは開いた人にだけ。カードを一覧表にしない */}
+        {rest.length > 0 && (
+          <li>
+            <details className="group">
+              <summary className="cursor-pointer list-none text-note font-medium text-slate3 transition-colors hover:text-blue-ink">
+                ＋ ほか{rest.length}項目
+              </summary>
+              <ul className="mt-4 space-y-3.5">
+                {rest.map((t) => (
+                  <li key={t} className="flex gap-3.5 text-note text-slate2">
+                    <span
+                      className={`mt-[13px] h-1.5 w-1.5 shrink-0 rounded-full ${
+                        tier.featured || isEntry
+                          ? "bg-blue-ink/70"
+                          : "bg-slate3/45"
+                      }`}
+                    />
+                    {t}
+                  </li>
+                ))}
+              </ul>
+            </details>
+          </li>
+        )}
       </ul>
 
       {/* どのプランのボタンが押されたかを残す（プラン別の成約率を出すため）。
@@ -403,9 +495,11 @@ function TierCard({ tier }: { tier: OsTier }) {
         event={EV.planSelect}
         params={{ plan: tier.key }}
         plan={tier.key}
-        className={`mt-9 w-full ${tier.featured ? "btn-primary" : "btn-outline"}`}
+        className={`mt-9 w-full ${
+          tier.featured || isEntry ? "btn-primary" : "btn-outline"
+        }`}
       >
-        このプランで相談する
+        自社の場合の費用を相談する
       </TrackedLink>
     </div>
   );

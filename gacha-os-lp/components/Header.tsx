@@ -68,15 +68,15 @@ export default function Header() {
           <div className="hidden shrink-0 items-center gap-4 sm:flex">
             <Link
               href="/demo"
-              className="text-[15px] font-medium text-slate2 transition-colors hover:text-blue-ink"
+              className="whitespace-nowrap text-[15px] font-medium text-slate2 transition-colors hover:text-blue-ink"
             >
-              デモを体験
+              無料デモを体験する
             </Link>
             <Link
               href="/#contact"
-              className="btn-primary !px-6 !py-3 !text-[15px]"
+              className="btn-primary whitespace-nowrap !px-6 !py-3 !text-[15px]"
             >
-              導入相談
+              導入について相談する
             </Link>
           </div>
 
@@ -136,7 +136,7 @@ export default function Header() {
             onClick={() => setOpen(false)}
             className="btn-primary btn-lg"
           >
-            導入相談
+            導入について相談する
           </Link>
         </div>
       </div>

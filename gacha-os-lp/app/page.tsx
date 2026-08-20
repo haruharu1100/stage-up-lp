@@ -2,7 +2,10 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import MobileCTA from "@/components/MobileCTA";
 import Hero from "@/components/Hero";
+import CoreToScreen from "@/components/sections/CoreToScreen";
 import ProductVideo from "@/components/sections/ProductVideo";
+import SixSteps from "@/components/sections/SixSteps";
+import RoleSplit from "@/components/sections/RoleSplit";
 import Problems from "@/components/sections/Problems";
 import Diagnose from "@/components/sections/Diagnose";
 import QuickTour from "@/components/sections/QuickTour";
@@ -16,12 +19,12 @@ import Rush from "@/components/sections/Rush";
 import Shipping from "@/components/sections/Shipping";
 import AiSupport from "@/components/sections/AiSupport";
 import AdminConsole from "@/components/sections/AdminConsole";
+import StatusLights from "@/components/sections/StatusLights";
 import TimeSaving from "@/components/sections/TimeSaving";
 import RoiCalculator from "@/components/sections/RoiCalculator";
 import BuiltFromOps from "@/components/sections/BuiltFromOps";
 import Security from "@/components/sections/Security";
 import Aws from "@/components/sections/Aws";
-import Converge from "@/components/sections/Converge";
 import Scope from "@/components/sections/Scope";
 import Flow from "@/components/sections/Flow";
 import Pricing from "@/components/sections/Pricing";
@@ -34,10 +37,18 @@ export default function Home() {
     <>
       <Header />
       <main>
+        {/* ── 導入：3D で全体像 → 本物の画面 → 30秒の実録 → 自分の役割 ── */}
         <Hero />
-        {/* 製品デモ動画（content/site.ts の demoVideo.src 設定時のみ表示） */}
+        {/* 3Dが分解して、実際の管理画面へ組み上がる（イメージ映像で終わらせない） */}
+        <CoreToScreen />
+        {/* /demo の管理画面をそのまま操作して録画した30秒（動画は補助） */}
         <ProductVideo />
-        {/* 課題 → 30秒診断 → 3分で全体像 → 各機能 */}
+        {/* 動画を見なくても同じことが分かる：作る→試す→公開→監視→発送→対応 */}
+        <SixSteps />
+        {/* 「結局、自分は何をするのか」に先に答える */}
+        <RoleSplit />
+
+        {/* ── 課題 → 30秒診断 → 3分で全体像 → 各機能 ── */}
         <Problems />
         <Diagnose />
         <QuickTour />
@@ -53,14 +64,17 @@ export default function Home() {
         <Shipping />
         <AiSupport />
         <AdminConsole />
-        {/* 効果 → 信頼 */}
+        {/* 緑・黄・赤・UNKNOWN。分からないものを「安全」とは表示しない */}
+        <StatusLights />
+
+        {/* ── 効果 → 信頼 ── */}
         <TimeSaving />
         <RoiCalculator />
         <BuiltFromOps />
         <Security />
         <Aws />
-        <Converge />
-        {/* 導入 → 料金 → 相談 */}
+
+        {/* ── 導入 → 料金 → 相談 ── */}
         <Scope />
         <Flow />
         <Pricing />

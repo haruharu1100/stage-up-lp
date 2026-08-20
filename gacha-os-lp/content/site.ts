@@ -7,7 +7,7 @@ export const site = {
     headline: ["オンラインガチャ運営を、", "仕入れ以外ほぼ自動化。"],
     sub: "ガチャ作成、景品設計、還元率管理、市場価格更新、発送、顧客対応まで。\nAIと自動化システムで、オンラインガチャ運営を次のステージへ。",
     ctaPrimary: { label: "無料デモを体験する", href: "/demo" },
-    ctaSecondary: { label: "導入相談", href: "#contact" },
+    ctaSecondary: { label: "導入について相談する", href: "#contact" },
     modules: [
       "AIガチャ設計",
       "REAL TIME RTP",
@@ -92,15 +92,18 @@ export const activeHero = heroVariants[activeHeroVariant];
 
 export const demoVideo: {
   src: string | null;
+  srcWebm: string | null;
   poster: string | null;
   caption: string;
   lengthLabel: string;
 } = {
-  src: null,
-  poster: null,
+  // /demo の管理画面をそのまま操作して録画したものです（作り物の映像ではありません）
+  src: "/video/gacha-os-demo.mp4",
+  srcWebm: "/video/gacha-os-demo.webm",
+  poster: "/video/gacha-os-demo.jpg",
   caption:
-    "ガチャ設計から還元率の警告、発送、AI対応まで。実際の管理画面の動きをご覧いただけます。",
-  lengthLabel: "約30秒",
+    "ダッシュボード → ガチャ管理 → 公開前バックテスト → 還元率モニタ → 市場価格 → 発送管理 → 監査ログ。実際の管理画面をそのまま録画しています。画面の数値はすべて運営例です。",
+  lengthLabel: "30秒",
 };
 
 export type Problem = {
@@ -586,7 +589,7 @@ export const ctaTrio = [
   {
     key: "demo",
     code: "01",
-    label: "無料デモを見る",
+    label: "無料デモを体験する",
     body: "本番を模したサンプル管理画面とAI OPERATORを、その場で触っていただけます。登録不要です。",
     href: "/demo",
     primary: true,
@@ -602,7 +605,7 @@ export const ctaTrio = [
   {
     key: "quote",
     code: "03",
-    label: "自社の場合の費用を聞く",
+    label: "自社の場合の費用を相談する",
     body: "規模と必要範囲をうかがったうえで、初期費用と月額の目安をお伝えします。",
     href: "#contact",
     primary: false,

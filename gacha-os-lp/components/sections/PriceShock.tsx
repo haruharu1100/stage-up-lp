@@ -499,7 +499,7 @@ export default function PriceShock() {
   return (
     <Section
       id="shock"
-      no="09"
+      no="10"
       eyebrow="PROFIT GUARD / 触って確かめる"
       title={
         <>

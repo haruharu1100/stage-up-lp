@@ -199,6 +199,15 @@
 
   .h-display {
     @apply font-semibold tracking-tightest leading-[1.08];
+
+    /*
+     * 日本語は語の途中でも改行されるので、放っておくと
+     * 「ガチャ運営の経／験がなくても」のように単語が割れます。
+     * word-break:auto-phrase は文節（意味のかたまり）で折り返す指定です。
+     * 対応していないブラウザでは、これまで通りの折り返しに戻るだけです。
+     */
+    word-break: auto-phrase;
+    line-break: strict;
   }
 
   .num {

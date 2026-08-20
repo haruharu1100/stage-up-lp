@@ -29,7 +29,7 @@ export default function QuickTour() {
   return (
     <Section
       id="tour"
-      no="04"
+      no="05"
       eyebrow="3 MIN TOUR"
       title={
         <>

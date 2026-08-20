@@ -89,7 +89,7 @@ export default function AiBuilder() {
   return (
     <Act
       id="builder"
-      no="SECTION 06"
+      no="SECTION 07"
       eyebrow="AI ENGINE"
       wide
       title={

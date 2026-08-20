@@ -1,6 +1,9 @@
 import Section from "../ui/Section";
 import Reveal from "../ui/Reveal";
+import { MoreDetail } from "../ui/Act";
 import { security } from "@/content/site";
+import { BACKTEST_ENGINE_VERSION, RUNS } from "@/lib/backtest";
+import { STALE_AFTER_HOURS } from "@/lib/priceFreshness";
 
 const icons: Record<string, string> = {
   抽選の整合性: "M8 1.5l5.5 2.4v4.2c0 3.3-2.3 6.2-5.5 7-3.2-.8-5.5-3.7-5.5-7V3.9L8 1.5z",
@@ -9,11 +12,55 @@ const icons: Record<string, string> = {
   データ保護: "M4.5 7V5a3.5 3.5 0 017 0v2M3.5 7h9v6.5h-9V7z",
 };
 
+/**
+ * 回帰テストの件数。
+ *
+ * ★数字を書き換えるときは、必ず `npm test` を実際に流して
+ *   最後に出る「# pass ◯◯」の値に合わせてください（推測で書かない）。
+ *   実行対象は tests/backtest.golden / backtest.invariants / backtest.extreme です。
+ */
+const REGRESSION_TESTS = 57;
+
+/** 価格が「古い」と判断されるまでの日数（lib/priceFreshness.ts の設定から算出） */
+const STALE_AFTER_DAYS = Math.round(STALE_AFTER_HOURS / 24);
+
+/** 折りたたみの中に入れる技術的な内訳。すべて実装を確認したものだけ */
+const QUALITY_DETAIL: { t: string; d: string }[] = [
+  {
+    t: `回帰テスト ${REGRESSION_TESTS}件`,
+    d: "公開前バックテストの計算を対象に、数字そのものを固定して見張っています。極端な入力（口数1・料金1円・景品0本・在庫超過など）でも計算が壊れないこと、危ない構成で「このまま公開できます」と出ないことを、変更のたびに確認します。",
+  },
+  {
+    t: "公開前チェックの3段階判定",
+    d: "外部サービスとの接続は、IMPLEMENTED（コードとして実装されているか）／ CONNECTED（本番の外部サービスに実際につながっているか）／ E2E VERIFIED（最後まで通ったのを人が自分の目で確かめたか）の3段階で見ます。3つそろって初めて完了扱いです。",
+  },
+  {
+    t: "バックテストの再現性",
+    d: `1構成あたり ${RUNS} 通りの当選順で試算します。乱数の種と判定ルールのバージョン（現在 ${BACKTEST_ENGINE_VERSION}）を結果に保存するため、同じ設定なら同じ結果になります。「前回と判定が違う」を後から追えます。`,
+  },
+  {
+    t: "SAFE FAIL（分からないときは、安全と言わない）",
+    d: "景品が未登録・価格が0円といった入力不足を検知した場合、判定を「安全」とは表示せず、判定できない旨と不足している箇所を出します。画面だけが正常に見えて、判断材料が欠けている状態を作らないための決まりです。",
+  },
+  {
+    t: "価格データの鮮度チェック",
+    d: `市場価格には FRESH ／ STALE ／ UNKNOWN の状態を持たせ、最終更新から ${STALE_AFTER_DAYS} 日を過ぎた価格は「古い」として扱います。古い価格のときは実還元率の数字を出しません。`,
+  },
+  {
+    t: "抽選の記録",
+    d: "抽選は、誰が・いつ・どのガチャを・何回・抽選前残数・結果・消費ポイント・抽選後残数まで1件ずつ記録に残す設計です。後から書き換えにくい形で保持し、管理操作についても記録を残します。",
+  },
+  {
+    t: "セキュリティ設計",
+    d: "上に挙げた4分野（抽選の整合性・決済とポイント・アプリケーション防御・データ保護）を、構築時の標準設計に含めます。適用範囲と強度はご要件に応じて設計します。",
+  },
+];
+
 export default function Security() {
   return (
     <Section
       id="security"
-      no="18"
+      no="20"
       eyebrow="SECURITY & INTEGRITY"
       title={
         <>
@@ -85,6 +132,65 @@ export default function Security() {
               <p className="mt-4 text-note text-slate2">{x.d}</p>
             </div>
           ))}
+        </div>
+      </Reveal>
+
+      {/* ── 製品としての品質（技術用語は折りたたみの中へ入れる） ── */}
+      <Reveal delay={0.06}>
+        <div className="mt-5 rounded-3xl border border-edge bg-white px-7 py-10 shadow-lift sm:px-10 sm:py-12">
+          <div className="grid gap-10 lg:grid-cols-[1fr_minmax(0,420px)] lg:items-start lg:gap-14">
+            <div>
+              <span className="num text-label text-slate3">QUALITY</span>
+              <h3 className="h-display mt-6 text-h2 text-slate">
+                見えない計算まで、
+                <br />
+                検証しています。
+              </h3>
+              <p className="mt-6 max-w-[34em] text-note text-slate2">
+                重要な計算・入力の異常値・価格データの欠損などを回帰テストで確認しています。
+              </p>
+              <p className="mt-4 max-w-[34em] text-note text-slate3">
+                画面が正しく見えていても、裏側の計算だけが間違っている――ガチャ運営でいちばん怖いのはこの状態です。だから、目に見える部分だけでなく、判断のもとになる数字そのものを見張っています。
+              </p>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
+              {[
+                { k: "REGRESSION TESTS", v: `${REGRESSION_TESTS}`, s: "件" },
+                { k: "BACKTEST RUNS", v: `${RUNS}`, s: "通り / 構成" },
+                { k: "RELEASE CHECK", v: "3", s: "段階で判定" },
+              ].map((x) => (
+                <div
+                  key={x.k}
+                  className="rounded-2xl border border-edge2 bg-paper2 px-6 py-5"
+                >
+                  <span className="num text-label text-slate3">{x.k}</span>
+                  <p className="mt-3 flex items-baseline gap-2">
+                    <span className="num text-h2 font-semibold leading-none text-blue-ink">
+                      {x.v}
+                    </span>
+                    <span className="text-note text-slate2">{x.s}</span>
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="mt-10">
+            <MoreDetail label="技術的な内訳を見る">
+              <ul className="space-y-7">
+                {QUALITY_DETAIL.map((x) => (
+                  <li key={x.t}>
+                    <p className="text-note font-bold text-slate">{x.t}</p>
+                    <p className="mt-2 text-note text-slate2">{x.d}</p>
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-8 border-t border-edge2 pt-6 text-note text-slate3">
+                ※ 事前のシミュレーションと検証であり、運営の成果や損失が出ないことをお約束するものではありません。
+              </p>
+            </MoreDetail>
+          </div>
         </div>
       </Reveal>
     </Section>

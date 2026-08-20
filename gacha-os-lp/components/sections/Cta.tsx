@@ -289,7 +289,7 @@ export default function Cta() {
                     お急ぎの場合は、その旨をメールでお知らせください。
                   </p>
                   <Link href="/demo" className="btn-outline mt-9">
-                    先に管理画面のデモを見る
+                    無料デモを体験する
                   </Link>
                 </div>
               ) : (

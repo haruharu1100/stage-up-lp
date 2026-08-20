@@ -1,49 +1,127 @@
 import Section from "../ui/Section";
 import Reveal from "../ui/Reveal";
-import { flow } from "@/content/site";
+
+/**
+ * 導入すると何が起きるかの時間軸。
+ *
+ * ★期間の表示について（景品表示法）
+ * 　「2週間で公開」のような所要日数はここに書きません。
+ * 　必要な作業量は、移行の有無・独自機能・決済の審査状況で大きく変わるためです。
+ * 　DAY 1 だけは「初回のヒアリング」の意味で使い、それ以降の段階に日数を振りません。
+ */
+const STAGES: { code: string; title: string; body: string }[] = [
+  {
+    code: "DAY 1",
+    title: "ヒアリング",
+    body: "いまの運営体制と、どこに時間が溶けているかをうかがいます。必要な機能範囲は、ここで一緒に決めます。",
+  },
+  {
+    code: "SETUP",
+    title: "ブランド・決済・配送などの設定",
+    body: "ロゴと配色、決済の接続、発送と伝票の流れ、AWS環境、ガチャの等級構成。運営の型をそのまま設定に落とします。",
+  },
+  {
+    code: "TEST",
+    title: "デモ・動作確認",
+    body: "テスト環境で実際に触っていただきます。抽選・ポイント・発送・管理画面を、公開前にご自身の目で確認できます。",
+  },
+  {
+    code: "LAUNCH",
+    title: "運営開始",
+    body: "公開前チェックを通してから本番公開。管理画面の操作は、初期研修としてご説明します。",
+  },
+  {
+    code: "SUPPORT",
+    title: "継続改善",
+    body: "公開後は監視と保守を継続します。実際の運営データを見ながら、還元率の設定や運用の手順を一緒に整えていきます。",
+  },
+];
 
 export default function Flow() {
   return (
     <Section
       id="flow"
-      no="21"
+      no="23"
       eyebrow="ONBOARDING"
       title={
         <>
-          相談から公開まで、
+          相談してから、
           <br />
-          おおむね1〜3か月。
+          運営が始まるまで。
         </>
       }
       lead="いきなり作り始めません。いまの運営体制と、どこに時間が溶けているかを整理してから、必要な機能範囲とインフラ構成を確定します。"
     >
+      {/* PC：横に並べる。スマホ：縦に積んで矢印でつなぐ */}
       <div className="relative">
-        <div className="absolute left-0 right-0 top-[62px] hidden h-px bg-edge lg:block" />
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          {flow.map((f, i) => (
-            <Reveal key={f.step} delay={i * 0.07} className="h-full">
-              <div className="lp-card relative h-full p-7 transition-all duration-300 hover:shadow-lift2 sm:p-8">
-                <div className="flex items-center justify-between gap-4">
-                  <span className="num text-h3 font-semibold text-blue-ink">
-                    {f.step}
-                  </span>
-                  <span className="num rounded-full border border-edge bg-paper2 px-3.5 py-1.5 text-label text-slate3">
-                    {f.term}
-                  </span>
+        {/* 横のつなぎ線（PCのみ） */}
+        <div className="absolute left-0 right-0 top-[17px] hidden h-px bg-edge lg:block" />
+
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5 lg:gap-3">
+          {STAGES.map((s, i) => {
+            const last = i === STAGES.length - 1;
+            return (
+              <Reveal key={s.code} delay={i * 0.06} className="h-full">
+                <div className="relative flex h-full flex-col">
+                  {/* 段階の名前。線の上に乗せるので白背景を敷く */}
+                  <div className="relative z-10 flex items-center gap-3">
+                    <span
+                      className={`num inline-flex items-center rounded-full border px-4 py-2 text-label ${
+                        i === 0
+                          ? "border-blue-ink/25 bg-blue-pale text-blue-ink"
+                          : last
+                            ? "border-edge bg-paper2 text-slate2"
+                            : "border-edge bg-white text-slate2"
+                      }`}
+                    >
+                      {s.code}
+                    </span>
+                    <span className="h-px flex-1 bg-edge lg:hidden" />
+                  </div>
+
+                  <div className="mt-5 flex-1 rounded-3xl border border-edge bg-white p-6 shadow-lift transition-all duration-300 hover:shadow-lift2 sm:p-7">
+                    <h3 className="text-body font-bold leading-[1.7] text-slate">
+                      {s.title}
+                    </h3>
+                    <p className="mt-4 text-note text-slate2">{s.body}</p>
+                  </div>
+
+                  {/* 縦のつなぎ矢印（1列に積むスマホでだけ出す） */}
+                  {!last && (
+                    <span
+                      aria-hidden
+                      className="mx-auto py-2 text-slate3/60 sm:hidden"
+                    >
+                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                        <path
+                          d="M8 2.5v11M4 9.5l4 4 4-4"
+                          stroke="currentColor"
+                          strokeWidth="1.4"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                    </span>
+                  )}
                 </div>
-                <h3 className="mt-6 text-body font-bold text-slate">{f.title}</h3>
-                <p className="mt-4 text-note text-slate2">{f.body}</p>
-              </div>
-            </Reveal>
-          ))}
+              </Reveal>
+            );
+          })}
         </div>
       </div>
 
       <Reveal delay={0.14}>
-        <div className="lp-tint mt-5 rounded-3xl px-7 py-8 sm:px-10 sm:py-9">
-          <span className="num text-label text-slate3">
-            WHAT YOU PREPARE
+        <p className="mt-8 rounded-2xl border border-edge bg-paper2 px-6 py-5 text-note text-slate2">
+          <span className="mr-3 inline-block rounded-full border border-edge bg-white px-3.5 py-1 text-note leading-normal text-blue-ink">
+            期間について
           </span>
+          かかる期間は、既存サイトからの移行の有無・独自機能・決済の審査状況によって変わります。あらかじめ日数をお約束することはしていません。ご要件をうかがったうえで、想定される進め方と目安をお伝えします。
+        </p>
+      </Reveal>
+
+      <Reveal delay={0.18}>
+        <div className="lp-tint mt-5 rounded-3xl px-7 py-8 sm:px-10 sm:py-9">
+          <span className="num text-label text-slate3">WHAT YOU PREPARE</span>
           <div className="mt-8 grid gap-7 sm:grid-cols-3">
             {[
               { t: "商品の仕入れ", d: "景品そのものと、その仕入れ判断。ここだけは人の仕事として残ります。" },

@@ -24,18 +24,21 @@ export default function MobileCTA() {
         <Link
           href="/demo"
           onClick={() => track(EV.ctaClick, { place: "mobile_bar", target: "demo" })}
-          className="btn-outline flex-1 !px-4 !py-4"
+          className="btn-outline flex-1 flex-col !gap-0 !px-3 !py-3 text-center !leading-snug"
         >
-          無料デモ
+          {/* 390px でも読める大きさを保つため、2行に分けて折り返しを固定する */}
+          <span className="block">無料デモを</span>
+          <span className="block">体験する</span>
         </Link>
         <Link
           href="/#contact"
           onClick={() =>
             track(EV.ctaClick, { place: "mobile_bar", target: "contact" })
           }
-          className="btn-primary flex-[1.35] !px-4 !py-4"
+          className="btn-primary flex-[1.35] flex-col !gap-0 !px-3 !py-3 text-center !leading-snug"
         >
-          導入相談をする
+          <span className="block">導入について</span>
+          <span className="block">相談する</span>
         </Link>
       </div>
     </div>
