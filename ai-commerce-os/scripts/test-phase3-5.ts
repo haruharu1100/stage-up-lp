@@ -413,8 +413,14 @@ async function main() {
   check('AIが結論だけ書き換えられない（卒業条件の判定と一致する）',
     rep.headline === gate.verdictJa);
   check('次にやることを1つに絞って出す', rep.nextAction.length > 0, rep.nextAction);
-  check('契約も実データも無いときは「まずCSVの取り込み」を勧める',
-    decideNextAction(0, 0, 0).includes('CSV'), decideNextAction(0, 0, 0));
+  check('契約も実データも無いときは「まず手で記録して取り込む」を勧める',
+    decideNextAction(0, 0, 0).includes('MANUAL_OBSERVATION'), decideNextAction(0, 0, 0));
+  // 【2026-08-20 追加】「CSVだから規約上安全」という言い方に戻らないための番人。
+  check('「規約上いちばん安全」という誤った説明をしない',
+    !decideNextAction(0, 0, 0).includes('安全な方法'), decideNextAction(0, 0, 0));
+  check('手で記録したデータを「提供を受けたデータ」と言わない',
+    decideNextAction(0, 0, 0).includes('提供を受けたデータ」ではありません'),
+    decideNextAction(0, 0, 0));
   check('レポートに実行経路が無いことの確認が含まれる', rep.safety.ok);
 
   // ============================================================ 全体

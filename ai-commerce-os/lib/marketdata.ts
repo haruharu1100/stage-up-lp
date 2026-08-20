@@ -1,7 +1,7 @@
 import { all, batch, nowIso } from './db/client';
 import { parseCsv } from './csv';
 import { cleanText, identityKey, modelKey, normalizeBrand, normalizeColor, normalizeJan, normalizeSize, parseIntOrNull, parseMoney } from './normalize';
-import { judgeRealMarketData } from './realdata';
+import { judgeRealMarketData, SELF_OBSERVED_CAUTION } from './realdata';
 import { appendSnapshots, type SnapshotRow } from './snapshots';
 import type { MarketObservation } from './route';
 
@@ -47,11 +47,19 @@ const ALIASES: Record<string, string[]> = {
   source_url: ['source_url', 'url', '出典url', '出典URL', 'リンク'],
 };
 
-/** データの出どころ。CSVで指定が無ければ手入力CSV扱いにする（自動取得を装わない）。 */
+/**
+ * データの出どころ。CSVで指定が無ければ手入力CSV扱いにする（自動取得を装わない）。
+ *
+ * `OFFICIAL_CSV_FEED`（事業者から正式に提供されたフィード）と
+ * `MANUAL_OBSERVATION`（自分で公開画面を見て記録）は**別物**。
+ * ファイル形式が同じCSVでも、データの立場が違う（lib/realdata.ts の説明を読むこと）。
+ */
 const SOURCE_TYPES = new Set([
-  'CSV_MANUAL', 'CSV_FEED', 'API', 'WEBHOOK', 'PARTNER_FEED',
-  // Phase 3.5。人が実際の市場画面を見て記録したもの。規約上いちばん安全な実データ。
+  'CSV_MANUAL', 'OFFICIAL_CSV_FEED', 'API', 'WEBHOOK', 'PARTNER_FEED',
+  // 人が公開画面を見て手で記録したもの。正式提供ではないので、増やす前に正規手段を探す。
   'MANUAL_OBSERVATION',
+  // 旧称。過去のCSVを読めなくしないために受け付ける（新規では使わない）。
+  'CSV_FEED',
 ]);
 
 function canon(h: string): string {
@@ -79,6 +87,12 @@ export type MarketImportResult = {
   snapshotsAppended: number;
   /** 実データにならなかった理由の内訳。ごまかさず出す。 */
   notRealReasons: Record<string, number>;
+  /** 事業者から正式に提供されたデータの行数 */
+  providedRows: number;
+  /** 自分で公開画面を見て記録したデータの行数（正式提供ではない） */
+  selfObservedRows: number;
+  /** 自分で記録したデータが含まれるときの注意書き。無ければ null。 */
+  caution: string | null;
 };
 
 export async function importMarketData(text: string): Promise<MarketImportResult> {
@@ -86,6 +100,7 @@ export async function importMarketData(text: string): Promise<MarketImportResult
   const out: MarketImportResult = {
     ok: false, message: '', rowCount: 0, inserted: 0, invalid: 0, errors: [], byVenue: {},
     realRows: 0, snapshotsAppended: 0, notRealReasons: {},
+    providedRows: 0, selfObservedRows: 0, caution: null,
   };
   if (grid.length < 2) {
     out.message = 'データが空です。1行目に見出し、2行目以降にデータを入れてください。';
@@ -157,8 +172,14 @@ export async function importMarketData(text: string): Promise<MarketImportResult
     const judged = judgeRealMarketData({
       dataSource: sourceType, sourceUrl, sourceNote, observedAt,
     });
-    if (judged.isReal) out.realRows++;
-    else out.notRealReasons[judged.reason] = (out.notRealReasons[judged.reason] ?? 0) + 1;
+    if (judged.isReal) {
+      out.realRows++;
+      // 実データでも「正式提供」と「自分で記録」は分けて数える。同じ箱に入れない。
+      if (judged.sourceClass === 'SELF_OBSERVED') out.selfObservedRows++;
+      else out.providedRows++;
+    } else {
+      out.notRealReasons[judged.reason] = (out.notRealReasons[judged.reason] ?? 0) + 1;
+    }
 
     const lowPrice = parseMoney(get('low_price'));
     const medianPrice = parseMoney(get('median_price'));
@@ -223,8 +244,11 @@ export async function importMarketData(text: string): Promise<MarketImportResult
   const snap = await appendSnapshots(snapshots);
   out.snapshotsAppended = snap.appended;
   out.ok = out.inserted > 0;
+  out.caution = out.selfObservedRows > 0 ? SELF_OBSERVED_CAUTION : null;
   out.message = out.inserted > 0
-    ? `${out.inserted}件の相場を取り込みました（うち実市場データ ${out.realRows}件／時系列に新しく積んだ観測 ${snap.appended}件）。`
+    ? `${out.inserted}件の相場を取り込みました（実市場データ ${out.realRows}件`
+      + `＝正式提供 ${out.providedRows}件／自分で記録 ${out.selfObservedRows}件`
+      + `／時系列に新しく積んだ観測 ${snap.appended}件）。`
     : '取り込める行がありませんでした。';
   return out;
 }

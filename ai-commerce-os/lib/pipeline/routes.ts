@@ -45,6 +45,8 @@ export type RouteRunStats = {
   bySkipReason: Record<string, number>;
   blockedProfitable: number;
   ruleVersion: string;
+  /** 古い手数料で作られていたため消したRouteの件数（Phase 3.6）。 */
+  staleFeeRoutesRemoved: number;
 };
 
 type Candidate = {
@@ -121,6 +123,7 @@ export async function runRoutes(opts: { onlyIds?: number[] } = {}): Promise<Rout
     runId, products: rows.length, combinationsTried: 0, routesGenerated: 0, routesOk: 0,
     routesBlocked: 0, productsWithRoute: 0, shadowOpened: 0, bestRoi: null, avgRoi: null,
     byPair: {}, bySkipReason: {}, blockedProfitable: 0, ruleVersion: rv,
+    staleFeeRoutesRemoved: 0,
   };
 
   // 版が変わったら過去のRouteと混ざらない。古い版のRouteは消す（判断の履歴は shadow に残る）。
@@ -289,6 +292,45 @@ export async function runRoutes(opts: { onlyIds?: number[] } = {}): Promise<Rout
   // スナップショットと答え合わせ枠は shadow_id を副問い合わせで引くので、必ず親の後に流す。
   for (let i = 0; i < shadowChildStmts.length; i += CHUNK) await batch(shadowChildStmts.slice(i, i + CHUNK));
   for (let i = 0; i < productStmts.length; i += CHUNK) await batch(productStmts.slice(i, i + CHUNK));
+
+  /*
+   * 【Phase 3.6 で追加】古い手数料で作られたRouteを残さない。
+   *
+   * 上の方で消しているのは「ルール版が変わったRoute」だけだった。
+   * ところが**手数料が変わってもルール版は変わらない**ので、
+   * 前回の実行で作られたRouteが古い料金のまま画面に残り続けていた。
+   *
+   * 実際にこれが起きた（2026-08-20）。
+   * メルカリの販売手数料を公式ページで確認して実額へ直したあと、
+   * 直す前に作られた MERCARI 向けRoute 39件が、振込手数料200円を引く前の
+   * 「200円ぶん儲かって見える」金額のまま残っていた。
+   *
+   * arbitrage_routes は「いま狙える機会の一覧」であって、判断の履歴ではない。
+   * 判断の履歴は route_shadow_trades に凍結してある（ルール24）。
+   * だからこちらは古い料金のものを消してよい。むしろ消さないと嘘の金額を見せることになる。
+   *
+   * 掃除はRouteを書き終えたあとに行う（先にやると今回作ったぶんまで消える）。
+   */
+  if (!opts.onlyIds) {
+    const feeNow = await all('SELECT venue_code, side, fee_version FROM venue_fee_profiles');
+    const versionsOf = (venue: string, side: string) => feeNow
+      .filter((f) => String(f.venue_code) === venue && String(f.side) === side)
+      .map((f) => String(f.fee_version));
+    const existing = await all(
+      'SELECT id, buy_venue_code, sell_venue_code, buy_fee_version, sell_fee_version FROM arbitrage_routes');
+    const staleIds = existing.filter((r) => {
+      const bv = versionsOf(String(r.buy_venue_code), 'BUY');
+      const sv = versionsOf(String(r.sell_venue_code), 'SELL');
+      // 今の手数料表に無い版を持っている＝古い料金で計算されたRoute。
+      return (bv.length > 0 && !bv.includes(String(r.buy_fee_version)))
+        || (sv.length > 0 && !sv.includes(String(r.sell_fee_version)));
+    }).map((r) => Number(r.id));
+    for (let i = 0; i < staleIds.length; i += CHUNK) {
+      const part = staleIds.slice(i, i + CHUNK);
+      await run(`DELETE FROM arbitrage_routes WHERE id IN (${part.map(() => '?').join(',')})`, part);
+    }
+    stats.staleFeeRoutesRemoved = staleIds.length;
+  }
 
   await recordOpportunities(opportunities, { fastHours: t.opportunityFastHours, now });
   // 消えた機会の寿命から半減期を出し直す（§7 §8）。

@@ -47,7 +47,31 @@ export default function MarketImportForm({ template }: { template: string }) {
             <dt>読み取った行数</dt><dd>{num(r.rowCount)}</dd>
             <dt>取り込んだ相場</dt><dd>{num(r.inserted)}</dd>
             <dt>取り込めなかった行</dt><dd>{num(r.invalid)}</dd>
+            {/*
+              実データを1つの数字にまとめない。
+              「事業者から提供されたもの」と「自分で見て記録したもの」は立場が違う（2026-08-20 訂正）。
+            */}
+            <dt>実市場データ</dt><dd>{num(r.realRows ?? 0)}</dd>
+            <dt>　うち 事業者から正式に提供</dt><dd>{num(r.providedRows ?? 0)}</dd>
+            <dt>　うち 自分で画面を見て記録</dt><dd>{num(r.selfObservedRows ?? 0)}</dd>
           </dl>
+          {r.caution && (
+            <div className="note warn small">
+              <strong>この取込には「自分で記録したデータ」が含まれます</strong>
+              <br />
+              {r.caution}
+            </div>
+          )}
+          {r.notRealReasons && Object.keys(r.notRealReasons).length > 0 && (
+            <>
+              <h3>実市場データとして数えなかった理由</h3>
+              <ul className="reasons small">
+                {Object.entries(r.notRealReasons).map(([reason, count], i: number) => (
+                  <li key={i}>{reason}：{num(count as number)}件</li>
+                ))}
+              </ul>
+            </>
+          )}
           {r.byVenue && Object.keys(r.byVenue).length > 0 && (
             <p className="small muted">
               市場ごと：{Object.entries(r.byVenue).map(([k, v]) => `${k} ${v}件`).join(' ／ ')}

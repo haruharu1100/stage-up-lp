@@ -130,8 +130,9 @@ export function feeDataConfidence(buyFee: FeeProfile, sellFee: FeeProfile, now =
       }
     }
     // 状態による天井。ここが Phase 3.5 の追加分。
-    const status = deriveFeeStatus(f as Parameters<typeof deriveFeeStatus>[0], now).status;
-    return clamp(capFeeConfidence(c, status), 0, 100);
+    // Phase 3.6：確認済みでも送料など実費が推定のままなら満点にしない（第3引数）。
+    const d = deriveFeeStatus(f as Parameters<typeof deriveFeeStatus>[0], now);
+    return clamp(capFeeConfidence(c, d.status, d.estimatedCosts.length), 0, 100);
   };
   // 片方が概算なら利益は確定しない。弱い方に引きずられるべきなので最小値を採る。
   return Math.round(Math.min(score(buyFee), score(sellFee)));

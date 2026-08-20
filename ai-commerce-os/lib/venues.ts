@@ -29,6 +29,17 @@ export type Venue = {
   shipping_model: string | null;
   authentication_model: string;
   api_available: number;
+  /**
+   * 事業者が**正式にCSVデータを提供している**か。
+   *
+   * 【2026-08-20 訂正】以前は全市場 1 にしていたが、これは誤りだった。
+   * 「CSVファイルとして取り込める」という意味で 1 にしていたが、それはこちら側の都合であって、
+   * 相手がデータを提供している事実ではない。自分で公開画面を見て書き写したものは、
+   * CSVの形をしていても「提供を受けたデータ」ではない（lib/realdata.ts を読むこと）。
+   *
+   * いま正式なCSV提供が確認できている市場は1つも無いので、全市場 0 にしてある。
+   * 確認できた市場だけ、出典を note に書いたうえで 1 にする。**推測で1にしない。**
+   */
   csv_available: number;
   manual_only: number;
   terms_status: string;
@@ -95,7 +106,7 @@ export const VENUE_SEED: VenueSeed[] = [
     buy_connector: 'csv', sell_connector: 'unavailable',
     buy_fee_model: '落札額に対する手数料', sell_fee_model: null,
     shipping_model: 'BUYER_PAYS', authentication_model: 'VENUE_SIDE',
-    api_available: 0, csv_available: 1, manual_only: 1,
+    api_available: 0, csv_available: 0, manual_only: 1,
     terms_status: 'UNVERIFIED', automation_permission: 'MANUAL_ONLY',
     presale_allowed: 0, currency: 'JPY',
     note: 'BtoBオークション。参加には古物商が必要。固定価格ではないため入札上限額の設計が別途要る。販売先としては使わない。',
@@ -107,7 +118,7 @@ export const VENUE_SEED: VenueSeed[] = [
     buy_connector: 'csv', sell_connector: 'unavailable',
     buy_fee_model: '店頭価格のみ', sell_fee_model: null,
     shipping_model: 'BUYER_PAYS', authentication_model: 'NONE',
-    api_available: 0, csv_available: 1, manual_only: 1,
+    api_available: 0, csv_available: 0, manual_only: 1,
     terms_status: 'UNVERIFIED', automation_permission: 'MANUAL_ONLY',
     presale_allowed: 0, currency: 'JPY',
     note: '法人取引条件は未確認。仕入のみ。',
@@ -119,7 +130,7 @@ export const VENUE_SEED: VenueSeed[] = [
     buy_connector: 'csv', sell_connector: 'unavailable',
     buy_fee_model: '店頭価格のみ', sell_fee_model: null,
     shipping_model: 'BUYER_PAYS', authentication_model: 'NONE',
-    api_available: 0, csv_available: 1, manual_only: 1,
+    api_available: 0, csv_available: 0, manual_only: 1,
     terms_status: 'UNVERIFIED', automation_permission: 'MANUAL_ONLY',
     presale_allowed: 0, currency: 'JPY',
     note: '法人取引条件は未確認。仕入のみ。',
@@ -131,7 +142,7 @@ export const VENUE_SEED: VenueSeed[] = [
     buy_connector: 'csv', sell_connector: 'unavailable',
     buy_fee_model: '店頭価格のみ', sell_fee_model: null,
     shipping_model: 'BUYER_PAYS', authentication_model: 'NONE',
-    api_available: 0, csv_available: 1, manual_only: 1,
+    api_available: 0, csv_available: 0, manual_only: 1,
     terms_status: 'UNVERIFIED', automation_permission: 'MANUAL_ONLY',
     presale_allowed: 0, currency: 'JPY',
     note: '法人取引条件は未確認。仕入のみ。',
@@ -143,7 +154,7 @@ export const VENUE_SEED: VenueSeed[] = [
     buy_connector: 'manual', sell_connector: 'manual',
     buy_fee_model: '購入手数料なし', sell_fee_model: '販売手数料 + 送料出品者負担',
     shipping_model: 'SELLER_PAYS', authentication_model: 'NONE',
-    api_available: 0, csv_available: 1, manual_only: 1,
+    api_available: 0, csv_available: 0, manual_only: 1,
     terms_status: 'UNVERIFIED', automation_permission: 'MANUAL_ONLY',
     presale_allowed: 0, currency: 'JPY',
     note: '仕入先にも販売先にもなる。自動操作は行わない。',
@@ -158,7 +169,7 @@ export const VENUE_SEED: VenueSeed[] = [
     buy_connector: 'manual', sell_connector: 'manual',
     buy_fee_model: '購入手数料なし', sell_fee_model: '販売手数料 + 決済手数料',
     shipping_model: 'SELLER_PAYS', authentication_model: 'NONE',
-    api_available: 0, csv_available: 1, manual_only: 1,
+    api_available: 0, csv_available: 0, manual_only: 1,
     terms_status: 'UNVERIFIED', automation_permission: 'MANUAL_ONLY',
     presale_allowed: 0, currency: 'JPY',
     note: '仕入先にも販売先にもなる。',
@@ -173,7 +184,7 @@ export const VENUE_SEED: VenueSeed[] = [
     buy_connector: 'manual', sell_connector: 'manual',
     buy_fee_model: '落札手数料なし（一般）', sell_fee_model: '落札システム利用料',
     shipping_model: 'SELLER_PAYS', authentication_model: 'NONE',
-    api_available: 0, csv_available: 1, manual_only: 1,
+    api_available: 0, csv_available: 0, manual_only: 1,
     terms_status: 'UNVERIFIED', automation_permission: 'MANUAL_ONLY',
     presale_allowed: 0, currency: 'JPY',
     note: '仕入先にも販売先にもなる。落札額が変動するため入札上限の設計が別途要る。',
@@ -191,7 +202,7 @@ export const VENUE_SEED: VenueSeed[] = [
     buy_connector: 'manual', sell_connector: 'unavailable',
     buy_fee_model: '購入手数料 + 鑑定料', sell_fee_model: '販売手数料 + 鑑定料',
     shipping_model: 'SELLER_PAYS', authentication_model: 'VENUE_SIDE',
-    api_available: 0, csv_available: 1, manual_only: 1,
+    api_available: 0, csv_available: 0, manual_only: 1,
     terms_status: 'BLOCKED', automation_permission: 'NOT_ALLOWED',
     presale_allowed: 0, currency: 'JPY',
     note: '販売（出品）は現在できない。法人出品プランが新規申込を停止しているため、計算はしても実行してはいけない。仕入先としては候補になる（法人購入プランは年商・購入額の条件あり／古物商必須・未確認）。',
@@ -206,7 +217,7 @@ export const VENUE_SEED: VenueSeed[] = [
     buy_connector: 'manual', sell_connector: 'manual',
     buy_fee_model: '購入手数料なし', sell_fee_model: '販売手数料（カテゴリ別）+ 配送',
     shipping_model: 'SELLER_PAYS', authentication_model: 'NONE',
-    api_available: 0, csv_available: 1, manual_only: 1,
+    api_available: 0, csv_available: 0, manual_only: 1,
     terms_status: 'UNVERIFIED', automation_permission: 'MANUAL_ONLY',
     presale_allowed: 0, currency: 'JPY',
     note: '販売にはセラーアカウントが必要。カテゴリごとに手数料率が違うので、カテゴリ別の手数料設定が要る。',
@@ -221,7 +232,7 @@ export const VENUE_SEED: VenueSeed[] = [
     buy_connector: 'manual', sell_connector: 'manual',
     buy_fee_model: '為替手数料 + 関税', sell_fee_model: '落札手数料 + 決済 + 為替 + 国際送料',
     shipping_model: 'SELLER_PAYS', authentication_model: 'NONE',
-    api_available: 0, csv_available: 1, manual_only: 1,
+    api_available: 0, csv_available: 0, manual_only: 1,
     terms_status: 'UNVERIFIED', automation_permission: 'MANUAL_ONLY',
     presale_allowed: 0, currency: 'JPY',
     note: '海外市場。為替・関税・国際送料が乗るため、額面が高くても手取りが伸びないことがある。',
@@ -236,7 +247,7 @@ export const VENUE_SEED: VenueSeed[] = [
     buy_connector: 'unavailable', sell_connector: 'manual',
     buy_fee_model: null, sell_fee_model: '決済手数料のみ',
     shipping_model: 'SELLER_PAYS', authentication_model: 'NONE',
-    api_available: 0, csv_available: 1, manual_only: 1,
+    api_available: 0, csv_available: 0, manual_only: 1,
     terms_status: 'VERIFIED', automation_permission: 'MANUAL_ONLY',
     presale_allowed: 0, currency: 'JPY',
     note: '手数料は最も安いが、集客は自前。売却までの日数は他市場より長くなりやすい。',
@@ -248,7 +259,7 @@ export const VENUE_SEED: VenueSeed[] = [
     buy_connector: 'manual', sell_connector: 'unavailable',
     buy_fee_model: '手入力', sell_fee_model: null,
     shipping_model: 'BUYER_PAYS', authentication_model: 'NONE',
-    api_available: 0, csv_available: 1, manual_only: 1,
+    api_available: 0, csv_available: 0, manual_only: 1,
     terms_status: 'UNVERIFIED', automation_permission: 'MANUAL_ONLY',
     presale_allowed: 0, currency: 'JPY',
     note: '古物市場・卸・個別仕入など。',

@@ -39,7 +39,12 @@ export type MarketFetchResult<T> = {
   reason: MarketFetchReason;
   message: string;
   /** 取れたデータの出どころ。画面と snapshot に残す。 */
-  sourceType: 'API' | 'CSV_MANUAL' | 'CSV_FEED' | 'WEBHOOK' | 'NONE';
+  /**
+   * 取れたデータの出どころ。
+   * `OFFICIAL_CSV_FEED`（事業者から正式提供）と `MANUAL_OBSERVATION`（自分で画面を見て記録）は別物。
+   * CSVという形式が同じでも立場が違うので、同じ値にまとめない。
+   */
+  sourceType: 'API' | 'CSV_MANUAL' | 'OFFICIAL_CSV_FEED' | 'MANUAL_OBSERVATION' | 'WEBHOOK' | 'NONE';
   items: T[];
 };
 

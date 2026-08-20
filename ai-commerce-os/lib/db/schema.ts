@@ -884,4 +884,121 @@ export const ADD_COLUMNS: string[] = [
 
   // 精度集計にも実市場かどうかの印を持たせる。
   `ALTER TABLE prediction_accuracy ADD COLUMN real_market_only INTEGER NOT NULL DEFAULT 0`,
+
+  // ---- Phase 3.6（実市場検証・メルカリ） ----
+  // 手数料は「行まるごと確認済み」にできない。
+  // 例：メルカリの販売手数料10%は公式ページで確認できるが、
+  //     同じ行に入っている送料800円は商品と発送方法で変わる“こちらの推定値”のまま。
+  // 行ごと VERIFIED にすると、確認していない800円まで確認済みの顔をしてしまう。
+  // そこで「どの項目を確認したか」を項目名の配列で持つ（JSON文字列）。
+  `ALTER TABLE venue_fee_profiles ADD COLUMN verified_fields TEXT`,
+];
+
+/**
+ * Phase 3.6 で追加するテーブル（実市場の出品を1件ずつ追跡する）。
+ * 既存の SCHEMA に混ぜず末尾へ分けて置く。あとから「どこが今回の追加か」を読めるようにするため。
+ */
+export const SCHEMA_OBSERVATION: string[] = [
+  /*
+   * 【追跡している出品（1商品ページ＝1行）】
+   *
+   * venue_market_prices は「その市場の相場」であって「その1件の出品」ではない。
+   * 今回やりたいのは「この1件の出品が、7日後・30日後にどうなったか」の答え合わせなので、
+   * 出品1件を主語にした表が要る。
+   *
+   * 【actual_sold_price を NULL のままにできることが重要】
+   * ユーザー指示：「出品価格100,000円の商品が売れた場合でも、
+   * 100,000円で売れたと勝手に決めないでください」。
+   * だから「売れたのは分かっているが、いくらで売れたかは不明」を表現できる形にする。
+   * sold_price_known = 0 のとき、画面には UNKNOWN と出す。0円とも出品価格とも書かない。
+   */
+  `CREATE TABLE IF NOT EXISTS tracked_listings (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    listing_key TEXT NOT NULL UNIQUE,
+    venue_code TEXT NOT NULL,
+    product_url TEXT NOT NULL,
+    product_name TEXT,
+    brand TEXT,
+    category TEXT,
+    model_number TEXT,
+    jan TEXT,
+    sku TEXT,
+    size TEXT,
+    color TEXT,
+    condition_raw TEXT,
+    condition_rank TEXT,
+    identity_key TEXT,
+    seller_type TEXT,
+    first_observed_at TEXT NOT NULL,
+    first_listing_price INTEGER,
+    latest_observed_at TEXT,
+    latest_listing_price INTEGER,
+    latest_state TEXT NOT NULL DEFAULT 'UNKNOWN',
+    actual_sold_price INTEGER,
+    sold_price_known INTEGER NOT NULL DEFAULT 0,
+    sold_at TEXT,
+    observation_count INTEGER NOT NULL DEFAULT 0,
+    data_source TEXT NOT NULL,
+    source_class TEXT NOT NULL,
+    real_market_data INTEGER NOT NULL DEFAULT 0,
+    identifiable INTEGER NOT NULL DEFAULT 0,
+    notes TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_tracked_listings_venue ON tracked_listings(venue_code, latest_state)`,
+  `CREATE INDEX IF NOT EXISTS idx_tracked_listings_identity ON tracked_listings(identity_key)`,
+
+  /*
+   * 【観測1回＝1行（追記のみ）】
+   *
+   * ユーザー指示：「同じURLを観測するたび、上書きせず新しいSnapshotを作ってください」。
+   * 上書きすると「7日前はいくらだったか」が消え、値下げが起きたことすら分からなくなる。
+   *
+   * UNIQUE(listing_key, observed_at) は「同じ瞬間の同じ出品は同じ観測」という意味。
+   * 同じCSVを2回取り込んでも件数が二重にならないようにするためだけのもの（冪等）。
+   * 観測日時が違えば必ず別の行として積まれる。
+   */
+  `CREATE TABLE IF NOT EXISTS listing_observations (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    listing_key TEXT NOT NULL,
+    venue_code TEXT NOT NULL,
+    observed_at TEXT NOT NULL,
+    checkpoint TEXT NOT NULL,
+    elapsed_hours REAL,
+    listing_price INTEGER,
+    shipping_included INTEGER,
+    listing_state TEXT NOT NULL,
+    state_source TEXT NOT NULL,
+    sold_price INTEGER,
+    sold_price_known INTEGER NOT NULL DEFAULT 0,
+    sold_at TEXT,
+    price_delta INTEGER,
+    data_source TEXT NOT NULL,
+    source_class TEXT NOT NULL,
+    real_market_data INTEGER NOT NULL DEFAULT 0,
+    entry_seconds REAL,
+    notes TEXT,
+    created_at TEXT NOT NULL,
+    UNIQUE(listing_key, observed_at)
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_listing_obs_key ON listing_observations(listing_key, observed_at)`,
+
+  /*
+   * 【人間の作業時間】
+   *
+   * ユーザー指示：「人間の入力負担も測定してください」「工程別時間を実測し、
+   * 感覚ではなく実測で自動化対象を決めてください」。
+   * 「たぶんここが面倒」で自動化先を決めると、たいてい外れる。だから秒数を残す。
+   */
+  `CREATE TABLE IF NOT EXISTS observation_work_log (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    batch_id TEXT NOT NULL,
+    step TEXT NOT NULL,
+    seconds REAL NOT NULL,
+    rows INTEGER NOT NULL DEFAULT 0,
+    note TEXT,
+    recorded_at TEXT NOT NULL
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_work_log_step ON observation_work_log(step)`,
 ];

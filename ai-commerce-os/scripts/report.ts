@@ -1,6 +1,7 @@
 import { buildDailyReport } from '../lib/dailyreport';
 import { migrate } from '../lib/db/client';
 import { REACHABILITY_JA, halfLifeTable } from '../lib/halflife';
+import { ensureReady } from '../lib/queries';
 
 /**
  * 毎日のSHADOWレポート（Phase 3.5・§24 §25）。
@@ -15,6 +16,9 @@ const pct = (v: number | null) => (v === null ? '測定不能' : `${(v * 100).to
 
 async function main() {
   await migrate();
+  // 手数料の状態は「今日から見て何日前に確認したか」で変わる。
+  // レポートを出す前に必ず計算し直す（古い状態のまま結論を出さない）。
+  await ensureReady();
   // 実行したときだけ判定結果を履歴に残す（画面を開いただけでは残さない）。
   const r = await buildDailyReport(new Date(), true);
 

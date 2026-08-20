@@ -123,6 +123,8 @@ ul.reasons li { margin-bottom: 6px; }
 }
 .note.danger { border-color: var(--red); background: #2a1618; color: #f3b5b5; }
 .note.ok { border-color: var(--green); background: #12241a; color: #a8e6c0; }
+/* 既定と同じ見た目。読む側に「注意」だと分かるよう、書く側で明示できるようにしておく。 */
+.note.warn { border-color: var(--amber); background: #241f10; color: #f0dca0; }
 
 .field { margin-bottom: 14px; }
 .field > label { display: block; margin-bottom: 5px; color: var(--muted); font-size: 13px; }

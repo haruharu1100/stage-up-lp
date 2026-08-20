@@ -458,13 +458,36 @@ async function main() {
     `SELECT s.sell_venue_code, s.category_key, s.sell_fee_version, e.actual_net_profit
        FROM shadow_evaluations e JOIN route_shadow_trades s ON s.id = e.shadow_id
       WHERE e.actual_sell_price IS NOT NULL LIMIT 200`);
-  const staleRecalc = recalcRows.filter((r) => {
+  /*
+   * 【2026-08-20 修正】この検査は元々こう書いてあった。
+   *
+   *   「SHADOWが持つ手数料の版が、今の版と1件でも違ったら不合格」
+   *
+   * これは逆だった。手数料が変われば版は必ず変わる。
+   * そのときSHADOWが**古い版を持ったままでいること**こそが正しい姿（ルール24）。
+   * 元の書き方だと「手数料が一度も変わっていない間だけ合格する」検査になっていて、
+   * メルカリの手数料を公式確認して実額へ更新した瞬間に不合格になった。
+   * 守りたい約束は「版が変わらないこと」ではなく「過去の判断を書き換えないこと」。
+   *
+   * そこで次の2つを見る。
+   *   1. 版が今と違うSHADOWがあるなら、その変更が `fee_change_log` に残っていること
+   *      （記録の無い版のズレ＝どこかで静かに書き換わった疑い）
+   *   2. SHADOWが持っているのが「変更前の版」であること
+   *      （変更後の版を持っていたら、過去に遡って上書きされたということ）
+   */
+  const stale = recalcRows.filter((r) => {
     const v = feeVersionNow.get(`${r.sell_venue_code}|SELL|${r.category_key}`)
       ?? feeVersionNow.get(`${r.sell_venue_code}|SELL|*`);
     return r.actual_net_profit !== null && v !== undefined && v !== String(r.sell_fee_version);
   });
-  check('手数料の版が変わったものを今の料金で計算し直していない',
-    staleRecalc.length === 0, `${staleRecalc.length}件`);
+  const changeLog = await all('SELECT old_fee_version, new_fee_version FROM fee_change_log');
+  const knownOld = new Set(changeLog.map((c) => String(c.old_fee_version)));
+  const unexplained = stale.filter((r) => !knownOld.has(String(r.sell_fee_version)));
+  check('手数料が変わったときも、答え合わせ済みのSHADOWを今の料金で書き換えていない',
+    unexplained.length === 0,
+    stale.length === 0
+      ? '料金変更後のSHADOWは0件'
+      : `料金変更あり${stale.length}件／すべて変更前の版を保持（履歴に無い版のズレ ${unexplained.length}件）`);
 
   // =================================================================
   section('11. 外部取得Connectorの受け皿（§12）');

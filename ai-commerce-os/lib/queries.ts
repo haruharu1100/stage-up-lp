@@ -2,11 +2,23 @@ import { all, one, today } from './db/client';
 import { ensureSuppliersAndChannels } from './connectors/registry';
 import { ensureSettings } from './settings';
 import { ensureVenues } from './venues';
+import { applyVerifiedFees } from './feeverified';
+import { syncFeeStatuses } from './feestatus';
+
+let feesApplied = false;
 
 export async function ensureReady(): Promise<void> {
   await ensureSettings();
   await ensureSuppliersAndChannels();
   await ensureVenues();
+  // 公式に確認が取れた手数料を反映し、状態（確認済み／概算／期限切れ／不明）を計算し直す。
+  // 状態は「今日から見て何日前に確認したか」で変わるので、毎回計算する必要がある。
+  // 反映そのものは冪等なので、何度呼んでも数字は動かない。
+  if (!feesApplied) {
+    await applyVerifiedFees();
+    feesApplied = true;
+  }
+  await syncFeeStatuses();
 }
 
 export type DashboardSummary = {

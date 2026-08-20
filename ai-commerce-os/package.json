@@ -17,7 +17,10 @@
     "test:phase3": "tsx scripts/test-phase3.ts",
     "observe": "tsx scripts/observe.ts",
     "report": "tsx scripts/report.ts",
-    "test:phase3-5": "tsx scripts/test-phase3-5.ts"
+    "fees": "tsx scripts/fees.ts",
+    "validation": "tsx scripts/validation.ts",
+    "test:phase3-5": "tsx scripts/test-phase3-5.ts",
+    "test:phase3-6": "tsx scripts/test-phase3-6.ts"
   },
   "dependencies": {
     "@libsql/client": "^0.14.0",

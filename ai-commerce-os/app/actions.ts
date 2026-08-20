@@ -6,6 +6,7 @@ import { runImport } from '@/lib/pipeline/import';
 import { runAnalyze } from '@/lib/pipeline/analyze';
 import { runRoutes } from '@/lib/pipeline/routes';
 import { importMarketData } from '@/lib/marketdata';
+import { importListingObservations, recordWork, WORK_STEPS, type WorkStepCode } from '@/lib/observation';
 import { ensureReady } from '@/lib/queries';
 import { invalidateSettingsCache, setSetting, SETTING_DEFS } from '@/lib/settings';
 import { CONDITION_RANKS, type ConditionRank } from '@/lib/conditions';
@@ -90,6 +91,67 @@ export async function importMarketDataAction(_prev: unknown, form: FormData) {
   } catch (e) {
     return { ok: false, message: e instanceof Error ? e.message : '取込に失敗しました。' };
   }
+}
+
+/**
+ * 実市場の出品を1件ずつ観測して取り込む（Phase 3.6・§3〜§9）。
+ *
+ * 相場CSVの取込とは別の入口にしてある。混ぜると
+ * 「相場の話」と「この1件の出品がどうなったかの話」が同じ数字に見えてしまう。
+ * Routeの作りなおしはここでは行わない（観測は相場テーブルを直接動かさないため）。
+ */
+export async function importObservationsAction(_prev: unknown, form: FormData) {
+  await ensureReady();
+
+  const file = form.get('file');
+  const pasted = String(form.get('text') ?? '');
+  let text = pasted;
+  if (file instanceof File && file.size > 0) text = await file.text();
+  if (!text.trim()) return { ok: false, message: 'CSVファイルを選ぶか、CSVの中身を貼り付けてください。' };
+
+  try {
+    const result = await importListingObservations(text);
+
+    // 取込にかかった時間が書いてあれば、工程「取り込む」として記録する（§19）。
+    const importSeconds = Number(form.get('import_seconds') ?? 0);
+    if (Number.isFinite(importSeconds) && importSeconds > 0) {
+      await recordWork('IMPORT', 'IMPORT', importSeconds, result.observations, '画面からの取込');
+    }
+    // 1行ずつ書いてあった入力秒数は「数字を書き写す」工程としてまとめる。
+    if (result.entrySecondsRows > 0) {
+      await recordWork('RECORD', 'RECORD', result.entrySecondsTotal, result.entrySecondsRows, 'CSVの入力秒数欄から');
+    }
+
+    if (!result.ok) return { ok: false, message: result.message, result };
+    await audit('IMPORT_LISTING_OBSERVATIONS', 'listing_observations', {
+      observations: result.observations, newListings: result.newListings, real: result.realRows,
+    });
+    revalidatePath('/validation');
+    return { ok: true, message: result.message, result };
+  } catch (e) {
+    return { ok: false, message: e instanceof Error ? e.message : '取込に失敗しました。' };
+  }
+}
+
+/** 工程ごとの作業時間を手で記録する（§19 §20）。感覚ではなく秒で残す。 */
+export async function recordWorkAction(_prev: unknown, form: FormData) {
+  await ensureReady();
+  const step = String(form.get('step') ?? '');
+  if (!WORK_STEPS.some((s) => s.code === step)) {
+    return { ok: false, message: '工程を選んでください。' };
+  }
+  const seconds = Number(form.get('seconds') ?? 0);
+  const rows = Number(form.get('rows') ?? 0);
+  if (!Number.isFinite(seconds) || seconds <= 0) {
+    return { ok: false, message: 'かかった時間（秒）を入れてください。' };
+  }
+  await recordWork(
+    `MANUAL-${nowIso().slice(0, 10)}`, step as WorkStepCode, seconds, rows,
+    String(form.get('note') ?? '') || undefined,
+  );
+  await audit('RECORD_WORK_TIME', 'observation_work_log', { step, seconds, rows });
+  revalidatePath('/validation');
+  return { ok: true, message: `記録しました（${seconds}秒 / ${rows}件）。` };
 }
 
 export async function rebuildRoutesAction() {
