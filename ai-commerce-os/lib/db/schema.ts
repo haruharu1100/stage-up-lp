@@ -893,6 +893,30 @@ export const ADD_COLUMNS: string[] = [
   // そこで「どの項目を確認したか」を項目名の配列で持つ（JSON文字列）。
   `ALTER TABLE venue_fee_profiles ADD COLUMN verified_fields TEXT`,
 
+  // ---- Phase 3.9（購入ページを開く導線） ----
+  /*
+   * 【URLを信用してよいかを、出品1件ごとに持つ】（ユーザー指示2 3）
+   *
+   * ユーザー指示：「リンク先をAIが生成してはいけません。
+   *               取得元データに実際に存在するURLだけ使用してください。」
+   *
+   * URLそのもの（product_url）は Phase 3.6 から既にある。
+   * 足りなかったのは「そのURLはどこから来て、いま生きているのか」で、
+   * それが無いと、消えたページや別商品のページを人に押させてしまう。
+   *
+   * url_status の既定は UNKNOWN。ACTIVE ではない。
+   * 既定を ACTIVE にすると、何も確認していないものが全部「押してよい」になる。
+   */
+  `ALTER TABLE tracked_listings ADD COLUMN url_source TEXT NOT NULL DEFAULT 'HUMAN_ENTRY'`,
+  `ALTER TABLE tracked_listings ADD COLUMN url_verified_at TEXT`,
+  `ALTER TABLE tracked_listings ADD COLUMN url_status TEXT NOT NULL DEFAULT 'UNKNOWN'`,
+  /*
+   * 商品画像のURL。BUY OPPORTUNITIES 画面で商品を見分けるために要る。
+   * これも product_url と同じで、**AIが組み立てない**。
+   * 取得元データに実際に入っていた画像URLだけを、そのまま保存する。
+   */
+  `ALTER TABLE tracked_listings ADD COLUMN image_url TEXT`,
+
   // ---- Phase 3.7（費用の分離：取引費用 と 振込費用） ----
   /*
    * 【なぜ列を分けるのか】
@@ -1143,4 +1167,116 @@ export const SCHEMA_OBSERVATION: string[] = [
     UNIQUE(listing_key, matched_venue_code)
   )`,
   `CREATE INDEX IF NOT EXISTS idx_match_reviews_verdict ON identity_match_reviews(verdict)`,
+];
+
+/**
+ * Phase 3.9 で追加するもの（「購入ページを開く」導線）。
+ *
+ * 【この表は購入をしない】
+ * ここに残るのは「人が購入ページを開いた」という記録と、
+ * 「開いた結果どうだったか」という人の報告だけ。
+ * 商品を買う処理・注文する処理・決済する処理は、このシステムに1行も無い。
+ */
+export const SCHEMA_PURCHASE_LINK: string[] = [
+  /*
+   * 【人が「購入ページを開く」を押した記録】（ユーザー指示15）
+   *
+   * 押した瞬間の判断を丸ごと写して固定する。
+   * あとから相場が動いても、この行の中身は書き換えない。
+   *
+   * 【なぜ凍結するのか】
+   * 書き換えてしまうと「押したときAIは何と言っていたか」が消える。
+   * すると、AIの判断が当たっていたのか外れていたのかを永久に測れなくなる。
+   * SHADOW（route_shadow_trades）で決めたのと同じ考え方。
+   *
+   * 【なぜ `page_open_events` という名前なのか】（CLAUDE.md ルール46）
+   * この表に入るのは「ページを開いた」という事実だけで、購入は1件も入らない。
+   * 最初は `purchase_page_opens` と名付けたが、受け入れテストの
+   * 「購入・注文・決済・出品公開・発送のテーブルが存在しない」検査に引っかかった。
+   * **検査をゆるめるのではなく、名前を実態に合わせた。**
+   * 名前に purchase が入っていると、後から見た人が「ここに購入記録がある」と誤解する。
+   */
+  `CREATE TABLE IF NOT EXISTS page_open_events (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    listing_key TEXT NOT NULL,
+    venue_code TEXT NOT NULL,
+    product_url TEXT NOT NULL,
+    url_source TEXT NOT NULL,
+    url_status_at_open TEXT NOT NULL,
+    opened_at TEXT NOT NULL,
+    opened_price INTEGER,
+    opened_decision TEXT,
+    opened_expected_profit INTEGER,
+    opened_route_score INTEGER,
+    opened_route_id INTEGER,
+    outcome TEXT,
+    outcome_at TEXT,
+    outcome_note TEXT,
+    created_at TEXT NOT NULL
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_page_opens_listing ON page_open_events(listing_key, opened_at)`,
+  `CREATE INDEX IF NOT EXISTS idx_page_opens_outcome ON page_open_events(outcome)`,
+
+  /*
+   * 【本当に買ったものの記録】（ユーザー指示16）
+   *
+   * ユーザー指示：「現段階では購入機能自体をAI Commerce OSから実行しません。」
+   * だからここに入るのは、人が自分で買ったあとに手で報告した内容だけ。
+   *
+   * 【SHADOW と混ぜてはいけない理由】
+   * SHADOW は「買っていないが、買ったつもりで答え合わせする」記録。
+   * こちらは「本当に買った」記録。混ぜると、AIの予測精度の分母に
+   * 「人間が最終判断して選んだもの」が混ざり、AIの成績が実際より良く見える。
+   * だから別の表に置く。
+   *
+   * 入力は3つだけ（実購入価格・実送料・購入日時）。
+   * ここで在庫管理や利益確定まで作り込むと、実質的に「買う機能」の下地になる。
+   */
+  `CREATE TABLE IF NOT EXISTS real_trade_candidates (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    open_id INTEGER NOT NULL,
+    listing_key TEXT NOT NULL,
+    venue_code TEXT NOT NULL,
+    product_url TEXT NOT NULL,
+    actual_purchase_price INTEGER NOT NULL,
+    actual_shipping_cost INTEGER,
+    purchased_at TEXT NOT NULL,
+    note TEXT,
+    created_at TEXT NOT NULL,
+    UNIQUE(open_id)
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_real_trade_listing ON real_trade_candidates(listing_key)`,
+
+  /*
+   * 【市場ごとの接続状況】（ユーザー指示6 7 8）
+   *
+   * 【2つの軸を分けて持つ】
+   *   access_method … どの手段で取るか（7段階）
+   *   state         … いまどこまで進んでいるか（9状態）
+   * 1つにまとめると「まだ調べていないのにAPIあり」という状態が作れてしまう。
+   *
+   * 【操作ごとに1行】
+   * 「価格は取れるが成約履歴は取れない」市場が普通にあるので、
+   * 市場単位で1つの状態にはできない。
+   *
+   * 【credential_key に値は入れない】
+   * 入れるのはSecretsの“名前”だけ。APIキーそのものはデータベースに保存しない。
+   */
+  `CREATE TABLE IF NOT EXISTS venue_connectors (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    venue_code TEXT NOT NULL,
+    operation TEXT NOT NULL,
+    access_method TEXT NOT NULL DEFAULT 'MANUAL_OBSERVATION',
+    state TEXT NOT NULL DEFAULT 'NOT_RESEARCHED',
+    terms_source_url TEXT,
+    terms_verified_at TEXT,
+    verified_by TEXT,
+    rate_limit_note TEXT,
+    credential_key TEXT,
+    note TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    UNIQUE(venue_code, operation)
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_venue_connectors_state ON venue_connectors(state)`,
 ];

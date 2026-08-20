@@ -13,6 +13,8 @@ import { ensureReady } from '@/lib/queries';
 import { invalidateSettingsCache, setSetting, SETTING_DEFS } from '@/lib/settings';
 import { CONDITION_RANKS, type ConditionRank } from '@/lib/conditions';
 import { isBuyPaymentMethod } from '@/lib/paymentmethods';
+import { recordOpenOutcome, recordPageOpen, setUrlStatus } from '@/lib/purchaselink';
+import { isPurchaseOutcome } from '@/lib/producturl';
 
 /**
  * 画面から呼べる操作はここだけ。
@@ -369,4 +371,85 @@ export async function reviewDecisionAction(_prev: unknown, form: FormData) {
   }
 
   return { ok: false, message: '不明な操作です。' };
+}
+
+/* ================================================================
+ * Phase 3.9：「購入ページを開く」導線
+ *
+ * ここにある操作は、どれも商品を買わない。
+ * 買うのは人が商品ページで行い、このシステムは「押した」「どうだった」を記録するだけ。
+ * 商品ページへの通信も行わない。
+ * ================================================================ */
+
+/** 商品ページの状態（出品中／売り切れ／消えた／不明）を人が記録する。 */
+export async function setUrlStatusAction(_prev: unknown, form: FormData) {
+  await ensureReady();
+  const listingKey = String(form.get('listing_key') ?? '').trim();
+  const status = String(form.get('url_status') ?? '').trim();
+  if (!listingKey) return { ok: false, message: '対象の出品が見つかりません。' };
+
+  const r = await setUrlStatus(listingKey, status);
+  if (r.ok) {
+    await audit('SET_URL_STATUS', listingKey, { status });
+    revalidatePath('/buy');
+    revalidatePath('/validation');
+  }
+  return r;
+}
+
+/**
+ * 人が「購入ページを開く」を押した記録を残す。
+ *
+ * 【この操作は購入ではない】
+ * 実際にページを開くのは画面上の普通のリンク。ここは記録だけ。
+ * 名前を openPurchasePageAction にしているのは、やっていることがそれだけだから。
+ */
+export async function openPurchasePageAction(_prev: unknown, form: FormData) {
+  await ensureReady();
+  const listingKey = String(form.get('listing_key') ?? '').trim();
+  if (!listingKey) return { ok: false, message: '対象の出品が見つかりません。' };
+
+  const r = await recordPageOpen(listingKey);
+  if (r.ok) {
+    await audit('OPENED_FOR_PURCHASE', listingKey, { openId: r.openId });
+    revalidatePath('/buy');
+  }
+  return r;
+}
+
+/** 開いたあと、どうだったかを人が報告する（5択）。 */
+export async function recordOpenOutcomeAction(_prev: unknown, form: FormData) {
+  await ensureReady();
+  const openId = Number(form.get('open_id'));
+  const outcome = String(form.get('outcome') ?? '');
+  const note = String(form.get('note') ?? '');
+  if (!openId) return { ok: false, message: '対象の記録が見つかりません。' };
+  if (!isPurchaseOutcome(outcome)) return { ok: false, message: '結果を選んでください。' };
+
+  // 「違う商品だった」を選んだときは理由を必ず書かせる（Phase 3.8 と同じ扱い）。
+  if (outcome === 'DIFFERENT_ITEM' && note.trim() === '') {
+    return { ok: false, message: '「違う商品だった」を選んだときは、何が違ったのかを必ず書いてください。' };
+  }
+
+  const numOrNull = (k: string) => {
+    const v = String(form.get(k) ?? '').trim();
+    if (v === '') return null;
+    const n = Number(v.replace(/[,\s円]/g, ''));
+    return Number.isFinite(n) ? n : null;
+  };
+
+  const r = await recordOpenOutcome({
+    openId,
+    outcome,
+    note,
+    actualPrice: numOrNull('actual_price'),
+    actualShipping: numOrNull('actual_shipping'),
+    purchasedAt: String(form.get('purchased_at') ?? '').trim() || null,
+  });
+  if (r.ok) {
+    await audit('PURCHASE_PAGE_OUTCOME', String(openId), { outcome });
+    revalidatePath('/buy');
+    revalidatePath('/validation');
+  }
+  return r;
 }
