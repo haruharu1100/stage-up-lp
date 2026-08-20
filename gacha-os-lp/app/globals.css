@@ -1,0 +1,410 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: auto;
+    -webkit-text-size-adjust: 100%;
+    /* スクロール連動アニメーションの位置計算の基準にする */
+    position: relative;
+  }
+
+  body {
+    @apply bg-paper text-slate font-sans antialiased;
+    overflow-x: hidden;
+  }
+
+  ::selection {
+    background: rgba(27, 75, 216, 0.16);
+    color: #0b1220;
+  }
+
+  /* キーボード操作時にどこを触っているかを必ず分かるようにする */
+  :focus-visible {
+    outline: 2px solid #1b4bd8;
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+
+  /* 暗い面の中では白い枠のほうが見える */
+  .on-dark :focus-visible {
+    outline-color: #7cc4ff;
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #eef2f8;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: rgba(11, 18, 32, 0.18);
+    border-radius: 99px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(27, 75, 216, 0.55);
+  }
+}
+
+@layer components {
+  .container-x {
+    @apply mx-auto w-full max-w-[1200px] px-5 sm:px-8;
+  }
+
+  /* 大きく見せたいセクション用。左右をもう少し広く使う */
+  .container-wide {
+    @apply mx-auto w-full max-w-[1440px] px-5 sm:px-10;
+  }
+
+  /* ═══════════════ 明るい面（LP本体） ═══════════════ */
+
+  /* すりガラス。白の上で「浮いている板」に見せる */
+  .lp-glass {
+    background: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.94) 0%,
+      rgba(247, 250, 254, 0.86) 100%
+    );
+    border: 1px solid rgba(11, 18, 32, 0.09);
+    backdrop-filter: blur(18px) saturate(1.4);
+    -webkit-backdrop-filter: blur(18px) saturate(1.4);
+  }
+
+  .lp-card {
+    @apply lp-glass rounded-3xl shadow-lift;
+  }
+
+  /* 薄いブルー寄りの面。白のとなりに置いて層をつくる */
+  .lp-tint {
+    background: linear-gradient(
+      180deg,
+      rgba(237, 242, 249, 0.9) 0%,
+      rgba(232, 239, 254, 0.62) 100%
+    );
+    border: 1px solid rgba(11, 18, 32, 0.07);
+  }
+
+  .rule {
+    height: 1px;
+    width: 100%;
+    background: linear-gradient(
+      to right,
+      transparent,
+      rgba(11, 18, 32, 0.14),
+      transparent
+    );
+  }
+
+  .eyebrow-lite {
+    @apply font-mono text-label uppercase text-blue-ink;
+  }
+
+  .grid-lite {
+    background-image: linear-gradient(
+        to right,
+        rgba(11, 18, 32, 0.045) 1px,
+        transparent 1px
+      ),
+      linear-gradient(to bottom, rgba(11, 18, 32, 0.045) 1px, transparent 1px);
+    background-size: 64px 64px;
+  }
+
+  .text-gradient-ink {
+    background: linear-gradient(178deg, #0b1220 20%, #33405a 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .text-gradient-royal {
+    background: linear-gradient(96deg, #1b4bd8 0%, #0891b2 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  /* ═══════════════ 暗い面（コンソール／危険警告／最終画面） ═══════════════ */
+
+  /* 明るいLPの中に「製品の管理画面」をそのまま置くための面 */
+  .console {
+    @apply on-dark text-ink;
+    background: linear-gradient(180deg, #0d1426 0%, #070c18 100%);
+    border: 1px solid rgba(255, 255, 255, 0.10);
+  }
+
+  .console-deep {
+    @apply on-dark text-ink;
+    background: radial-gradient(
+        120% 80% at 50% 0%,
+        rgba(27, 75, 216, 0.20),
+        transparent 62%
+      ),
+      linear-gradient(180deg, #080e1c 0%, #05060a 100%);
+  }
+
+  /* 既存の暗い画面（/demo /launch /sales-demo）が使っている定義。変更しない */
+  .glass {
+    background: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.055) 0%,
+      rgba(255, 255, 255, 0.018) 100%
+    );
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+  }
+
+  .glass-strong {
+    background: linear-gradient(
+      180deg,
+      rgba(19, 27, 51, 0.92) 0%,
+      rgba(8, 12, 24, 0.92) 100%
+    );
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+  }
+
+  .eyebrow {
+    @apply font-mono text-[11px] uppercase tracking-[0.32em] text-blue-bright;
+  }
+
+  .hairline {
+    height: 1px;
+    width: 100%;
+    background: linear-gradient(
+      to right,
+      transparent,
+      rgba(255, 255, 255, 0.12),
+      transparent
+    );
+  }
+
+  .card {
+    @apply glass rounded-2xl;
+  }
+
+  .grid-bg {
+    background-image: linear-gradient(
+        to right,
+        rgba(255, 255, 255, 0.04) 1px,
+        transparent 1px
+      ),
+      linear-gradient(to bottom, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+    background-size: 56px 56px;
+  }
+
+  /* ═══════════════ 共通 ═══════════════ */
+
+  .h-display {
+    @apply font-semibold tracking-tightest leading-[1.08];
+  }
+
+  .num {
+    @apply font-mono tabular-nums tracking-tight;
+  }
+
+  .btn {
+    @apply relative inline-flex items-center justify-center gap-2 rounded-full px-7 py-4 text-[16px] font-semibold transition-all duration-300 will-change-transform;
+  }
+
+  /* 大きいCTA（スマホでも押しやすい） */
+  .btn-lg {
+    @apply btn px-9 py-[19px] text-[17px] sm:text-[18px];
+  }
+
+  .btn-primary {
+    @apply btn text-white;
+    background: linear-gradient(100deg, #1436a8 0%, #1b4bd8 48%, #2f8fd6 110%);
+    box-shadow: 0 10px 34px -12px rgba(27, 75, 216, 0.75),
+      0 2px 6px rgba(27, 75, 216, 0.2);
+  }
+  .btn-primary:hover {
+    box-shadow: 0 18px 48px -12px rgba(27, 75, 216, 0.9),
+      0 2px 6px rgba(27, 75, 216, 0.24);
+    transform: translateY(-1px);
+  }
+
+  /* 明るい面での第2ボタン */
+  .btn-outline {
+    @apply btn border text-slate;
+    border-color: rgba(11, 18, 32, 0.16);
+    background: rgba(255, 255, 255, 0.75);
+    box-shadow: 0 1px 2px rgba(11, 18, 32, 0.04);
+  }
+  .btn-outline:hover {
+    border-color: rgba(27, 75, 216, 0.42);
+    background: #ffffff;
+    transform: translateY(-1px);
+  }
+
+  /* 暗い面での第2ボタン（既存画面が使用） */
+  .btn-ghost {
+    @apply btn border border-white/15 text-ink;
+    background: rgba(255, 255, 255, 0.03);
+  }
+  .btn-ghost:hover {
+    border-color: rgba(255, 255, 255, 0.3);
+    background: rgba(255, 255, 255, 0.07);
+  }
+
+  .mask-fade-b {
+    -webkit-mask-image: linear-gradient(to bottom, #000 55%, transparent 100%);
+    mask-image: linear-gradient(to bottom, #000 55%, transparent 100%);
+  }
+
+  /* ───── スライダー ───── */
+  .range {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 4px;
+    border-radius: 99px;
+    background: rgba(255, 255, 255, 0.1);
+    outline: none;
+    cursor: pointer;
+  }
+  .range::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: linear-gradient(140deg, #60a5fa, #22d3ee);
+    border: 2px solid #0b1020;
+    box-shadow: 0 0 0 1px rgba(96, 165, 250, 0.6),
+      0 6px 18px -4px rgba(59, 130, 246, 0.9);
+    transition: transform 0.15s ease;
+  }
+  .range::-webkit-slider-thumb:hover {
+    transform: scale(1.12);
+  }
+  .range::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #60a5fa;
+    border: 2px solid #0b1020;
+  }
+
+  .range-gold::-webkit-slider-thumb {
+    background: linear-gradient(140deg, #e3cfa0, #c8a96a);
+    box-shadow: 0 0 0 1px rgba(200, 169, 106, 0.6),
+      0 6px 18px -4px rgba(200, 169, 106, 0.8);
+  }
+
+  /* 明るい面の大きいスライダー（ROI用。指でつかめる太さにする） */
+  .range-lite {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 10px;
+    border-radius: 99px;
+    background: rgba(11, 18, 32, 0.09);
+    outline: none;
+    cursor: pointer;
+  }
+  .range-lite::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: linear-gradient(140deg, #ffffff, #eef3fb);
+    border: 1px solid rgba(11, 18, 32, 0.12);
+    box-shadow: 0 2px 4px rgba(11, 18, 32, 0.12),
+      0 10px 24px -8px rgba(27, 75, 216, 0.5);
+    transition: transform 0.16s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .range-lite::-webkit-slider-thumb:hover {
+    transform: scale(1.08);
+  }
+  .range-lite::-webkit-slider-thumb:active {
+    transform: scale(0.96);
+  }
+  .range-lite::-moz-range-thumb {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: #ffffff;
+    border: 1px solid rgba(11, 18, 32, 0.12);
+    box-shadow: 0 2px 4px rgba(11, 18, 32, 0.12);
+  }
+
+  /* 既存の暗い画面が使っている文字グラデーション */
+  .text-gradient {
+    background: linear-gradient(180deg, #ffffff 25%, #94a8c9 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .text-gradient-blue {
+    background: linear-gradient(96deg, #60a5fa 0%, #22d3ee 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .text-gradient-gold {
+    background: linear-gradient(96deg, #e3cfa0 0%, #c8a96a 60%, #8a6f3c 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+  .text-pretty {
+    text-wrap: pretty;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  /* 3Dの板を傾けるときの遠近 */
+  .persp {
+    perspective: 1400px;
+  }
+  .persp-near {
+    perspective: 900px;
+  }
+  .preserve-3d {
+    transform-style: preserve-3d;
+  }
+  /* スマホの横スワイプカード */
+  .swipe-x {
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+  }
+  .swipe-item {
+    scroll-snap-align: center;
+  }
+}
+
+/*
+ * プレゼンテーションモード（/demo?presentation=true）。
+ * 画面録画・商談での画面共有向けに、数字や状態の変化を目で追える速さへ落とす。
+ */
+[data-presentation="true"] * {
+  transition-duration: 420ms;
+  transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "name": "gacha-os-lp",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev -p 3210",
+    "build": "node scripts/check-launch.mjs && next build",
+    "start": "next start",
+    "lint": "next lint",
+    "test": "tsx --test tests/*.test.ts",
+    "check:launch": "node scripts/check-launch.mjs",
+    "check:urls": "node scripts/check-urls.mjs",
+    "verify": "tsc --noEmit && npm test && npm run check:urls && npm run build"
+  },
+  "dependencies": {
+    "@react-three/drei": "^9.114.3",
+    "@react-three/fiber": "^8.17.10",
+    "framer-motion": "^11.11.17",
+    "lenis": "^1.1.18",
+    "next": "^14.2.35",
+    "react": "^18",
+    "react-dom": "^18",
+    "three": "^0.169.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "@types/three": "^0.169.0",
+    "eslint": "^8",
+    "eslint-config-next": "14.2.15",
+    "postcss": "^8",
+    "tailwindcss": "^3.4.1",
+    "tsx": "^4.23.12",
+    "typescript": "^5"
+  }
+}
