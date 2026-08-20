@@ -1,3 +1,4 @@
+import { capFeeConfidence, deriveFeeStatus } from './feestatus';
 import type { FeeProfile, MarketObservation } from './route';
 
 /**
@@ -103,24 +104,34 @@ export function marketDataConfidence(
 /**
  * FEE_DATA_CONFIDENCE（0〜100）。
  * 概算のままの手数料は、利益額そのものが動く。ここを甘く見ると全部が狂う。
+ *
+ * 【Phase 3.5 で足したこと（§2）】
+ * 4段階の状態（VERIFIED / ESTIMATED / OUTDATED / UNKNOWN）による天井を必ず通す。
+ * Phase 3 までは is_estimated=0 でありさえすれば70点台に届いたため、
+ * 5年前に確認したきりの料金でも STRONG BUY になり得た。
+ * 「確認済み」以外は STRONG BUY に必要な信頼度（既定65）へ届かないところで蓋をする。
  */
 export function feeDataConfidence(buyFee: FeeProfile, sellFee: FeeProfile, now = Date.now()): number {
   const score = (f: FeeProfile): number => {
+    let c: number;
     if (f.is_estimated === 1) {
       // 概算。出典すら無いものはさらに低い。
-      return f.source_url ? 45 : 30;
-    }
-    let c = 75;
-    if (f.source_url) c += 10;
-    if (f.manually_verified_by) c += 5;
-    if (f.verified_at) {
-      const ageDays = (now - Date.parse(f.verified_at)) / 86400000;
-      if (Number.isFinite(ageDays)) {
-        if (ageDays <= 90) c += 10;
-        else if (ageDays > 365) c -= 15; // 1年以上前の確認は「確認済み」と言い切れない
+      c = f.source_url ? 45 : 30;
+    } else {
+      c = 75;
+      if (f.source_url) c += 10;
+      if (f.manually_verified_by) c += 5;
+      if (f.verified_at) {
+        const ageDays = (now - Date.parse(f.verified_at)) / 86400000;
+        if (Number.isFinite(ageDays)) {
+          if (ageDays <= 90) c += 10;
+          else if (ageDays > 365) c -= 15; // 1年以上前の確認は「確認済み」と言い切れない
+        }
       }
     }
-    return clamp(c, 0, 100);
+    // 状態による天井。ここが Phase 3.5 の追加分。
+    const status = deriveFeeStatus(f as Parameters<typeof deriveFeeStatus>[0], now).status;
+    return clamp(capFeeConfidence(c, status), 0, 100);
   };
   // 片方が概算なら利益は確定しない。弱い方に引きずられるべきなので最小値を採る。
   return Math.round(Math.min(score(buyFee), score(sellFee)));

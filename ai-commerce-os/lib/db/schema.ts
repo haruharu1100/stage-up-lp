@@ -667,6 +667,105 @@ export const SCHEMA: string[] = [
     detected_at      TEXT NOT NULL,
     note             TEXT
   )`,
+
+  // ============================================================ Phase 3.5
+  // 「テストデータでは動く」から「実際の市場で当たる」へ進むための層。
+  // ここでも実購入・実出品はしない。観測・記録・答え合わせだけ。
+
+  // 相場の時系列（§5 §6）。
+  //
+  // 【なぜ venue_market_prices と別に持つのか】
+  // venue_market_prices は「今いくらか」を1行で持つ表で、取り込むたびに上書きされる。
+  // それだけだと「80,000→78,000→82,000と動いた」という履歴が消える。
+  // 本当に安く買えるタイミングだったのかは、履歴が無いと永久に判定できない。
+  //
+  // 【この表は追記専用】
+  // UPDATE を書かない。同じ観測が二度来たら ON CONFLICT DO NOTHING で捨てる。
+  // 後から現在値で上書きすると、常に自分が正しかったことになる。
+  `CREATE TABLE IF NOT EXISTS market_snapshots (
+    id                 INTEGER PRIMARY KEY AUTOINCREMENT,
+    identity_key       TEXT NOT NULL,
+    product_id         INTEGER,
+    venue_code         TEXT NOT NULL,
+    role               TEXT NOT NULL,
+    observed_at        TEXT NOT NULL,
+    buy_price          INTEGER,
+    sell_price         INTEGER,
+    lowest_listing     INTEGER,
+    median_listing     INTEGER,
+    average_listing    INTEGER,
+    sold_price         INTEGER,
+    sold_count         INTEGER,
+    listing_count      INTEGER,
+    avg_days_to_sell   REAL,
+    price_stddev_ratio REAL,
+    price_basis        TEXT,
+    data_source        TEXT NOT NULL DEFAULT 'CSV_MANUAL',
+    source_url         TEXT,
+    data_confidence    INTEGER,
+    real_market_data   INTEGER NOT NULL DEFAULT 0,
+    captured_at        TEXT NOT NULL,
+    UNIQUE(identity_key, venue_code, role, observed_at, data_source)
+  )`,
+
+  `CREATE INDEX IF NOT EXISTS ix_ms_series ON market_snapshots(identity_key, venue_code, role, observed_at)`,
+  `CREATE INDEX IF NOT EXISTS ix_ms_real   ON market_snapshots(real_market_data, observed_at)`,
+
+  // 利益機会の半減期（§7 §8）。
+  // 「人間が承認しても間に合うRoute」と「自動購入でないと間に合わないRoute」を分けるための集計。
+  // 実際に消えた機会だけを材料にする。生きている機会を混ぜると寿命を長く見積もってしまう。
+  `CREATE TABLE IF NOT EXISTS opportunity_half_life (
+    id                    INTEGER PRIMARY KEY AUTOINCREMENT,
+    segment_type          TEXT NOT NULL,
+    segment_key           TEXT NOT NULL,
+    sample_count          INTEGER NOT NULL DEFAULT 0,
+    expired_count         INTEGER NOT NULL DEFAULT 0,
+    p25_lifetime_hours    REAL,
+    median_lifetime_hours REAL,
+    p75_lifetime_hours    REAL,
+    half_life_hours       REAL,
+    reachability          TEXT NOT NULL DEFAULT 'UNKNOWN',
+    reachability_note     TEXT,
+    updated_at            TEXT NOT NULL,
+    UNIQUE(segment_type, segment_key)
+  )`,
+
+  // Phase 4 卒業条件の判定結果（§20 §25）。
+  //
+  // 【なぜ履歴で残すのか】
+  // 「いつ基準を満たしたのか」「満たしたあとで悪化していないか」を後から追えるようにする。
+  // そして何より、AIがこの表を見て自分で次のPhaseへ進むことはしない。
+  // ここは人間が読むための表であって、実行の許可証ではない。
+  `CREATE TABLE IF NOT EXISTS phase_gate_log (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    evaluated_at  TEXT NOT NULL,
+    gate_name     TEXT NOT NULL,
+    passed        INTEGER NOT NULL DEFAULT 0,
+    passed_count  INTEGER NOT NULL DEFAULT 0,
+    total_count   INTEGER NOT NULL DEFAULT 0,
+    verdict_ja    TEXT NOT NULL,
+    detail_json   TEXT,
+    UNIQUE(evaluated_at, gate_name)
+  )`,
+
+  // 実市場データの取得記録（§4 §23）。
+  //
+  // 【なぜ取得の失敗まで残すのか】
+  // 「つながらなかった」を残さないと、あとで「なぜ0件なのか」が分からなくなる。
+  // 規約上できないのか、鍵が無いのか、単に実行していないのかを区別する。
+  `CREATE TABLE IF NOT EXISTS market_fetch_log (
+    id             INTEGER PRIMARY KEY AUTOINCREMENT,
+    venue_code     TEXT NOT NULL,
+    operation      TEXT NOT NULL,
+    attempted_at   TEXT NOT NULL,
+    ok             INTEGER NOT NULL DEFAULT 0,
+    reason         TEXT NOT NULL,
+    source_type    TEXT,
+    item_count     INTEGER NOT NULL DEFAULT 0,
+    message        TEXT
+  )`,
+
+  `CREATE INDEX IF NOT EXISTS ix_fetchlog_venue ON market_fetch_log(venue_code, attempted_at)`,
 ];
 
 /**
@@ -730,4 +829,59 @@ export const ADD_COLUMNS: string[] = [
   `ALTER TABLE route_shadow_trades ADD COLUMN sell_fee_version TEXT`,
   `ALTER TABLE route_shadow_trades ADD COLUMN final_outcome TEXT`,
   `ALTER TABLE route_shadow_trades ADD COLUMN final_horizon INTEGER`,
+
+  // ---- Phase 3.5 ----
+  // 手数料の状態を4段階で持つ（§1）。is_estimated の0/1だけでは
+  // 「昔確認したが料金改定で無効になった」を表せない。
+  `ALTER TABLE venue_fee_profiles ADD COLUMN fee_status TEXT NOT NULL DEFAULT 'UNKNOWN'`,
+  `ALTER TABLE venue_fee_profiles ADD COLUMN source_name TEXT`,
+  `ALTER TABLE venue_fee_profiles ADD COLUMN status_note TEXT`,
+
+  // 相場データにも出典URLと「実市場データか」の印を持たせる（§4 §9）。
+  // 設計用のサンプルを実データとして数えないための唯一の防波堤。
+  `ALTER TABLE venue_market_prices ADD COLUMN source_url TEXT`,
+  `ALTER TABLE venue_market_prices ADD COLUMN real_market_data INTEGER NOT NULL DEFAULT 0`,
+
+  // Route に「理論／補正後／保守」の3本立てと下振れを持たせる（§11〜§16）。
+  `ALTER TABLE arbitrage_routes ADD COLUMN real_market_data INTEGER NOT NULL DEFAULT 0`,
+  `ALTER TABLE arbitrage_routes ADD COLUMN buy_fee_status TEXT`,
+  `ALTER TABLE arbitrage_routes ADD COLUMN sell_fee_status TEXT`,
+  `ALTER TABLE arbitrage_routes ADD COLUMN raw_expected_sell_price INTEGER`,
+  `ALTER TABLE arbitrage_routes ADD COLUMN calibrated_expected_sell_price INTEGER`,
+  `ALTER TABLE arbitrage_routes ADD COLUMN conservative_sell_price INTEGER`,
+  `ALTER TABLE arbitrage_routes ADD COLUMN sell_price_low_80 INTEGER`,
+  `ALTER TABLE arbitrage_routes ADD COLUMN sell_price_high_80 INTEGER`,
+  `ALTER TABLE arbitrage_routes ADD COLUMN interval_basis TEXT`,
+  `ALTER TABLE arbitrage_routes ADD COLUMN raw_expected_roi REAL`,
+  `ALTER TABLE arbitrage_routes ADD COLUMN calibrated_expected_roi REAL`,
+  `ALTER TABLE arbitrage_routes ADD COLUMN conservative_expected_roi REAL`,
+  `ALTER TABLE arbitrage_routes ADD COLUMN calibration_source TEXT`,
+  `ALTER TABLE arbitrage_routes ADD COLUMN conservative_net_profit INTEGER`,
+  `ALTER TABLE arbitrage_routes ADD COLUMN downside_profit INTEGER`,
+  `ALTER TABLE arbitrage_routes ADD COLUMN max_expected_loss INTEGER`,
+
+  // SHADOW にも同じ3本立てを凍結して残す。あとから作り直せない。
+  `ALTER TABLE route_shadow_trades ADD COLUMN real_market_data INTEGER NOT NULL DEFAULT 0`,
+  `ALTER TABLE route_shadow_trades ADD COLUMN raw_expected_roi REAL`,
+  `ALTER TABLE route_shadow_trades ADD COLUMN calibrated_expected_roi REAL`,
+  `ALTER TABLE route_shadow_trades ADD COLUMN conservative_expected_roi REAL`,
+  `ALTER TABLE route_shadow_trades ADD COLUMN raw_expected_sell_price INTEGER`,
+  `ALTER TABLE route_shadow_trades ADD COLUMN calibrated_expected_sell_price INTEGER`,
+  `ALTER TABLE route_shadow_trades ADD COLUMN conservative_sell_price INTEGER`,
+  `ALTER TABLE route_shadow_trades ADD COLUMN sell_price_low_80 INTEGER`,
+  `ALTER TABLE route_shadow_trades ADD COLUMN sell_price_high_80 INTEGER`,
+  `ALTER TABLE route_shadow_trades ADD COLUMN conservative_net_profit INTEGER`,
+  `ALTER TABLE route_shadow_trades ADD COLUMN downside_profit INTEGER`,
+  `ALTER TABLE route_shadow_trades ADD COLUMN max_expected_loss INTEGER`,
+  `ALTER TABLE route_shadow_trades ADD COLUMN buy_fee_status TEXT`,
+  `ALTER TABLE route_shadow_trades ADD COLUMN sell_fee_status TEXT`,
+
+  // 答え合わせに「外した向き」を持たせる（§17 §18）。
+  // 見送って儲かった(FALSE_NEGATIVE)より、買うと言って損した(FALSE_POSITIVE)の方が重い。
+  `ALTER TABLE shadow_evaluations ADD COLUMN error_class TEXT`,
+  `ALTER TABLE shadow_evaluations ADD COLUMN decision_at_decision TEXT`,
+  `ALTER TABLE shadow_evaluations ADD COLUMN real_market_data INTEGER NOT NULL DEFAULT 0`,
+
+  // 精度集計にも実市場かどうかの印を持たせる。
+  `ALTER TABLE prediction_accuracy ADD COLUMN real_market_only INTEGER NOT NULL DEFAULT 0`,
 ];

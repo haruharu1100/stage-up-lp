@@ -3,6 +3,11 @@ import {
   type ConfidenceSet, type Freshness,
 } from './confidence';
 import { all } from './db/client';
+import { deriveFeeStatus, type FeeStatus } from './feestatus';
+import {
+  buildSellPriceForecast, NO_CALIBRATION,
+  type Calibration, type SellPriceForecast,
+} from './forecast';
 import type { Thresholds } from './settings';
 import type { Decision } from './score';
 
@@ -45,6 +50,11 @@ export type FeeProfile = {
   source_type?: string | null;
   manually_verified_by?: string | null;
   fee_version?: string | null;
+  // Phase 3.5。手数料の状態判定（VERIFIED/ESTIMATED/OUTDATED/UNKNOWN）に使う。
+  effective_from?: string | null;
+  effective_to?: string | null;
+  source_name?: string | null;
+  fee_status?: string | null;
 };
 
 // ---------------------------------------------------------------- BUY 側
@@ -133,6 +143,9 @@ export type MarketObservation = {
   median_price?: number | null;
   avg_price?: number | null;
   source_type?: string | null;
+  // Phase 3.5。実市場データかどうか。テストデータを実データとして数えないための印。
+  source_url?: string | null;
+  real_market_data?: boolean;
 };
 
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
@@ -248,6 +261,34 @@ export type RouteInput = {
   normalHours?: number;
   /** テストで時刻を固定するため */
   now?: number;
+
+  // ---- Phase 3.5（省略可） ----
+  /** 実市場データの答え合わせから学んだ補正。無ければ理論値のまま。 */
+  calibration?: Calibration;
+  /** 予測レンジの既定幅（ばらつきが分からない市場用） */
+  forecastDefaultBand?: number;
+  /** 保守見積りの控えめ率（実績が無いとき） */
+  conservativeHaircut?: number;
+  /** この相場データが実市場のものか。テストデータは false のまま。 */
+  realMarketData?: boolean;
+};
+
+/**
+ * 理論／補正後／保守の3本立て（Phase 3.5・§11〜§16）。
+ * 将来お金を出す判断は conservativeNetProfit と conservativeRoi で行う（§13）。
+ */
+export type RouteForecast = {
+  sellPrice: SellPriceForecast;
+  rawNetProfit: number;
+  calibratedNetProfit: number;
+  conservativeNetProfit: number;
+  /** 80%レンジの下側で売れた場合の利益。マイナスなら「当たり前に損する可能性がある」。 */
+  downsideProfit: number;
+  /** 売れ残った場合の最大損失。仕入に投じた総額がそのまま損になる。 */
+  maxExpectedLoss: number;
+  rawRoi: number | null;
+  calibratedRoi: number | null;
+  conservativeRoi: number | null;
 };
 
 export type RouteResult = {
@@ -279,6 +320,12 @@ export type RouteResult = {
   adjustmentTier: string | null;
   /** データ品質が理由で判定を1段下げたか（§9） */
   confidenceCapped: boolean;
+
+  // ---- Phase 3.5 ----
+  forecast: RouteForecast;
+  realMarketData: boolean;
+  buyFeeStatus: FeeStatus;
+  sellFeeStatus: FeeStatus;
 };
 
 export function calcRoute(input: RouteInput): RouteResult {
@@ -383,6 +430,34 @@ export function calcRoute(input: RouteInput): RouteResult {
     confidenceCapped = true;
   }
 
+  // --- Phase 3.5：理論／補正後／保守の3本立て（§11〜§16） ---
+  // 判定（decision）そのものはここでは変えない。
+  // 変えてしまうと Phase 3 までの答え合わせと地続きでなくなり、
+  // 「補正のせいで良くなったのか、判定が良かったのか」が分からなくなる。
+  // 保守値は表示と、将来の実購入判断のために持つ。
+  const sellForecast = buildSellPriceForecast(input.sellPrice, input.calibration ?? NO_CALIBRATION, {
+    stddevRatio: input.sellObservation?.price_stddev_ratio ?? null,
+    defaultBand: input.forecastDefaultBand ?? 0.15,
+    defaultHaircut: input.conservativeHaircut ?? 0.15,
+  });
+  const profitAt = (price: number) => calcNetReceipt(price, input.sellFee).netReceipt - buy.total;
+  const roiAt = (profit: number) => (buy.total > 0 ? profit / buy.total : null);
+  const calibratedNetProfit = profitAt(sellForecast.calibrated);
+  const conservativeNetProfit = profitAt(sellForecast.conservative);
+  const downsideProfit = profitAt(sellForecast.low80);
+  const forecast: RouteForecast = {
+    sellPrice: sellForecast,
+    rawNetProfit: expectedNetProfit,
+    calibratedNetProfit,
+    conservativeNetProfit,
+    downsideProfit,
+    // 売れ残りが最悪の事態。仕入に使ったお金がまるごと返ってこない。
+    maxExpectedLoss: buy.total,
+    rawRoi: expectedRoi,
+    calibratedRoi: roiAt(calibratedNetProfit),
+    conservativeRoi: roiAt(conservativeNetProfit),
+  };
+
   return {
     buy, sell,
     expectedNetProfit,
@@ -407,6 +482,10 @@ export function calcRoute(input: RouteInput): RouteResult {
     scoreAdjustment,
     adjustmentTier: input.adjustmentTier ?? null,
     confidenceCapped,
+    forecast,
+    realMarketData: input.realMarketData === true,
+    buyFeeStatus: deriveFeeStatus(input.buyFee, now).status,
+    sellFeeStatus: deriveFeeStatus(input.sellFee, now).status,
   };
 }
 

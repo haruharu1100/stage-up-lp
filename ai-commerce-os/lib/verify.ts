@@ -167,6 +167,68 @@ export const VERDICT_JA: Record<string, string> = {
   APPROPRIATE: '点数は妥当だった',
 };
 
+// -------------------------------------------------- 間違いの種類（Phase 3.5・§17 §18）
+
+/**
+ * 【なぜ「外れた」だけでは足りないのか】
+ * 外れ方には2種類あり、痛みの大きさが全然違う。
+ *
+ *   FALSE_POSITIVE（買うと判断 → 実際は損）
+ *     … 現金が減る。在庫が残る。同じ判定が続けば損が積み上がる。
+ *
+ *   FALSE_NEGATIVE（見送った → 実際は儲かった）
+ *     … 儲け損ねただけ。財布からお金は出ていかない。
+ *
+ * 同じ「1件の間違い」でも、前者のほうがはるかに危険なので、
+ * 集計では FALSE_POSITIVE に重みを付けて数える（FALSE_POSITIVE_WEIGHT・既定3倍）。
+ * 「間違いが同じ件数だから互角」とは扱わない。
+ */
+export type ErrorClass =
+  /** 買うと判断して、実際に利益が出た */
+  | 'TRUE_POSITIVE'
+  /** 買うと判断したのに、実際は損だった。いちばん危険 */
+  | 'FALSE_POSITIVE'
+  /** 見送ったが、実際は利益が出ていた。取り逃し */
+  | 'FALSE_NEGATIVE'
+  /** 見送って正解だった */
+  | 'TRUE_NEGATIVE'
+  /** 実際に売れたかどうかが確認できず、勝ちにも負けにもできない */
+  | 'UNCLASSIFIED';
+
+export const ERROR_CLASS_JA: Record<ErrorClass, string> = {
+  TRUE_POSITIVE: '買うと判断して、実際に利益が出た',
+  FALSE_POSITIVE: '買うと判断したのに、実際は損だった（いちばん危険）',
+  FALSE_NEGATIVE: '見送ったが、実際は利益が出ていた（取り逃し）',
+  TRUE_NEGATIVE: '見送って正解だった',
+  UNCLASSIFIED: '実際に売れたか確認できず、勝ち負けを付けていない',
+};
+
+/** 「買う」と判断した扱いにする決定。WATCH は買っていないので含めない。 */
+export const POSITIVE_DECISIONS = new Set(['STRONG_BUY', 'BUY']);
+
+/**
+ * 判断と結果を突き合わせて、間違いの種類を決める。
+ *
+ * 【確認できないものを勝ちにも負けにもしない】
+ * 実際に売れたという証拠が無い（ACTUAL_SALE_UNCONFIRMED）ものは UNCLASSIFIED。
+ * ここを「たぶん売れた」で埋めると、精度の数字がいくらでも良く見えてしまう。
+ */
+export function classifyError(
+  decision: string | null,
+  outcome: Outcome,
+  actualNetProfit: number | null,
+): ErrorClass {
+  if (outcome === 'PENDING' || outcome === 'ACTUAL_SALE_UNCONFIRMED') return 'UNCLASSIFIED';
+  const boughtIt = POSITIVE_DECISIONS.has(String(decision ?? '').toUpperCase());
+
+  // 利益が出たと言えるのは「売れた」かつ「純利益がプラス」の時だけ。
+  // 売れていないのに含み益で勝ちにはしない。
+  const profited = outcome === 'SOLD' && actualNetProfit !== null && actualNetProfit > 0;
+
+  if (boughtIt) return profited ? 'TRUE_POSITIVE' : 'FALSE_POSITIVE';
+  return profited ? 'FALSE_NEGATIVE' : 'TRUE_NEGATIVE';
+}
+
 // ---------------------------------------------------------------- 実行
 
 /**
@@ -183,7 +245,8 @@ export async function runVerification(opts: { now?: string } = {}): Promise<Veri
             s.id, s.supplier_product_id, s.identity_key, s.category_key, s.decided_at,
             s.buy_venue_code, s.sell_venue_code, s.acquisition_total_cost,
             s.expected_sell_price, s.expected_net_receipt, s.expected_net_profit,
-            s.expected_roi, s.expected_days_to_sell, s.route_score, s.sell_fee_version
+            s.expected_roi, s.expected_days_to_sell, s.route_score, s.sell_fee_version,
+            s.decision, s.real_market_data
        FROM shadow_evaluations e
        JOIN route_shadow_trades s ON s.id = e.shadow_id
       WHERE e.outcome = 'PENDING' AND e.due_at <= ?
@@ -260,13 +323,20 @@ export async function runVerification(opts: { now?: string } = {}): Promise<Veri
               actual_sell_price = ?, actual_days_to_sell = ?, actual_net_receipt = ?,
               actual_net_profit = ?, actual_roi = ?,
               sell_price_error = ?, sell_price_error_ratio = ?, days_to_sell_error = ?,
-              net_profit_error = ?, roi_error = ?, probability_correct = ?, score_verdict = ?
+              net_profit_error = ?, roi_error = ?, probability_correct = ?, score_verdict = ?,
+              error_class = ?, decision_at_decision = ?, real_market_data = ?
             WHERE id = ?`,
       args: [
         now, ev.outcome, ev.basis, ev.note,
         ev.actualSellPrice, ev.actualDaysToSell, actualNetReceipt, actualNetProfit, actualRoi,
         sellPriceError, sellPriceErrorRatio, daysError, profitError, roiError,
-        probCorrect, verdict, r.eval_id,
+        probCorrect, verdict,
+        // §17 間違いの種類。判断そのものを答え合わせの行にも写して、後から集計しやすくする。
+        classifyError(r.decision === null || r.decision === undefined ? null : String(r.decision),
+          ev.outcome, actualNetProfit),
+        r.decision === null || r.decision === undefined ? null : String(r.decision),
+        Number(r.real_market_data ?? 0) === 1 ? 1 : 0,
+        r.eval_id,
       ],
     });
 

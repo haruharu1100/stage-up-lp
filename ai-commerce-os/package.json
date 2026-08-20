@@ -14,7 +14,10 @@
     "test:phase2": "tsx scripts/test-phase2.ts",
     "followup": "tsx scripts/followup.ts",
     "verify": "tsx scripts/verify.ts",
-    "test:phase3": "tsx scripts/test-phase3.ts"
+    "test:phase3": "tsx scripts/test-phase3.ts",
+    "observe": "tsx scripts/observe.ts",
+    "report": "tsx scripts/report.ts",
+    "test:phase3-5": "tsx scripts/test-phase3-5.ts"
   },
   "dependencies": {
     "@libsql/client": "^0.14.0",

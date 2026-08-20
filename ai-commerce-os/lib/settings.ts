@@ -300,6 +300,153 @@ export const SETTING_DEFS: SettingDef[] = [
     group_key: '学習',
     hint: '利益が出る状態がこれ以内で消えた価格差は、速度スコアを高くする（見つけても間に合わない可能性が高い）。',
   },
+
+  // --- 予測の3本立て（Phase 3.5） ---
+  {
+    key: 'CONSERVATIVE_HAIRCUT',
+    value: '0.15',
+    value_type: 'rate',
+    label: '保守見積りの控えめ幅',
+    group_key: '予測',
+    hint: '実績がまだ無いあいだ、保守的な販売価格を出すために理論値から何割引くか。実市場の実績がたまったら、この既定値ではなく実際の下振れを使う。',
+  },
+  {
+    key: 'FORECAST_DEFAULT_BAND',
+    value: '0.15',
+    value_type: 'rate',
+    label: '予測レンジの既定の広がり',
+    group_key: '予測',
+    hint: 'その市場の価格のばらつきが分からないときに使う仮の幅。実測のばらつきがあればそちらを使う。',
+  },
+  {
+    key: 'HUMAN_REACH_HOURS',
+    value: '24',
+    value_type: 'int',
+    label: '人間が承認して間に合う時間',
+    group_key: '予測',
+    hint: '価格差の半減期がこれ以上なら「人間が確認してから買っても間に合う」と判断する。これ未満は自動でないと間に合わない。',
+  },
+
+  // --- 精度（Phase 3.5・§17〜§19） ---
+  {
+    key: 'FALSE_POSITIVE_WEIGHT',
+    value: '3',
+    value_type: 'int',
+    label: '見込み違いの重み（買うと言って外した側）',
+    group_key: '精度',
+    hint: '「買うと判断したのに儲からなかった」を「見送ったのに儲かった」の何倍重く数えるか。赤字商品を大量に買う方が、良い商品を1件逃すよりはるかに危険なため。',
+  },
+
+  // --- Phase 4 卒業条件（Phase 3.5・§20） ---
+  // ここはAIが書き換えてはいけない。変更は人間のみ（CLAUDE.md ルール9）。
+  {
+    key: 'GATE_MIN_REAL_SHADOW',
+    value: '100',
+    value_type: 'int',
+    label: '必要な実市場の仮想取引 件数',
+    group_key: '卒業条件',
+    hint: 'テストデータは1件も数えない。実際の市場データで判断した記録だけを数える。',
+  },
+  {
+    key: 'GATE_MIN_EVALUATED',
+    value: '100',
+    value_type: 'int',
+    label: '答え合わせが終わった件数',
+    group_key: '卒業条件',
+    hint: '記録しただけでは何も証明していない。30日後の答え合わせまで終わった件数で数える。',
+  },
+  {
+    key: 'GATE_MIN_STRONG_BUY_SAMPLES',
+    value: '30',
+    value_type: 'int',
+    label: 'STRONG BUY の必要件数',
+    group_key: '卒業条件',
+    hint: '100件のうちSTRONG BUYが3件しかなければ、その精度は偶然と区別できない。STRONG BUYだけで最低これだけ要る。',
+  },
+  {
+    key: 'GATE_MIN_STRONG_BUY_PRECISION',
+    value: '0.90',
+    value_type: 'rate',
+    label: 'STRONG BUY の的中率',
+    group_key: '卒業条件',
+    hint: 'STRONG BUYと判断したもののうち、実際に利益が出た割合。',
+  },
+  {
+    key: 'GATE_MIN_STRONG_BUY_PRECISION_LOWER',
+    value: '0.75',
+    value_type: 'rate',
+    label: 'STRONG BUY 的中率の下限（悪く見積もった場合）',
+    group_key: '卒業条件',
+    hint: '件数が少ないと的中率はブレる。統計的に最も悪く見積もってもこれを下回らないことを条件にする。',
+  },
+  {
+    key: 'GATE_MIN_BUY_PRECISION',
+    value: '0.80',
+    value_type: 'rate',
+    label: 'BUY以上の的中率',
+    group_key: '卒業条件',
+  },
+  {
+    key: 'GATE_MAX_FALSE_POSITIVE_RATE',
+    value: '0.10',
+    value_type: 'rate',
+    label: '見込み違いの上限（買うと言って外した割合）',
+    group_key: '卒業条件',
+    hint: 'STRONG BUYのうち儲からなかった割合の上限。的中率90%と同じことを裏から言っている。',
+  },
+  {
+    key: 'GATE_MIN_VERIFIED_FEE_RATIO',
+    value: '0.90',
+    value_type: 'rate',
+    label: '手数料が確認済みの割合',
+    group_key: '卒業条件',
+  },
+  {
+    key: 'GATE_MIN_MARKET_CONFIDENCE',
+    value: '90',
+    value_type: 'int',
+    label: '相場データの信頼度（平均）',
+    group_key: '卒業条件',
+  },
+  {
+    key: 'GATE_MIN_MARKET_CONFIDENCE_WORST',
+    value: '70',
+    value_type: 'int',
+    label: '相場データの信頼度（最低値）',
+    group_key: '卒業条件',
+    hint: '平均だけ見ると、1件のひどいデータが良いデータに隠される。一番低い件も条件に入れる。',
+  },
+  {
+    key: 'GATE_MAX_UNCONFIRMED_RATIO',
+    value: '0.30',
+    value_type: 'rate',
+    label: '判定保留の上限割合',
+    group_key: '卒業条件',
+    hint: '100件のうち90件が「売れたか分からない」なら、的中率は残り10件だけで測ったことになる。',
+  },
+  {
+    key: 'GATE_MIN_VENUE_DIVERSITY',
+    value: '3',
+    value_type: 'int',
+    label: '必要な市場の種類数',
+    group_key: '卒業条件',
+    hint: '同じRouteばかり100件集めても、他の市場で通用する証明にならない。',
+  },
+  {
+    key: 'GATE_MIN_CATEGORY_DIVERSITY',
+    value: '3',
+    value_type: 'int',
+    label: '必要な商品カテゴリの種類数',
+    group_key: '卒業条件',
+  },
+  {
+    key: 'PHASE4_UNLOCKED',
+    value: 'false',
+    value_type: 'text',
+    label: 'Phase 4（少額の実取引）の解禁',
+    group_key: '卒業条件',
+    hint: 'AIはこの値を書き換えない。卒業条件を全部満たしても、人間がここを true にしない限り実取引には進まない。なお Phase 3.5 時点では、true にしても実購入のコード自体が存在しない。',
+  },
 ];
 
 let cache: Map<string, string> | null = null;
@@ -381,7 +528,62 @@ export type Thresholds = {
   accuracyMidSamples: number;
   accuracyFullSamples: number;
   opportunityFastHours: number;
+  // ---- Phase 3.5 ----
+  conservativeHaircut: number;
+  forecastDefaultBand: number;
+  humanReachHours: number;
+  falsePositiveWeight: number;
 };
+
+/** Phase 4 の卒業条件（§20）。AIは変更しない。人間だけが変える。 */
+export type GateThresholds = {
+  minRealShadow: number;
+  minEvaluated: number;
+  minStrongBuySamples: number;
+  minStrongBuyPrecision: number;
+  minStrongBuyPrecisionLower: number;
+  minBuyPrecision: number;
+  maxFalsePositiveRate: number;
+  minVerifiedFeeRatio: number;
+  minMarketConfidence: number;
+  minMarketConfidenceWorst: number;
+  maxUnconfirmedRatio: number;
+  minVenueDiversity: number;
+  minCategoryDiversity: number;
+};
+
+export async function getGateThresholds(): Promise<GateThresholds> {
+  const s = await loadSettings();
+  const num = (k: string) => Number(s.get(k));
+  return {
+    minRealShadow: num('GATE_MIN_REAL_SHADOW'),
+    minEvaluated: num('GATE_MIN_EVALUATED'),
+    minStrongBuySamples: num('GATE_MIN_STRONG_BUY_SAMPLES'),
+    minStrongBuyPrecision: num('GATE_MIN_STRONG_BUY_PRECISION'),
+    minStrongBuyPrecisionLower: num('GATE_MIN_STRONG_BUY_PRECISION_LOWER'),
+    minBuyPrecision: num('GATE_MIN_BUY_PRECISION'),
+    maxFalsePositiveRate: num('GATE_MAX_FALSE_POSITIVE_RATE'),
+    minVerifiedFeeRatio: num('GATE_MIN_VERIFIED_FEE_RATIO'),
+    minMarketConfidence: num('GATE_MIN_MARKET_CONFIDENCE'),
+    minMarketConfidenceWorst: num('GATE_MIN_MARKET_CONFIDENCE_WORST'),
+    maxUnconfirmedRatio: num('GATE_MAX_UNCONFIRMED_RATIO'),
+    minVenueDiversity: num('GATE_MIN_VENUE_DIVERSITY'),
+    minCategoryDiversity: num('GATE_MIN_CATEGORY_DIVERSITY'),
+  };
+}
+
+/**
+ * Phase 4 が人間の手で解禁されているか（§25）。
+ *
+ * 【AIはここを書き換えない】
+ * 卒業条件をすべて満たしても、この値が true にならない限り次へ進まない。
+ * そして Phase 3.5 時点では、true にしたところで実購入のコードが存在しない。
+ * 二重に止めてある。
+ */
+export async function isPhase4Unlocked(): Promise<boolean> {
+  const s = await loadSettings();
+  return String(s.get('PHASE4_UNLOCKED') ?? 'false').toLowerCase() === 'true';
+}
 
 export async function getThresholds(): Promise<Thresholds> {
   const s = await loadSettings();
@@ -424,6 +626,10 @@ export async function getThresholds(): Promise<Thresholds> {
     accuracyMidSamples: num('ACCURACY_MID_SAMPLES'),
     accuracyFullSamples: num('ACCURACY_FULL_SAMPLES'),
     opportunityFastHours: num('OPPORTUNITY_FAST_HOURS'),
+    conservativeHaircut: num('CONSERVATIVE_HAIRCUT'),
+    forecastDefaultBand: num('FORECAST_DEFAULT_BAND'),
+    humanReachHours: num('HUMAN_REACH_HOURS'),
+    falsePositiveWeight: num('FALSE_POSITIVE_WEIGHT'),
   };
 }
 

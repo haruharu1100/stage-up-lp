@@ -82,8 +82,13 @@ export function shadowStatement(s: ShadowSource): Stmt {
        product_id, identity_key, brand, category_key, decision, acquisition_price,
        liquidity_score, expected_days_to_sell, sell_probability_7d, sell_probability_90d,
        market_data_confidence, fee_data_confidence, match_confidence,
-       buy_fee_version, sell_fee_version)
-     VALUES (?,NULL,?,?,?,?, ?,?,?,?, ?,?,?, 'OPEN', ?, ?, ?,?,?,?,?,?, ?,?,?,?, ?,?,?, ?,?)
+       buy_fee_version, sell_fee_version,
+       real_market_data, buy_fee_status, sell_fee_status,
+       raw_expected_sell_price, calibrated_expected_sell_price, conservative_sell_price,
+       sell_price_low_80, sell_price_high_80,
+       raw_expected_roi, calibrated_expected_roi, conservative_expected_roi,
+       conservative_net_profit, downside_profit, max_expected_loss)
+     VALUES (?,NULL,?,?,?,?, ?,?,?,?, ?,?,?, 'OPEN', ?, ?, ?,?,?,?,?,?, ?,?,?,?, ?,?,?, ?,?, ?,?,?, ?,?,?, ?,?, ?,?,?, ?,?,?)
      ON CONFLICT(supplier_product_id, buy_venue_code, sell_venue_code, rule_version) DO NOTHING`,
     args: [
       s.supplierProductId, decidedAt, s.ruleVersion, s.buyVenueCode, s.sellVenueCode,
@@ -100,6 +105,14 @@ export function shadowStatement(s: ShadowSource): Stmt {
       r.liquidity.score, r.expectedDaysToSell, r.sellProbability7d, r.sellProbability90d,
       r.confidence.market, r.confidence.fee, r.confidence.match,
       s.buyFeeVersion, s.sellFeeVersion,
+      // --- Phase 3.5 ---
+      // 判断した時点の3本立て予測をそのまま凍結する。
+      // 後から補正式が変わっても、この行の数字は動かさない（§3・§11）。
+      r.realMarketData ? 1 : 0, r.buyFeeStatus, r.sellFeeStatus,
+      r.forecast.sellPrice.raw, r.forecast.sellPrice.calibrated, r.forecast.sellPrice.conservative,
+      r.forecast.sellPrice.low80, r.forecast.sellPrice.high80,
+      r.forecast.rawRoi, r.forecast.calibratedRoi, r.forecast.conservativeRoi,
+      r.forecast.conservativeNetProfit, r.forecast.downsideProfit, r.forecast.maxExpectedLoss,
     ],
   };
 }

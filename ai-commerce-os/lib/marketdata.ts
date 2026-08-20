@@ -1,6 +1,8 @@
 import { all, batch, nowIso } from './db/client';
 import { parseCsv } from './csv';
 import { cleanText, identityKey, modelKey, normalizeBrand, normalizeColor, normalizeJan, normalizeSize, parseIntOrNull, parseMoney } from './normalize';
+import { judgeRealMarketData } from './realdata';
+import { appendSnapshots, type SnapshotRow } from './snapshots';
 import type { MarketObservation } from './route';
 
 /**
@@ -41,10 +43,16 @@ const ALIASES: Record<string, string[]> = {
   median_price: ['median_price', 'median', '中央値価格', '中央'],
   avg_price: ['avg_price', 'average', 'mean', '平均値', '平均価格'],
   source_type: ['source_type', '取得元', 'データ取得元', '取得方法'],
+  // Phase 3.5。出典URLが無いものは実市場データとして数えない（§4）。
+  source_url: ['source_url', 'url', '出典url', '出典URL', 'リンク'],
 };
 
 /** データの出どころ。CSVで指定が無ければ手入力CSV扱いにする（自動取得を装わない）。 */
-const SOURCE_TYPES = new Set(['CSV_MANUAL', 'CSV_FEED', 'API', 'WEBHOOK', 'PARTNER_FEED']);
+const SOURCE_TYPES = new Set([
+  'CSV_MANUAL', 'CSV_FEED', 'API', 'WEBHOOK', 'PARTNER_FEED',
+  // Phase 3.5。人が実際の市場画面を見て記録したもの。規約上いちばん安全な実データ。
+  'MANUAL_OBSERVATION',
+]);
 
 function canon(h: string): string {
   return h.trim().toLowerCase().replace(/[\s_\-　]/g, '');
@@ -64,11 +72,21 @@ export type MarketImportResult = {
   invalid: number;
   errors: { row: number; reason: string }[];
   byVenue: Record<string, number>;
+  // ---- Phase 3.5 ----
+  /** 実市場データとして数えられた行数（§9） */
+  realRows: number;
+  /** 時系列へ新しく積まれた観測の件数（§6） */
+  snapshotsAppended: number;
+  /** 実データにならなかった理由の内訳。ごまかさず出す。 */
+  notRealReasons: Record<string, number>;
 };
 
 export async function importMarketData(text: string): Promise<MarketImportResult> {
   const grid = parseCsv(text);
-  const out: MarketImportResult = { ok: false, message: '', rowCount: 0, inserted: 0, invalid: 0, errors: [], byVenue: {} };
+  const out: MarketImportResult = {
+    ok: false, message: '', rowCount: 0, inserted: 0, invalid: 0, errors: [], byVenue: {},
+    realRows: 0, snapshotsAppended: 0, notRealReasons: {},
+  };
   if (grid.length < 2) {
     out.message = 'データが空です。1行目に見出し、2行目以降にデータを入れてください。';
     return out;
@@ -90,6 +108,7 @@ export async function importMarketData(text: string): Promise<MarketImportResult
   const knownVenues = new Set((await all('SELECT code FROM venues')).map((r) => String(r.code)));
   const now = nowIso();
   const stmts: { sql: string; args: unknown[] }[] = [];
+  const snapshots: SnapshotRow[] = [];
 
   for (let i = 1; i < grid.length; i++) {
     const row = grid[i];
@@ -131,14 +150,31 @@ export async function importMarketData(text: string): Promise<MarketImportResult
 
     const srcRaw = get('source_type').toUpperCase().replace(/[\s-]/g, '_');
     const sourceType = SOURCE_TYPES.has(srcRaw) ? srcRaw : 'CSV_MANUAL';
+    const sourceUrl = cleanText(get('source_url')) || null;
+    const sourceNote = cleanText(get('source')) || null;
+
+    // 実市場データかどうかの判定（§4 §9）。ここを甘くすると Phase 3.5 の目的が消える。
+    const judged = judgeRealMarketData({
+      dataSource: sourceType, sourceUrl, sourceNote, observedAt,
+    });
+    if (judged.isReal) out.realRows++;
+    else out.notRealReasons[judged.reason] = (out.notRealReasons[judged.reason] ?? 0) + 1;
+
+    const lowPrice = parseMoney(get('low_price'));
+    const medianPrice = parseMoney(get('median_price'));
+    const avgPrice = parseMoney(get('avg_price'));
+    const soldCount = parseIntOrNull(get('sold_count_30d'));
+    const listingCount = parseIntOrNull(get('listing_count'));
+    const daysNum = days === '' ? null : Number(days);
+    const sdNum = sd === '' ? null : Number(sd);
 
     stmts.push({
       sql: `INSERT INTO venue_market_prices
         (venue_code, side, product_id, identity_key, price, price_basis,
          sold_count_30d, listing_count, avg_days_to_sell, price_stddev_ratio,
          observed_at, source_note, is_estimated, created_at,
-         low_price, median_price, avg_price, source_type)
-       VALUES (?,?,NULL,?,?,?, ?,?,?,?, ?,?,?,?, ?,?,?,?)
+         low_price, median_price, avg_price, source_type, source_url, real_market_data)
+       VALUES (?,?,NULL,?,?,?, ?,?,?,?, ?,?,?,?, ?,?,?,?,?,?)
        ON CONFLICT(venue_code, side, identity_key) DO UPDATE SET
          price = excluded.price, price_basis = excluded.price_basis,
          sold_count_30d = excluded.sold_count_30d, listing_count = excluded.listing_count,
@@ -146,24 +182,49 @@ export async function importMarketData(text: string): Promise<MarketImportResult
          observed_at = excluded.observed_at, source_note = excluded.source_note,
          is_estimated = excluded.is_estimated,
          low_price = excluded.low_price, median_price = excluded.median_price,
-         avg_price = excluded.avg_price, source_type = excluded.source_type`,
+         avg_price = excluded.avg_price, source_type = excluded.source_type,
+         source_url = excluded.source_url, real_market_data = excluded.real_market_data`,
       args: [
         venue, side, key, price, basis,
-        parseIntOrNull(get('sold_count_30d')), parseIntOrNull(get('listing_count')),
-        days === '' ? null : Number(days), sd === '' ? null : Number(sd),
-        observedAt, cleanText(get('source')) || null, basis === 'SOLD_MEDIAN' ? 0 : 1, now,
-        parseMoney(get('low_price')), parseMoney(get('median_price')), parseMoney(get('avg_price')),
-        sourceType,
+        soldCount, listingCount, daysNum, sdNum,
+        observedAt, sourceNote, basis === 'SOLD_MEDIAN' ? 0 : 1, now,
+        lowPrice, medianPrice, avgPrice,
+        sourceType, sourceUrl, judged.isReal ? 1 : 0,
       ],
     });
+
+    // 時系列にも1件として積む（§6）。venue_market_prices は上書きされるが、こちらは残る。
+    snapshots.push({
+      identityKey: key,
+      venueCode: venue,
+      role: side === 'BUY' ? 'BUY' : 'SELL',
+      observedAt,
+      buyPrice: side === 'BUY' ? price : null,
+      sellPrice: side === 'SELL' ? price : null,
+      lowestListing: lowPrice,
+      medianListing: medianPrice,
+      averageListing: avgPrice,
+      soldPrice: basis === 'SOLD_MEDIAN' ? price : null,
+      soldCount,
+      listingCount,
+      avgDaysToSell: daysNum,
+      priceStddevRatio: sdNum,
+      priceBasis: basis,
+      dataSource: sourceType,
+      sourceUrl,
+      realMarketData: judged.isReal,
+    });
+
     out.inserted++;
     out.byVenue[venue] = (out.byVenue[venue] ?? 0) + 1;
   }
 
   for (let i = 0; i < stmts.length; i += 300) await batch(stmts.slice(i, i + 300));
+  const snap = await appendSnapshots(snapshots);
+  out.snapshotsAppended = snap.appended;
   out.ok = out.inserted > 0;
   out.message = out.inserted > 0
-    ? `${out.inserted}件の相場を取り込みました。`
+    ? `${out.inserted}件の相場を取り込みました（うち実市場データ ${out.realRows}件／時系列に新しく積んだ観測 ${snap.appended}件）。`
     : '取り込める行がありませんでした。';
   return out;
 }
@@ -175,7 +236,7 @@ export async function loadObservations(): Promise<ObservationMap> {
   const rows = await all(
     `SELECT venue_code, side, identity_key, price, price_basis, sold_count_30d, listing_count,
             avg_days_to_sell, price_stddev_ratio, observed_at,
-            low_price, median_price, avg_price, source_type
+            low_price, median_price, avg_price, source_type, source_url, real_market_data
        FROM venue_market_prices`,
   );
   const m: ObservationMap = new Map();
@@ -193,6 +254,8 @@ export async function loadObservations(): Promise<ObservationMap> {
       median_price: numOrNull(r.median_price),
       avg_price: numOrNull(r.avg_price),
       source_type: r.source_type === null || r.source_type === undefined ? null : String(r.source_type),
+      source_url: r.source_url === null || r.source_url === undefined ? null : String(r.source_url),
+      real_market_data: Number(r.real_market_data ?? 0) === 1,
     });
   }
   return m;

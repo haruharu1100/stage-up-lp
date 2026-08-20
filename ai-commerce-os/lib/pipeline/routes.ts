@@ -1,8 +1,12 @@
 import { loadRouteAdjustments } from '../accuracy';
 import { all, batch, nowIso, run, today } from '../db/client';
 import { syncFeeVersions } from '../fees';
+import { syncFeeStatuses } from '../feestatus';
+import { calibrationFor, loadCalibrations, NO_CALIBRATION } from '../forecast';
+import { rebuildHalfLife } from '../halflife';
 import { loadObservations, type ObservationMap } from '../marketdata';
 import { classifyCause, recordOpportunities, type OpportunityObservation } from '../opportunity';
+import { shadowIsRealMarket } from '../realdata';
 import { calcRoute, loadFeeProfiles, pickFee, type FeeProfile, type MarketObservation, type RouteResult } from '../route';
 import { getThresholds, routeRuleVersion, type Thresholds } from '../settings';
 import { buildShadow, type ShadowSource } from '../shadow';
@@ -70,12 +74,19 @@ export async function runRoutes(opts: { onlyIds?: number[] } = {}): Promise<Rout
   await ensureVenues();
   // 手数料の版を先に確定させる。判断した時の手数料を後から特定できないと、§11の再計算が嘘になる。
   await syncFeeVersions();
+  // 手数料が「確認済みか概算か古いか不明か」を確定させる（§1）。
+  // これが ESTIMATED のままの市場は、この後どれだけ利益が大きくても STRONG BUY にならない（§2）。
+  await syncFeeStatuses();
   const t = await getThresholds();
   const rv = await routeRuleVersion();
   const now = nowIso();
 
   // 過去のSHADOWの答え合わせから出た補正。実績が少ない組み合わせは 0 が返る。
   const adjustments = await loadRouteAdjustments(30);
+
+  // 予測のズレ補正（§11）。実市場データだけから作る。
+  // テストデータしか無いうちは中身が空になり、補正は一切かからない。
+  const calibrations = await loadCalibrations(30, t.accuracyMinSamples);
 
   const runId = Number(
     (await run('INSERT INTO pipeline_runs (kind, started_at) VALUES (?, ?)', ['routes', now])).lastInsertRowid,
@@ -168,6 +179,13 @@ export async function runRoutes(opts: { onlyIds?: number[] } = {}): Promise<Rout
           adjustmentTier: adj?.tier ?? null,
           freshHours: t.marketFreshHours,
           normalHours: t.marketNormalHours,
+          // --- Phase 3.5 ---
+          // 仕入側と販売側の両方が実市場データの時だけ「実市場のRoute」と数える（§9）。
+          // 片方だけ実データのものを混ぜると、100件の意味が無くなる。
+          realMarketData: shadowIsRealMarket(b.obs?.real_market_data === true, s.obs?.real_market_data === true),
+          calibration: calibrationFor(calibrations, `${b.venue.code}→${s.venue.code}`) ?? NO_CALIBRATION,
+          forecastDefaultBand: t.forecastDefaultBand,
+          conservativeHaircut: t.conservativeHaircut,
         });
         results.push({ buy: b, sell: s, res, blocked, buyFee, sellFee });
 
@@ -273,6 +291,9 @@ export async function runRoutes(opts: { onlyIds?: number[] } = {}): Promise<Rout
   for (let i = 0; i < productStmts.length; i += CHUNK) await batch(productStmts.slice(i, i + CHUNK));
 
   await recordOpportunities(opportunities, { fastHours: t.opportunityFastHours, now });
+  // 消えた機会の寿命から半減期を出し直す（§7 §8）。
+  // 「人が承認して間に合う組み合わせ」だけを後から選べるようにするため。
+  await rebuildHalfLife(t.humanReachHours);
 
   // best_route_id は行が確定してから紐づける
   await run(`
@@ -373,8 +394,13 @@ function routeStatement(
        route_score, risk_score, data_confidence, decision, price_basis, buy_price_basis,
        fees_estimated, status, blocked_reason, skip_reason, breakdown_json, created_at,
        buy_fee_version, sell_fee_version, market_data_confidence, fee_data_confidence, match_confidence,
-       data_age_hours, freshness_tier, base_route_score, score_adjustment, adjustment_tier, confidence_capped)
-     VALUES (?,?,?,?,?, ?,?,?,?,?, ?,?,?,?,?, ?,?,?,?,?, ?,?,?,?,?, ?,?,?,?, ?,?,?, ?,?,?,?,?, ?,?,?,?,?,?, ?,?,?,?,?,?, ?,?,?,?,?, ?,?,?,?,?,?)
+       data_age_hours, freshness_tier, base_route_score, score_adjustment, adjustment_tier, confidence_capped,
+       real_market_data, buy_fee_status, sell_fee_status,
+       raw_expected_sell_price, calibrated_expected_sell_price, conservative_sell_price,
+       sell_price_low_80, sell_price_high_80, interval_basis,
+       raw_expected_roi, calibrated_expected_roi, conservative_expected_roi, calibration_source,
+       conservative_net_profit, downside_profit, max_expected_loss)
+     VALUES (?,?,?,?,?, ?,?,?,?,?, ?,?,?,?,?, ?,?,?,?,?, ?,?,?,?,?, ?,?,?,?, ?,?,?, ?,?,?,?,?, ?,?,?,?,?,?, ?,?,?,?,?,?, ?,?,?,?,?, ?,?,?,?,?,?, ?,?,?, ?,?,?, ?,?,?, ?,?,?,?, ?,?,?)
      ON CONFLICT(supplier_product_id, buy_venue_code, sell_venue_code, rule_version) DO UPDATE SET
        acquisition_price = excluded.acquisition_price,
        acquisition_total_cost = excluded.acquisition_total_cost,
@@ -395,7 +421,20 @@ function routeStatement(
        match_confidence = excluded.match_confidence,
        data_age_hours = excluded.data_age_hours, freshness_tier = excluded.freshness_tier,
        base_route_score = excluded.base_route_score, score_adjustment = excluded.score_adjustment,
-       adjustment_tier = excluded.adjustment_tier, confidence_capped = excluded.confidence_capped`,
+       adjustment_tier = excluded.adjustment_tier, confidence_capped = excluded.confidence_capped,
+       real_market_data = excluded.real_market_data,
+       buy_fee_status = excluded.buy_fee_status, sell_fee_status = excluded.sell_fee_status,
+       raw_expected_sell_price = excluded.raw_expected_sell_price,
+       calibrated_expected_sell_price = excluded.calibrated_expected_sell_price,
+       conservative_sell_price = excluded.conservative_sell_price,
+       sell_price_low_80 = excluded.sell_price_low_80, sell_price_high_80 = excluded.sell_price_high_80,
+       interval_basis = excluded.interval_basis,
+       raw_expected_roi = excluded.raw_expected_roi,
+       calibrated_expected_roi = excluded.calibrated_expected_roi,
+       conservative_expected_roi = excluded.conservative_expected_roi,
+       calibration_source = excluded.calibration_source,
+       conservative_net_profit = excluded.conservative_net_profit,
+       downside_profit = excluded.downside_profit, max_expected_loss = excluded.max_expected_loss`,
     args: [
       c.id, c.product_id, b.venue.code, s.venue.code, rv,
       r.buy.itemPrice, r.buy.buyerFee, r.buy.paymentFee, r.buy.domesticShipping, r.buy.authenticationFee,
@@ -412,6 +451,13 @@ function routeStatement(
       r.confidence.market, r.confidence.fee, r.confidence.match,
       r.freshness.ageHours, r.freshness.tier, r.baseRouteScore, r.scoreAdjustment,
       r.adjustmentTier, r.confidenceCapped ? 1 : 0,
+      // --- Phase 3.5 ---
+      r.realMarketData ? 1 : 0, r.buyFeeStatus, r.sellFeeStatus,
+      r.forecast.sellPrice.raw, r.forecast.sellPrice.calibrated, r.forecast.sellPrice.conservative,
+      r.forecast.sellPrice.low80, r.forecast.sellPrice.high80, r.forecast.sellPrice.intervalBasis,
+      r.forecast.rawRoi, r.forecast.calibratedRoi, r.forecast.conservativeRoi,
+      r.forecast.sellPrice.calibrationSource,
+      r.forecast.conservativeNetProfit, r.forecast.downsideProfit, r.forecast.maxExpectedLoss,
     ],
   };
 }

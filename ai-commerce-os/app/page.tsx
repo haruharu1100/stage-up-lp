@@ -1,4 +1,6 @@
 import Link from 'next/link';
+import { peekPhase4Gate } from '@/lib/gate';
+import { realShadowDiversity } from '@/lib/precision';
 import { getDashboard, recentImports, recentRuns, shadowSummary, skipReasonBreakdown, supplierBreakdown } from '@/lib/queries';
 import { routeOverview } from '@/lib/routequeries';
 import { SKIP_REASONS } from '@/lib/score';
@@ -7,7 +9,7 @@ import { num, pct, yen } from '@/lib/format';
 export const dynamic = 'force-dynamic';
 
 export default async function DashboardPage() {
-  const [d, skips, suppliers, shadow, imports, runs, ro] = await Promise.all([
+  const [d, skips, suppliers, shadow, imports, runs, ro, gate, diversity] = await Promise.all([
     getDashboard(),
     skipReasonBreakdown(),
     supplierBreakdown(),
@@ -15,6 +17,9 @@ export default async function DashboardPage() {
     recentImports(),
     recentRuns(),
     routeOverview(),
+    // 画面を開くだけでは判定履歴を増やさない（記録は `npm run report` のときだけ）。
+    peekPhase4Gate(),
+    realShadowDiversity(),
   ]);
 
   const empty = d.imported === 0;
@@ -25,6 +30,17 @@ export default async function DashboardPage() {
       <p className="lead">
         CSVを入れるだけで「この中で何を買えば利益が出そうか」を順位付けします。実際の購入・出品は行いません。
       </p>
+
+      {/* 経営者向けの結論1行（§25）。卒業条件の判定から機械的に作られ、AIは書き換えられない。 */}
+      <div className={gate.passed ? 'note ok' : 'note danger'}>
+        <strong>{gate.verdictJa}</strong>
+        <br />
+        <span className="small">
+          実市場データのSHADOW {num(diversity.realShadowCount)} 件（目標 {num(gate.thresholds.minRealShadow)} 件）。
+          テストデータの成績は数えていません。
+          <Link href="/readiness"> 内訳を見る</Link>
+        </span>
+      </div>
 
       {empty && (
         <div className="note">

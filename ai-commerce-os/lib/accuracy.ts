@@ -101,7 +101,22 @@ export async function rebuildAccuracy(): Promise<{ rows: number; adjusted: numbe
   let adjusted = 0;
   let count = 0;
 
+  // 2周する。1周目は全データ、2周目は実市場データだけ（Phase 3.5・§11）。
+  //
+  // 【なぜ分けるのか】
+  // 今この瞬間、DBに入っているSHADOWはすべてテストデータである。
+  // その成績（例：予想より10.1ポイント低い）を本番の補正に使うと、
+  // 「架空のデータで作った癖」で実際の仕入判断を歪めることになる。
+  // だから実データ由来の行を別の名前（route_real など）で分けて持ち、
+  // 実データが貯まるまで本番用の補正は空のままにしておく。
+  const passes: { realOnly: boolean; suffix: string }[] = [
+    { realOnly: false, suffix: '' },
+    { realOnly: true, suffix: '_real' },
+  ];
+
+  for (const pass of passes) {
   for (const seg of SEGMENTS) {
+    const realFilter = pass.realOnly ? ' AND s.real_market_data = 1' : '';
     const rows = await all(`
       SELECT ${seg.expr} AS seg_key, e.horizon_days AS horizon,
              COUNT(*) AS sample_count,
@@ -119,7 +134,7 @@ export async function rebuildAccuracy(): Promise<{ rows: number; adjusted: numbe
              AVG(e.actual_roi) AS avg_actual_roi
         FROM shadow_evaluations e
         JOIN route_shadow_trades s ON s.id = e.shadow_id
-       WHERE e.outcome <> 'PENDING'
+       WHERE e.outcome <> 'PENDING'${realFilter}
        GROUP BY seg_key, e.horizon_days`);
 
     for (const r of rows) {
@@ -137,8 +152,8 @@ export async function rebuildAccuracy(): Promise<{ rows: number; adjusted: numbe
            not_sold_count, unconfirmed_count, hit_rate, avg_sell_price_error,
            avg_sell_price_error_ratio, avg_days_error, avg_net_profit_error, avg_roi_error,
            avg_predicted_roi, avg_actual_roi, calibration_ratio, score_adjustment,
-           adjustment_tier, updated_at)
-         VALUES (?,?,?,?,?,?, ?,?,?,?, ?,?,?,?, ?,?,?,?, ?,?)
+           adjustment_tier, updated_at, real_market_only)
+         VALUES (?,?,?,?,?,?, ?,?,?,?, ?,?,?,?, ?,?,?,?, ?,?,?)
          ON CONFLICT(segment_type, segment_key, horizon_days) DO UPDATE SET
            sample_count = excluded.sample_count, decided_count = excluded.decided_count,
            sold_count = excluded.sold_count, not_sold_count = excluded.not_sold_count,
@@ -152,9 +167,10 @@ export async function rebuildAccuracy(): Promise<{ rows: number; adjusted: numbe
            avg_actual_roi = excluded.avg_actual_roi,
            calibration_ratio = excluded.calibration_ratio,
            score_adjustment = excluded.score_adjustment,
-           adjustment_tier = excluded.adjustment_tier, updated_at = excluded.updated_at`,
+           adjustment_tier = excluded.adjustment_tier, updated_at = excluded.updated_at,
+           real_market_only = excluded.real_market_only`,
         args: [
-          seg.type, String(r.seg_key), Number(r.horizon),
+          `${seg.type}${pass.suffix}`, String(r.seg_key), Number(r.horizon),
           Number(r.sample_count ?? 0), decided, Number(r.sold_count ?? 0),
           Number(r.not_sold_count ?? 0), Number(r.unconfirmed_count ?? 0),
           r.hit_rate === null ? null : Number(r.hit_rate),
@@ -164,9 +180,11 @@ export async function rebuildAccuracy(): Promise<{ rows: number; adjusted: numbe
           r.avg_net_profit_error === null ? null : Number(r.avg_net_profit_error),
           r.avg_roi_error === null ? null : Number(r.avg_roi_error),
           predicted, actual, calibrationRatio(predicted, actual), adj, tier, now,
+          pass.realOnly ? 1 : 0,
         ],
       });
     }
+  }
   }
 
   for (let i = 0; i < stmts.length; i += 300) await batch(stmts.slice(i, i + 300));
