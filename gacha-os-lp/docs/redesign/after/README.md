@@ -33,6 +33,8 @@
 | 13 | 導入効果の試算 | [pc-13-roi.png](pc-13-roi.png) | [sp-13-roi.png](sp-13-roi.png) |
 | 14 | 料金 | [pc-14-pricing.png](pc-14-pricing.png) | [sp-14-pricing.png](sp-14-pricing.png) |
 | 15 | 最終CTA | [pc-15-contact.png](pc-15-contact.png) | [sp-15-contact.png](sp-15-contact.png) |
+| 16 | フッター（販売事業者） | [pc-16-footer.png](pc-16-footer.png) | [sp-16-footer.png](sp-16-footer.png) |
+| 17 | 個人情報の取り扱い | [pc-17-privacy.png](pc-17-privacy.png) | [sp-17-privacy.png](sp-17-privacy.png) |
 
 短縮前の状態は `../before/` にあります。
 

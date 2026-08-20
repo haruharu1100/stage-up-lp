@@ -7,8 +7,10 @@
  * 公開前チェック（/launch）で自動的に警告されます。
  *
  * 環境変数でも上書きできます（Vercel の Environment Variables）。
- *   NEXT_PUBLIC_OPERATOR_NAME    事業者名
- *   NEXT_PUBLIC_OPERATOR_CONTACT 問い合わせ窓口（メールアドレス）
+ *   NEXT_PUBLIC_OPERATOR_NAME           事業者名
+ *   NEXT_PUBLIC_OPERATOR_REPRESENTATIVE 代表者名
+ *   NEXT_PUBLIC_OPERATOR_ADDRESS        所在地
+ *   NEXT_PUBLIC_OPERATOR_CONTACT        問い合わせ窓口
  */
 
 const pick = (envValue: string | undefined, fallback: string) => {
@@ -18,16 +20,44 @@ const pick = (envValue: string | undefined, fallback: string) => {
 
 export const operator = {
   /** 事業者名（法人名または屋号） */
-  name: pick(process.env.NEXT_PUBLIC_OPERATOR_NAME, ""),
-  /** 個人情報の問い合わせ窓口 */
-  contact: pick(process.env.NEXT_PUBLIC_OPERATOR_CONTACT, ""),
+  name: pick(process.env.NEXT_PUBLIC_OPERATOR_NAME, "REMERCI株式会社"),
+  /** 代表者名 */
+  representative: pick(
+    process.env.NEXT_PUBLIC_OPERATOR_REPRESENTATIVE,
+    "代表取締役　横田 明樹"
+  ),
+  /** 所在地 */
+  address: pick(
+    process.env.NEXT_PUBLIC_OPERATOR_ADDRESS,
+    "大阪府和泉市阪本町376-161"
+  ),
+  /**
+   * 個人情報についての問い合わせ窓口。
+   *
+   * ★電話番号はあえて載せていません。
+   * このサイトは、その場で申し込み・決済まで完了する形ではなく、
+   * ご相談を受け取るだけの案内サイトです。
+   * そのため、電話番号の掲載が必要になる「通信販売の広告」には当たりません。
+   * 個人情報についての窓口は、フォームで受け付ける形で足ります。
+   * 将来このサイト上で申し込み・決済まで完結させる場合は、
+   * 電話番号を含む特定商取引法の表記が別途必要になります。
+   */
+  contact: pick(
+    process.env.NEXT_PUBLIC_OPERATOR_CONTACT,
+    "本サイトのご相談フォーム"
+  ),
 };
 
-export const operatorReady = Boolean(operator.name && operator.contact);
+export const operatorReady = Boolean(
+  operator.name && operator.contact && operator.representative && operator.address
+);
 
 /** 表示用。未設定なら、はっきり「未設定」と出す（それらしい嘘を書かない） */
 export const operatorName = operator.name || "（事業者名 未設定）";
 export const operatorContact = operator.contact || "（問い合わせ窓口 未設定）";
+export const operatorRepresentative =
+  operator.representative || "（代表者名 未設定）";
+export const operatorAddress = operator.address || "（所在地 未設定）";
 
 /**
  * このサイトで実際に取得している情報。

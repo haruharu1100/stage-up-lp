@@ -1,9 +1,15 @@
 import Link from "next/link";
 import Logo from "./ui/Logo";
+import {
+  operatorAddress,
+  operatorName,
+  operatorRepresentative,
+} from "@/config/legal";
 
 export default function Footer() {
   return (
-    <footer className="relative border-t border-edge bg-paper2 pb-36 pt-16 sm:py-20">
+    // 下の余白は、スマホの固定CTAバー（実測157px）に文章が隠れない高さにしている
+    <footer className="relative border-t border-edge bg-paper2 pb-44 pt-16 sm:py-20">
       <div className="container-x">
         <div className="flex flex-col gap-14 md:flex-row md:items-start md:justify-between">
           <div className="max-w-sm">
@@ -47,6 +53,31 @@ export default function Footer() {
         </div>
 
         <div className="rule my-12" />
+
+        {/*
+          誰が売っているのかを、探さなくても分かる場所に置く。
+          ここが無い（または探しにくい）と、
+          サイトの出来がよくても最後の一歩で信用されない。
+        */}
+        <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
+          <dl className="grid gap-x-6 gap-y-2 text-note sm:grid-cols-[auto_1fr]">
+            <dt className="text-slate3">販売事業者</dt>
+            <dd className="text-slate">{operatorName}</dd>
+            <dt className="text-slate3">代表者</dt>
+            <dd className="text-slate">{operatorRepresentative}</dd>
+            <dt className="text-slate3">所在地</dt>
+            <dd className="text-slate">{operatorAddress}</dd>
+          </dl>
+
+          <Link
+            href="/legal/privacy"
+            className="text-note text-slate2 underline decoration-edge underline-offset-4 transition-colors hover:text-blue-ink"
+          >
+            個人情報の取り扱いについて
+          </Link>
+        </div>
+
+        <div className="rule my-10" />
 
         <div className="flex flex-col gap-4 text-note text-slate3 sm:flex-row sm:items-center sm:justify-between">
           <p>© {new Date().getFullYear()} AI GACHA OS. All rights reserved.</p>

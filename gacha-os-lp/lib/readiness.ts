@@ -389,17 +389,25 @@ export function buildChecklist(env: NodeJS.ProcessEnv): CheckItem[] {
       },
     },
 
+    /*
+      ★ここは「まだ無いものを、有ると書かない」場所。
+      以前はどちらも「ページの枠は実装済み」と書いてありましたが、
+      実際には app/legal/ の中に privacy しかありません。
+      チェックリストが嘘をつくと、チェックリスト自体が意味を失うため、
+      現状のまま（未作成）を書いています。
+    */
     {
       key: "legal_terms",
       label: "利用規約",
-      why: "契約条件を示すページ。無いまま販売はできません。",
+      why: "契約条件を示すページ。サイト上で申し込みまで完結させる場合は必要です。",
       required: true,
       code: "LEGAL_TERMS_UNCONFIRMED",
       stages: {
         implemented: {
           auto: true,
-          state: "ok",
-          detail: "ページの枠は実装済み。",
+          state: "todo",
+          detail:
+            "利用規約ページはまだありません。いまのサイトはご相談を受け取るだけで、契約条件は個別の契約書で定めています。サイト上で申し込み・決済まで行う形にする場合は、公開前に作成してください。",
         },
         connected: na("この項目に「接続」はありません。"),
         verified: {
@@ -414,14 +422,15 @@ export function buildChecklist(env: NodeJS.ProcessEnv): CheckItem[] {
     {
       key: "legal_tokushoho",
       label: "特定商取引法に基づく表記",
-      why: "有料サービスを販売する際に必要な表示です。",
+      why: "サイト上で申し込み・決済まで完結させる（通信販売の広告に当たる）場合に必要な表示です。",
       required: true,
       code: "LEGAL_TOKUSHOHO_UNCONFIRMED",
       stages: {
         implemented: {
           auto: true,
-          state: "ok",
-          detail: "ページの枠は実装済み。",
+          state: "todo",
+          detail:
+            "特商法表記のページはまだありません。いまのサイトは申し込み・決済を行わないご相談の窓口のため、事業者情報は /legal/privacy に記載しています。サイト上で申し込み・決済まで行う形にする場合は、電話番号を含む表記が別途必要です。",
         },
         connected: na("この項目に「接続」はありません。"),
         verified: {
