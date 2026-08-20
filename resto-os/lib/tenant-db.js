@@ -60,6 +60,8 @@ const SCOPED_TABLES = new Set([
   'ingredients', 'recipe_lines', 'stock_moves', 'order_plans', 'order_plan_lines', 'stockouts',
   // 周辺の会場と、そこでの開催予定（第1層：人が登録した事実）
   'venues', 'venue_events',
+  // 待ち時間の実測と、人が組んだシフト（どちらも第1層＝測った事実・決めた事実）
+  'waitlist', 'shifts',
 ]);
 
 export function createCtx({ tenantId, storeId, role, staffId = null, staffName = '', plan = 'standard', tenant = null, store = null, exec = null }) {

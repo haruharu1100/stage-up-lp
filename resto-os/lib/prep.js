@@ -25,6 +25,7 @@
 import { addDays, dayDiff } from './learn.js';
 import { nowIso, withTx } from './db.js';
 import { predictDay } from './forecast.js';
+import { WASTE_REASON_LABEL } from './domain/waste.js';
 
 // 同じ曜日を何回ぶんまでさかのぼって見るか。
 // 多くすると安定するが、古すぎる時期（味・価格・客層が違う）を混ぜてしまう。
@@ -488,6 +489,16 @@ export async function wasteByDow(ctx, { days = 90 } = {}) {
   );
   const salesOf = new Map(facts.map((r) => [r.business_date, Number(r.sales || 0)]));
 
+  // 捨てた理由ごとの内訳。理由は決まった選択肢なので、そのまま数えられる。
+  const reasonRows = await ctx.query(
+    `SELECT m.business_date AS date, m.waste_reason AS reason, SUM(m.amount) AS amount
+       FROM stock_moves m
+      WHERE SCOPE(m) AND m.kind = 'waste' AND m.business_date BETWEEN ? AND ?
+        AND m.waste_reason IS NOT NULL AND m.waste_reason <> ''
+      GROUP BY m.business_date, m.waste_reason`,
+    [from, to],
+  );
+
   const byDow = new Map();
   const ratios = [];
   for (const r of rows) {
@@ -500,6 +511,8 @@ export async function wasteByDow(ctx, { days = 90 } = {}) {
     list.push({ date: r.date, amount: Number(r.amount || 0), ratio });
     byDow.set(d, list);
   }
+
+  const reasons = summarizeReasons(reasonRows, salesOf);
   if (ratios.length < 8) {
     return { ok: false, reason: 'NOT_ENOUGH', recordedDays: ratios.length, message: '売上と突き合わせられる廃棄の記録が、まだ足りません。' };
   }
@@ -521,18 +534,30 @@ export async function wasteByDow(ctx, { days = 90 } = {}) {
       enough: true,
       avgAmount: Math.round(median(list.map((x) => x.amount)) || 0),
       diffPct: Math.round(diff * 1000) / 10,
+      // その曜日の理由の内訳（記録があるときだけ）
+      reasons: reasons.byDow.get(d) || null,
     });
   }
   out.sort((a, b) => a.dow - b.dow);
 
   const notes = [];
   for (const r of out) {
-    if (!r.enough || Math.abs(r.diffPct) < 15) continue;
-    if (r.diffPct > 0) {
-      notes.push(`${r.dowName}曜日は、売上に対して捨てている量が他の曜日より約${Math.round(r.diffPct)}%多い傾向があります（${r.days}日ぶんの記録）。仕込みの量を見直すと減らせるかもしれません。`);
-    } else {
-      notes.push(`${r.dowName}曜日は、売上に対して捨てている量が他の曜日より約${Math.round(Math.abs(r.diffPct))}%少なめです（${r.days}日ぶんの記録）。`);
+    if (!r.enough) continue;
+    if (Math.abs(r.diffPct) >= 15) {
+      if (r.diffPct > 0) {
+        notes.push(`${r.dowName}曜日は、売上に対して捨てている量が他の曜日より約${Math.round(r.diffPct)}%多い傾向があります（${r.days}日ぶんの記録）。`);
+      } else {
+        notes.push(`${r.dowName}曜日は、売上に対して捨てている量が他の曜日より約${Math.round(Math.abs(r.diffPct))}%少なめです（${r.days}日ぶんの記録）。`);
+      }
     }
+    // 理由まで踏み込めるのは、その曜日に理由つきの記録が十分あるときだけ
+    const rs = r.reasons;
+    if (!rs || !rs.enough || !rs.stands) continue;
+    notes.push(
+      `${r.dowName}曜日は、捨てたぶんのうち「${rs.stands.label}」の割合が高い傾向があります`
+      + `（この曜日 ${rs.stands.pct}%／ふだん ${rs.stands.overallPct}%・${rs.days}日ぶんの記録）。`
+      + 'これは記録の偏りであって、原因が確かめられたわけではありません。',
+    );
   }
   if (!notes.length) notes.push('いまのところ、曜日による大きな偏りは見当たりません。');
 
@@ -542,9 +567,79 @@ export async function wasteByDow(ctx, { days = 90 } = {}) {
     to,
     recordedDays: ratios.length,
     rows: out,
+    reasons: reasons.overall,
+    reasonDays: reasons.days,
     notes,
-    caution: 'ここで分かるのは「その曜日に多い・少ない」という傾向だけです。捨てた理由まではこの数字からは分かりません。',
+    caution: reasons.days >= 8
+      ? 'ここで分かるのは「その曜日に多い・少ない」「どの理由の割合が高い」という傾向だけです。なぜそうなったかは、この数字からは決められません。'
+      : 'ここで分かるのは「その曜日に多い・少ない」という傾向だけです。捨てた理由の内訳は、廃棄を入力するときに理由を選ぶとたまっていきます。',
   };
+}
+
+/**
+ * 捨てた理由の内訳をまとめる。
+ *
+ * ★ここでやっているのは「割合を数えているだけ」。
+ *   「火曜は仕込み過多が多い」→「だから火曜は仕込みすぎている」とは書かない。
+ *   入力した人が理由を選び違えていることもあるし、たまたま数回そうだっただけかもしれない。
+ *   決めるのは店の人で、システムは気づきを渡すところまで。
+ */
+function summarizeReasons(reasonRows, salesOf) {
+  const total = new Map();
+  const perDow = new Map();
+  const daysWithReason = new Set();
+
+  for (const r of reasonRows) {
+    if (!salesOf.has(r.date)) continue; // 売上が確定していない日は混ぜない
+    const amount = Number(r.amount || 0);
+    if (amount <= 0) continue;
+    const key = String(r.reason);
+    daysWithReason.add(r.date);
+    total.set(key, (total.get(key) || 0) + amount);
+
+    const d = dowOf(r.date);
+    if (!perDow.has(d)) perDow.set(d, { amounts: new Map(), dates: new Set() });
+    const bucket = perDow.get(d);
+    bucket.amounts.set(key, (bucket.amounts.get(key) || 0) + amount);
+    bucket.dates.add(r.date);
+  }
+
+  const grand = [...total.values()].reduce((s, v) => s + v, 0);
+  const overall = [...total.entries()]
+    .map(([key, amount]) => ({
+      key,
+      label: WASTE_REASON_LABEL[key] || key,
+      amount,
+      pct: grand ? Math.round((amount / grand) * 100) : 0,
+    }))
+    .sort((a, b) => b.amount - a.amount);
+  const overallPct = new Map(overall.map((r) => [r.key, r.pct]));
+
+  const byDow = new Map();
+  for (const [d, bucket] of perDow) {
+    const sum = [...bucket.amounts.values()].reduce((s, v) => s + v, 0);
+    const days = bucket.dates.size;
+    const list = [...bucket.amounts.entries()]
+      .map(([key, amount]) => ({
+        key,
+        label: WASTE_REASON_LABEL[key] || key,
+        amount,
+        pct: sum ? Math.round((amount / sum) * 100) : 0,
+        overallPct: overallPct.get(key) || 0,
+      }))
+      .sort((a, b) => b.amount - a.amount);
+
+    // 「この曜日はこの理由が目立つ」と言えるのは、
+    // 3日ぶん以上の記録があり、その理由が全体の3割以上を占め、
+    // かつ ふだんの割合より15ポイント以上高いときだけ。
+    const enough = days >= 3 && grand > 0;
+    const stands = enough
+      ? list.find((r) => r.pct >= 30 && r.pct - r.overallPct >= 15) || null
+      : null;
+    byDow.set(d, { days, enough, rows: list, stands });
+  }
+
+  return { overall, byDow, days: daysWithReason.size };
 }
 
 export { DOW };

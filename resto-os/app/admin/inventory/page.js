@@ -42,15 +42,17 @@ async function post(body) {
 // ===== 在庫 =====
 
 function StockTab({ data, reload, setErr }) {
-  const [form, setForm] = useState({ ingredientId: '', kind: 'count', qty: '', reason: '' });
+  const [form, setForm] = useState({ ingredientId: '', kind: 'count', qty: '', reason: '', wasteReason: '' });
   const [busy, setBusy] = useState(false);
 
   const submit = async () => {
     if (!form.ingredientId) { setErr('材料を選んでください'); return; }
+    // 廃棄は理由が無いと記録できない。理由の無い廃棄は、あとで数えられず改善に使えないため。
+    if (form.kind === 'waste' && !form.wasteReason) { setErr('捨てた理由を選んでください'); return; }
     setBusy(true);
     try {
       await post({ action: 'move', ...form });
-      setForm((f) => ({ ...f, qty: '', reason: '' }));
+      setForm((f) => ({ ...f, qty: '', reason: '', wasteReason: '' }));
       await reload();
       setErr('');
     } catch (e) { setErr(String(e.message || e)); } finally { setBusy(false); }
@@ -98,10 +100,24 @@ function StockTab({ data, reload, setErr }) {
               onChange={(e) => setForm((f) => ({ ...f, qty: e.target.value }))}
             />
           </div>
+          {form.kind === 'waste' && (
+            <div>
+              <div className="lbl">捨てた理由（必須）</div>
+              <select
+                className="input" value={form.wasteReason} style={{ minWidth: 150 }}
+                onChange={(e) => setForm((f) => ({ ...f, wasteReason: e.target.value }))}
+              >
+                <option value="">選んでください</option>
+                {(data.wasteReasons || []).map(([k, label]) => (
+                  <option key={k} value={k}>{label}</option>
+                ))}
+              </select>
+            </div>
+          )}
           <div style={{ flex: 1, minWidth: 160 }}>
             <div className="lbl">ひとこと（あれば）</div>
             <input
-              className="input" value={form.reason} placeholder="例：仕込みすぎ"
+              className="input" value={form.reason} placeholder="例：夕方の仕込み分"
               onChange={(e) => setForm((f) => ({ ...f, reason: e.target.value }))}
             />
           </div>
@@ -109,6 +125,7 @@ function StockTab({ data, reload, setErr }) {
         </div>
         <p className="muted" style={{ fontSize: 12, marginBottom: 0 }}>
           廃棄と使用は、そのままの数（プラス）で入れてください。差し引きはこちらでします。
+          {form.kind === 'waste' && ' 捨てた理由は決まった選択肢から選びます。そろえておくと、あとで「どの理由が多いか」を数えられます。'}
         </p>
       </div>
 
@@ -166,7 +183,10 @@ function StockTab({ data, reload, setErr }) {
                     <td className="mono">{Math.round(m.qty * 10) / 10}{m.unit}</td>
                     {data.seeCost && <td className="mono">{m.amount ? yen(m.amount) : '—'}</td>}
                     <td className="muted">{m.staff_name || '自動'}</td>
-                    <td className="muted" style={{ fontSize: 12 }}>{m.reason || ''}</td>
+                    <td className="muted" style={{ fontSize: 12 }}>
+                      {m.wasteReasonLabel ? <span className="badge b-gray" style={{ marginRight: 6 }}>{m.wasteReasonLabel}</span> : null}
+                      {m.reason || ''}
+                    </td>
                   </tr>
                 ))}
               </tbody>

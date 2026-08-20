@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import Nav from '../../components/Nav';
+import WaitCard from '../../components/WaitCard';
 import { buildReceipt } from '../../lib/domain/receipt.js';
 
 const yen = (n) => `${Number(n || 0).toLocaleString()}円`;
@@ -223,6 +224,8 @@ export default function Pos() {
             </div>
           </div>
         )}
+
+        <WaitCard tables={tables} onChange={load} />
 
         <div className="grid g4">
           {tables.map((t) => (

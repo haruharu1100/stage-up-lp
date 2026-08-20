@@ -1080,6 +1080,62 @@ function AccuracyBox({ acc }) {
   );
 }
 
+const ERR_COLOR = (v) => (v <= 10 ? '#0f9d58' : v <= 20 ? '#e8710a' : '#d93025');
+
+/**
+ * 6種類ぜんぶの当たり具合。
+ * 記録が少ない種類は、数字を出さずに「まだ判断できません」と正直に書く。
+ */
+function AccuracyBySort({ sum }) {
+  const fams = sum?.families || [];
+  if (!fams.length) return null;
+  return (
+    <>
+      <div className="muted" style={{ marginTop: 14, marginBottom: 8 }}>
+        <b>種類ごとの当たり具合</b>（直近{sum.days}日ぶん）。
+        予測 → 実績 → ずれ をその都度そのまま残しています。ずれが片側に続いたときだけ、次の予測をそのぶん戻します。
+      </div>
+      <table className="table table-wide">
+        <thead>
+          <tr>
+            <th>種類</th><th>答え合わせ</th>
+            <th style={{ textAlign: 'right' }}>ずれの真ん中</th>
+            <th style={{ textAlign: 'right' }}>10%以内</th>
+            <th style={{ textAlign: 'right' }}>範囲内</th>
+            <th>かたより</th>
+          </tr>
+        </thead>
+        <tbody>
+          {fams.map((f) => (
+            <tr key={f.key}>
+              <td>{f.label}</td>
+              {f.enough ? (
+                <>
+                  <td className="mono">{num(f.dates)}日／{num(f.records)}件</td>
+                  <td className="mono" style={{ textAlign: 'right', color: ERR_COLOR(f.medErrorPct) }}>{f.medErrorPct}%</td>
+                  <td className="mono" style={{ textAlign: 'right' }}>{f.within10}%</td>
+                  <td className="mono" style={{ textAlign: 'right' }}>{f.inRangePct}%</td>
+                  <td className="muted" style={{ fontSize: 12 }}>
+                    {Math.abs(f.biasPct) < 5
+                      ? '片寄りなし'
+                      : f.biasPct > 0 ? `多めに出しがち（＋${f.biasPct}%）` : `少なめに出しがち（${f.biasPct}%）`}
+                  </td>
+                </>
+              ) : (
+                <td className="muted" colSpan={5}>{f.message}</td>
+              )}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <div className="muted" style={{ marginTop: 8, fontSize: 12 }}>
+        ※「必要人数」の実績は、その日ほんとうに来たお客さんから計算し直した人数です。組んだシフトの人数ではありません。
+        ※その日ぜんぜん出なかったものは、ずれの計算から外しています（0で割れないため）。
+      </div>
+    </>
+  );
+}
+
 /**
  * 何時が忙しそうか、そのとき何人いれば回りそうか。
  * 棒の長さは「その日の中での多い・少ない」を表していて、他の日とは比べていない。
@@ -1106,8 +1162,8 @@ function HourlyCard({ hourly }) {
       <table className="table table-wide">
         <thead>
           <tr>
-            <th>時間</th><th>売上の見込み</th><th style={{ width: '32%' }}>多い・少ない</th>
-            <th>ご来店</th><th>在店の目安</th><th>人手の目安</th>
+            <th>時間</th><th>売上の見込み</th><th style={{ width: '26%' }}>多い・少ない</th>
+            <th>ご来店</th><th>在店の目安</th><th>人手の目安</th><th>実測の待ち時間</th>
           </tr>
         </thead>
         <tbody>
@@ -1123,6 +1179,12 @@ function HourlyCard({ hourly }) {
               <td className="mono">{num(r.arrivals)}人</td>
               <td className="mono">{num(r.inStore)}人{r.nearFull ? <span className="badge b-out" style={{ marginLeft: 6 }}>満席に近い</span> : null}</td>
               <td className="mono">{num(r.staff)}人</td>
+              {/* ここだけは見込みではなく、受付とご案内の時刻の差＝測った事実 */}
+              <td className="mono">
+                {r.waitAvgMinutes === null || r.waitAvgMinutes === undefined
+                  ? <span className="muted">記録なし</span>
+                  : <>{r.waitAvgMinutes}分<span className="muted" style={{ fontSize: 11 }}>／{num(r.waitSamples)}件</span></>}
+              </td>
             </tr>
           ))}
         </tbody>
@@ -1132,7 +1194,8 @@ function HourlyCard({ hourly }) {
       </ul>
       <div className="muted" style={{ fontSize: 12 }}>
         ※「在店の目安」は、その時間にご来店した人数と、前の1時間にご来店した人数から見積もっています。
-        実際にお待たせした時間は記録していないため、待ち時間を分数ではお出ししません。
+        ※「実測の待ち時間」だけは見込みではなく事実です。テーブル画面で受付とご案内を押した時刻の差だけを出しています。
+        記録が5件に満たない時間帯は「記録なし」と出し、推測の分数は出しません。
       </div>
     </div>
   );
@@ -1210,6 +1273,7 @@ function ForecastTab({ fc, anom, hourly, busy, err, open, setOpen, onRemake }) {
       <div className="card" style={{ marginTop: 14 }}>
         <div className="h2">予測はどれくらい当たっているか</div>
         <AccuracyBox acc={fc?.accuracy} />
+        <AccuracyBySort sum={fc?.accuracySummary} />
       </div>
 
       {/* いつもと違った日 */}

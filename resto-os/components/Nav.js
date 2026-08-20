@@ -19,6 +19,7 @@ const LINKS = [
   ['/admin/reports', 'レポート', ['owner', 'admin', 'manager'], 'history'],
   ['/admin/prep', '今日の仕込み', ['owner', 'admin', 'manager', 'kitchen'], 'history'],
   ['/admin/inventory', '材料と発注', ['owner', 'admin', 'manager', 'kitchen'], 'inventory'],
+  ['/admin/shift', 'シフトと人手', ['owner', 'admin', 'manager'], 'shift'],
   ['/admin/coupons', 'クーポン', ['owner', 'admin', 'manager'], 'coupon'],
   ['/admin/staff', 'スタッフ', ['owner', 'admin'], 'staff'],
   ['/admin/printers', 'プリンター', ['owner', 'admin', 'manager'], 'pos'],

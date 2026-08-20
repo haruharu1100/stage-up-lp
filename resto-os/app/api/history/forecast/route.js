@@ -2,7 +2,9 @@ import { NextResponse } from 'next/server';
 import { businessDate } from '../../../../lib/db.js';
 import { requireAuth, requireRole, requireFeature, apiFail } from '../../../../lib/auth.js';
 import { addDays, learningStatus } from '../../../../lib/learn.js';
-import { predictDay, saveForecasts, accuracy, anomalies, todayPlan, hourlyPlan, confLabel } from '../../../../lib/forecast.js';
+import { predictDay, saveForecasts, accuracy, accuracySummary, anomalies, todayPlan, hourlyPlan, confLabel } from '../../../../lib/forecast.js';
+import { saveDetailForecasts } from '../../../../lib/forecast-detail.js';
+import { hasFeature } from '../../../../lib/plans.js';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
@@ -120,12 +122,13 @@ export async function GET(req) {
     }
 
     const next = await viewNext(ctx, sp);
-    const [status, acc, plan] = await Promise.all([
+    const [status, acc, plan, summary] = await Promise.all([
       learningStatus(ctx),
       accuracy(ctx, { days: 120, metric: 'sales' }),
       todayPlan(ctx),
+      accuracySummary(ctx, { days: 120 }),
     ]);
-    return NextResponse.json({ ok: true, ...next, status, accuracy: acc, plan });
+    return NextResponse.json({ ok: true, ...next, status, accuracy: acc, plan, accuracySummary: summary });
   } catch (e) {
     return apiFail(e);
   }
@@ -146,7 +149,14 @@ export async function POST(req) {
         error: `まだ${r.haveDays || 0}日ぶんしか記録がないため、予測を出せません。記録がたまるとここに出ます。`,
       }, { status: 400 });
     }
-    return NextResponse.json({ ok: true, saved: r.saved });
+    // 内訳（時間帯・人手・商品・材料）ぶんも同じタイミングで作り直す。
+    // ここで失敗しても、1日ぶんの見込みは作れているので画面は止めない。
+    let detail = 0;
+    try {
+      const d = await saveDetailForecasts(ctx, { days: 3, hasInventory: hasFeature(ctx.plan, 'inventory') });
+      detail = d.saved || 0;
+    } catch { detail = 0; }
+    return NextResponse.json({ ok: true, saved: r.saved, detail });
   } catch (e) {
     return apiFail(e);
   }

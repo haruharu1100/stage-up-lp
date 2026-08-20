@@ -308,7 +308,7 @@ export default function PrepPage() {
                 </p>
                 <div style={{ overflowX: 'auto' }}>
                   <table className="table">
-                    <thead><tr><th>曜日</th><th className="mono">記録日数</th><th className="mono">1日あたりの廃棄</th><th>ほかの曜日と比べて</th></tr></thead>
+                    <thead><tr><th>曜日</th><th className="mono">記録日数</th><th className="mono">1日あたりの廃棄</th><th>ほかの曜日と比べて</th><th>捨てた理由の内訳</th></tr></thead>
                     <tbody>
                       {data.wasteDow.rows.map((r) => (
                         <tr key={r.dow}>
@@ -324,11 +324,28 @@ export default function PrepPage() {
                                     {r.diffPct > 0 ? `約${Math.round(r.diffPct)}%多い` : `約${Math.round(Math.abs(r.diffPct))}%少ない`}
                                   </b>)}
                           </td>
+                          <td style={{ fontSize: 12 }}>
+                            {!r.reasons || !r.reasons.enough
+                              ? <span className="muted">理由つきの記録がまだ少なめです</span>
+                              : r.reasons.rows.slice(0, 3).map((x) => (
+                                  <span key={x.key} style={{ marginRight: 8 }}>
+                                    {x.label} {x.pct}%
+                                    {r.reasons.stands && r.reasons.stands.key === x.key
+                                      ? <b style={{ color: 'var(--red)' }}>（多め）</b> : null}
+                                  </span>
+                                ))}
+                          </td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
                 </div>
+                {data.wasteDow.reasons?.length > 0 && (
+                  <p className="muted" style={{ fontSize: 12, marginTop: 8 }}>
+                    期間ぜんぶの内訳：{data.wasteDow.reasons.map((x) => `${x.label} ${x.pct}%`).join('　')}
+                    　（理由つきの記録 {data.wasteDow.reasonDays}日ぶん）
+                  </p>
+                )}
                 <ul style={{ marginTop: 10, paddingLeft: 20, lineHeight: 1.9 }}>
                   {data.wasteDow.notes.map((n, i) => <li key={i}>{n}</li>)}
                 </ul>

@@ -3,6 +3,7 @@ import { all, one, businessDate, initDb } from '../../../lib/db.js';
 import { createCtx } from '../../../lib/tenant-db.js';
 import { ensureCalendar, saveForecast, saveActual, backfillWeather, rebuildDay, addDays } from '../../../lib/learn.js';
 import { saveForecasts, scoreDay } from '../../../lib/forecast.js';
+import { saveDetailForecasts } from '../../../lib/forecast-detail.js';
 import { runReport } from '../../../lib/report.js';
 import { detectStockouts } from '../../../lib/prep.js';
 import { consumeDay } from '../../../lib/inventory.js';
@@ -144,18 +145,27 @@ async function runJob(job, slot) {
     // （導入前の営業日や、あとから取り込んだ過去の売上ぶん）
     const b = await backfillWeather(ctx, { days: 400, cap: 60 });
 
+    // 売れた数ぶんの材料を在庫から引く。これをしないと在庫は入荷でしか動かず、いつまでも減らない。
+    // レシピが未登録の店では何もしない（勝手な数字を作らない）。
+    //
+    // ★採点より先にやる。ここで入る「使った量」が、在庫需要の予測に対する実績になるため。
+    let used = 0;
+    const hasInv = hasFeature(ctx.plan, 'inventory');
+    if (hasInv) {
+      const cu = await consumeDay(ctx, y);
+      used = cu.lines || 0;
+    }
+
     // 昨日ぶんの「予測 対 実際」を採点する。
     // 実際の数字が確定したあとに採点するので、あとから都合よく直すことはできない。
     const sc = await scoreDay(ctx, y);
     // 明日から先の予測を作り直す。今日と過去には触れない（当たり外れの記録を守るため）
     const fc = await saveForecasts(ctx, { days: 10 });
-
-    // 売れた数ぶんの材料を在庫から引く。これをしないと在庫は入荷でしか動かず、いつまでも減らない。
-    // レシピが未登録の店では何もしない（勝手な数字を作らない）。
-    let used = 0;
-    if (hasFeature(ctx.plan, 'inventory')) {
-      const cu = await consumeDay(ctx, y);
-      used = cu.lines || 0;
+    // 内訳（時間帯・人手・商品・材料）ぶんも作る。ここは3日先までで足りる。
+    let detail = 0;
+    if (hasFeature(ctx.plan, 'history')) {
+      const df = await saveDetailForecasts(ctx, { days: 3, hasInventory: hasInv });
+      detail = df.saved || 0;
     }
 
     // 「売り逃していないか」を数え直す。ここで出るのは推測であって、売上の数字とは混ぜない。
@@ -173,7 +183,7 @@ async function runJob(job, slot) {
     return {
       date: y, rebuilt: Boolean(r?.ok), sales: r?.sales ?? null,
       weather: a.saved ?? 0, weatherBackfill: b.saved ?? 0,
-      scored: sc.scored ?? 0, forecasts: fc.saved ?? 0,
+      scored: sc.scored ?? 0, forecasts: fc.saved ?? 0, detailForecasts: detail,
       stockUsed: used, missedItems: missed,
       report: rep.ok ? (rep.delivered ? '作成・送信' : '作成のみ') : (rep.skipped || '見送り'),
     };

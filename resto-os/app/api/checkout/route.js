@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { nowIso, withTx } from '../../../lib/db.js';
-import { requireAuth, requireRole, canSeeCost, apiFail, ApiError } from '../../../lib/auth.js';
+import { requireAuth, requireRole, requireFeature, canSeeCost, apiFail, ApiError } from '../../../lib/auth.js';
 import { getOpenItems, getTable, buildTotals, stripCost } from '../../../lib/store.js';
 import { newPublicId, newToken } from '../../../lib/tenant-db.js';
 import { logAudit } from '../../../lib/audit.js';
@@ -86,7 +86,7 @@ async function preview(ctx, tableId, code, pickIds = null, payGuests = 0) {
 
 export async function GET(req) {
   try {
-    const ctx = requireRole(await requireAuth(), FLOOR_ROLES);
+    const ctx = requireFeature(requireRole(await requireAuth(), FLOOR_ROLES), 'pos');
     const sp = new URL(req.url).searchParams;
     const r = await preview(ctx, sp.get('tableId'), sp.get('coupon') || '', sp.get('itemIds') || null, sp.get('guests'));
     // 原価・粗利はスタッフに見せない（会計画面は全員が開くため、ここで必ず落とす）
@@ -104,7 +104,7 @@ export async function GET(req) {
 
 export async function POST(req) {
   try {
-    const ctx = await requireAuth();
+    const ctx = requireFeature(await requireAuth(), 'pos');
     const b = await req.json();
     const action = b.action || 'close';
     if (action === 'void' || action === 'refund') return await voidCheck(ctx, b, action);

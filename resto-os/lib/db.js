@@ -367,11 +367,39 @@ const MIGRATIONS = [
      source TEXT DEFAULT 'manual', staff_name TEXT DEFAULT '', created_at TEXT NOT NULL
    )`,
   `CREATE INDEX IF NOT EXISTS ix_venue_events ON venue_events(tenant_id, store_id, business_date)`,
+
+  // ---- 待ち時間の実測 ----
+  `CREATE TABLE IF NOT EXISTS waitlist (
+     id INTEGER PRIMARY KEY AUTOINCREMENT,
+     tenant_id INTEGER NOT NULL, store_id INTEGER NOT NULL,
+     business_date TEXT NOT NULL, name TEXT DEFAULT '', guests INTEGER NOT NULL DEFAULT 1,
+     status TEXT NOT NULL DEFAULT 'waiting',
+     waiting_started_at TEXT NOT NULL, seated_at TEXT DEFAULT '', left_at TEXT DEFAULT '',
+     actual_wait_minutes INTEGER, wait_dow INTEGER, wait_hour INTEGER,
+     table_id INTEGER, staff_id INTEGER, staff_name TEXT DEFAULT '', note TEXT DEFAULT '',
+     created_at TEXT NOT NULL, updated_at TEXT NOT NULL
+   )`,
+  `CREATE INDEX IF NOT EXISTS ix_waitlist ON waitlist(tenant_id, store_id, business_date, status)`,
+  `CREATE INDEX IF NOT EXISTS ix_waitlist_slot ON waitlist(tenant_id, store_id, wait_dow, wait_hour)`,
+
+  // ---- シフト ----
+  `CREATE TABLE IF NOT EXISTS shifts (
+     id INTEGER PRIMARY KEY AUTOINCREMENT,
+     tenant_id INTEGER NOT NULL, store_id INTEGER NOT NULL,
+     business_date TEXT NOT NULL, staff_id INTEGER, staff_name TEXT NOT NULL,
+     role TEXT DEFAULT 'hall', start_time TEXT NOT NULL, end_time TEXT NOT NULL,
+     note TEXT DEFAULT '', created_by TEXT DEFAULT '',
+     created_at TEXT NOT NULL, updated_at TEXT NOT NULL
+   )`,
+  `CREATE INDEX IF NOT EXISTS ix_shifts ON shifts(tenant_id, store_id, business_date)`,
+
+  // ---- 廃棄の理由（決まった選択肢） ----
+  `ALTER TABLE stock_moves ADD COLUMN waste_reason TEXT DEFAULT ''`,
 ];
 
 // 「もう追いついているか」を1回で見分けるための問い合わせ。
 // ★項目を足したら、必ずこの1行も最後に足したものへ合わせて更新すること。
-const SCHEMA_PROBE = 'SELECT id FROM venue_events LIMIT 1';
+const SCHEMA_PROBE = 'SELECT waste_reason FROM stock_moves LIMIT 1';
 
 async function migrate(db) {
   for (const sql of MIGRATIONS) {

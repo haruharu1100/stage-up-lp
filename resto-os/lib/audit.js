@@ -35,6 +35,7 @@ export const AUDIT_LABEL = {
   'table.delete': 'テーブル削除',
   'table.open': '来店（着席）',
   'table.close': '空席にする',
+  'table.close_uncharged': '未会計のまま空席にする（レジ会計）',
   'table.regenerate_qr': 'QR再発行',
   'staff.create': 'スタッフ追加',
   'staff.update': 'スタッフ変更',

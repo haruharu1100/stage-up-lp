@@ -24,6 +24,9 @@
 import { addDays } from './learn.js';
 import { nowIso, withTx } from './db.js';
 import { prepPlan } from './prep.js';
+import { WASTE_REASONS, WASTE_REASON_LABEL, isWasteReason } from './domain/waste.js';
+
+export { WASTE_REASONS, WASTE_REASON_LABEL };
 
 export const MOVE_KINDS = ['count', 'receive', 'use', 'waste', 'adjust'];
 
@@ -238,9 +241,15 @@ export async function currentStock(ctx) {
 }
 
 /** 在庫の動きを1件記録する。棚卸だけは「その時点の数」、それ以外は増減。 */
-export async function addMove(ctx, { ingredientId, kind, qty, reason = '', date = null }) {
+export async function addMove(ctx, { ingredientId, kind, qty, reason = '', wasteReason = '', date = null }) {
   const iid = Number(ingredientId);
   if (!MOVE_KINDS.includes(kind)) throw new Error('記録の種類が正しくありません');
+  // 廃棄は理由が要る。理由の無い廃棄記録は、あとから何の役にも立たないため。
+  let wr = '';
+  if (kind === 'waste') {
+    wr = String(wasteReason || '');
+    if (!isWasteReason(wr)) throw new Error('捨てた理由を選んでください');
+  }
   const ing = await ctx.first(`SELECT * FROM ingredients WHERE SCOPE() AND id = ?`, [iid]);
   if (!ing) throw new Error('その材料が見つかりません');
 
@@ -261,6 +270,7 @@ export async function addMove(ctx, { ingredientId, kind, qty, reason = '', date 
     kind,
     qty: q,
     amount: kind === 'waste' || kind === 'receive' ? amount : 0,
+    waste_reason: wr,
     reason: clean(reason, 120),
     staff_id: ctx.staffId ? Number(ctx.staffId) : null,
     staff_name: ctx.staffName || '',
@@ -336,14 +346,19 @@ export async function listMoves(ctx, { days = 14, ingredientId = null, limit = 1
   let where = '';
   if (ingredientId) { where = 'AND m.ingredient_id = ?'; args.push(Number(ingredientId)); }
   args.push(Math.max(1, Math.min(300, limit)));
-  return ctx.query(
-    `SELECT m.id, m.business_date AS date, m.kind, m.qty, m.amount, m.reason, m.staff_name,
+  const rows = await ctx.query(
+    `SELECT m.id, m.business_date AS date, m.kind, m.qty, m.amount, m.reason, m.waste_reason, m.staff_name,
             i.name, i.unit
        FROM stock_moves m JOIN ingredients i ON i.id = m.ingredient_id
       WHERE SCOPE(m) AND m.business_date BETWEEN ? AND ? ${where}
       ORDER BY m.business_date DESC, m.id DESC LIMIT ?`,
     args,
   );
+  return rows.map((r) => ({
+    ...r,
+    wasteReason: r.waste_reason || '',
+    wasteReasonLabel: WASTE_REASON_LABEL[r.waste_reason] || '',
+  }));
 }
 
 // ===== 発注の提案 =====

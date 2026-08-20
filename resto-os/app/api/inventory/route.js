@@ -6,7 +6,7 @@ import {
   listIngredients, saveIngredient, currentStock, addMove, listMoves,
   listRecipe, saveRecipe, recipeCoverage,
   buildOrderPlan, saveOrderPlan, listOrderPlans, decideOrderPlan, receiveOrderPlan,
-  UNITS, MOVE_KINDS, MOVE_LABEL,
+  UNITS, MOVE_KINDS, MOVE_LABEL, WASTE_REASONS,
 } from '../../../lib/inventory.js';
 
 export const dynamic = 'force-dynamic';
@@ -61,6 +61,7 @@ export async function GET(req) {
       units: UNITS,
       kinds: MOVE_KINDS,
       kindLabel: MOVE_LABEL,
+      wasteReasons: WASTE_REASONS,
       seeCost,
       canManage: MANAGE_ROLES.includes(ctx.role),
       today: businessDate(),
@@ -83,6 +84,7 @@ export async function POST(req) {
         kind: String(body.kind || ''),
         qty: body.qty,
         reason: body.reason || '',
+        wasteReason: body.wasteReason || '',
         date: body.date || null,
       });
       await logAudit(ctx, {

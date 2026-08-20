@@ -714,6 +714,7 @@ CREATE TABLE IF NOT EXISTS stock_moves (
   kind TEXT NOT NULL,                  -- count＝棚卸 / receive＝入荷 / use＝使用 / waste＝廃棄 / adjust＝手直し
   qty REAL NOT NULL DEFAULT 0,         -- countは「その時点の在庫」、それ以外は増減（廃棄・使用はマイナス）
   amount INTEGER DEFAULT 0,            -- 金額（円）。廃棄額の集計に使う
+  waste_reason TEXT DEFAULT '',        -- 廃棄のときだけ。決まった選択肢から選ぶ（lib/inventory.js の WASTE_REASONS）
   reason TEXT DEFAULT '',
   staff_id INTEGER,
   staff_name TEXT DEFAULT '',
@@ -827,3 +828,54 @@ CREATE TABLE IF NOT EXISTS venue_events (
   created_at TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS ix_venue_events ON venue_events(tenant_id, store_id, business_date);
+
+-- ===== 待ち時間（第1層：実際に測った時刻だけを持つ） =====
+
+-- ★ここに入るのは「実際に押された時刻」だけ。見込みや推測は一切入れない。
+--   受付した時刻と席についた時刻の差が、そのまま待ち時間になる。
+--   測っていない待ち時間を「たぶん15分くらい」と埋めることは絶対にしない。
+CREATE TABLE IF NOT EXISTS waitlist (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  tenant_id INTEGER NOT NULL,
+  store_id INTEGER NOT NULL,
+  business_date TEXT NOT NULL,
+  name TEXT DEFAULT '',                -- 呼び出し名（山田さま など）
+  guests INTEGER NOT NULL DEFAULT 1,
+  status TEXT NOT NULL DEFAULT 'waiting', -- waiting＝お待ち中 / seated＝ご案内済み / left＝待たずにお帰り
+  waiting_started_at TEXT NOT NULL,    -- 受付した時刻（実測）
+  seated_at TEXT DEFAULT '',           -- 席についた時刻（実測）
+  left_at TEXT DEFAULT '',             -- 待たずに帰られた時刻（実測）
+  actual_wait_minutes INTEGER,         -- 実測の待ち分数。着席するまでは必ず null（埋めない）
+  wait_dow INTEGER,                    -- 受付した曜日（0=日）。曜日×時間帯の集計用
+  wait_hour INTEGER,                   -- 受付した時間帯（0〜23）
+  table_id INTEGER,                    -- 案内した卓
+  staff_id INTEGER,
+  staff_name TEXT DEFAULT '',
+  note TEXT DEFAULT '',
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS ix_waitlist ON waitlist(tenant_id, store_id, business_date, status);
+CREATE INDEX IF NOT EXISTS ix_waitlist_slot ON waitlist(tenant_id, store_id, wait_dow, wait_hour);
+
+-- ===== シフト（第1層：人が組んだ事実） =====
+
+-- 1行＝1人ぶんの出勤。時間帯ごとの配置人数は、この行を時間で数えて出す。
+-- 「20時に2人」という形で持たないのは、あとから「誰を19時から入れるか」を
+-- 考えるときに、人単位でないと具体的な案にならないため。
+CREATE TABLE IF NOT EXISTS shifts (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  tenant_id INTEGER NOT NULL,
+  store_id INTEGER NOT NULL,
+  business_date TEXT NOT NULL,
+  staff_id INTEGER,
+  staff_name TEXT NOT NULL,
+  role TEXT DEFAULT 'hall',            -- hall＝ホール / kitchen＝厨房 / other
+  start_time TEXT NOT NULL,            -- '17:00'
+  end_time TEXT NOT NULL,              -- '23:00'（翌朝までのときは '25:00' まで書ける）
+  note TEXT DEFAULT '',
+  created_by TEXT DEFAULT '',
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS ix_shifts ON shifts(tenant_id, store_id, business_date);

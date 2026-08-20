@@ -15,11 +15,43 @@ import { nowIso, withTx } from './db.js';
 import { calendarFacts, calendarLabel, dowLabel, PAYDAY_NONE } from './domain/calendar.js';
 import { weatherGroup } from './weather/open-meteo.js';
 import { addDays, dayDiff } from './learn.js';
+import { waitForSlots } from './waitlist.js';
 
 const METRICS = [
   { key: 'sales', col: 'sales', label: '売上', unit: '円' },
   { key: 'guests', col: 'guests', label: '客数', unit: '人' },
 ];
+
+/**
+ * 答え合わせの対象。
+ *
+ * metric の書き方は「種類:相手」。sales と guests だけ相手がいないので種類そのまま。
+ *   sales / guests / hour_sales:20 / item_qty:12 / staff:20 / stock_use:3
+ * こうしておくと、表を増やさずに種類を増やせる。
+ */
+export const METRIC_FAMILIES = [
+  { key: 'sales', label: '売上', unit: '円', kind: 'yen' },
+  { key: 'guests', label: '来客数', unit: '人', kind: 'num' },
+  { key: 'hour_sales', label: '時間帯別売上', unit: '円', kind: 'yen' },
+  { key: 'item_qty', label: '商品別販売数', unit: '個', kind: 'num' },
+  { key: 'staff', label: '必要人数', unit: '人', kind: 'num' },
+  { key: 'stock_use', label: '在庫需要', unit: '', kind: 'num' },
+];
+
+export const FAMILY_LABEL = Object.fromEntries(METRIC_FAMILIES.map((f) => [f.key, f.label]));
+
+export function familyOf(metric) {
+  return String(metric || '').split(':')[0];
+}
+
+export function metricTargetOf(metric) {
+  const i = String(metric || '').indexOf(':');
+  return i < 0 ? '' : String(metric).slice(i + 1);
+}
+
+// 精度を語ってよい下限。これ未満は「まだ判断できません」と正直に返す
+const MIN_RESULT_ROWS = 10;
+const MIN_RESULT_DAYS = 7;
 
 const GROUP_LABEL = {
   clear: '晴れ', cloudy: 'くもり', rain: '雨', snow: '雪', fog: '霧', storm: '雷雨',
@@ -289,14 +321,21 @@ export async function predictDay(ctx, date, preload = null) {
     ? preload.__acc
     : await accuracy(ctx, { days: 120, metric: 'sales' });
 
+  // これまでのずれが片側に寄っていたら、そのぶんを戻す（答え合わせを次の予測に返す）
+  const cal = preload && preload.__cal !== undefined
+    ? preload.__cal
+    : Object.fromEntries(await Promise.all(
+      METRICS.map(async (m) => [m.key, await calibration(ctx, { metric: m.key, days: 120 })]),
+    ));
+
   const metrics = {};
   for (const m of METRICS) {
-    metrics[m.key] = predictMetric(usable, t, m, date, acc);
+    metrics[m.key] = predictMetric(usable, t, m, date, acc, cal?.[m.key] || null);
   }
   return { date, ok: true, context: t, metrics, haveDays: usable.length };
 }
 
-function predictMetric(rows, t, m, date, acc = null) {
+function predictMetric(rows, t, m, date, acc = null, cal = null) {
   const key = m.key;
   const basis = [];
   // 条件の効き目は、曜日の差を取り除いてから測る（同じ効果を二度足さないため）
@@ -432,6 +471,18 @@ function predictMetric(rows, t, m, date, acc = null) {
     }
   }
 
+  // 答え合わせから分かった「いつものかたより」を戻す。
+  // これは条件の効き目ではなく、この店に対するこのやり方のクセの補正。
+  if (cal?.ok) {
+    factors.push({
+      k: 'calibration',
+      ratio: cal.ratio,
+      label: 'これまでの外し方の補正',
+      detail: `過去${cal.n}回の答え合わせで、${cal.biasPct > 0 ? '多めに出す' : '少なめに出す'}ことが続いていたぶんを戻しています`
+        + `（ずれの真ん中 ${cal.biasPct > 0 ? '＋' : ''}${cal.biasPct}%の半分だけ）。`,
+    });
+  }
+
   // 効かせすぎを防ぐ。かけ算を重ねると、まれな日で現実離れした数字になる
   let mult = 1;
   for (const f of factors) mult *= f.ratio;
@@ -531,6 +582,9 @@ export async function saveForecasts(ctx, { days = 10 } = {}) {
 
   const ts = nowIso();
   const acc = await accuracy(ctx, { days: 120, metric: 'sales' });
+  const cal = Object.fromEntries(await Promise.all(
+    METRICS.map(async (m) => [m.key, await calibration(ctx, { metric: m.key, days: 120 })]),
+  ));
   let saved = 0;
   for (let i = 0; i < days; i += 1) {
     const d = addDays(from, i);
@@ -538,6 +592,7 @@ export async function saveForecasts(ctx, { days = 10 } = {}) {
     const pre = rows.slice();
     pre.__ctx = t;
     pre.__acc = acc;
+    pre.__cal = cal;
     const p = await predictDay(ctx, d, pre);
     if (!p.ok) continue;
     for (const m of METRICS) {
@@ -579,6 +634,58 @@ function pickContext(t) {
 // ===== 当たり外れを記録する =====
 
 /**
+ * その日の「実際そうだった数字」を、予測と同じ metric の名前で集める。
+ *
+ * ★ここが読むのは事実の表（第1層・第1.5層）だけ。
+ *   予測の表からは1つも取らない。予測で予測を採点すると、いつまでも満点になってしまう。
+ */
+async function actualsFor(ctx, date, fact) {
+  const map = new Map();
+  map.set('sales', Number(fact.sales || 0));
+  map.set('guests', Number(fact.guests || 0));
+
+  // 時間帯別の売上と、その時間に席についた人数
+  const hrs = await ctx.query(
+    `SELECT hour, sales, guests FROM daily_hour_facts WHERE SCOPE() AND business_date = ? ORDER BY hour`,
+    [date],
+  );
+  const arrivals = new Map();
+  for (const h of hrs) {
+    const hour = Number(h.hour);
+    map.set(`hour_sales:${hour}`, Number(h.sales || 0));
+    arrivals.set(hour, Number(h.guests || 0));
+  }
+
+  // 必要人数の「実際」は、その日ほんとうに来たお客さんから計算し直した人数。
+  // 組んだシフトの人数ではない（それは店が決めた数であって、必要だった数ではないため）。
+  const perStaff = Math.max(4, Number(ctx.store?.guests_per_staff) || 12);
+  const minStaff = Math.max(1, Number(ctx.store?.min_staff) || 2);
+  for (const [hour, come] of arrivals) {
+    const before = arrivals.get(hour - 1) || 0;
+    const inStore = come + before * 0.6;
+    map.set(`staff:${hour}`, Math.max(minStaff, Math.ceil(inStore / perStaff)));
+  }
+
+  // 商品ごとに実際に出た数
+  const items = await ctx.query(
+    `SELECT item_id, SUM(qty) AS qty FROM daily_item_facts
+      WHERE SCOPE() AND business_date = ? AND item_id IS NOT NULL GROUP BY item_id`,
+    [date],
+  );
+  for (const r of items) map.set(`item_qty:${Number(r.item_id)}`, Number(r.qty || 0));
+
+  // 材料ごとに実際に減った量（使用の記録。qty はマイナスで入っているので符号を戻す）
+  const used = await ctx.query(
+    `SELECT ingredient_id, SUM(-qty) AS q FROM stock_moves
+      WHERE SCOPE() AND business_date = ? AND kind = 'use' GROUP BY ingredient_id`,
+    [date],
+  );
+  for (const r of used) map.set(`stock_use:${Number(r.ingredient_id)}`, Math.round(Number(r.q || 0) * 100) / 100);
+
+  return map;
+}
+
+/**
  * 予測と実際を突き合わせて残す。
  * 外れた日も必ず残す。都合の良い日だけ数えると、精度の表示が嘘になる。
  */
@@ -592,35 +699,40 @@ export async function scoreDay(ctx, date) {
   );
   if (!fcs.length) return { ok: false, reason: 'NO_FORECAST' };
 
-  const actualOf = { sales: Number(fact.sales || 0), guests: Number(fact.guests || 0) };
+  const actualOf = await actualsFor(ctx, date, fact);
   const ts = nowIso();
-  let n = 0;
+  const scoreRows = [];
   for (const f of fcs) {
-    const actual = actualOf[f.metric];
+    const actual = actualOf.get(f.metric);
     if (actual === undefined) continue;
-    // 休業日は外れとして数えない（予測の良し悪しではないため）
+    // 休業日・その日ぜんぜん出なかったものは外れとして数えない
+    // （0で割れないうえ、予測の良し悪しとも言い切れないため）
     if (!actual) continue;
     const predicted = Number(f.value || 0);
-    const errPct = actual ? Math.round(((predicted - actual) / actual) * 1000) / 10 : 0;
+    const errPct = Math.round(((predicted - actual) / actual) * 1000) / 10;
     const inRange = predicted && f.low !== null && f.high !== null
       ? actual >= Number(f.low) && actual <= Number(f.high)
       : null;
-    await withTx(async (tx) => {
-      const c = ctx.bind(tx);
-      await c.run(`DELETE FROM forecast_results WHERE SCOPE() AND target_date = ? AND metric = ?`, [date, f.metric]);
-      await c.insert('forecast_results', {
-        target_date: date,
-        metric: f.metric,
-        predicted,
-        actual,
-        error_pct: errPct,
-        cause_json: JSON.stringify({ inRange, low: f.low, high: f.high }),
-        created_at: ts,
-      });
+    scoreRows.push({
+      target_date: date,
+      metric: f.metric,
+      predicted,
+      actual,
+      error_pct: errPct,
+      cause_json: JSON.stringify({ inRange, low: f.low, high: f.high, family: familyOf(f.metric) }),
+      created_at: ts,
     });
-    n += 1;
   }
-  return { ok: true, scored: n };
+  if (!scoreRows.length) return { ok: true, scored: 0 };
+
+  // その日ぶんはまとめて1回で入れ直す。件数が多い（時間帯・商品・材料ぶん）ので、
+  // 1件ずつ取引を開けると夜間処理が間に合わなくなる。
+  await withTx(async (tx) => {
+    const c = ctx.bind(tx);
+    await c.run(`DELETE FROM forecast_results WHERE SCOPE() AND target_date = ?`, [date]);
+    for (const r of scoreRows) await c.insert('forecast_results', r);
+  });
+  return { ok: true, scored: scoreRows.length };
 }
 
 /** ここ最近の当たり具合。良い数字だけを選ばず、そのまま出す */
@@ -653,6 +765,109 @@ export async function accuracy(ctx, { days = 60, metric = 'sales' } = {}) {
       errorPct: Number(r.error_pct),
       inRange: (() => { try { return JSON.parse(r.cause_json || '{}').inRange === true; } catch { return false; } })(),
     })),
+  };
+}
+
+/**
+ * 6種類ぜんぶの当たり具合を、種類ごとにまとめて返す。
+ *
+ * ★記録が少ないうちは、数字を出さずに「まだ判断できません」と返す。
+ *   3日ぶんの記録で「ずれ2%」と出すと、当たっているように見えてしまうため。
+ */
+export async function accuracySummary(ctx, { days = 120 } = {}) {
+  const from = addDays(todayJst(), -days);
+  const rows = await ctx.query(
+    `SELECT target_date, metric, predicted, actual, error_pct, cause_json FROM forecast_results
+      WHERE SCOPE() AND target_date >= ?`,
+    [from],
+  );
+
+  const byFamily = new Map(METRIC_FAMILIES.map((f) => [f.key, []]));
+  for (const r of rows) {
+    const fam = familyOf(r.metric);
+    if (!byFamily.has(fam)) continue;
+    byFamily.get(fam).push(r);
+  }
+
+  const families = METRIC_FAMILIES.map((f) => {
+    const list = byFamily.get(f.key) || [];
+    const dates = new Set(list.map((r) => r.target_date));
+    const base = {
+      key: f.key, label: f.label, unit: f.unit,
+      records: list.length, dates: dates.size,
+    };
+    if (list.length < MIN_RESULT_ROWS || dates.size < MIN_RESULT_DAYS) {
+      return {
+        ...base,
+        enough: false,
+        message: list.length
+          ? `現在の記録数では精度判断できません（いまは${dates.size}日ぶん・${list.length}件。${MIN_RESULT_DAYS}日ぶん・${MIN_RESULT_ROWS}件たまると出します）。`
+          : '現在の記録数では精度判断できません（まだ答え合わせの記録がありません）。',
+      };
+    }
+    const errs = list.map((r) => Math.abs(Number(r.error_pct)));
+    const signed = list.map((r) => Number(r.error_pct));
+    const inRange = list.filter((r) => {
+      try { return JSON.parse(r.cause_json || '{}').inRange === true; } catch { return false; }
+    }).length;
+    return {
+      ...base,
+      enough: true,
+      avgErrorPct: Math.round((errs.reduce((s, v) => s + v, 0) / errs.length) * 10) / 10,
+      medErrorPct: Math.round(median(errs) * 10) / 10,
+      // ＋なら出しすぎ、−なら出し足りない。かたよりが続くなら次の予測で補正する材料になる
+      biasPct: Math.round(median(signed) * 10) / 10,
+      within10: Math.round((errs.filter((v) => v <= 10).length / errs.length) * 100),
+      within20: Math.round((errs.filter((v) => v <= 20).length / errs.length) * 100),
+      inRangePct: Math.round((inRange / list.length) * 100),
+    };
+  });
+
+  return {
+    ok: true,
+    days,
+    families,
+    totalRecords: rows.length,
+    note: '予測 → 実績 → ずれ、をそのまま残しています。外れた日も抜かずに数えています。',
+  };
+}
+
+/**
+ * 「いつも出しすぎている／出し足りない」というかたよりを見つけて、次の予測にかける倍率を返す。
+ *
+ * ここが Prediction Feedback Loop の「改善」にあたる部分。
+ * ただしやることは1つだけ——ずれの真ん中ぶんを戻すこと。
+ * 凝った学習をさせないのは、なぜその数字になったのかを店長に説明できなくなるため。
+ *
+ * かけるのは、記録が十分たまっていて、かつ、かたよりが片側に続いているときだけ。
+ */
+export async function calibration(ctx, { metric = 'sales', days = 120 } = {}) {
+  const from = addDays(todayJst(), -days);
+  const rows = await ctx.query(
+    `SELECT target_date, error_pct FROM forecast_results
+      WHERE SCOPE() AND metric = ? AND target_date >= ?`,
+    [metric, from],
+  );
+  const none = { ok: false, ratio: 1, n: rows.length, biasPct: null };
+  if (rows.length < 20) return none;
+
+  const signed = rows.map((r) => Number(r.error_pct));
+  const bias = median(signed);
+  if (!Number.isFinite(bias) || Math.abs(bias) < 5) return { ...none, biasPct: Math.round(bias * 10) / 10 };
+
+  // 片側に寄っているかを確かめる。半々に散らばっているだけなら、それは偏りではなくばらつき。
+  const overs = signed.filter((v) => v > 0).length;
+  const share = overs / signed.length;
+  if (share > 0.35 && share < 0.65) return { ...none, biasPct: Math.round(bias * 10) / 10 };
+
+  // 一度に直しすぎない。半分だけ戻し、上下15%で頭打ちにする。
+  const ratio = clamp(1 / (1 + (bias / 100) * 0.5), 0.85, 1.15);
+  return {
+    ok: true,
+    ratio,
+    n: rows.length,
+    biasPct: Math.round(bias * 10) / 10,
+    overShare: Math.round(share * 100),
   };
 }
 
@@ -805,6 +1020,11 @@ export async function hourlyPlan(ctx, date = null) {
   const seats = Number(seatRow?.seats || 0);
 
   const arrivals = hourList.map((h) => (sumG ? (medOf(shareGuests, h) / sumG) * totalGuests : 0));
+
+  // 実際に測った待ち時間。記録が足りない時間帯は入らないので、そこには何も表示しない。
+  // ★ここに入るのは受付ボタンとご案内ボタンの時刻差だけ。分数を計算で作ることはしない。
+  const waits = await waitForSlots(ctx, dow, hourList, { days: 90 });
+
   const rows = hourList.map((h, i) => {
     const sales = (medOf(shareSales, h) / sumS) * totalSales;
     // そのときお店にいる人数の目安＝この時間に来た人＋前の時間に来た人（2時間ほど滞在するとみて）
@@ -818,8 +1038,14 @@ export async function hourlyPlan(ctx, date = null) {
       arrivals: Math.round(arrivals[i]),
       inStore: Math.round(inStore),
       staff,
-      // 席がいっぱいに近づきそうかどうか。待ち時間そのものは測っていないので、分数では言わない。
+      // 人手も幅で持つ。1人単位なので幅は狭いが、「ぴったり何人」と言い切らないため。
+      staffLow: Math.max(minStaff, Math.ceil((inStore * lowRate) / perStaff)),
+      staffHigh: Math.max(minStaff, Math.ceil((inStore * highRate) / perStaff)),
+      // 席がいっぱいに近づきそうかどうか。
       nearFull: seats > 0 && inStore >= seats * 0.9,
+      // 実測の待ち時間（記録が足りない時間帯は null。ここを推測で埋めることは絶対にしない）
+      waitAvgMinutes: waits.get(h)?.avgMinutes ?? null,
+      waitSamples: waits.get(h)?.samples ?? 0,
       samples: (shareSales.get(h) || []).length,
     };
   });
@@ -833,7 +1059,14 @@ export async function hourlyPlan(ctx, date = null) {
   }
   const full = rows.filter((r) => r.nearFull).map((r) => `${r.hour}時台`);
   if (full.length) {
-    notes.push(`${full.join('・')}は満席に近づく可能性があります（お待たせする時間そのものは記録していないため、分数では出せません）。`);
+    notes.push(`${full.join('・')}は満席に近づく可能性があります。`);
+  }
+  // 実際に測った待ち時間がある時間帯だけ、そのまま添える（測っていない時間帯には触れない）
+  const measured = rows.filter((r) => r.waitAvgMinutes !== null);
+  if (measured.length) {
+    notes.push(`実際に測った待ち時間の平均：${measured.map((r) => `${r.hour}時台 ${r.waitAvgMinutes}分`).join('・')}（受付とご案内の時刻の差）。`);
+  } else {
+    notes.push('お待たせした時間は、受付とご案内をボタンで記録すると実測で出せるようになります（記録が無いうちは推測の分数を出しません）。');
   }
 
   return {

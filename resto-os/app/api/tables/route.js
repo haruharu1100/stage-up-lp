@@ -4,6 +4,7 @@ import { requireAuth, requireRole, apiFail, ApiError } from '../../../lib/auth.j
 import { newPublicId, newToken } from '../../../lib/tenant-db.js';
 import { applyOtoshi } from '../../../lib/store.js';
 import { logAudit } from '../../../lib/audit.js';
+import { hasFeature } from '../../../lib/plans.js';
 
 export const dynamic = 'force-dynamic';
 
@@ -93,10 +94,37 @@ export async function PATCH(req) {
       requireRole(ctx, FLOOR_ROLES);
       // 未会計が残ったまま席を空けると売上が消える
       const open = await ctx.query(
-        `SELECT id FROM order_items WHERE SCOPE() AND table_id = ? AND check_id IS NULL AND status <> 'void'`,
+        `SELECT id, unit_price, qty FROM order_items WHERE SCOPE() AND table_id = ? AND check_id IS NULL AND status <> 'void'`,
         [id]
       );
-      if (open.length) throw new ApiError('HAS_OPEN_ITEMS', '未会計の注文が残っています。先に会計してください', 409);
+      if (open.length && hasFeature(ctx.plan, 'pos')) {
+        throw new ApiError('HAS_OPEN_ITEMS', '未会計の注文が残っています。先に会計してください', 409);
+      }
+      // 簡易POSを使わないプランでは、お会計はお店のレジで行う。
+      // それでも席を空けられないと、QRが古いまま次のお客様に前の組の注文が見えてしまう。
+      // そこで、確認のうえ席を空けられるようにする。注文は消さず「提供済」にして必ず残す。
+      if (open.length) {
+        if (!b.force) {
+          throw new ApiError(
+            'HAS_OPEN_ITEMS_LIGHT',
+            `未会計の注文が${open.length}件あります。お店のレジでお会計を済ませてから、席を空けてください`,
+            409
+          );
+        }
+        await ctx.run(
+          `UPDATE order_items SET status = 'served', served_at = COALESCE(NULLIF(served_at, ''), ?)
+             WHERE SCOPE() AND table_id = ? AND check_id IS NULL AND status <> 'void'`,
+          [nowIso(), id]
+        );
+        await logAudit(ctx, {
+          action: 'table.close_uncharged', targetType: 'table', targetId: id,
+          before: {
+            table: before.name,
+            件数: open.length,
+            金額: open.reduce((s, i) => s + Number(i.unit_price) * Number(i.qty), 0),
+          },
+        });
+      }
       await ctx.run(`UPDATE tables SET status = 'empty', guests = 0, opened_at = NULL, token = ? WHERE SCOPE() AND id = ?`, [newToken(), id]);
       await logAudit(ctx, { action: 'table.close', targetType: 'table', targetId: id, before: { table: before.name } });
       return NextResponse.json({ ok: true });

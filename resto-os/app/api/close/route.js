@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { nowIso, businessDate, businessRange } from '../../../lib/db.js';
-import { requireAuth, requireRole, apiFail, ApiError } from '../../../lib/auth.js';
+import { requireAuth, requireRole, requireFeature, apiFail, ApiError } from '../../../lib/auth.js';
 import { logAudit } from '../../../lib/audit.js';
 import { rebuildDay, saveActual } from '../../../lib/learn.js';
 
@@ -89,7 +89,7 @@ async function build(ctx, date) {
 
 export async function GET(req) {
   try {
-    const ctx = requireRole(await requireAuth(), MANAGE_ROLES);
+    const ctx = requireFeature(requireRole(await requireAuth(), MANAGE_ROLES), 'pos');
     const date = new URL(req.url).searchParams.get('date') || businessDate();
     const r = await build(ctx, date);
 
@@ -116,7 +116,7 @@ export async function GET(req) {
 
 export async function POST(req) {
   try {
-    const ctx = requireRole(await requireAuth(), MANAGE_ROLES);
+    const ctx = requireFeature(requireRole(await requireAuth(), MANAGE_ROLES), 'pos');
     const b = await req.json();
     const date = String(b.date || businessDate());
     const r = await build(ctx, date);
