@@ -2,6 +2,14 @@ import { all } from '@/lib/db/client';
 import { ensureReady } from '@/lib/queries';
 import { FEE_SOURCE_JA } from '@/lib/fees';
 import { AUTOMATION_JA, TERMS_STATUS_JA, VENUE_KIND_JA, type Venue } from '@/lib/venues';
+import { connectorRanking, ensureConnectorResearch } from '@/lib/connectors/permissions';
+import {
+  CONNECTOR_STATE_JA,
+  FIRST_LIVE_CONNECTOR_STATUS_JA,
+  USAGE_VERDICT_JA,
+  type ConnectorState,
+  type UsageVerdict,
+} from '@/lib/venuepermissions';
 import { num, pct } from '@/lib/format';
 
 export const dynamic = 'force-dynamic';
@@ -27,6 +35,9 @@ function day(v: unknown): string {
 
 export default async function VenuesPage() {
   await ensureReady();
+  // 2026-08-20 の再調査結果をDBへ反映する。何度実行しても同じ結果になる。
+  await ensureConnectorResearch();
+  const ranking = connectorRanking();
   const venues = (await all('SELECT * FROM venues ORDER BY kind, code')) as unknown as Venue[];
   // 概算のままの手数料を上に集める。目立たせないと「確認したつもり」で使い続けてしまう。
   const fees = await all(
@@ -76,6 +87,64 @@ export default async function VenuesPage() {
         自動購入・自動出品ができる市場は <strong>1つもありません</strong>。
         公式APIが使えることを確認できていない市場は、システム側が実行を拒否します。
         {estimated > 0 && <> 手数料が概算のままの設定が {num(estimated)} 件あります（公式の料金ページで実額の確認が必要です）。</>}
+      </div>
+
+      <h2>どの市場から自動でデータを取るか（CONNECTOR PRIORITY SCORE）</h2>
+      <p className="lead">
+        10市場を10の観点・各10点で採点しました。<strong>調べても分からなかった項目には点を付けていません</strong>（0点です）。
+        点数の高さだけで選ぶと、「技術的には取れるが、規約で当社の目的が禁じられている市場」を選んでしまいます。
+        そこで「使ってよいか」に関する4観点のうち1つでも0点の市場は、<strong>合計点が何点でも候補から外しています</strong>。
+      </p>
+      <div className="note" style={{ marginTop: 10 }}>{FIRST_LIVE_CONNECTOR_STATUS_JA}</div>
+      <div className="scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>接続先</th>
+              <th>市場</th>
+              <th>点数</th>
+              <th>候補にできるか</th>
+              <th>いまの状態</th>
+              <th>公式情報の確認</th>
+              <th>未確認の項目</th>
+            </tr>
+          </thead>
+          <tbody>
+            {ranking.map((r) => (
+              <tr key={r.connector_code}>
+                <td>
+                  <strong>{r.name}</strong>
+                  <div className="small muted">{r.connector_code}</div>
+                </td>
+                <td className="small">{r.venue_ref}</td>
+                <td>
+                  <strong>{num(r.score)}</strong>
+                  <span className="small muted"> / 100</span>
+                </td>
+                <td className="small">
+                  {r.passes_gate
+                    ? <span className="badge strong">候補にできる</span>
+                    : <span className="badge skip">候補にしない</span>}
+                  {r.gate_reason_ja && <div className="small muted">{r.gate_reason_ja}</div>}
+                </td>
+                <td className="small">{CONNECTOR_STATE_JA[r.state as ConnectorState] ?? r.state}</td>
+                <td className="small">{USAGE_VERDICT_JA[r.verdict as UsageVerdict] ?? r.verdict}</td>
+                <td className="small">
+                  {/* 0件と書けるのは、本当に全部確認できたときだけ */}
+                  {r.unknown_count > 0
+                    ? <>{num(r.unknown_count)} 件</>
+                    : <span className="muted">なし</span>}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div className="note" style={{ marginTop: 10 }}>
+        いま自動でデータを取っている市場は <strong>0件</strong> です。
+        「Yahoo!ショッピングが0点に近い」のは<strong>禁止されているからではなく、商用に使ってよいかを確認できていないから</strong>です。
+        確認が取れれば、この市場は一気に上位に変わります。詳しい根拠は
+        事業Vault「19_Connector再調査_市場別スコア」に全部書いてあります。
       </div>
 
       <h2>市場ごとの能力</h2>

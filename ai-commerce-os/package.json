@@ -24,7 +24,8 @@
     "test:phase3-6": "tsx scripts/test-phase3-6.ts",
     "test:phase3-7": "tsx scripts/test-phase3-7.ts",
     "test:phase3-8": "tsx scripts/test-phase3-8.ts",
-    "test:phase3-9": "tsx scripts/test-phase3-9.ts"
+    "test:phase3-9": "tsx scripts/test-phase3-9.ts",
+    "test:phase3-9b": "tsx scripts/test-phase3-9b.ts"
   },
   "dependencies": {
     "@libsql/client": "^0.14.0",

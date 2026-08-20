@@ -178,16 +178,53 @@ export const VENUE_SEED: VenueSeed[] = [
       { side: 'SELL', profile: { fee_rate: 0.045, payment_fee_rate: 0.0, shipping_cost: 800, packing_cost: 150, return_loss_fixed: 300, source_note: '概算。公式の料金ページで実額を確認すること。' } },
     ],
   },
+  /*
+   * 【Yahoo!ショッピングとヤフオク!は別の市場である】（ユーザー指示3）
+   *
+   * 同じ「Yahoo!」でも、この2つは調べた結果が正反対だった。
+   *   ヤフオク!        … オークションWeb APIは2018-02-22に提供終了。旧URLは404
+   *   Yahoo!ショッピング … 商品検索APIは v3 が現役。URLもJANも価格も取れる
+   *
+   * 1つの市場として扱っていると、ヤフオク!の「終了」でショッピングまで潰してしまう
+   * （実際、前回の調査でそれに近い間違いをした）。だから別の行として持つ。
+   * 手数料も規約も別なので、混ぜてはいけない。
+   */
   {
+    code: 'YAHOO_SHOPPING', name: 'Yahoo!ショッピング', kind: 'MARKETPLACE',
+    // 仕入先としては使える（人が普通に買える）。
+    // 販売はストア出店契約が必要で当社は未契約なので can_sell=0＝「この市場では販売できない」と画面に出る。
+    can_buy: 1, can_sell: 0,
+    // api_available=0 のまま。APIが現役であることと、当社が使ってよいことは別（venue_connectors 側で8項目に分けて管理）。
+    buy_connector: 'manual', sell_connector: 'unavailable',
+    buy_fee_model: '購入手数料なし', sell_fee_model: 'ストア料金（出店契約による）',
+    shipping_model: 'SELLER_PAYS', authentication_model: 'NONE',
+    api_available: 0, csv_available: 0, manual_only: 1,
+    terms_status: 'UNVERIFIED', automation_permission: 'MANUAL_ONLY',
+    presale_allowed: 0, currency: 'JPY',
+    note: 'ヤフオク!とは別の市場。商品検索API（v3）は現役だが、商用利用の可否が未確認のため自動取得はまだしない。販売にはストア出店契約が必要（当社は未契約）。',
+    fees: [
+      { side: 'BUY', profile: { shipping_cost: 700, source_note: '概算。実額は要確認。' } },
+      { side: 'SELL', profile: { fee_rate: 0.1, shipping_cost: 700, packing_cost: 150, return_loss_fixed: 300, source_note: '概算。出店契約が無いため参考値。実額は要確認。' } },
+    ],
+  },
+  {
+    // ＝ YAHOO_AUCTIONS。venue_connectors 側では 'YAHOO_AUCTIONS' というコードで別調査してある。
     code: 'YAHUOKU', name: 'ヤフオク!', kind: 'AUCTION',
     can_buy: 1, can_sell: 1,
     buy_connector: 'manual', sell_connector: 'manual',
     buy_fee_model: '落札手数料なし（一般）', sell_fee_model: '落札システム利用料',
     shipping_model: 'SELLER_PAYS', authentication_model: 'NONE',
     api_available: 0, csv_available: 0, manual_only: 1,
+    /*
+     * ★terms_status は UNVERIFIED のままにする（BLOCKED にしない）。
+     * ここで止まっているのは「自動でデータを取ること」だけで、
+     * 人がヤフオク!で買うこと・売ること自体は普通にできる。
+     * 「自動取得できない」を「市場として使えない」に読み替えると、
+     * 使える仕入先・販売先を自分で消してしまう。
+     */
     terms_status: 'UNVERIFIED', automation_permission: 'MANUAL_ONLY',
     presale_allowed: 0, currency: 'JPY',
-    note: '仕入先にも販売先にもなる。落札額が変動するため入札上限の設計が別途要る。',
+    note: 'Yahoo!ショッピングとは別の市場。オークションWeb APIは提供終了済みで、自動取得の正規手段が無い。人が見て記録する仕入先・販売先としては有効。落札額が変動するため入札上限の設計が別途要る。',
     fees: [
       { side: 'BUY', profile: { shipping_cost: 900, source_note: '概算。実額は要確認。' } },
       { side: 'SELL', profile: { fee_rate: 0.1, shipping_cost: 900, packing_cost: 150, return_loss_fixed: 300, source_note: '概算。公式の料金ページで実額を確認すること。' } },

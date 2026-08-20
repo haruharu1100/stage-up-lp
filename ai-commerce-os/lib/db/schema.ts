@@ -967,6 +967,57 @@ export const ADD_COLUMNS: string[] = [
   `ALTER TABLE arbitrage_routes ADD COLUMN buy_payment_fee_known INTEGER NOT NULL DEFAULT 1`,
   `ALTER TABLE arbitrage_routes ADD COLUMN cost_confidence INTEGER NOT NULL DEFAULT 0`,
   `ALTER TABLE arbitrage_routes ADD COLUMN cost_items_json TEXT`,
+
+  /*
+   * ---- Phase 3.9b：市場ごとの「許可」を8項目に分ける（ユーザー指示4）----
+   *
+   * 【なぜ1つの判定ではいけないか】
+   * これまでは市場ごとに「自動取得できる／できない」の1判定しか持っていなかった。
+   * その結果、Yahoo!ショッピングを「公式ヘルプに原則非商用と書いてある」の一言で
+   * 使えない側に倒してしまった。実際にはAPIは現役で、商用相談の導線も公式にあった。
+   *
+   * 「APIが存在するか」と「当社の目的に使ってよいか」は別の質問である。
+   * 別の質問には別の欄を用意する。
+   *
+   * 【既定は全部 UNKNOWN】
+   * 「まだ調べていない」を「たぶん大丈夫」に化けさせないため。
+   * ここに 'YES' を既定値にすると、調査前の市場が全部「使ってよい」に見えてしまう。
+   */
+  `ALTER TABLE venue_connectors ADD COLUMN api_exists TEXT NOT NULL DEFAULT 'UNKNOWN'`,
+  `ALTER TABLE venue_connectors ADD COLUMN commercial_use_allowed TEXT NOT NULL DEFAULT 'UNKNOWN'`,
+  `ALTER TABLE venue_connectors ADD COLUMN internal_business_use_allowed TEXT NOT NULL DEFAULT 'UNKNOWN'`,
+  `ALTER TABLE venue_connectors ADD COLUMN price_analysis_allowed TEXT NOT NULL DEFAULT 'UNKNOWN'`,
+  `ALTER TABLE venue_connectors ADD COLUMN data_storage_allowed TEXT NOT NULL DEFAULT 'UNKNOWN'`,
+  `ALTER TABLE venue_connectors ADD COLUMN automated_collection_allowed TEXT NOT NULL DEFAULT 'UNKNOWN'`,
+  `ALTER TABLE venue_connectors ADD COLUMN automated_purchase_allowed TEXT NOT NULL DEFAULT 'UNKNOWN'`,
+  `ALTER TABLE venue_connectors ADD COLUMN automated_listing_allowed TEXT NOT NULL DEFAULT 'UNKNOWN'`,
+
+  /*
+   * 「使える／使えない」の2択にしない3分類。
+   * CONFIRMED_ALLOWED / CONFIRMED_PROHIBITED / CONFIRMATION_REQUIRED
+   * 既定は CONFIRMATION_REQUIRED＝「まだ確認していない」。禁止という意味ではない。
+   */
+  `ALTER TABLE venue_connectors ADD COLUMN usage_verdict TEXT NOT NULL DEFAULT 'CONFIRMATION_REQUIRED'`,
+
+  /*
+   * 同じ会社でもサービスが違えば別のConnectorとして持つ。
+   * venue_code には 'AMAZON_SP_API' のようなサービス単位のコードを入れ、
+   * venue_ref に venues テーブル側の 'AMAZON' を入れて結びつける。
+   * Yahoo!ショッピングとヤフオク!は調査結果が正反対だったので、ここを混ぜてはいけない。
+   */
+  `ALTER TABLE venue_connectors ADD COLUMN venue_ref TEXT`,
+
+  /*
+   * 【DEFAULT を付けない】
+   * 事業Vault/DIGEST.md の原則：「本当に0点だった」と「まだ採点していない」を混ぜない。
+   * DEFAULT 0 を付けると、採点前の行が「0点の市場」と見分けられなくなる。
+   */
+  `ALTER TABLE venue_connectors ADD COLUMN priority_score INTEGER`,
+  `ALTER TABLE venue_connectors ADD COLUMN priority_score_json TEXT`,
+  // 何が分かっていないかの一覧。空にしない＝「全部分かった」と言わない。
+  `ALTER TABLE venue_connectors ADD COLUMN unknowns_json TEXT`,
+  // 成約価格（いくらで売れたか）が取れるか。現在価格とは別の質問なので別の欄で持つ。
+  `ALTER TABLE venue_connectors ADD COLUMN sold_data_available TEXT NOT NULL DEFAULT 'UNKNOWN'`,
 ];
 
 /**
