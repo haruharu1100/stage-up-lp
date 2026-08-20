@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import Section from "../ui/Section";
 import Reveal from "../ui/Reveal";
+import { MoreDetail } from "../ui/Act";
 import { roiDefaults, roiNote } from "@/content/site";
 import { activeTiers, type OsTier } from "@/config/pricing";
 import { EV, track, trackOnce } from "@/lib/track";
@@ -200,13 +201,13 @@ export default function RoiCalculator() {
         {/* 入力 */}
         <Reveal>
           <div className="overflow-hidden rounded-3xl border border-edge bg-white shadow-lift">
-            <div className="border-b border-edge bg-paper2/70 px-6 py-4">
+            <div className="border-b border-edge bg-paper2/70 px-5 py-3.5 sm:px-6 sm:py-4">
               <span className="num text-label text-slate3">
                 YOUR NUMBERS
               </span>
             </div>
 
-            <div className="space-y-7 px-6 py-7">
+            <div className="space-y-4 px-5 py-5 sm:space-y-6 sm:px-6 sm:py-7">
               {FIELDS.map((f) => (
                 <div key={f.key}>
                   <div className="flex items-baseline justify-between gap-3">
@@ -226,7 +227,7 @@ export default function RoiCalculator() {
                   <input
                     id={`roi-${f.key}`}
                     type="range"
-                    className="range-lite mt-3.5"
+                    className="range-lite mt-2.5 sm:mt-3.5"
                     min={f.min}
                     max={f.max}
                     step={f.step}
@@ -240,7 +241,7 @@ export default function RoiCalculator() {
               <button
                 type="button"
                 onClick={() => setV({ ...roiDefaults })}
-                className="w-full rounded-full border border-edge bg-white py-3 text-note text-slate2 transition hover:border-slate3/40 hover:text-slate"
+                className="w-full rounded-full border border-edge bg-white py-2.5 text-note text-slate2 transition hover:border-slate3/40 hover:text-slate sm:py-3"
               >
                 初期値に戻す
               </button>
@@ -253,7 +254,7 @@ export default function RoiCalculator() {
           <div className="flex h-full flex-col gap-4">
             {/* 結論 */}
             <div
-              className={`overflow-hidden rounded-3xl border p-8 sm:p-10 ${
+              className={`overflow-hidden rounded-3xl border p-6 sm:p-10 ${
                 positive
                   ? "border-blue-ink/25 bg-gradient-to-br from-blue-pale via-white to-white shadow-lift2"
                   : "border-edge bg-white shadow-lift"
@@ -264,24 +265,24 @@ export default function RoiCalculator() {
               </span>
               {positive ? (
                 <>
-                  <p className="mt-6 text-body leading-[1.9] text-slate2">
+                  <p className="mt-4 text-body leading-[1.9] text-slate2">
                     あなたの場合、年間 約
                   </p>
-                  <p className="num mt-3 break-all text-mega font-bold text-gradient-royal">
+                  <p className="num mt-2 break-all text-mega font-bold text-gradient-royal">
                     {man(r.yearlyDiff)}
                   </p>
-                  <p className="mt-4 text-body leading-[1.9] text-slate2">
+                  <p className="mt-3 text-body leading-[1.9] text-slate2">
                     の改善余地があります。
                   </p>
                 </>
               ) : (
                 <>
-                  <p className="num mt-6 text-h2 font-bold leading-tight text-slate">
+                  <p className="num mt-4 text-h2 font-bold leading-tight text-slate">
                     現在の規模では、
                     <br />
                     金額面の効果は限定的です。
                   </p>
-                  <p className="mt-5 text-note leading-[1.95] text-slate2">
+                  <p className="mt-4 text-note leading-[1.95] text-slate2">
                     件数が増えるほど効果が出るモデルです。まずは一部機能だけの導入をご検討ください。
                   </p>
                 </>
@@ -290,7 +291,7 @@ export default function RoiCalculator() {
 
             {/* 料金との突き合わせ（項目5：ROIと料金をつなぐ） */}
             <div className="overflow-hidden rounded-3xl border border-edge bg-white shadow-lift">
-              <div className="flex items-center justify-between gap-3 border-b border-edge bg-paper2/70 px-6 py-4">
+              <div className="flex items-center justify-between gap-3 border-b border-edge bg-paper2/70 px-5 py-3.5 sm:px-6 sm:py-4">
                 <span className="num text-label text-slate3">
                   VS 導入費用 / 年
                 </span>
@@ -319,7 +320,7 @@ export default function RoiCalculator() {
                 />
               </div>
 
-              <p className="border-t border-edge bg-paper2/70 px-6 py-5 text-note leading-[1.85] text-slate2">
+              <p className="border-t border-edge bg-paper2/70 px-5 py-4 text-note leading-[1.85] text-slate2 sm:px-6 sm:py-5">
                 <span className="mr-2.5 rounded-md border border-warn/35 bg-warn/[0.10] px-2 py-1 text-[13px] font-semibold text-warn-ink">
                   モデルケース
                 </span>
@@ -362,21 +363,16 @@ export default function RoiCalculator() {
               />
             </div>
 
-            {/* 内訳 */}
-            <div className="overflow-hidden rounded-3xl border border-edge bg-white shadow-lift">
-              <div className="flex items-center justify-between border-b border-edge bg-paper2/70 px-6 py-4">
-                <span className="num text-label text-slate3">
-                  BREAKDOWN / 月
-                </span>
-                <span className="num text-note text-slate3">
-                  {Math.round(r.beforeH)}h → {Math.round(r.afterH)}h
-                </span>
-              </div>
+            {/* 作業ごとの内訳。合計は上の指標に出ているので、
+                内訳そのものは読みたい人にだけ開いてもらう */}
+            <MoreDetail
+              label={`作業ごとの内訳を見る（月 ${Math.round(r.beforeH)}h → ${Math.round(r.afterH)}h）`}
+            >
               <div className="divide-y divide-edge2">
                 {r.rows.map((x) => (
                   <div
                     key={x.label}
-                    className="flex items-center justify-between gap-3 px-6 py-3.5"
+                    className="flex items-center justify-between gap-3 py-3 first:pt-0 last:pb-0"
                   >
                     <span className="text-note text-slate2">{x.label}</span>
                     <span className="num shrink-0 text-note">
@@ -392,14 +388,14 @@ export default function RoiCalculator() {
                 ))}
               </div>
               {r.capped && (
-                <p className="border-t border-edge bg-paper2/70 px-6 py-4 text-note leading-[1.8] text-slate2">
+                <p className="mt-4 border-t border-edge2 pt-4 text-note leading-[1.8] text-slate2">
                   入力された作業量が、スタッフ{v.staff}名の稼働時間（月160時間 ×
                   {v.staff}名）を超えたため、実際に投入できる時間の範囲に収めて試算しています。
                 </p>
               )}
-            </div>
+            </MoreDetail>
 
-            <div className="mt-auto flex flex-col gap-3.5 pt-2 sm:flex-row">
+            <div className="mt-auto flex flex-col gap-3 pt-1 sm:flex-row sm:gap-3.5 sm:pt-2">
               <Link href="/demo" className="btn-primary btn-lg w-full sm:w-auto">
                 実際の管理画面を見る
               </Link>
@@ -412,7 +408,7 @@ export default function RoiCalculator() {
       </div>
 
       <Reveal delay={0.1} className="mt-4">
-        <p className="rounded-2xl border border-edge bg-paper2/70 px-6 py-5 text-note leading-[1.95] text-slate2">
+        <p className="rounded-2xl border border-edge bg-paper2/70 px-5 py-4 text-note leading-[1.95] text-slate2 sm:px-6 sm:py-5">
           <span className="mr-2.5 rounded-md border border-warn/35 bg-warn/[0.10] px-2 py-1 text-[13px] font-semibold text-warn-ink">
             シミュレーション
           </span>
@@ -443,7 +439,7 @@ function CostRow({
           ? "text-warn-ink"
           : "text-slate2";
   return (
-    <div className="flex items-baseline justify-between gap-4 px-6 py-4">
+    <div className="flex items-baseline justify-between gap-4 px-5 py-3.5 sm:px-6 sm:py-4">
       <span
         className={`text-note leading-[1.7] ${big ? "font-bold text-slate" : "text-slate2"}`}
       >
@@ -483,15 +479,15 @@ function Metric({
           : "text-slate";
 
   return (
-    <div className="rounded-3xl border border-edge bg-white p-6 shadow-lift">
+    <div className="rounded-3xl border border-edge bg-white p-5 shadow-lift sm:p-6">
       <p className="text-note leading-snug text-slate3">{label}</p>
-      <p className={`num mt-3 break-all text-h3 font-bold leading-none ${color}`}>
+      <p className={`num mt-2.5 break-all text-h3 font-bold leading-none ${color}`}>
         {value}
         <span className="ml-1.5 text-note font-normal text-slate3">
           {unit}
         </span>
       </p>
-      <p className="mt-3 text-note leading-[1.7] text-slate3">{sub}</p>
+      <p className="mt-2.5 text-note leading-[1.7] text-slate3">{sub}</p>
     </div>
   );
 }

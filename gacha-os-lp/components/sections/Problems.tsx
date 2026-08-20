@@ -20,7 +20,7 @@ export default function Problems() {
       <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
         {problems.map((p, i) => (
           <Reveal key={p.no} delay={i * 0.06} className="h-full">
-            <div className="group h-full rounded-3xl border border-edge2 bg-paper2 p-7 transition-colors duration-500 hover:border-edge sm:p-8">
+            <div className="group h-full rounded-3xl border border-edge2 bg-paper2 p-6 transition-colors duration-500 hover:border-edge sm:p-8">
               <div className="flex items-center gap-4">
                 <span className="num text-label text-slate3">{p.no}</span>
                 <span className="h-px flex-1 bg-edge2" />
@@ -28,7 +28,7 @@ export default function Problems() {
                   {p.cost}
                 </span>
               </div>
-              <h3 className="mt-6 text-body font-bold leading-snug text-slate">
+              <h3 className="mt-5 text-body font-bold leading-snug text-slate">
                 {p.title}
               </h3>
               <p className="mt-4 text-note text-slate2">{p.body}</p>
@@ -38,7 +38,7 @@ export default function Problems() {
       </div>
 
       <Reveal delay={0.1}>
-        <div className="lp-tint mt-5 rounded-3xl px-7 py-8 sm:px-10 sm:py-9">
+        <div className="lp-tint mt-5 rounded-3xl px-6 py-7 sm:px-10 sm:py-9">
           <p className="text-body text-pretty text-slate2">
             <span className="font-bold text-blue-ink">仕入れは、人にしかできません。</span>
             <br className="hidden sm:block" />

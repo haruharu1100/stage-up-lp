@@ -1,5 +1,6 @@
 import Section from "../ui/Section";
 import Reveal from "../ui/Reveal";
+import { MoreDetail } from "../ui/Act";
 
 /**
  * 導入すると何が起きるかの時間軸。
@@ -13,7 +14,7 @@ const STAGES: { code: string; title: string; body: string }[] = [
   {
     code: "DAY 1",
     title: "ヒアリング",
-    body: "いまの運営体制と、どこに時間が溶けているかをうかがいます。必要な機能範囲は、ここで一緒に決めます。",
+    body: "いまの運営体制と、どこに時間が溶けているかをうかがい、必要な機能範囲をここで決めます。",
   },
   {
     code: "SETUP",
@@ -50,14 +51,14 @@ export default function Flow() {
           運営が始まるまで。
         </>
       }
-      lead="いきなり作り始めません。いまの運営体制と、どこに時間が溶けているかを整理してから、必要な機能範囲とインフラ構成を確定します。"
+      lead="いきなり作り始めません。現状を整理してから、必要な機能範囲とインフラ構成を確定します。"
     >
-      {/* PC：横に並べる。スマホ：縦に積んで矢印でつなぐ */}
+      {/* PC：横に並べる。スマホ：2列に並べて縦の長さを抑える */}
       <div className="relative">
         {/* 横のつなぎ線（PCのみ） */}
         <div className="absolute left-0 right-0 top-[17px] hidden h-px bg-edge lg:block" />
 
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5 lg:gap-3">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-5 lg:gap-3">
           {STAGES.map((s, i) => {
             const last = i === STAGES.length - 1;
             return (
@@ -66,7 +67,7 @@ export default function Flow() {
                   {/* 段階の名前。線の上に乗せるので白背景を敷く */}
                   <div className="relative z-10 flex items-center gap-3">
                     <span
-                      className={`num inline-flex items-center rounded-full border px-4 py-2 text-label ${
+                      className={`num inline-flex items-center rounded-full border px-3 py-1.5 text-label sm:px-4 sm:py-2 ${
                         i === 0
                           ? "border-blue-ink/25 bg-blue-pale text-blue-ink"
                           : last
@@ -79,30 +80,12 @@ export default function Flow() {
                     <span className="h-px flex-1 bg-edge lg:hidden" />
                   </div>
 
-                  <div className="mt-5 flex-1 rounded-3xl border border-edge bg-white p-6 shadow-lift transition-all duration-300 hover:shadow-lift2 sm:p-7">
+                  <div className="mt-3 flex-1 rounded-3xl border border-edge bg-white p-5 shadow-lift transition-all duration-300 hover:shadow-lift2 sm:mt-5 sm:p-7">
                     <h3 className="text-body font-bold leading-[1.7] text-slate">
                       {s.title}
                     </h3>
-                    <p className="mt-4 text-note text-slate2">{s.body}</p>
+                    <p className="mt-3 text-note text-slate2">{s.body}</p>
                   </div>
-
-                  {/* 縦のつなぎ矢印（1列に積むスマホでだけ出す） */}
-                  {!last && (
-                    <span
-                      aria-hidden
-                      className="mx-auto py-2 text-slate3/60 sm:hidden"
-                    >
-                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                        <path
-                          d="M8 2.5v11M4 9.5l4 4 4-4"
-                          stroke="currentColor"
-                          strokeWidth="1.4"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      </svg>
-                    </span>
-                  )}
                 </div>
               </Reveal>
             );
@@ -111,7 +94,7 @@ export default function Flow() {
       </div>
 
       <Reveal delay={0.14}>
-        <p className="mt-8 rounded-2xl border border-edge bg-paper2 px-6 py-5 text-note text-slate2">
+        <p className="mt-5 rounded-2xl border border-edge bg-paper2 px-5 py-5 text-note text-slate2 sm:mt-8 sm:px-6">
           <span className="mr-3 inline-block rounded-full border border-edge bg-white px-3.5 py-1 text-note leading-normal text-blue-ink">
             期間について
           </span>
@@ -119,10 +102,11 @@ export default function Flow() {
         </p>
       </Reveal>
 
-      <Reveal delay={0.18}>
-        <div className="lp-tint mt-5 rounded-3xl px-7 py-8 sm:px-10 sm:py-9">
-          <span className="num text-label text-slate3">WHAT YOU PREPARE</span>
-          <div className="mt-8 grid gap-7 sm:grid-cols-3">
+      {/* ご用意いただくもの（WHAT YOU PREPARE）は、
+          具体的に検討が進んだ人だけが読む内容なので畳んでおく */}
+      <Reveal delay={0.18} className="mt-4">
+        <MoreDetail label="ご用意いただくもの（3つ）">
+          <div className="grid gap-5 sm:grid-cols-3">
             {[
               { t: "商品の仕入れ", d: "景品そのものと、その仕入れ判断。ここだけは人の仕事として残ります。" },
               { t: "サイトの方向性", d: "扱うジャンル、ブランドの雰囲気、既存サイトがあればその情報。" },
@@ -134,7 +118,7 @@ export default function Flow() {
               </div>
             ))}
           </div>
-        </div>
+        </MoreDetail>
       </Reveal>
     </Section>
   );

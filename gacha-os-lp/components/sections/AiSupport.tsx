@@ -5,6 +5,7 @@ import { useInView } from "framer-motion";
 import Section from "../ui/Section";
 import Reveal from "../ui/Reveal";
 import BeforeAfter from "../ui/BeforeAfter";
+import { MoreDetail } from "../ui/Act";
 
 type Msg =
   | { role: "user"; text: string }
@@ -95,7 +96,7 @@ export default function AiSupport() {
           持ち場を見ているAIにする。
         </>
       }
-      lead="AI OPERATOR は、販売中のガチャ・価格の警告・未発送・問い合わせを同じ画面で見ています。聞けば、いま何から手を付けるかを順番にして返します。お客様からの問い合わせは、権限の範囲内で一次対応し、答えてはいけない領域は担当者へ渡す設計です。"
+      lead="AI OPERATOR は、下の4つを同じ画面で見ています。聞けば、いま何から手を付けるかを順番にして返します。"
     >
       <BeforeAfter id="support" className="mb-3" />
 
@@ -114,14 +115,14 @@ export default function AiSupport() {
             </span>
           </div>
 
-          <div className="grid grid-cols-2 gap-3 border-b border-edge2 px-5 py-5 sm:grid-cols-4 sm:px-6 sm:py-6">
+          <div className="grid grid-cols-2 gap-2 border-b border-edge2 px-4 py-3.5 sm:grid-cols-4 sm:gap-3 sm:px-6 sm:py-6">
             {watching.map((w) => (
               <div
                 key={w.l}
-                className="rounded-2xl border border-edge2 bg-paper2 px-4 py-4 sm:px-5"
+                className="rounded-2xl border border-edge2 bg-paper2 px-3.5 py-3 sm:px-5 sm:py-4"
               >
                 <span className="num text-label text-slate3">{w.l}</span>
-                <p className={`num mt-2.5 text-h3 font-semibold ${w.tone}`}>
+                <p className={`num mt-1 text-h3 font-semibold sm:mt-2.5 ${w.tone}`}>
                   {w.v}
                   <span className="ml-1 text-note font-normal text-slate3">{w.u}</span>
                 </p>
@@ -129,17 +130,17 @@ export default function AiSupport() {
             ))}
           </div>
 
-          <div className="px-5 py-6 sm:px-6 sm:py-7">
+          <div className="px-4 py-4 sm:px-6 sm:py-7">
             <div className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
               <span className="num text-label text-slate3">質問</span>
               <p className="text-note font-semibold text-slate">今日は何をしたらいい？</p>
             </div>
 
-            <ol className="mt-6 space-y-3">
+            <ol className="mt-4 space-y-2 sm:mt-6 sm:space-y-3">
               {briefing.map((b) => (
                 <li
                   key={b.no}
-                  className="flex gap-4 rounded-2xl border border-edge2 bg-paper2 px-5 py-5 sm:gap-5 sm:px-6"
+                  className="flex gap-3.5 rounded-2xl border border-edge2 bg-paper2 px-4 py-3 sm:gap-5 sm:px-6 sm:py-5"
                 >
                   <span className="num shrink-0 text-h3 font-semibold leading-none text-blue-ink">
                     {b.no}
@@ -149,15 +150,33 @@ export default function AiSupport() {
                       <h4 className="text-note font-bold text-slate">{b.t}</h4>
                       <span className="num text-label text-slate3">想定 {b.cost}</span>
                     </div>
-                    <p className="mt-2.5 text-note text-slate2">{b.d}</p>
                   </div>
                 </li>
               ))}
             </ol>
 
-            <p className="mt-6 border-t border-edge2 pt-5 text-note text-slate3">
+            {/* 各項目の内訳は消さずにここへ畳む */}
+            <div className="mt-3">
+              <MoreDetail label="それぞれの中身を見る">
+                <ol className="space-y-4">
+                  {briefing.map((b) => (
+                    <li key={b.no}>
+                      <span className="num text-label text-slate3">
+                        {b.no} ／ 想定 {b.cost}
+                      </span>
+                      <p className="mt-1 font-bold text-slate">{b.t}</p>
+                      <p className="mt-1">{b.d}</p>
+                    </li>
+                  ))}
+                </ol>
+                <p className="mt-5 border-t border-edge2 pt-5">
+                  上の件数と所要時間は、架空のサンプルデータによる表示例です。
+                </p>
+              </MoreDetail>
+            </div>
+
+            <p className="mt-4 border-t border-edge2 pt-4 text-note text-slate3 sm:mt-5 sm:pt-5">
               AI OPERATOR は状況を整理して優先順位を提案します。実行するかどうかは運営者が判断します。
-              上の件数と所要時間は、架空のサンプルデータによる表示例です。
             </p>
           </div>
         </div>
@@ -167,7 +186,7 @@ export default function AiSupport() {
         <Reveal>
           <div
             ref={ref}
-            className="flex h-full min-h-[440px] flex-col overflow-hidden rounded-3xl border border-edge bg-white shadow-lift"
+            className="flex h-full min-h-[360px] flex-col overflow-hidden rounded-3xl border border-edge bg-white shadow-lift sm:min-h-[440px]"
           >
             <div className="flex items-center justify-between border-b border-edge2 bg-paper2 px-5 py-3.5">
               <div className="flex items-center gap-2.5">
@@ -181,7 +200,7 @@ export default function AiSupport() {
               <span className="num text-[10px] text-slate3">user_2841 でログイン中</span>
             </div>
 
-            <div className="flex-1 space-y-3 overflow-hidden p-5">
+            <div className="flex-1 space-y-2.5 overflow-hidden p-4 sm:space-y-3 sm:p-5">
               {script.slice(0, shown).map((m, i) => {
                 if (m.role === "trace") {
                   return (
@@ -201,7 +220,7 @@ export default function AiSupport() {
                     className={`flex ${mine ? "justify-end" : "justify-start"}`}
                   >
                     <div
-                      className={`max-w-[85%] rounded-2xl px-4 py-3 text-[13px] leading-[1.9] ${
+                      className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-[13px] leading-[1.9] sm:py-3 ${
                         mine
                           ? "rounded-br-sm border border-edge bg-paper2 text-slate"
                           : "rounded-bl-sm bg-blue-pale text-blue-ink"
@@ -225,8 +244,8 @@ export default function AiSupport() {
               )}
             </div>
 
-            <div className="border-t border-edge2 bg-paper2 px-5 py-3.5">
-              <div className="flex items-center gap-3 rounded-xl border border-edge bg-white px-4 py-2.5">
+            <div className="border-t border-edge2 bg-paper2 px-4 py-3 sm:px-5 sm:py-3.5">
+              <div className="flex items-center gap-3 rounded-xl border border-edge bg-white px-4 py-2">
                 <span className="flex-1 text-[12px] text-slate3">
                   メッセージを入力…
                 </span>
@@ -239,36 +258,34 @@ export default function AiSupport() {
         </Reveal>
 
         <div className="space-y-3">
+          {/* 参照範囲の一覧と技術的な補足は消さずに畳んでおく */}
           <Reveal delay={0.08}>
-            <div className="rounded-3xl border border-edge bg-white p-6 shadow-lift">
-              <span className="num text-[10px] tracking-[0.2em] text-blue-ink">
-                AIが参照できる情報
-              </span>
-              <ul className="mt-5 space-y-2.5">
+            <MoreDetail label="AIが参照できる情報">
+              <ul className="space-y-2.5">
                 {[
                   "そのお客様の発送依頼と依頼日時",
                   "対象の景品と注文・利用履歴",
                   "配送ステータスと追跡番号",
                   "FAQ・利用規約・特商法の記載",
                 ].map((t) => (
-                  <li key={t} className="flex gap-2.5 text-[12px] leading-[1.8] text-slate2">
-                    <span className="mt-[7px] h-1 w-1 shrink-0 rounded-full bg-ok-ink/70" />
+                  <li key={t} className="flex gap-2.5">
+                    <span className="mt-[13px] h-1 w-1 shrink-0 rounded-full bg-ok-ink/70" />
                     {t}
                   </li>
                 ))}
               </ul>
-              <p className="mt-5 border-t border-edge2 pt-4 text-[11px] leading-[1.9] text-slate3">
+              <p className="mt-4 border-t border-edge2 pt-4 text-slate3">
                 ログインセッションに紐づく範囲だけを参照する設計にし、参照範囲は権限管理で制御します。
               </p>
-            </div>
+            </MoreDetail>
           </Reveal>
 
           <Reveal delay={0.14}>
-            <div className="rounded-3xl border border-warn-ink/25 bg-warn/[0.08] p-6 shadow-lift">
+            <div className="rounded-3xl border border-warn-ink/25 bg-warn/[0.08] p-4 shadow-lift sm:p-6">
               <span className="num text-[10px] tracking-[0.2em] text-warn-ink">
                 人へエスカレーションする領域
               </span>
-              <div className="mt-5 flex flex-wrap gap-1.5">
+              <div className="mt-3 flex flex-wrap gap-1.5 sm:mt-5">
                 {escalations.map((e) => (
                   <span
                     key={e}
@@ -278,10 +295,10 @@ export default function AiSupport() {
                   </span>
                 ))}
               </div>
-              <p className="mt-5 text-[11px] leading-[1.9] text-slate2">
+              <p className="mt-3 text-[11px] leading-[1.9] text-slate2 sm:mt-5">
                 これらはAIが判断せず、担当者へ引き継ぐ設定にします。
               </p>
-              <p className="mt-3 text-[10.5px] leading-[1.85] text-slate3">
+              <p className="mt-2.5 text-[10.5px] leading-[1.85] text-slate3 sm:mt-3">
                 ※ 上のやり取りは架空のサンプルデータによる動作イメージです。追跡番号は伏せて表示しています。
               </p>
             </div>

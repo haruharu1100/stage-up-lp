@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import Section from "../ui/Section";
 import Reveal from "../ui/Reveal";
+import { MoreDetail } from "../ui/Act";
 import { engines } from "@/content/site";
 
 /**
@@ -65,30 +66,40 @@ export default function OsOverview() {
           1つのOSとしてつながる。
         </>
       }
-      lead="ガチャを作る。還元率を見張る。相場を取り込む。発送を流す。問い合わせに答える。バラバラに存在していた作業を、ひとつの管理画面の上でつなぎます。"
+      lead="バラバラに存在していた作業を、ひとつの管理画面の上でつなぎます。"
     >
-      <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="grid gap-3 sm:grid-cols-2 sm:gap-5 lg:grid-cols-5">
         {engines.map((e, i) => (
           <Reveal key={e.key} delay={i * 0.07} className="h-full">
-            <div className="lp-card flex h-full flex-col p-7 transition-all duration-500 hover:-translate-y-1 hover:shadow-lift2">
-              <span className="flex h-11 w-11 items-center justify-center rounded-full bg-blue-pale text-blue-ink">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden>
-                  {icons[e.key]}
-                </svg>
-              </span>
-              <span className="num mt-6 block text-label text-slate3">
-                {e.code}
-              </span>
-              <h3 className="mt-4 text-body font-bold text-slate">{e.title}</h3>
+            <div className="lp-card flex h-full flex-col p-5 transition-all duration-500 hover:-translate-y-1 hover:shadow-lift2 sm:p-7">
+              <div className="flex items-center gap-4 lg:block">
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-blue-pale text-blue-ink">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden>
+                    {icons[e.key]}
+                  </svg>
+                </span>
+                <div className="min-w-0 lg:mt-6">
+                  <span className="num block text-label text-slate3">
+                    {e.code}
+                  </span>
+                  <h3 className="mt-2 text-body font-bold text-slate lg:mt-4">
+                    {e.title}
+                  </h3>
+                </div>
+              </div>
               <p className="mt-4 flex-1 text-note text-slate2">{e.lead}</p>
-              <ul className="mt-6 space-y-3 border-t border-edge2 pt-6">
-                {e.points.map((p) => (
-                  <li key={p} className="flex gap-3 text-note text-slate2">
-                    <span className="mt-[13px] h-1.5 w-1.5 shrink-0 rounded-full bg-blue-ink/60" />
-                    {p}
-                  </li>
-                ))}
-              </ul>
+              <div className="mt-4 lg:mt-6">
+                <MoreDetail label="できること">
+                  <ul className="space-y-2.5">
+                    {e.points.map((p) => (
+                      <li key={p} className="flex gap-3">
+                        <span className="mt-[13px] h-1.5 w-1.5 shrink-0 rounded-full bg-blue-ink/60" />
+                        {p}
+                      </li>
+                    ))}
+                  </ul>
+                </MoreDetail>
+              </div>
             </div>
           </Reveal>
         ))}

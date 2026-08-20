@@ -1,5 +1,6 @@
 import Section from "../ui/Section";
 import Reveal from "../ui/Reveal";
+import { MoreDetail } from "../ui/Act";
 import { awsStack } from "@/content/site";
 
 const layers = [
@@ -26,11 +27,11 @@ export default function Aws() {
     >
       <div className="grid gap-5 lg:grid-cols-[1fr_400px]">
         <Reveal>
-          <div className="lp-card h-full p-7 sm:p-9">
+          <div className="lp-card h-full p-6 sm:p-9">
             <span className="num text-label text-slate3">
               REFERENCE ARCHITECTURE
             </span>
-            <div className="mt-8 space-y-3">
+            <div className="mt-6 space-y-2.5">
               {layers.map((l, i) => (
                 <div key={l.label} className="relative">
                   <div className="flex flex-col gap-4 rounded-2xl border border-edge2 bg-paper2 p-5 sm:flex-row sm:items-center">
@@ -65,7 +66,7 @@ export default function Aws() {
               ))}
             </div>
 
-            <div className="mt-8 rounded-2xl border border-edge bg-paper2 p-6">
+            <div className="mt-6 rounded-2xl border border-edge bg-paper2 p-5 sm:p-6">
               <p className="text-note text-slate2">
                 どんな条件でも絶対に停止しないと保証することはできません。想定する同時アクセス規模をうかがったうえで、必要な構成・監視・復旧手順をご提案します。
               </p>
@@ -73,18 +74,31 @@ export default function Aws() {
           </div>
         </Reveal>
 
+        {/*
+          各サービスが何をしているかの用語解説は、
+          技術者以外には長すぎるので畳んでいます（消してはいません）。
+        */}
         <Reveal delay={0.08}>
-          <div className="h-full rounded-3xl border border-edge bg-white p-7 shadow-lift sm:p-8">
+          <div className="h-full rounded-3xl border border-edge bg-white p-6 shadow-lift sm:p-8">
             <span className="num text-label text-slate3">
               WHAT EACH ONE DOES
             </span>
-            <div className="mt-7 divide-y divide-edge2">
-              {awsStack.map((s) => (
-                <div key={s.name} className="py-5 first:pt-0">
-                  <p className="num text-note font-bold text-slate">{s.name}</p>
-                  <p className="mt-2 text-note text-slate2">{s.role}</p>
+            <p className="mt-5 text-note text-slate2">
+              上の構成に出てくるAWSのサービスが、それぞれ何をしているかをまとめています。
+            </p>
+            <div className="mt-5">
+              <MoreDetail label={`各サービスの役割を見る（${awsStack.length}件）`}>
+                <div className="divide-y divide-edge2">
+                  {awsStack.map((s) => (
+                    <div key={s.name} className="py-4 first:pt-0">
+                      <p className="num text-note font-bold text-slate">
+                        {s.name}
+                      </p>
+                      <p className="mt-2 text-note text-slate2">{s.role}</p>
+                    </div>
+                  ))}
                 </div>
-              ))}
+              </MoreDetail>
             </div>
           </div>
         </Reveal>

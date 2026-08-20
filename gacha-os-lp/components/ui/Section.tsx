@@ -25,7 +25,7 @@ export default function Section({
   return (
     <section
       id={id}
-      className={`relative scroll-mt-24 py-24 sm:py-28 lg:py-36 ${className}`}
+      className={`relative scroll-mt-24 py-14 sm:py-28 lg:py-36 ${className}`}
     >
       <div className="container-x">
         <Reveal>
@@ -47,12 +47,12 @@ export default function Section({
               <span className="hidden h-px w-8 bg-edge sm:block" />
               <span className="eyebrow-lite">{eyebrow}</span>
             </div>
-            <h2 className="h-display mt-6 text-h2 text-balance text-slate">
+            <h2 className="h-display mt-4 text-h2 text-balance text-slate sm:mt-6">
               {title}
             </h2>
             {lead ? (
               <p
-                className={`mt-7 max-w-[36em] text-body text-pretty text-slate2 ${
+                className={`mt-5 max-w-[36em] text-body text-pretty text-slate2 sm:mt-7 ${
                   align === "center" ? "mx-auto" : ""
                 }`}
               >
@@ -61,7 +61,7 @@ export default function Section({
             ) : null}
           </div>
         </Reveal>
-        <div className="mt-14 sm:mt-16 lg:mt-20">{children}</div>
+        <div className="mt-9 sm:mt-16 lg:mt-20">{children}</div>
       </div>
     </section>
   );

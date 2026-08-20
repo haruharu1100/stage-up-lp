@@ -67,7 +67,7 @@ export default function Act({
   return (
     <section
       id={id}
-      className={`relative scroll-mt-24 overflow-hidden py-24 sm:py-28 lg:py-36 ${TONE[tone]} ${className}`}
+      className={`relative scroll-mt-24 overflow-hidden py-14 sm:py-28 lg:py-36 ${TONE[tone]} ${className}`}
     >
       {tone === "paper" && (
         <div className="pointer-events-none absolute inset-0 grid-lite opacity-45 [mask-image:radial-gradient(ellipse_at_50%_0%,#000_10%,transparent_72%)]" />
@@ -111,7 +111,7 @@ export default function Act({
           )}
 
           <h2
-            className={`h-display mt-6 text-h1 text-balance ${
+            className={`h-display mt-4 text-h1 text-balance sm:mt-6 ${
               dark ? "text-white" : "text-slate"
             }`}
           >
@@ -120,7 +120,7 @@ export default function Act({
 
           {lead && (
             <p
-              className={`mt-7 max-w-[36em] text-body text-pretty ${
+              className={`mt-5 max-w-[36em] text-body text-pretty sm:mt-7 ${
                 align === "center" ? "mx-auto" : ""
               } ${dark ? "text-white/62" : "text-slate2"}`}
             >
@@ -135,7 +135,7 @@ export default function Act({
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: "-8% 0px -8% 0px" }}
             transition={{ duration: 0.85, delay: 0.1, ease }}
-            className="mt-14 sm:mt-16 lg:mt-20"
+            className="mt-9 sm:mt-16 lg:mt-20"
           >
             {children}
           </motion.div>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Act from "../ui/Act";
+import Act, { MoreDetail } from "../ui/Act";
 import BeforeAfter from "../ui/BeforeAfter";
 import { buildGacha, jpy, recalcRtp } from "@/lib/simulate";
 
@@ -63,7 +63,7 @@ function Gauge({
   const pct = Math.max(2, Math.min(100, ((value - 70) / (max - 70)) * 100));
   return (
     <div
-      className={`rounded-3xl border p-7 transition-colors duration-500 ${
+      className={`rounded-3xl border p-5 transition-colors duration-500 sm:p-7 ${
         emphasize
           ? `${tone.ring} ${tone.soft} shadow-lift`
           : "border-edge bg-paper2/70"
@@ -83,7 +83,7 @@ function Gauge({
           <span className="text-[0.5em] opacity-70">%</span>
         </p>
       </div>
-      <div className="relative mt-5 h-2 w-full overflow-hidden rounded-full bg-edge2">
+      <div className="relative mt-4 h-2 w-full overflow-hidden rounded-full bg-edge2 sm:mt-5">
         <div
           className={`h-full rounded-full transition-all duration-500 ${
             emphasize ? tone.bar : "bg-slate3/45"
@@ -136,20 +136,20 @@ export default function RtpMonitor() {
           <span className="text-gradient-royal">いまの実還元率</span>を見る。
         </>
       }
-      lead="上位賞が抜ければ、残った口数の価値は下がります。相場が上がれば、同じ景品でも実質の還元率は上がります。AI GACHA OS は、この2つを常に計算し続けます。スライダーを動かすと、実際に数字が動きます。"
+      lead="上位賞が抜ければ残った口数の価値は下がり、相場が上がれば同じ景品でも実質の還元率は上がります。この2つを常に計算し続けます。スライダーを動かすと、実際に数字が動きます。"
     >
-      <BeforeAfter id="rtp" className="mb-8" />
+      <BeforeAfter id="rtp" className="mb-4 sm:mb-8" />
 
-      <div className="grid gap-4 lg:grid-cols-[1fr_390px]">
+      <div className="grid gap-3 sm:gap-4 lg:grid-cols-[1fr_390px]">
         {/* ───────── メーター ───────── */}
-        <div className="space-y-4">
+        <div className="space-y-3 sm:space-y-4">
           {/* いま危ない方の数字を、いちばん大きく出す */}
           <div
-            className={`rounded-[28px] border p-8 transition-colors duration-500 sm:p-10 ${tone.ring} ${
+            className={`rounded-[28px] border p-6 transition-colors duration-500 sm:p-10 ${tone.ring} ${
               worst >= 105 ? tone.soft : "bg-white"
             } shadow-lift2`}
           >
-            <div className="flex flex-wrap items-end justify-between gap-6">
+            <div className="flex flex-wrap items-end justify-between gap-4 sm:gap-6">
               <div>
                 <p className="num text-label text-slate3">LIVE RTP / いま高い方</p>
                 <p className={`num mt-3 text-mega font-bold ${tone.color}`}>
@@ -167,12 +167,12 @@ export default function RtpMonitor() {
                         ? "黄色警告：実還元率が105%を超えています"
                         : "正常：しきい値の範囲内です"}
                 </p>
-                <p className="num mt-3 text-note text-slate2">
+                <p className="num mt-2 text-note text-slate2 sm:mt-3">
                   残り {state.leftSlots} 口 / 残景品総額 {jpy(state.leftValue)}
                 </p>
                 <button
                   type="button"
-                  className={`mt-5 rounded-full px-6 py-3 text-note font-bold transition-colors ${
+                  className={`mt-4 rounded-full px-6 py-3 text-note font-bold transition-colors sm:mt-5 ${
                     worst >= 105
                       ? "bg-danger text-white hover:bg-danger-ink"
                       : "border border-edge bg-white text-slate3"
@@ -184,7 +184,7 @@ export default function RtpMonitor() {
             </div>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-3 sm:gap-4">
             <Gauge label="設定時還元率" sub="DESIGNED" value={state.designed} />
             <Gauge
               label="残数ベース還元率"
@@ -200,7 +200,7 @@ export default function RtpMonitor() {
             />
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-3">
+          <div className="grid grid-cols-3 gap-2 sm:gap-4">
             {[
               { l: "注意", v: "105% 超", c: "border-warn/40 text-warn-ink" },
               { l: "警告", v: "110% 超", c: "border-danger/35 text-danger-ink" },
@@ -208,29 +208,39 @@ export default function RtpMonitor() {
             ].map((t) => (
               <div
                 key={t.l}
-                className={`rounded-2xl border bg-white px-5 py-4 ${t.c}`}
+                className={`rounded-2xl border bg-white px-3.5 py-3.5 sm:px-5 sm:py-4 ${t.c}`}
               >
                 <p className="text-note font-bold">{t.l}</p>
-                <p className="num mt-1 text-note text-slate2">{t.v}</p>
+                <p className="num mt-1 whitespace-nowrap text-note text-slate2">
+                  {t.v}
+                </p>
               </div>
             ))}
           </div>
           <p className="text-note leading-[1.9] text-slate3">
             しきい値はガチャごとに設定できます。自動停止にするか、警告だけ出して人が判断するかも選べます。
           </p>
+
+          <MoreDetail label="計算式を見る">
+            <p className="num">
+              残数ベース ＝ 残景品総額 ÷（残り口数 × 1口料金）
+              <br />
+              市場価格ベース ＝ 残数ベース × 相場変動
+            </p>
+          </MoreDetail>
         </div>
 
         {/* ───────── 操作パネル ───────── */}
-        <div className="rounded-[28px] border border-edge bg-paper2/70 p-8">
+        <div className="rounded-[28px] border border-edge bg-paper2/70 p-6 sm:p-8">
           <div className="flex items-center gap-2.5">
             <span className="h-2 w-2 rounded-full bg-blue-ink" />
             <span className="num text-label text-slate3">SIMULATION</span>
           </div>
-          <p className="mt-5 text-note leading-[1.9] text-slate2">
+          <p className="mt-4 text-note leading-[1.9] text-slate2 sm:mt-5">
             1回 {jpy(PRICE)} / 全 {TOTAL} 口 / スニーカー中心のガチャを例にしています。
           </p>
 
-          <div className="mt-9 space-y-9">
+          <div className="mt-6 space-y-6 sm:mt-9 sm:space-y-9">
             {[
               {
                 label: "消化した口数",
@@ -279,15 +289,6 @@ export default function RtpMonitor() {
                 />
               </div>
             ))}
-          </div>
-
-          <div className="mt-10 rounded-2xl border border-edge bg-white p-5">
-            <p className="num text-label text-slate3">CALCULATION</p>
-            <p className="num mt-3 text-note leading-[1.9] text-slate2">
-              残数ベース ＝ 残景品総額 ÷（残り口数 × 1口料金）
-              <br />
-              市場価格ベース ＝ 残数ベース × 相場変動
-            </p>
           </div>
         </div>
       </div>

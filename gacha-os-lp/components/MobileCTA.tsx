@@ -20,6 +20,30 @@ export default function MobileCTA() {
         show ? "translate-y-0" : "translate-y-full"
       }`}
     >
+      {/*
+        検討中の人がいちばん探すのは料金です。
+        ここに1行足しておくと、どこまでスクロールしていても1タップで料金へ行けます。
+        （文字は小さくできないので、ボタンを3つ横並びにはせず、細い1行にしています）
+      */}
+      <Link
+        href="/#pricing"
+        onClick={() =>
+          track(EV.ctaClick, { place: "mobile_bar", target: "pricing" })
+        }
+        className="mb-2.5 flex items-center justify-center gap-1.5 rounded-xl border border-edge bg-paper2 py-2 text-note font-semibold text-blue-ink"
+      >
+        料金を見る
+        <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden>
+          <path
+            d="M3 8h10M9 4l4 4-4 4"
+            stroke="currentColor"
+            strokeWidth="1.7"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      </Link>
+
       <div className="flex items-stretch gap-2.5 pb-3.5">
         <Link
           href="/demo"

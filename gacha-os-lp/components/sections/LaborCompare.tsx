@@ -57,7 +57,7 @@ const RISKS = [
 export default function LaborCompare() {
   return (
     <>
-      <Reveal delay={0.06} className="mt-24">
+      <Reveal delay={0.06} className="mt-12 sm:mt-24">
         <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-3">
           <div className="flex items-center gap-4">
             <span className="num text-label text-slate3">COMPARE</span>
@@ -72,15 +72,15 @@ export default function LaborCompare() {
         </div>
       </Reveal>
 
-      <Reveal delay={0.1} className="mt-7">
+      <Reveal delay={0.1} className="mt-6">
         <div className="grid gap-4 lg:grid-cols-2">
           {/* BEFORE */}
-          <div className="rounded-3xl border border-edge bg-paper2 p-7 sm:p-8">
+          <div className="rounded-3xl border border-edge bg-paper2 p-6 sm:p-8">
             <span className="num text-label text-slate3">
               BEFORE ／ 人の手で回す場合
             </span>
 
-            <div className="mt-7 flex flex-wrap gap-x-10 gap-y-6">
+            <div className="mt-6 flex flex-wrap gap-x-10 gap-y-5">
               <Stat label="担当スタッフ" value={`${MODEL.staff}人`} tone="mute" />
               <Stat
                 label="毎月の運営作業"
@@ -90,7 +90,7 @@ export default function LaborCompare() {
               <Stat label="人件費 相当" value={`${jpy(beforeCost)}／月`} tone="warn" />
             </div>
 
-            <ul className="mt-8 space-y-3.5 border-t border-edge2 pt-7">
+            <ul className="mt-6 space-y-3 border-t border-edge2 pt-5">
               {timeModel.map((r) => (
                 <li
                   key={r.task}
@@ -106,12 +106,12 @@ export default function LaborCompare() {
           </div>
 
           {/* AFTER */}
-          <div className="rounded-3xl border border-blue-ink/20 bg-white p-7 shadow-lift2 sm:p-8">
+          <div className="rounded-3xl border border-blue-ink/20 bg-white p-6 shadow-lift2 sm:p-8">
             <span className="num text-label text-blue-ink">
               AFTER ／ AI GACHA OS
             </span>
 
-            <div className="mt-7 flex flex-wrap gap-x-10 gap-y-6">
+            <div className="mt-6 flex flex-wrap gap-x-10 gap-y-5">
               <Stat label="人の役割" value="確認・承認" tone="ink" />
               <Stat
                 label="毎月の運営作業"
@@ -121,7 +121,7 @@ export default function LaborCompare() {
               <Stat label="人件費 相当" value={`${jpy(afterCost)}／月`} tone="ok" />
             </div>
 
-            <ul className="mt-8 space-y-3.5 border-t border-edge2 pt-7">
+            <ul className="mt-6 space-y-3 border-t border-edge2 pt-5">
               {timeModel.map((r) => (
                 <li
                   key={r.task}
@@ -140,8 +140,8 @@ export default function LaborCompare() {
 
       {/* 差額の帯 */}
       <Reveal delay={0.14} className="mt-4">
-        <div className="lp-tint rounded-3xl px-7 py-8 sm:px-9">
-          <div className="flex flex-wrap items-end gap-x-14 gap-y-8">
+        <div className="lp-tint rounded-3xl px-6 py-6 sm:px-9 sm:py-8">
+          <div className="flex flex-wrap items-end gap-x-12 gap-y-6">
             <div>
               <p className="num text-label text-slate3">減る作業時間</p>
               <p className="num mt-3 text-h1 font-semibold leading-none text-slate">
@@ -172,7 +172,7 @@ export default function LaborCompare() {
             )}
           </div>
 
-          <p className="mt-8 border-t border-edge2 pt-7 text-note text-slate2">
+          <p className="mt-6 border-t border-edge2 pt-5 text-note text-slate2">
             上記は「1日{beforeHoursPerDay}時間相当の運営作業が発生している事業者」を、月{MODEL.workdaysPerMonth}日・時給{MODEL.hourlyWage.toLocaleString("ja-JP")}円で換算した
             <span className="font-bold text-slate">モデルケース</span>
             です。実測値ではなく、この金額の達成をお約束するものではありません。実際の削減幅は、扱うジャンル・ガチャ本数・発送件数・体制によって変わります。
@@ -182,21 +182,21 @@ export default function LaborCompare() {
 
       {/* 事故リスク */}
       <Reveal delay={0.18} className="mt-4">
-        <div className="rounded-3xl border border-edge bg-white p-7 shadow-lift sm:p-8">
+        <div className="rounded-3xl border border-edge bg-white p-6 shadow-lift sm:p-8">
           <span className="num text-label text-slate3">
             RISK ／ 金額に出ないコスト
           </span>
-          <p className="mt-5 text-body text-slate2">
+          <p className="mt-4 text-body text-slate2">
             人件費より重いのは、起きてしまったときに取り返せない事故のほうです。
           </p>
-          <div className="mt-7 grid gap-4 md:grid-cols-3">
+          <div className="mt-6 grid gap-3 md:grid-cols-3">
             {RISKS.map((r) => (
               <div
                 key={r.t}
-                className="rounded-2xl border border-edge2 bg-paper2 p-6"
+                className="rounded-2xl border border-edge2 bg-paper2 p-5"
               >
                 <p className="text-note font-bold text-slate">{r.t}</p>
-                <p className="mt-3.5 text-note text-slate2">{r.b}</p>
+                <p className="mt-3 text-note text-slate2">{r.b}</p>
               </div>
             ))}
           </div>

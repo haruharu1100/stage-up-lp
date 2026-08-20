@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useReducedMotion } from "framer-motion";
 import Section from "../ui/Section";
 import Reveal from "../ui/Reveal";
+import { MoreDetail } from "../ui/Act";
 import BeforeAfter from "../ui/BeforeAfter";
 import PriceFreshnessBadge from "../ui/PriceFreshnessBadge";
 import { STALE_AFTER_HOURS } from "@/lib/priceFreshness";
@@ -266,33 +267,30 @@ export default function MarketPrice() {
           還元率も動く。
         </>
       }
-      lead="景品の価格は、入れた日の値段のままではありません。設定した周期で市場価格を取り込み、購入時価格との差を管理画面に出します。この価格が、そのまま実還元率の計算に入ります。"
+      lead="設定した周期で市場価格を取り込み、購入時価格との差がそのまま実還元率の計算に入ります。"
     >
       <BeforeAfter id="price" className="mb-5" />
 
       <Reveal>
-        <div className="mb-5 flex flex-wrap items-center gap-3">
-          <span className="num rounded-full border border-danger/25 bg-danger/[0.06] px-3.5 py-1.5 text-label text-danger-ink">
-            ESCALATION
-          </span>
-          <span className="text-note font-bold text-slate">
-            上がった → 悪化した → 気づいた → 止めた
-          </span>
-        </div>
         <Escalation />
       </Reveal>
 
       <Reveal delay={0.06}>
-        <p className="mb-10 mt-5 rounded-3xl border border-edge bg-white px-6 py-5 text-note text-slate2 shadow-lift">
+        <p className="mt-4 rounded-3xl border border-edge bg-white px-6 py-5 text-note text-slate2 shadow-lift">
           <span className="num mr-2.5 rounded-full border border-warn-ink/25 bg-warn/10 px-2.5 py-1 text-label text-warn-ink">
             モデルケース
           </span>
-          ※ 画面の数値はすべて運営例です。実際の判定は、公開中の全ガチャに対して同じ計算を走らせ、しきい値を超えたものだけを一覧に上げます。
+          ※ 画面の数値はすべて運営例です。
         </p>
       </Reveal>
 
-      <div className="grid gap-5 lg:grid-cols-[1fr_360px]">
-        <Reveal>
+      <Reveal delay={0.08} className="mt-4">
+        <MoreDetail label="相場一覧・更新設定と UNKNOWN の扱いを見る">
+          <p className="mb-5">
+            実際の判定は、公開中の全ガチャに対して同じ計算を走らせ、しきい値を超えたものだけを一覧に上げます。
+          </p>
+
+          <div className="grid gap-5 lg:grid-cols-[1fr_360px]">
           <div className="lp-card overflow-hidden">
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-edge2 px-6 py-4">
               <span className="eyebrow-lite">MARKET PRICE MONITOR</span>
@@ -337,9 +335,7 @@ export default function MarketPrice() {
               </p>
             </div>
           </div>
-        </Reveal>
 
-        <Reveal delay={0.08}>
           <div className="lp-card h-full p-7 sm:p-8">
             <span className="eyebrow-lite">UPDATE SETTINGS</span>
             <div className="mt-7 space-y-3.5">
@@ -400,8 +396,9 @@ export default function MarketPrice() {
               </p>
             </div>
           </div>
-        </Reveal>
-      </div>
+          </div>
+        </MoreDetail>
+      </Reveal>
     </Section>
   );
 }

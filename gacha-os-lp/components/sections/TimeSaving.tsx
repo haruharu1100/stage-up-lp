@@ -1,5 +1,6 @@
 import Section from "../ui/Section";
 import Reveal from "../ui/Reveal";
+import { MoreDetail } from "../ui/Act";
 import { timeModel, timeModelNote } from "@/content/site";
 
 const beforeTotal = timeModel.reduce((a, r) => a + r.before, 0);
@@ -28,24 +29,24 @@ export default function TimeSaving() {
     >
       {/* 合計の対比 */}
       <Reveal>
-        <div className="grid gap-4 sm:grid-cols-[1fr_auto_1fr] sm:items-stretch">
-          <div className="rounded-3xl border border-edge bg-paper2 p-7 sm:p-9">
+        <div className="grid gap-3 sm:grid-cols-[1fr_auto_1fr] sm:items-stretch sm:gap-4">
+          <div className="rounded-3xl border border-edge bg-paper2 p-6 sm:p-9">
             <span className="num inline-flex items-center gap-2.5 text-label text-slate3">
               <span className="h-1.5 w-1.5 rounded-full bg-slate3/50" />
               従来の運営
             </span>
-            <p className="num mt-6 text-h1 font-semibold leading-none text-slate3">
+            <p className="num mt-4 text-h1 font-semibold leading-none text-slate3">
               {beforeTotal}
               <span className="ml-2 text-note font-normal text-slate3">
                 時間 / 日
               </span>
             </p>
-            <p className="mt-6 text-note text-slate3">
-              計算・確認・転記・返信。人が手を動かさないと、何も進まない状態。
+            <p className="mt-4 text-note text-slate3">
+              人が手を動かさないと、何も進まない状態。
             </p>
           </div>
 
-          <div className="flex items-center justify-center py-1 sm:px-3 sm:py-0">
+          <div className="flex items-center justify-center sm:px-3 sm:py-0">
             <span
               className="flex h-11 w-11 items-center justify-center rounded-full border border-edge bg-white text-blue-ink shadow-lift sm:hidden"
               aria-hidden
@@ -76,35 +77,32 @@ export default function TimeSaving() {
             </span>
           </div>
 
-          <div className="rounded-3xl border border-blue-ink/20 bg-white p-7 shadow-lift2 sm:p-9">
+          <div className="rounded-3xl border border-blue-ink/20 bg-white p-6 shadow-lift2 sm:p-9">
             <span className="num inline-flex items-center gap-2.5 text-label text-blue-ink">
               <span className="h-1.5 w-1.5 rounded-full bg-blue-ink" />
               AI GACHA OS
             </span>
-            <p className="num mt-6 text-h1 font-semibold leading-none text-slate">
+            <p className="num mt-4 text-h1 font-semibold leading-none text-slate">
               1〜2
               <span className="ml-2 text-note font-normal text-slate3">
                 時間 / 日
               </span>
             </p>
-            <p className="mt-6 text-note text-slate2">
+            <p className="mt-4 text-note text-slate2">
               残るのは「確認」と「承認」。数字はすでに出ている状態から始まります。
             </p>
           </div>
         </div>
       </Reveal>
 
-      {/* 内訳 */}
+      {/* 内訳。読みたい人にだけ開いてもらう（合計は上の対比で見えている） */}
       <Reveal delay={0.06} className="mt-4">
-        <div className="overflow-hidden rounded-3xl border border-edge bg-white shadow-lift">
-          <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-b border-edge2 px-6 py-5 sm:px-8">
-            <span className="num text-label text-slate3">DAILY BREAKDOWN</span>
-            <span className="num text-note text-slate3">モデルケース</span>
-          </div>
-
+        <MoreDetail
+          label={`作業ごとの内訳を見る（${timeModel.length}項目・モデルケース）`}
+        >
           <div className="divide-y divide-edge2">
             {timeModel.map((r) => (
-              <div key={r.task} className="px-6 py-6 sm:px-8">
+              <div key={r.task} className="py-5 first:pt-0 last:pb-0">
                 <div className="flex flex-wrap items-baseline justify-between gap-x-5 gap-y-1">
                   <p className="text-note font-semibold text-slate">{r.task}</p>
                   <p className="num shrink-0 text-note">
@@ -119,7 +117,7 @@ export default function TimeSaving() {
                 </div>
 
                 {/* バー */}
-                <div className="mt-4 space-y-2">
+                <div className="mt-3 space-y-2">
                   <div className="h-1.5 overflow-hidden rounded-full bg-mist">
                     <div
                       className="h-full rounded-full bg-slate3/35"
@@ -136,14 +134,12 @@ export default function TimeSaving() {
                   </div>
                 </div>
 
-                <p className="mt-3.5 text-note text-slate3">
-                  導入後：{r.note}
-                </p>
+                <p className="mt-3 text-note text-slate3">導入後：{r.note}</p>
               </div>
             ))}
           </div>
 
-          <div className="flex flex-wrap items-baseline justify-between gap-x-5 gap-y-2 border-t border-edge bg-paper2 px-6 py-6 sm:px-8">
+          <div className="mt-5 flex flex-wrap items-baseline justify-between gap-x-5 gap-y-2 border-t border-edge pt-5">
             <span className="text-note text-slate2">合計</span>
             <span className="num flex flex-wrap items-baseline gap-x-2.5">
               <span className="text-note text-slate3 line-through">
@@ -155,11 +151,11 @@ export default function TimeSaving() {
               </span>
             </span>
           </div>
-        </div>
+        </MoreDetail>
       </Reveal>
 
       <Reveal delay={0.1} className="mt-4">
-        <p className="rounded-2xl border border-edge bg-paper2 px-6 py-6 text-note text-slate2">
+        <p className="rounded-2xl border border-edge bg-paper2 px-5 py-5 text-note text-slate2 sm:px-6">
           <span className="mr-3 inline-block rounded-full border border-edge bg-white px-3.5 py-1 text-note leading-normal text-slate3">
             運営例
           </span>

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Section from "../ui/Section";
 import Reveal from "../ui/Reveal";
+import { MoreDetail } from "../ui/Act";
 import BeforeAfter from "../ui/BeforeAfter";
 import DashboardMock from "../DashboardMock";
 
@@ -97,12 +98,21 @@ export default function AdminConsole() {
           <span className="text-gradient-royal">聞けば、答えが返ってくる。</span>
         </>
       }
-      lead="管理画面はSaaS水準で設計します。さらに右上には AI OPERATOR。日本語で聞くだけで、いま危険なガチャ・残っている発送・今月の利益を、根拠つきで返します。"
+      lead="管理画面はSaaS水準で設計します。さらに右上には AI OPERATOR。日本語で聞くだけで、根拠つきの数字がその場で返ります。"
     >
       <BeforeAfter id="admin" className="mb-3" />
 
       <Reveal>
-        <DashboardMock />
+        {/*
+          同じ管理画面の全体像は上のセクションで一度出しているので、
+          スマホでは要点だけの表示にして重複を減らす（大きい画面はそのまま）。
+        */}
+        <div className="lg:hidden">
+          <DashboardMock compact />
+        </div>
+        <div className="hidden lg:block">
+          <DashboardMock />
+        </div>
       </Reveal>
 
       <div className="mt-3 grid gap-3 lg:grid-cols-[1fr_380px]">
@@ -118,7 +128,7 @@ export default function AdminConsole() {
               <span className="num text-[10px] text-slate3">管理画面 右上に常駐</span>
             </div>
 
-            <div className="flex-1 space-y-3 p-5">
+            <div className="flex-1 space-y-3 p-4 sm:p-5">
               {qa.slice(0, asked).map((x) => (
                 <div key={x.q} className="space-y-3">
                   <div className="flex justify-end">
@@ -134,7 +144,7 @@ export default function AdminConsole() {
                 </div>
               ))}
               {asked === 0 && (
-                <p className="py-8 text-center text-[12px] text-slate3">
+                <p className="py-4 text-center text-[12px] text-slate3 sm:py-8">
                   下のボタンを押すと、AI OPERATOR の回答が表示されます
                 </p>
               )}
@@ -172,19 +182,17 @@ export default function AdminConsole() {
         </Reveal>
 
         <Reveal delay={0.12}>
-          <div className="h-full rounded-3xl border border-edge bg-white p-6 shadow-lift">
+          <div className="h-full rounded-3xl border border-edge bg-white p-4 shadow-lift sm:p-6">
             <span className="num text-[10px] tracking-[0.2em] text-blue-ink">MORNING BRIEF</span>
             <p className="mt-2 text-[12px] leading-[1.9] text-slate2">
-              AIが毎朝、運営責任者のように状況を整理。
+              AIが毎朝、通知を並べるのではなく、粗利への影響が大きい順に並べ替えて渡します。
             </p>
-            <p className="mt-1 text-[11px] leading-[1.85] text-slate3">
-              通知を並べるのではなく、粗利への影響が大きい順に並べ替えて渡します。
-            </p>
-            <ol className="mt-5 space-y-2.5">
-              {morningBrief.map((s, i) => (
+            <ol className="mt-4 space-y-2">
+              {/* 上から2件だけ出す。残りは下の「詳しく見る」の中 */}
+              {morningBrief.slice(0, 2).map((s, i) => (
                 <li
                   key={s.title}
-                  className={`rounded-2xl border p-4 ${
+                  className={`rounded-2xl border p-3 sm:p-3.5 ${
                     i === 0
                       ? "border-danger/25 bg-danger/[0.05]"
                       : "border-edge2 bg-paper2"
@@ -201,13 +209,37 @@ export default function AdminConsole() {
                     </span>
                     <span className="num ml-auto text-[10px] text-slate3">目安 {s.cost}</span>
                   </div>
-                  <p className="mt-2.5 text-[12.5px] font-bold leading-[1.7] text-slate">
+                  <p className="mt-2 text-[12.5px] font-bold leading-[1.7] text-slate">
                     {s.title}
                   </p>
-                  <p className="mt-1.5 text-[11.5px] leading-[1.85] text-slate2">{s.detail}</p>
+                  {i === 0 && (
+                    <p className="mt-1.5 text-[11.5px] leading-[1.85] text-slate2">
+                      {s.detail}
+                    </p>
+                  )}
                 </li>
               ))}
             </ol>
+
+            {/* 3件目以降と、各項目の中身は、読みたい人だけが開く */}
+            <div className="mt-3">
+              <MoreDetail label="残り3件と、それぞれの中身を見る">
+                <ul className="space-y-5">
+                  {morningBrief.slice(1).map((s) => (
+                    <li key={s.title}>
+                      <span className="num text-label text-slate3">
+                        {s.level} ／ 目安 {s.cost}
+                      </span>
+                      <p className="mt-1 text-note font-bold text-slate">
+                        {s.title}
+                      </p>
+                      <p className="mt-2 text-note text-slate2">{s.detail}</p>
+                    </li>
+                  ))}
+                </ul>
+              </MoreDetail>
+            </div>
+
             <p className="mt-4 text-[10.5px] leading-[1.8] text-slate3">
               ※ 表示はサンプルデータによる動作イメージです。この一覧はメール／LINE
               で受け取る設定にもできます。
@@ -222,7 +254,7 @@ export default function AdminConsole() {
             <span className="num text-[10px] tracking-[0.2em] text-blue-bright">
               LOTTERY AUDIT LOG
             </span>
-            <span className="text-[11px] text-white/45">
+            <span className="hidden text-[11px] text-white/45 lg:inline">
               誰が・いつ・どのガチャを・何回・抽選前残数・結果・消費ポイント・抽選後残数
             </span>
             <span className="text-[10.5px] text-white/35 sm:hidden">
@@ -244,7 +276,7 @@ export default function AdminConsole() {
               {auditLog.map((l) => (
                 <div
                   key={l.t}
-                  className="num grid grid-cols-[86px_92px_60px_60px_78px_1fr_78px_78px] items-center gap-2 border-b border-white/5 px-5 py-3 text-[11px] last:border-0"
+                  className="num grid grid-cols-[86px_92px_60px_60px_78px_1fr_78px_78px] items-center gap-2 border-b border-white/5 px-5 py-2.5 text-[11px] last:border-0 sm:py-3"
                 >
                   <span className="text-white/40">{l.t}</span>
                   <span className="text-white/55">{l.u}</span>
@@ -260,8 +292,7 @@ export default function AdminConsole() {
           </div>
           <div className="border-t border-white/8 px-5 py-3.5">
             <p className="text-[11px] leading-[1.9] text-white/50">
-              抽選は1件ずつ記録に残ります。後から書き換えにくい設計にすることで、
-              「本当に正しく抽選されたのか」を運営者自身が確認できる状態を保ちます。
+              抽選は1件ずつ、後から書き換えにくい形で記録に残ります。「本当に正しく抽選されたのか」を運営者自身が確認できる状態を保つためです。
             </p>
           </div>
         </div>

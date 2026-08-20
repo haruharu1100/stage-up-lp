@@ -27,7 +27,7 @@ export default function BuiltFromOps() {
           {builtFromOps.facts.map((f, i) => (
             <div
               key={f.t}
-              className="relative overflow-hidden rounded-3xl border border-edge bg-white p-8 shadow-lift sm:p-10"
+              className="relative overflow-hidden rounded-3xl border border-edge bg-white p-6 shadow-lift sm:p-10"
             >
               <div className="flex items-center gap-4">
                 <span className="num text-label text-slate3">
@@ -35,8 +35,8 @@ export default function BuiltFromOps() {
                 </span>
                 <span className="h-px w-8 bg-edge" />
               </div>
-              <h3 className="h-display mt-7 text-h3 text-slate">{f.t}</h3>
-              <p className="mt-6 text-body text-slate2">{f.b}</p>
+              <h3 className="h-display mt-5 text-h3 text-slate sm:mt-7">{f.t}</h3>
+              <p className="mt-4 text-body text-slate2 sm:mt-6">{f.b}</p>
             </div>
           ))}
         </div>
@@ -53,11 +53,11 @@ export default function BuiltFromOps() {
             </div>
             <div className="grid grid-cols-2 divide-x divide-y divide-edge2 sm:grid-cols-3">
               {shown.map((m) => (
-                <div key={m.key} className="px-6 py-8 sm:px-8">
+                <div key={m.key} className="px-5 py-6 sm:px-8 sm:py-8">
                   <p className="text-note leading-tight text-slate3">
                     {m.label}
                   </p>
-                  <p className="num mt-4 text-h1 font-semibold leading-none text-slate">
+                  <p className="num mt-3 text-h1 font-semibold leading-none text-slate">
                     {m.value.toLocaleString("ja-JP")}
                     <span className="ml-2 text-note font-normal text-slate3">
                       {m.unit}
@@ -71,7 +71,7 @@ export default function BuiltFromOps() {
       )}
 
       <Reveal delay={0.12} className="mt-5">
-        <p className="rounded-2xl border border-edge bg-paper2 px-6 py-6 text-note text-slate2">
+        <p className="rounded-2xl border border-edge bg-paper2 px-5 py-5 text-note text-slate2 sm:px-6 sm:py-6">
           運営実績の数値は、集計体制が整い、確認できるようになったものから順に掲載します。現時点では、確認できていない数値は掲載していません。
         </p>
       </Reveal>

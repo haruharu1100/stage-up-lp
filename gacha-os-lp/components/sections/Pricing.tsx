@@ -15,6 +15,7 @@ import {
   type OsTier,
 } from "@/config/pricing";
 import LaborCompare from "./LaborCompare";
+import { MoreDetail } from "../ui/Act";
 import { EV } from "@/lib/track";
 
 /**
@@ -66,92 +67,10 @@ export default function Pricing() {
       }
       lead={pricingStructure.lead}
     >
-      {/* ── 金額を出す前に、比べる相手を示す（ROIセクションへ戻す） ── */}
+      {/* ── 料金カードまでの距離を縮める。
+             前置きは「金額に何が含まれるか」の1つだけを出し、
+             残り（OSの構成式・3ブロック・プラン差分）は開いた人にだけ出す ── */}
       <Reveal>
-        <div className="mb-5 flex flex-col gap-6 rounded-3xl border border-blue-ink/20 bg-gradient-to-b from-blue-pale/70 to-white px-7 py-8 shadow-lift sm:px-10 sm:py-9 lg:flex-row lg:items-center lg:justify-between">
-          <div>
-            <span className="num text-label text-blue-ink">BEFORE YOU LOOK</span>
-            <p className="mt-5 text-h3 font-semibold leading-[1.6] text-slate">
-              金額を見る前に、いまの運営コストと比べてください。
-            </p>
-            <p className="mt-4 max-w-[38em] text-note text-slate2">
-              比べる相手は、他社システムの月額ではありません。いま実際にかかっている人の時間と人件費です。導入効果の試算に自社の数字を入れると、その差額が出ます。
-            </p>
-          </div>
-          <a href="#roi" className="btn-outline shrink-0 lg:min-w-[260px]">
-            今の運営コストを試算する
-          </a>
-        </div>
-      </Reveal>
-
-      {/* AI GACHA OS = SYSTEM + AI + AUTOMATION + SUPPORT */}
-      <Reveal>
-        <div className="lp-tint overflow-hidden rounded-3xl px-7 py-8 sm:px-10 sm:py-9">
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-5">
-            <span className="num text-h3 font-semibold tracking-[0.04em] text-gradient-royal">
-              AI GACHA OS
-            </span>
-            <span className="num text-h3 font-light text-slate3/60">=</span>
-            {EQUATION.map((e, i) => (
-              <span key={e.k} className="flex items-center gap-4">
-                {i > 0 && (
-                  <span className="num text-h3 font-light text-slate3/60">+</span>
-                )}
-                <span className="rounded-2xl border border-edge bg-white px-5 py-3.5 shadow-lift">
-                  <span className="num block text-label text-blue-ink">
-                    {e.k}
-                  </span>
-                  <span className="mt-1.5 block text-note text-slate2">
-                    {e.j}
-                  </span>
-                </span>
-              </span>
-            ))}
-          </div>
-        </div>
-      </Reveal>
-
-      {/* 3ブロック構成 */}
-      <Reveal delay={0.06} className="mt-5">
-        <div className="grid gap-5 md:grid-cols-3">
-          {pricingStructure.blocks.map((b, i) => (
-            <div
-              key={b.code}
-              className={`rounded-3xl border p-7 shadow-lift sm:p-8 ${
-                i === 1
-                  ? "border-blue-ink/20 bg-gradient-to-b from-blue-pale/70 to-white"
-                  : "border-edge bg-white"
-              }`}
-            >
-              <span
-                className={`num text-label ${
-                  i === 1 ? "text-blue-ink" : "text-slate3"
-                }`}
-              >
-                {b.code}
-              </span>
-              <p className="mt-5 text-h3 font-semibold text-slate">{b.name}</p>
-              <p className="mt-4 text-note text-slate2">{b.body}</p>
-            </div>
-          ))}
-        </div>
-      </Reveal>
-
-      {/* 料金セクションがどれだけ見られているかを計測する */}
-      <ViewTracker event={EV.pricingView} />
-
-      {/* ── 比べる軸を先に示す（月額の安さ比べにさせない） ── */}
-      <LaborCompare />
-
-      {/* ── MONTHLY OS：STARTER / GROWTH / ENTERPRISE ── */}
-      <GroupHead
-        code="MONTHLY OS"
-        title="月額OS利用料"
-        note="システム利用・AI機能・監視・保守・アップデートを含みます。"
-      />
-
-      {/* 金額の前に「何が含まれるか」を置く。月額だけを単独で見せない */}
-      <Reveal delay={0.04} className="mt-7">
         <div className="lp-card px-7 py-8 sm:px-9">
           <p className="text-body font-bold text-slate">
             この金額に含まれるのは、下の6つの運営業務です。
@@ -174,29 +93,116 @@ export default function Pricing() {
         </div>
       </Reveal>
 
-      {/* 3プランの違いを1行で。表を細かくしないための要約 */}
-      <Reveal delay={0.06} className="mt-9">
-        <div className="grid gap-3 sm:grid-cols-3">
-          {TIER_SUMMARY.map((s, i) => (
-            <div
-              key={s.key}
-              className={`rounded-2xl border px-6 py-5 ${
-                i === 0
-                  ? "border-blue-ink/25 bg-blue-pale"
-                  : "border-edge bg-paper2"
-              }`}
-            >
-              <span
-                className={`num text-label ${
-                  i === 0 ? "text-blue-ink" : "text-slate3"
+      <Reveal delay={0.06} className="mt-4">
+        <MoreDetail label="料金の考え方（OSの構成・3つのブロック・プランの違い）">
+          {/* AI GACHA OS = SYSTEM + AI + AUTOMATION + SUPPORT */}
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-5">
+            <span className="num text-h3 font-semibold tracking-[0.04em] text-gradient-royal">
+              AI GACHA OS
+            </span>
+            <span className="num text-h3 font-light text-slate3/60">=</span>
+            {EQUATION.map((e, i) => (
+              <span key={e.k} className="flex items-center gap-4">
+                {i > 0 && (
+                  <span className="num text-h3 font-light text-slate3/60">+</span>
+                )}
+                <span className="rounded-2xl border border-edge bg-white px-5 py-3.5 shadow-lift">
+                  <span className="num block text-label text-blue-ink">
+                    {e.k}
+                  </span>
+                  <span className="mt-1.5 block text-note text-slate2">
+                    {e.j}
+                  </span>
+                </span>
+              </span>
+            ))}
+          </div>
+
+          {/* 3ブロック構成 */}
+          <div className="mt-6 grid gap-4 md:grid-cols-3">
+            {pricingStructure.blocks.map((b, i) => (
+              <div
+                key={b.code}
+                className={`rounded-2xl border p-6 ${
+                  i === 1
+                    ? "border-blue-ink/20 bg-blue-pale"
+                    : "border-edge bg-white"
                 }`}
               >
-                {s.key}
-              </span>
-              <p className="mt-3 text-note text-slate2">{s.diff}</p>
-            </div>
-          ))}
+                <span
+                  className={`num text-label ${
+                    i === 1 ? "text-blue-ink" : "text-slate3"
+                  }`}
+                >
+                  {b.code}
+                </span>
+                <p className="mt-4 text-h3 font-semibold text-slate">{b.name}</p>
+                <p className="mt-3 text-note text-slate2">{b.body}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* 3プランの違いを1行で。表を細かくしないための要約 */}
+          <div className="mt-4 grid gap-3 sm:grid-cols-3">
+            {TIER_SUMMARY.map((s, i) => (
+              <div
+                key={s.key}
+                className={`rounded-2xl border px-6 py-5 ${
+                  i === 0
+                    ? "border-blue-ink/25 bg-blue-pale"
+                    : "border-edge bg-paper2"
+                }`}
+              >
+                <span
+                  className={`num text-label ${
+                    i === 0 ? "text-blue-ink" : "text-slate3"
+                  }`}
+                >
+                  {s.key}
+                </span>
+                <p className="mt-3 text-note text-slate2">{s.diff}</p>
+              </div>
+            ))}
+          </div>
+        </MoreDetail>
+      </Reveal>
+
+      {/* 料金セクションがどれだけ見られているかを計測する */}
+      <ViewTracker event={EV.pricingView} />
+
+      {/* ── MONTHLY OS：STARTER / GROWTH / ENTERPRISE ── */}
+      <GroupHead
+        code="MONTHLY OS"
+        title="月額OS利用料"
+        note="システム利用・AI機能・監視・保守・アップデートを含みます。"
+      />
+
+      {/* ── 金額を出す前に、比べる相手を示す（ROIセクションへ戻す） ── */}
+      <Reveal className="mt-7">
+        <div className="flex flex-col gap-6 rounded-3xl border border-blue-ink/20 bg-gradient-to-b from-blue-pale/70 to-white px-7 py-8 shadow-lift sm:px-10 sm:py-9 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <span className="num text-label text-blue-ink">BEFORE YOU LOOK</span>
+            <p className="mt-5 text-h3 font-semibold leading-[1.6] text-slate">
+              金額を見る前に、いまの運営コストと比べてください。
+            </p>
+            <p className="mt-4 max-w-[38em] text-note text-slate2">
+              比べる相手は、他社システムの月額ではありません。いま実際にかかっている人の時間と人件費です。導入効果の試算に自社の数字を入れると、その差額が出ます。
+            </p>
+          </div>
+          <a href="#roi" className="btn-outline shrink-0 lg:min-w-[260px]">
+            今の運営コストを試算する
+          </a>
         </div>
+      </Reveal>
+
+      {/* 比べる軸そのもの（人件費・時間・事故リスクの試算）は、
+          読みたい人にだけ開いてもらう。内容は LaborCompare のまま */}
+      <Reveal delay={0.04} className="mt-4">
+        <MoreDetail label="人件費・時間・事故リスクで比べる（モデルケースの試算）">
+          <div className="[&>*:first-child]:mt-0">
+            <LaborCompare />
+          </div>
+        </MoreDetail>
       </Reveal>
 
       <div className="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
@@ -208,15 +214,11 @@ export default function Pricing() {
       </div>
 
       {monitorOffer.enabled && (
-        <Reveal delay={0.2} className="mt-5">
-          <div className="rounded-3xl border border-gold-deep/25 bg-gold/[0.06] px-7 py-7 shadow-lift sm:px-9">
-            <span className="num text-label text-gold-deep">MONITOR</span>
-            <p className="mt-4 text-h3 font-semibold text-slate">
-              {monitorHeadline()}
-            </p>
-            <p className="mt-4 text-note text-slate2">{monitorOffer.body}</p>
+        <Reveal delay={0.2} className="mt-4">
+          <MoreDetail label={monitorHeadline()}>
+            <p className="text-note text-slate2">{monitorOffer.body}</p>
 
-            <p className="mt-7 border-t border-gold-deep/15 pt-6 text-note font-bold text-slate">
+            <p className="mt-6 text-note font-bold text-slate">
               ご協力いただく内容
             </p>
             <ul className="mt-4 space-y-3">
@@ -233,92 +235,54 @@ export default function Pricing() {
                 無料になるのは月額のOS利用料です。初期構築費は別途かかります。
               </p>
             )}
-          </div>
+          </MoreDetail>
         </Reveal>
       )}
 
-      {/* ── INITIAL SETUP ── */}
-      <GroupHead
-        code={initialSetup.code}
-        title={initialSetup.name}
-        note="初回のみ発生します。月額とは別枠です。"
-      />
+      {/* ── INITIAL SETUP（検討が進んだ人だけが読む枠なので畳む。金額は見出しに出す） ── */}
+      <Reveal delay={0.06} className="mt-4">
+        <MoreDetail
+          label={`${initialSetup.name}（初回のみ・月額とは別枠）　${setupPriceLabel}`}
+        >
+          <p className="text-note text-slate2">{initialSetup.lead}</p>
 
-      <Reveal delay={0.08} className="mt-7">
-        <div className="grid gap-5 lg:grid-cols-[minmax(0,380px)_1fr]">
-          <div className="flex flex-col rounded-3xl border border-blue-ink/20 bg-gradient-to-b from-blue-pale/70 to-white p-7 shadow-lift2 sm:p-8">
-            <p className="num text-label text-blue-ink">初期構築費</p>
-            <p className="num mt-5 text-h3 font-semibold leading-tight text-slate">
-              {setupPriceLabel}
-            </p>
-            <p className="mt-6 border-t border-edge2 pt-6 text-note text-slate2">
-              {initialSetup.lead}
-            </p>
-            <a href="#contact" className="btn-outline mt-8 w-full">
-              自社の場合の費用を相談する
-            </a>
-          </div>
-
-          <div className="rounded-3xl border border-edge bg-white p-7 shadow-lift sm:p-8">
-            <span className="num text-label text-slate3">INCLUDED</span>
-            <ul className="mt-7 grid gap-3.5 sm:grid-cols-2">
-              {initialSetup.includes.map((t) => (
-                <li key={t} className="flex gap-3.5 text-note text-slate2">
-                  <span className="mt-[13px] h-1.5 w-1.5 shrink-0 rounded-full bg-blue-ink/70" />
-                  {t}
-                </li>
-              ))}
-            </ul>
-            <p className="mt-7 border-t border-edge2 pt-6 text-note text-slate3">
-              {initialSetup.note}
-            </p>
-          </div>
-        </div>
+          <p className="mt-6 text-note font-bold text-slate">
+            初期構築費に含まれるもの
+          </p>
+          <ul className="mt-4 grid gap-3.5 sm:grid-cols-2">
+            {initialSetup.includes.map((t) => (
+              <li key={t} className="flex gap-3.5 text-note text-slate2">
+                <span className="mt-[13px] h-1.5 w-1.5 shrink-0 rounded-full bg-blue-ink/70" />
+                {t}
+              </li>
+            ))}
+          </ul>
+          <p className="mt-6 border-t border-edge2 pt-6 text-note text-slate3">
+            {initialSetup.note}
+          </p>
+          <a href="#contact" className="btn-outline mt-6 w-full">
+            自社の場合の費用を相談する
+          </a>
+        </MoreDetail>
       </Reveal>
 
-      {/* ── OPTION（数が多いので3つのまとまりで見せ、詳細は開いた人だけに出す） ── */}
-      <Reveal delay={0.06} className="mt-24">
-        <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-3">
-          <div className="flex items-center gap-4">
-            <span className="num text-label text-slate3">OPTION</span>
-            <span className="h-px w-10 bg-edge" />
-            <h3 className="h-display text-h3 text-slate">
-              運営まで任せたい方へ。
-            </h3>
-          </div>
+      {/* ── OPTION（名前のチップと内訳の二重表示をやめ、内訳1本にまとめて畳む） ── */}
+      <Reveal delay={0.08} className="mt-4">
+        <MoreDetail label="オプション：運営まで任せたい方へ（集客・運営・商品）">
           <p className="text-note text-slate3">
             初期導入時に全部を選ぶ必要はありません。
           </p>
-        </div>
-      </Reveal>
+          <div className="mt-6 grid gap-4 lg:grid-cols-3">
+            {optionCatalog.map((g) => (
+              <div
+                key={g.code}
+                className="rounded-2xl border border-edge bg-white p-6"
+              >
+                <span className="num text-label text-gold-deep">{g.code}</span>
+                <p className="mt-4 text-h3 font-semibold text-slate">{g.name}</p>
+                <p className="mt-3 text-note text-slate2">{g.body}</p>
 
-      <Reveal delay={0.1} className="mt-7">
-        <div className="grid gap-5 lg:grid-cols-3">
-          {optionCatalog.map((g) => (
-            <div
-              key={g.code}
-              className="flex h-full flex-col rounded-3xl border border-edge bg-white p-7 shadow-lift transition-all duration-300 hover:border-gold-deep/30 hover:shadow-lift2 sm:p-8"
-            >
-              <span className="num text-label text-gold-deep">{g.code}</span>
-              <p className="mt-5 text-h3 font-semibold text-slate">{g.name}</p>
-              <p className="mt-4 text-note text-slate2">{g.body}</p>
-
-              <div className="mt-6 flex flex-wrap gap-2">
-                {g.items.map((o) => (
-                  <span
-                    key={o.name}
-                    className="rounded-full border border-edge bg-paper2 px-3.5 py-1.5 text-note leading-normal text-slate2"
-                  >
-                    {o.name}
-                  </span>
-                ))}
-              </div>
-
-              <details className="group mt-auto pt-7">
-                <summary className="cursor-pointer list-none text-note font-medium text-slate3 transition-colors hover:text-blue-ink">
-                  ＋ 内容を見る
-                </summary>
-                <ul className="mt-5 space-y-5 border-t border-edge2 pt-6">
+                <ul className="mt-5 space-y-4 border-t border-edge2 pt-5">
                   {g.items.map((o) => (
                     <li key={o.name}>
                       <p className="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-note font-bold text-slate">
@@ -333,38 +297,40 @@ export default function Pricing() {
                     </li>
                   ))}
                 </ul>
-              </details>
-            </div>
-          ))}
-        </div>
+              </div>
+            ))}
+          </div>
+        </MoreDetail>
       </Reveal>
 
-      {/* 標準機能 */}
-      <Reveal delay={0.14} className="mt-5">
-        <div className="grid gap-5 lg:grid-cols-2">
-          {(
-            [
-              { t: "ユーザー側 標準機能", list: baseFeatures.user },
-              { t: "管理画面 標準機能", list: baseFeatures.admin },
-            ] as const
-          ).map((b) => (
-            <div key={b.t} className="lp-card p-7 sm:p-8">
-              <span className="num text-label text-slate3">{b.t}</span>
-              <ul className="mt-7 space-y-3.5">
-                {b.list.map((t) => (
-                  <li key={t} className="flex gap-3.5 text-note text-slate2">
-                    <span className="mt-[13px] h-1.5 w-1.5 shrink-0 rounded-full bg-ok-ink/60" />
-                    {t}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
-        </div>
+      {/* 標準機能（一覧が長いので畳む。中身はそのまま） */}
+      <Reveal delay={0.1} className="mt-4">
+        <MoreDetail label="標準機能の一覧（ユーザー側／管理画面）">
+          <div className="grid gap-5 lg:grid-cols-2">
+            {(
+              [
+                { t: "ユーザー側 標準機能", list: baseFeatures.user },
+                { t: "管理画面 標準機能", list: baseFeatures.admin },
+              ] as const
+            ).map((b) => (
+              <div key={b.t}>
+                <span className="num text-label text-slate3">{b.t}</span>
+                <ul className="mt-5 space-y-3.5">
+                  {b.list.map((t) => (
+                    <li key={t} className="flex gap-3.5 text-note text-slate2">
+                      <span className="mt-[13px] h-1.5 w-1.5 shrink-0 rounded-full bg-ok-ink/60" />
+                      {t}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+        </MoreDetail>
       </Reveal>
 
       <Reveal delay={0.18}>
-        <p className="mx-auto mt-10 max-w-3xl text-center text-note text-slate3">
+        <p className="mx-auto mt-8 max-w-3xl text-center text-note text-slate3">
           ※ {taxNote}要件・移行の有無・演出の量・件数によって変動します。決済手数料・AWS利用料・ドメイン費用は別途実費となります。オプションは内容ごとの個別見積りです。
         </p>
       </Reveal>
@@ -382,7 +348,7 @@ function GroupHead({
   note: string;
 }) {
   return (
-    <Reveal delay={0.06} className="mt-24">
+    <Reveal delay={0.06} className="mt-12 sm:mt-24">
       <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-3">
         <div className="flex items-center gap-4">
           <span className="num text-label text-slate3">{code}</span>

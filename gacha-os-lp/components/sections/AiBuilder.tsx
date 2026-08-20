@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Act from "../ui/Act";
+import Act, { MoreDetail } from "../ui/Act";
 import BeforeAfter from "../ui/BeforeAfter";
 import {
   BASE_TUNE,
@@ -85,6 +85,8 @@ export default function AiBuilder() {
 
   const tone = rtpToneLite(result.actualRtp);
   const samples = SAMPLE_PRIZES[genre];
+  // スマホでは選んでいるジャンルの補足だけを出す（4件を常に並べない）
+  const activeGenre = GENRES.find((g) => g.key === genre);
 
   return (
     <Act
@@ -99,14 +101,14 @@ export default function AiBuilder() {
           AIが設計する。
         </>
       }
-      lead="「何を何個入れればいいのか分からない」を無くします。1回料金・総口数・目標還元率・ジャンルを決めるだけで、等級構成と本数、当選確率、想定売上・原価・利益まで一度に組み上がります。下のパネルは実際に動きます。数字を動かしてみてください。"
+      lead="「何を何個入れればいいのか分からない」を無くします。下の4つを決めるだけで、等級構成と本数・当選確率・想定売上・原価・利益まで一度に組み上がります。パネルは実際に動きます。"
     >
-      <BeforeAfter id="builder" className="mb-8" />
+      <BeforeAfter id="builder" className="mb-3 sm:mb-8" />
 
       <div className="overflow-hidden rounded-[28px] border border-edge bg-white shadow-float">
         <div className="grid lg:grid-cols-[400px_1fr]">
           {/* ───────── 入力：運営者が決めること ───────── */}
-          <div className="border-b border-edge2 bg-paper2/60 p-7 sm:p-9 lg:border-b-0 lg:border-r">
+          <div className="border-b border-edge2 bg-paper2/60 p-4 sm:p-9 lg:border-b-0 lg:border-r">
             <div className="flex items-center gap-2.5">
               <span className="h-2 w-2 rounded-full bg-blue-ink" />
               <span className="num text-label text-slate3">
@@ -114,16 +116,16 @@ export default function AiBuilder() {
               </span>
             </div>
 
-            <div className="mt-9 space-y-9">
+            <div className="mt-5 space-y-5 sm:mt-9 sm:space-y-9">
               <div>
                 <span className="text-note text-slate2">1回プレイ料金</span>
-                <div className="mt-3.5 grid grid-cols-4 gap-2">
+                <div className="mt-2.5 grid grid-cols-4 gap-2 sm:mt-3.5">
                   {PRICES.map((p) => (
                     <button
                       key={p}
                       type="button"
                       onClick={() => setPrice(p)}
-                      className={`num rounded-xl border py-3 text-note font-bold transition-all ${
+                      className={`num rounded-xl border py-2.5 text-note font-bold transition-all sm:py-3 ${
                         price === p
                           ? "border-blue-ink bg-blue-pale text-blue-ink"
                           : "border-edge bg-white text-slate3 hover:border-slate3/40"
@@ -163,13 +165,13 @@ export default function AiBuilder() {
 
               <div>
                 <span className="text-note text-slate2">ガチャジャンル</span>
-                <div className="mt-3.5 grid gap-2">
+                <div className="mt-2.5 grid grid-cols-2 gap-2 sm:mt-3.5 sm:grid-cols-1">
                   {GENRES.map((g) => (
                     <button
                       key={g.key}
                       type="button"
                       onClick={() => setGenre(g.key)}
-                      className={`flex items-center justify-between gap-3 rounded-xl border px-4 py-3 text-left transition-all ${
+                      className={`flex items-center justify-between gap-3 rounded-xl border px-3.5 py-2.5 text-left transition-all sm:px-4 ${
                         genre === g.key
                           ? "border-blue-ink bg-blue-pale"
                           : "border-edge bg-white hover:border-slate3/40"
@@ -182,15 +184,21 @@ export default function AiBuilder() {
                       >
                         {g.label}
                       </span>
-                      <span className="text-note text-slate3">{g.note}</span>
+                      <span className="hidden text-note text-slate3 sm:block">
+                        {g.note}
+                      </span>
                     </button>
                   ))}
                 </div>
+                {/* 選んだジャンルの中身。他のジャンルはボタンを押すと入れ替わる */}
+                <p className="mt-2.5 text-note leading-[1.8] text-slate3 sm:hidden">
+                  {activeGenre?.note}
+                </p>
               </div>
             </div>
 
             {/* AIに作り直させる */}
-            <div className="mt-10 border-t border-edge2 pt-8">
+            <div className="mt-5 border-t border-edge2 pt-5 sm:mt-10 sm:pt-8">
               <div className="flex items-center gap-2.5">
                 <span className="flex h-6 w-6 items-center justify-center rounded-md bg-gradient-to-br from-blue-deep to-blue text-[11px] font-bold text-white">
                   AI
@@ -199,14 +207,14 @@ export default function AiBuilder() {
                   AIに作り直させる
                 </span>
               </div>
-              <div className="mt-4 grid gap-2">
+              <div className="mt-3 grid grid-cols-2 gap-2 sm:mt-4">
                 {TUNES.map((t) => (
                   <button
                     key={t.key}
                     type="button"
                     onClick={() => setTune(t)}
                     aria-pressed={tune.key === t.key}
-                    className={`rounded-xl border px-4 py-3.5 text-left transition-all ${
+                    className={`rounded-xl border px-3.5 py-2.5 text-left transition-all sm:py-3 ${
                       tune.key === t.key
                         ? "border-blue-ink bg-blue-pale"
                         : "border-edge bg-white hover:border-slate3/40"
@@ -219,17 +227,18 @@ export default function AiBuilder() {
                     >
                       {t.label}
                     </span>
-                    <span className="mt-1.5 block text-note leading-[1.8] text-slate3">
-                      {t.desc}
-                    </span>
                   </button>
                 ))}
               </div>
+              {/* 選んだ組み方の説明。他の説明はボタンを押すと入れ替わる */}
+              <p className="mt-3 text-note leading-[1.8] text-slate3">
+                {tune.desc}
+              </p>
             </div>
           </div>
 
           {/* ───────── 出力：AIが組んだ構成 ───────── */}
-          <div className="relative p-7 sm:p-9">
+          <div className="relative p-4 sm:p-9">
             <div
               className={`pointer-events-none absolute inset-0 z-10 bg-white/70 backdrop-blur-[2px] transition-opacity duration-300 ${
                 thinking ? "opacity-100" : "opacity-0"
@@ -263,8 +272,8 @@ export default function AiBuilder() {
             </div>
 
             {/* 等級構成の表 */}
-            <div className="mt-7 overflow-hidden rounded-2xl border border-edge">
-              <div className="grid grid-cols-[1.25fr_.5fr_.9fr_.85fr] gap-2 border-b border-edge bg-paper2 px-5 py-3 text-note text-slate3 sm:grid-cols-[1.5fr_.55fr_.85fr_.85fr_.7fr]">
+            <div className="mt-4 overflow-hidden rounded-2xl border border-edge sm:mt-7">
+              <div className="grid grid-cols-[1.25fr_.5fr_.9fr_.85fr] gap-2 border-b border-edge bg-paper2 px-4 py-2.5 text-note text-slate3 sm:grid-cols-[1.5fr_.55fr_.85fr_.85fr_.7fr] sm:px-5 sm:py-3">
                 <span>等級 / 景品候補</span>
                 <span className="text-right">本数</span>
                 <span className="hidden text-right sm:block">景品ポイント</span>
@@ -274,7 +283,7 @@ export default function AiBuilder() {
               {result.rows.map((r) => (
                 <div
                   key={r.key}
-                  className="grid grid-cols-[1.25fr_.5fr_.9fr_.85fr] items-center gap-2 border-b border-edge2 px-5 py-4 text-note last:border-0 sm:grid-cols-[1.5fr_.55fr_.85fr_.85fr_.7fr]"
+                  className="grid grid-cols-[1.25fr_.5fr_.9fr_.85fr] items-center gap-2 border-b border-edge2 px-4 py-2.5 text-note last:border-0 sm:px-5 sm:py-4 sm:grid-cols-[1.5fr_.55fr_.85fr_.85fr_.7fr]"
                 >
                   <span className="min-w-0">
                     <span className="block font-bold text-slate">{r.label}</span>
@@ -292,7 +301,7 @@ export default function AiBuilder() {
                   </span>
                 </div>
               ))}
-              <div className="grid grid-cols-[1.25fr_.5fr_.9fr_.85fr] items-center gap-2 bg-blue-pale/70 px-5 py-4 text-note sm:grid-cols-[1.5fr_.55fr_.85fr_.85fr_.7fr]">
+              <div className="grid grid-cols-[1.25fr_.5fr_.9fr_.85fr] items-center gap-2 bg-blue-pale/70 px-4 py-2.5 text-note sm:grid-cols-[1.5fr_.55fr_.85fr_.85fr_.7fr] sm:px-5 sm:py-4">
                 <span className="min-w-0">
                   <span className="block font-bold text-blue-ink">ラストワン賞</span>
                   <span className="block truncate text-note text-slate3">
@@ -313,7 +322,7 @@ export default function AiBuilder() {
             </div>
 
             {/* 主要な数字 */}
-            <div className="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-3">
+            <div className="mt-4 grid grid-cols-2 gap-2.5 sm:mt-5 sm:gap-3 lg:grid-cols-3">
               {[
                 { l: "想定売上", v: jpy(result.sales), c: "text-slate" },
                 {
@@ -344,15 +353,17 @@ export default function AiBuilder() {
               ].map((k) => (
                 <div
                   key={k.l}
-                  className="rounded-2xl border border-edge bg-paper2/70 px-5 py-4"
+                  className="rounded-2xl border border-edge bg-paper2/70 px-4 py-3 sm:px-5 sm:py-4"
                 >
                   <p className="text-note leading-snug text-slate3">{k.l}</p>
-                  <p className={`num mt-2.5 text-h3 font-bold ${k.c}`}>{k.v}</p>
+                  <p className={`num mt-1.5 text-h3 font-bold sm:mt-2 ${k.c}`}>
+                    {k.v}
+                  </p>
                 </div>
               ))}
             </div>
 
-            <div className="mt-5 flex flex-col gap-4 rounded-2xl border border-edge bg-paper2/70 p-5 sm:flex-row sm:items-center sm:justify-between">
+            <div className="mt-3 flex flex-col gap-3 rounded-2xl border border-edge bg-paper2/70 p-4 sm:mt-5 sm:flex-row sm:items-center sm:justify-between sm:gap-3.5 sm:p-5">
               <p className="text-note leading-[1.85] text-slate2">
                 AIが出すのは<span className="font-bold text-slate">候補</span>までです。
                 公開できるのは、運営者が「承認」を押した構成だけ。
@@ -367,9 +378,17 @@ export default function AiBuilder() {
               </div>
             </div>
 
-            <p className="mt-4 text-note leading-[1.85] text-slate3">
-              ※ 上記は入力値にもとづく試算です。景品候補はジャンル別のサンプル表示で、実際の景品は仕入れ内容によって変わります。決済手数料3.6%・送料を含まない前提の概算であり、実際の料率や原価は契約・仕入れ条件によって異なります。
+            <p className="mt-3 text-note leading-[1.85] text-slate3 sm:mt-4">
+              ※ 画面の数値はすべて入力値にもとづく運営例です。実績値ではありません。
             </p>
+            {/* 前提の内訳は消さずに畳む */}
+            <div className="mt-3">
+              <MoreDetail label="この試算の前提">
+                <p>
+                  景品候補はジャンル別のサンプル表示で、実際の景品は仕入れ内容によって変わります。決済手数料3.6%・送料を含まない前提の概算であり、実際の料率や原価は契約・仕入れ条件によって異なります。
+                </p>
+              </MoreDetail>
+            </div>
           </div>
         </div>
       </div>

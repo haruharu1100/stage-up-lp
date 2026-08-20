@@ -23,7 +23,7 @@ export default function Scope() {
           {scopeOptions.map((o, i) => (
             <div
               key={o.title}
-              className="lp-card h-full p-7 transition-all duration-300 hover:shadow-lift2 sm:p-8"
+              className="lp-card h-full p-6 transition-all duration-300 hover:shadow-lift2 sm:p-8"
             >
               <span className="num text-label text-slate3">
                 {String(i + 1).padStart(2, "0")}
@@ -36,7 +36,7 @@ export default function Scope() {
       </Reveal>
 
       <Reveal delay={0.08} className="mt-5">
-        <div className="lp-tint flex flex-col gap-7 rounded-3xl px-7 py-8 sm:flex-row sm:items-center sm:justify-between sm:px-10 sm:py-9">
+        <div className="lp-tint flex flex-col gap-6 rounded-3xl px-6 py-7 sm:flex-row sm:items-center sm:justify-between sm:px-10 sm:py-9">
           <div>
             <p className="text-body font-bold text-slate">
               どこから入れるべきかは、規模と体制で変わります。

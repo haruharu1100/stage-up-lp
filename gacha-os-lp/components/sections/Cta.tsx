@@ -148,7 +148,7 @@ export default function Cta() {
   return (
     <section
       id="contact"
-      className="relative overflow-hidden bg-paper2 py-28 sm:py-36"
+      className="relative overflow-hidden bg-paper2 py-16 sm:py-36"
     >
       <div className="pointer-events-none absolute inset-0 grid-lite mask-fade-b opacity-70" />
       <div className="pointer-events-none absolute -top-40 left-1/2 h-[520px] w-[880px] -translate-x-1/2 rounded-full bg-blue-pale/80 blur-[140px]" />
@@ -162,12 +162,12 @@ export default function Cta() {
               <span className="h-px w-10 bg-edge" />
               <span className="eyebrow-lite">GET STARTED</span>
             </div>
-            <h2 className="h-display mt-7 text-h2 text-slate">
+            <h2 className="h-display mt-5 text-h2 text-slate sm:mt-7">
               まず、いまの運営を
               <br />
               <span className="text-gradient-royal">見せてください。</span>
             </h2>
-            <p className="mx-auto mt-7 max-w-2xl text-body text-slate2">
+            <p className="mx-auto mt-5 max-w-2xl text-body text-slate2 sm:mt-7">
               どこに時間が溶けているのかを一緒に整理します。デモ画面をお見せしながら、
               必要な機能範囲とお見積りの目安をその場でお伝えします。
             </p>
@@ -175,7 +175,7 @@ export default function Cta() {
         </Reveal>
 
         {/* CTA 3種 */}
-        <div className="mt-16 grid gap-5 md:grid-cols-3">
+        <div className="mt-10 grid gap-4 sm:gap-5 md:mt-16 md:grid-cols-3">
           {ctaTrio.map((c, i) => {
             const isForm = c.href === "#contact";
             const inner = (
@@ -194,12 +194,12 @@ export default function Cta() {
                     </span>
                   )}
                 </div>
-                <p className="mt-6 text-h3 font-semibold text-slate">
+                <p className="mt-5 text-h3 font-semibold text-slate">
                   {c.label}
                 </p>
                 <p className="mt-3.5 text-note text-slate2">{c.body}</p>
                 <span
-                  className={`mt-7 inline-flex items-center gap-2 text-note font-semibold ${
+                  className={`mt-6 inline-flex items-center gap-2 text-note font-semibold ${
                     c.primary ? "text-blue-ink" : "text-slate2"
                   }`}
                 >
@@ -224,7 +224,7 @@ export default function Cta() {
               </>
             );
 
-            const cls = `group flex h-full flex-col rounded-3xl border p-7 text-left shadow-lift transition-all duration-300 hover:-translate-y-1 sm:p-8 ${
+            const cls = `group flex h-full flex-col rounded-3xl border p-6 text-left shadow-lift transition-all duration-300 hover:-translate-y-1 sm:p-8 ${
               c.primary
                 ? "border-blue-ink/20 bg-gradient-to-b from-blue-pale/70 to-white hover:border-blue-ink/40 hover:shadow-blue-lift"
                 : "border-edge bg-white hover:border-blue-ink/25 hover:shadow-lift2"
@@ -260,7 +260,7 @@ export default function Cta() {
           <Reveal delay={0.1}>
             <div
               id="lead-form"
-              className="lp-card scroll-mt-24 p-7 shadow-lift2 sm:p-10"
+              className="lp-card scroll-mt-24 p-6 shadow-lift2 sm:p-10"
             >
               {state === "done" ? (
                 <div className="flex min-h-[420px] flex-col items-center justify-center text-center">
@@ -297,7 +297,7 @@ export default function Cta() {
                   onSubmit={onSubmit}
                   method="post"
                   action="/api/contact"
-                  className="space-y-8"
+                  className="space-y-6 sm:space-y-8"
                   /* フォームに手を付けた人を1回だけ数える（入力内容は送らない） */
                   onFocusCapture={() => trackOnce(EV.contactStart, {})}
                 >
@@ -531,11 +531,11 @@ export default function Cta() {
 
           <Reveal delay={0.16}>
             <div className="flex h-full flex-col gap-5">
-              <div className="lp-card flex-1 p-7 sm:p-8">
+              <div className="lp-card flex-1 p-6 sm:p-8">
                 <span className="num text-label text-slate3">
                   WHAT HAPPENS NEXT
                 </span>
-                <ol className="mt-7 space-y-5">
+                <ol className="mt-5 space-y-4">
                   {[
                     "内容を確認し、担当者からご連絡します",
                     "オンラインで現状と課題をうかがいます（30〜60分）",
@@ -549,15 +549,15 @@ export default function Cta() {
                     </li>
                   ))}
                 </ol>
-                <div className="mt-8 rule" />
-                <p className="mt-6 text-note text-slate3">
+                <div className="mt-6 rule" />
+                <p className="mt-5 text-note text-slate3">
                   無理な提案はしません。運営規模によっては、既存のやり方を続けたほうがよいこともあります。その場合はそうお伝えします。
                 </p>
               </div>
 
               <Link
                 href="/demo"
-                className="group rounded-3xl border border-blue-ink/20 bg-gradient-to-b from-blue-pale/70 to-white p-7 shadow-lift transition-all duration-300 hover:-translate-y-1 hover:border-blue-ink/40 hover:shadow-blue-lift sm:p-8"
+                className="group rounded-3xl border border-blue-ink/20 bg-gradient-to-b from-blue-pale/70 to-white p-6 shadow-lift transition-all duration-300 hover:-translate-y-1 hover:border-blue-ink/40 hover:shadow-blue-lift sm:p-8"
               >
                 <span className="num text-label text-blue-ink">LIVE DEMO</span>
                 <p className="mt-4 text-h3 font-semibold text-slate">

@@ -3,6 +3,7 @@
 import { useMemo, useRef, useState } from "react";
 import Section from "../ui/Section";
 import Reveal from "../ui/Reveal";
+import { MoreDetail } from "../ui/Act";
 import { jpy, rtpTone } from "@/lib/simulate";
 import { EV, track } from "@/lib/track";
 
@@ -114,14 +115,6 @@ function PriceShockSim() {
           ))}
         </div>
 
-        <div className="mt-8 rounded-2xl border border-edge2 bg-paper2 p-5">
-          <p className="num text-label text-slate3">WHAT HAPPENS</p>
-          <p className="mt-3 text-note text-slate2">
-            仕入れたときの価格は変わりません。変わるのは
-            <span className="font-bold text-slate">お客様が受け取る景品の価値</span>
-            です。相場が上がるほど、同じガチャでも実質の還元率は上がり、粗利は減ります。
-          </p>
-        </div>
       </div>
 
       {/* 結果 */}
@@ -207,7 +200,7 @@ function PriceShockSim() {
         </div>
 
         {/* 粗利 */}
-        <div className="grid gap-5 sm:grid-cols-3">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-5">
           {[
             { l: "売上（完売時）", v: jpy(SALES), sub: "変わりません", tone: "text-slate" },
             {
@@ -232,7 +225,7 @@ function PriceShockSim() {
           ].map((m) => (
             <div
               key={m.l}
-              className="rounded-3xl border border-edge bg-white p-6 shadow-lift"
+              className="rounded-3xl border border-edge bg-white p-5 shadow-lift last:col-span-2 sm:p-6 sm:last:col-span-1"
             >
               <p className="text-note text-slate3">{m.l}</p>
               <p
@@ -247,11 +240,13 @@ function PriceShockSim() {
           ))}
         </div>
 
-        <div className="lp-tint rounded-3xl px-6 py-6 sm:px-7">
-          <p className="num text-label text-slate3">
-            READ THIS
+        <MoreDetail label="この数字の読み方を見る">
+          <p>
+            仕入れたときの価格は変わりません。変わるのは
+            <span className="font-bold text-slate">お客様が受け取る景品の価値</span>
+            です。相場が上がるほど、同じガチャでも実質の還元率は上がり、粗利は減ります。
           </p>
-          <p className="mt-3.5 text-note text-slate2">
+          <p className="mt-4">
             この例は、仕入れた時点ですでに還元率 {base.rtp.toFixed(1)}%
             です。決済手数料まで入れると、この時点で粗利はほとんど残っていません。
             <span className="font-bold text-slate">
@@ -259,14 +254,16 @@ function PriceShockSim() {
             </span>
             だから「公開したあとも実還元率を見続ける」必要があります。
           </p>
-        </div>
+          <p className="mt-4">
+            実際の判定では、全景品の相場・消化状況・上位賞の払い出しをあわせて計算します。
+          </p>
+        </MoreDetail>
 
         <p className="rounded-3xl border border-edge bg-white px-6 py-5 text-note text-slate2 shadow-lift">
           <span className="num mr-2.5 rounded-full border border-warn-ink/25 bg-warn/10 px-2.5 py-1 text-label text-warn-ink">
             モデルケース
           </span>
-          説明のために単純化した例です。金額・還元率はこの画面の中だけで計算しています。
-          実際の判定では、全景品の相場・消化状況・上位賞の払い出しをあわせて計算します。
+          説明のために単純化した運営例です。金額・還元率はこの画面の中だけで計算しています。
         </p>
       </div>
     </div>
@@ -369,7 +366,7 @@ function LeftoverSim() {
       </div>
 
       <p className="mt-6 text-note text-slate2">
-        1回 {jpy(LEFT_PRICE)} / 全 1,000 口のガチャです。残り口数のボタンを押すと、その時点の
+        1回 {jpy(LEFT_PRICE)} / 全 1,000 口。残り口数を押すと、その時点の
         <span className="font-bold text-slate">残数ベース実還元率</span>
         が出ます。
       </p>
@@ -414,8 +411,32 @@ function LeftoverSim() {
         })}
       </div>
 
+      {/* 還元率が跳ねたことを知らせる面。ここも管理画面と同じ濃色 */}
+      <div
+        className={`console-deep mt-5 rounded-3xl border p-6 shadow-console transition-colors duration-500 ${
+          rtp >= 110
+            ? "border-danger/45"
+            : rtp >= 105
+              ? "border-warn/40"
+              : rtp < 70
+                ? "border-cyan/35"
+                : "border-white/10"
+        }`}
+      >
+        <p className="num text-label text-white/40">この時点の実還元率</p>
+        <p className={`num mt-3 text-[38px] font-semibold leading-none ${tone.color}`}>
+          {rtp.toFixed(1)}
+          <span className="text-[18px]">%</span>
+        </p>
+        <p className="mt-5 text-note font-bold leading-snug text-white/90">
+          {scenario.headline}
+        </p>
+        <p className="mt-3 text-note text-white/55">{scenario.body}</p>
+      </div>
+
       {/* 明細 */}
-      <div className="mt-5 grid gap-5 lg:grid-cols-[1fr_340px]">
+      <div className="mt-4">
+        <MoreDetail label="残っている景品の内訳と計算式を見る">
         <div className="rounded-3xl border border-edge2 bg-paper2 p-6 sm:p-7">
           <p className="num text-label text-slate3">
             残っている景品（残り {cur.left} 口）
@@ -455,40 +476,14 @@ function LeftoverSim() {
           </p>
         </div>
 
-        {/* 還元率が跳ねたことを知らせる面。ここも管理画面と同じ濃色 */}
-        <div
-          className={`console-deep rounded-3xl border p-6 shadow-console transition-colors duration-500 ${
-            rtp >= 110
-              ? "border-danger/45"
-              : rtp >= 105
-                ? "border-warn/40"
-                : rtp < 70
-                  ? "border-cyan/35"
-                  : "border-white/10"
-          }`}
-        >
-          <p className="num text-label text-white/40">
-            この時点の実還元率
-          </p>
-          <p className={`num mt-3 text-[38px] font-semibold leading-none ${tone.color}`}>
-            {rtp.toFixed(1)}
-            <span className="text-[18px]">%</span>
-          </p>
-          <p className="mt-5 text-note font-bold leading-snug text-white/90">
-            {scenario.headline}
-          </p>
-          <p className="mt-3 text-note text-white/55">
-            {scenario.body}
-          </p>
-        </div>
+        <p className="mt-5">
+          <span className="num mr-2.5 rounded-full border border-warn-ink/25 bg-warn/10 px-2.5 py-1 text-label text-warn-ink">
+            モデルケース
+          </span>
+          残り口数と残景品はサンプルです。実際の管理画面では、この計算が販売中の全ガチャに対して自動で走り、しきい値を超えたものだけが一覧に上がってきます。
+        </p>
+        </MoreDetail>
       </div>
-
-      <p className="mt-5 rounded-3xl border border-edge bg-white px-6 py-5 text-note text-slate2 shadow-lift">
-        <span className="num mr-2.5 rounded-full border border-warn-ink/25 bg-warn/10 px-2.5 py-1 text-label text-warn-ink">
-          モデルケース
-        </span>
-        残り口数と残景品はサンプルです。実際の管理画面では、この計算が販売中の全ガチャに対して自動で走り、しきい値を超えたものだけが一覧に上がってきます。
-      </p>
     </div>
   );
 }
@@ -508,10 +503,10 @@ export default function PriceShock() {
           <span className="text-gradient-royal">利益は静かに消えます。</span>
         </>
       }
-      lead="ガチャの採算が崩れるのは、公開したあとです。景品の相場が上がったとき。上位賞が残ったまま口数だけ減っていったとき。どちらも画面を見ているだけでは気づけません。ここでは、その2つを実際に動かして確かめられます。"
+      lead="採算が崩れるのは公開したあとです。相場が上がったときと、上位賞が残ったまま口数だけ減ったとき。その2つを動かして確かめられます。"
     >
       <Reveal>
-        <div className="mb-5 flex flex-wrap items-center gap-3">
+        <div className="mb-4 flex flex-wrap items-center gap-3">
           <span className="num rounded-full border border-warn-ink/25 bg-warn/10 px-3.5 py-1.5 text-label text-warn-ink">
             CASE 01
           </span>
@@ -522,8 +517,8 @@ export default function PriceShock() {
         <PriceShockSim />
       </Reveal>
 
-      <Reveal delay={0.08} className="mt-16">
-        <div className="mb-5 flex flex-wrap items-center gap-3">
+      <Reveal delay={0.08} className="mt-10 sm:mt-16">
+        <div className="mb-4 flex flex-wrap items-center gap-3">
           <span className="num rounded-full border border-blue-ink/20 bg-blue-pale px-3.5 py-1.5 text-label text-blue-ink">
             CASE 02
           </span>

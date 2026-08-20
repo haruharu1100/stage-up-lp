@@ -24,18 +24,18 @@ export default function BeforeAfter({ id, className = "", delay = 0 }: Props) {
       <div className="overflow-hidden rounded-3xl border border-edge bg-white shadow-lift">
         <div className="grid md:grid-cols-[1fr_auto_1fr]">
           {/* BEFORE */}
-          <div className="bg-paper2 p-7 sm:p-9">
+          <div className="bg-paper2 p-5 sm:p-9">
             <span className="num inline-flex items-center gap-2.5 text-label text-slate3">
               <span className="h-1.5 w-1.5 rounded-full bg-slate3/50" />
               BEFORE
             </span>
-            <p className="mt-5 text-note leading-[1.95] text-slate2">
+            <p className="mt-3 text-note leading-[1.85] text-slate2 sm:mt-5 sm:leading-[1.95]">
               {x.before}
             </p>
           </div>
 
           {/* 矢印 */}
-          <div className="flex items-center justify-center border-y border-edge2 py-4 md:border-x md:border-y-0 md:px-6 md:py-0">
+          <div className="flex items-center justify-center border-y border-edge2 py-2 md:border-x md:border-y-0 md:px-6 md:py-0">
             <span className="text-blue-ink md:hidden" aria-hidden>
               <svg width="20" height="20" viewBox="0 0 16 16" fill="none">
                 <path
@@ -61,16 +61,18 @@ export default function BeforeAfter({ id, className = "", delay = 0 }: Props) {
           </div>
 
           {/* AFTER */}
-          <div className="bg-white p-7 sm:p-9">
+          <div className="bg-white p-5 sm:p-9">
             <span className="num inline-flex items-center gap-2.5 text-label text-blue-ink">
               <span className="h-1.5 w-1.5 rounded-full bg-blue-ink" />
               AFTER
             </span>
-            <p className="mt-5 text-note leading-[1.95] text-slate">{x.after}</p>
+            <p className="mt-3 text-note leading-[1.85] text-slate sm:mt-5 sm:leading-[1.95]">
+              {x.after}
+            </p>
           </div>
         </div>
 
-        <div className="border-t border-edge2 bg-blue-pale/60 px-7 py-5 sm:px-9">
+        <div className="border-t border-edge2 bg-blue-pale/60 px-5 py-4 sm:px-9 sm:py-5">
           <p className="flex items-start gap-3 text-note leading-[1.8] text-ok-ink">
             <span className="mt-[11px] h-1.5 w-1.5 shrink-0 rounded-full bg-ok-ink" />
             {x.gain}

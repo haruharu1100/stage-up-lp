@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useReducedMotion } from "framer-motion";
-import Act from "../ui/Act";
+import Act, { MoreDetail } from "../ui/Act";
 import Reveal from "../ui/Reveal";
 import BeforeAfter from "../ui/BeforeAfter";
 
@@ -97,13 +97,13 @@ function ShippingFlow() {
           />
         </div>
 
-        <ol className="mt-7 space-y-2.5">
+        <ol className="mt-6 space-y-2">
           {ROWS.map((r) => {
             const lit = stage >= r.stage;
             return (
               <li
                 key={r.code}
-                className={`flex flex-wrap items-center gap-x-4 gap-y-2 rounded-2xl border px-5 py-4 transition-all ${
+                className={`flex flex-wrap items-center gap-x-4 gap-y-1.5 rounded-2xl border px-5 py-3.5 transition-all ${
                   lit
                     ? "border-edge bg-white shadow-lift"
                     : "border-edge2 bg-paper2/60 opacity-55"
@@ -111,7 +111,7 @@ function ShippingFlow() {
                 style={{ transitionDuration: dur }}
               >
                 <span
-                  className={`grid h-6 w-6 shrink-0 place-items-center rounded-full border transition-colors ${
+                  className={`order-1 grid h-6 w-6 shrink-0 place-items-center rounded-full border transition-colors ${
                     lit
                       ? "border-transparent bg-blue-ink text-white"
                       : "border-edge text-slate3"
@@ -132,17 +132,18 @@ function ShippingFlow() {
                   ) : null}
                 </span>
                 <span
-                  className={`num shrink-0 text-note font-bold ${
+                  className={`order-2 num shrink-0 text-note font-bold ${
                     lit ? "text-slate" : "text-slate3"
                   }`}
                 >
                   {r.code}
                 </span>
-                <span className="min-w-0 flex-1 text-note text-slate2">
+                {/* スマホでは「担当」を1行目の右に置き、説明文は次の行へ回して縦を詰める */}
+                <span className="order-4 w-full min-w-0 text-note text-slate2 sm:order-3 sm:w-auto sm:flex-1">
                   {r.label}
                 </span>
                 <span
-                  className={`shrink-0 rounded-full px-3 py-1 text-note font-medium ${
+                  className={`order-3 ml-auto shrink-0 rounded-full px-3 py-1 text-note font-medium sm:order-4 sm:ml-0 ${
                     WHO[r.who] ?? "bg-paper2 text-slate3"
                   }`}
                 >
@@ -173,7 +174,7 @@ function ShippingFlow() {
         </div>
 
         <p className="mt-6 text-note leading-[1.9] text-slate3">
-          ※ 画面の数値はすべて運営例です。件数・配送業者・データ形式は、ご利用の契約内容にあわせて設定します。このボタンは動きを見るためのLP上の見本です。
+          ※ 画面の数値はすべて運営例です。このボタンは動きを見るためのLP上の見本です。
         </p>
       </div>
     </div>
@@ -194,24 +195,17 @@ export default function Shipping() {
           発送作業を流れにする。
         </>
       }
-      lead="売れるほど人手が要る、という状態をやめます。発送依頼から伝票データ、追跡番号、通知、マイページ反映までを一本の流れにまとめました。"
+      lead="発送依頼から伝票データ、追跡番号、通知、マイページ反映までを一本の流れにまとめました。"
     >
-      <BeforeAfter id="ship" className="mb-8" />
+      <BeforeAfter id="ship" className="mb-6" />
 
       <Reveal>
-        <div className="mb-5 flex flex-wrap items-center gap-3">
-          <span className="num rounded-full border border-blue-ink/20 bg-blue-pale px-3.5 py-1.5 text-label text-blue-ink">
-            HANDS ON
-          </span>
-          <span className="text-note font-bold text-slate">
-            発送対象 {TARGET} 件を、押しながら片づけてみる
-          </span>
-        </div>
         <ShippingFlow />
       </Reveal>
 
-      <Reveal delay={0.06}>
-        <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <Reveal delay={0.06} className="mt-4">
+        <MoreDetail label="6ステップの内訳と発送キューを見る">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {steps.map((s, i) => (
             <div
               key={s.n}
@@ -244,11 +238,9 @@ export default function Shipping() {
               )}
             </div>
           ))}
-        </div>
-      </Reveal>
+          </div>
 
-      <Reveal delay={0.08}>
-        <div className="mt-4 overflow-hidden rounded-3xl border border-edge bg-white shadow-lift">
+          <div className="mt-4 overflow-hidden rounded-3xl border border-edge bg-white shadow-lift">
           <div className="flex flex-col gap-2 border-b border-edge bg-paper2/70 px-7 py-5 sm:flex-row sm:items-center sm:justify-between">
             <span className="num text-label text-slate3">
               SHIPPING QUEUE / 仕入れ支援つき
@@ -281,13 +273,12 @@ export default function Shipping() {
               </span>
             </div>
           ))}
-        </div>
-      </Reveal>
+          </div>
 
-      <Reveal delay={0.12}>
-        <p className="mt-6 text-note leading-[1.9] text-slate3">
-          ※ 対応する配送業者・データ形式は、ご利用の契約内容にあわせて設定します。
-        </p>
+          <p className="mt-6 text-note leading-[1.9] text-slate3">
+            ※ 件数はすべて運営例です。対応する配送業者・データ形式は、ご利用の契約内容にあわせて設定します。
+          </p>
+        </MoreDetail>
       </Reveal>
     </Act>
   );

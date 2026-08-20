@@ -1,5 +1,6 @@
 import Section from "../ui/Section";
 import Reveal from "../ui/Reveal";
+import { MoreDetail } from "../ui/Act";
 
 /**
  * ブロックA：ガチャを公開するまでの5ステップ（量で語る。所要時間は書かない）
@@ -78,20 +79,20 @@ export default function RoleSplit() {
     >
       {/* ───────── ブロックA：公開までの5ステップ ───────── */}
       <Reveal>
-        <div className="lp-card overflow-hidden p-7 sm:p-9">
+        <div className="lp-card overflow-hidden p-5 sm:p-9">
           <div className="flex flex-wrap items-baseline gap-x-4 gap-y-2">
             <span className="eyebrow-lite">STEPS TO LAUNCH</span>
             <span className="num text-label text-slate3">5 STEPS</span>
           </div>
-          <p className="mt-6 max-w-[40em] text-body text-pretty text-slate">
+          <p className="mt-5 max-w-[40em] text-body text-pretty text-slate sm:mt-6">
             ガチャを1本公開するまでに通る道は、5つです。
           </p>
 
-          <ol className="mt-9 grid gap-3 lg:grid-cols-5">
+          <ol className="mt-6 grid grid-cols-2 gap-2.5 sm:mt-9 sm:gap-3 lg:grid-cols-5">
             {launchSteps.map((s) => (
               <li
                 key={s.no}
-                className="relative flex h-full flex-col rounded-2xl border border-edge2 bg-paper2 p-5 sm:p-6"
+                className="relative flex h-full flex-col rounded-2xl border border-edge2 bg-paper2 p-4 sm:p-6"
               >
                 <div className="flex items-baseline gap-2.5">
                   <span className="num text-label text-slate3">STEP</span>
@@ -99,20 +100,36 @@ export default function RoleSplit() {
                     {s.no}
                   </span>
                 </div>
-                <h3 className="mt-5 text-body font-bold text-slate">
+                <h3 className="mt-3 text-body font-bold text-pretty text-slate sm:mt-5">
                   {s.title}
                 </h3>
-                <p className="mt-3.5 flex-1 text-note text-pretty text-slate2">
-                  {s.body}
-                </p>
-                {s.sample ? (
-                  <p className="num mt-5 rounded-xl border border-blue-ink/15 bg-blue-pale px-3.5 py-2.5 text-note text-blue-ink">
-                    {s.sample}
-                  </p>
-                ) : null}
               </li>
             ))}
           </ol>
+
+          <p className="mt-5 text-note text-pretty text-slate2">
+            数字を見て、直すか進めるかを決めるのは人です。承認しないかぎり公開されません。
+          </p>
+
+          {/* 各ステップの補足は消さずにここへ畳む */}
+          <div className="mt-4">
+            <MoreDetail label="各ステップで何をするか">
+              <ol className="space-y-4">
+                {launchSteps.map((s) => (
+                  <li key={s.no}>
+                    <span className="num text-label text-slate3">
+                      STEP {s.no}
+                    </span>
+                    <p className="mt-1 font-bold text-slate">{s.title}</p>
+                    <p className="mt-1 text-pretty">{s.body}</p>
+                    {s.sample ? (
+                      <p className="num mt-2 text-blue-ink">{s.sample}</p>
+                    ) : null}
+                  </li>
+                ))}
+              </ol>
+            </MoreDetail>
+          </div>
         </div>
       </Reveal>
 
@@ -120,21 +137,23 @@ export default function RoleSplit() {
       <Reveal delay={0.08} className="mt-5">
         <div className="grid gap-3 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
           {/* 左：あなたがすること（少ない・大きいカード） */}
-          <div className="lp-card flex flex-col p-7 sm:p-9">
+          <div className="lp-card flex flex-col p-5 sm:p-9">
             <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">
               <span className="text-body font-bold text-slate">
                 あなたがすること
               </span>
               <span className="num text-label text-slate3">4 ITEMS</span>
             </div>
-            <div className="mt-8 grid flex-1 gap-3 sm:grid-cols-2">
+            <div className="mt-5 grid flex-1 grid-cols-2 gap-2.5 sm:mt-8 sm:gap-3">
               {humanTasks.map((t) => (
                 <div
                   key={t.title}
-                  className="flex h-full flex-col rounded-2xl border border-edge bg-white p-5 shadow-lift sm:p-6"
+                  className="flex h-full flex-col rounded-2xl border border-edge bg-white p-4 shadow-lift sm:p-6"
                 >
-                  <p className="text-body font-bold text-slate">{t.title}</p>
-                  <p className="mt-3.5 text-note text-pretty text-slate2">
+                  <p className="text-body font-bold text-pretty text-slate">
+                    {t.title}
+                  </p>
+                  <p className="mt-2.5 text-note text-pretty text-slate2 sm:mt-3.5">
                     {t.body}
                   </p>
                 </div>
@@ -143,18 +162,18 @@ export default function RoleSplit() {
           </div>
 
           {/* 右：AI GACHA OS が支えること（多い・小さいチップ） */}
-          <div className="lp-tint flex flex-col rounded-3xl p-7 sm:p-9">
+          <div className="lp-tint flex flex-col rounded-3xl p-5 sm:p-9">
             <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">
               <span className="text-body font-bold text-slate">
                 AI GACHA OS が支えること
               </span>
               <span className="num text-label text-slate3">8 ITEMS</span>
             </div>
-            <div className="mt-8 flex flex-1 flex-wrap content-start gap-2.5">
+            <div className="mt-5 flex flex-1 flex-wrap content-start gap-2 sm:mt-8 sm:gap-2.5">
               {osTasks.map((t) => (
                 <span
                   key={t}
-                  className="inline-flex items-center gap-2.5 rounded-full border border-blue-ink/15 bg-blue-pale px-4 py-2.5 text-note font-semibold text-blue-ink"
+                  className="inline-flex items-center gap-2.5 rounded-full border border-blue-ink/15 bg-blue-pale px-3.5 py-2 text-note font-semibold text-blue-ink sm:px-4 sm:py-2.5"
                 >
                   <span
                     aria-hidden
@@ -164,7 +183,7 @@ export default function RoleSplit() {
                 </span>
               ))}
             </div>
-            <p className="mt-8 border-t border-edge2 pt-6 text-note text-pretty text-slate2">
+            <p className="mt-5 border-t border-edge2 pt-5 text-note text-pretty text-slate2 sm:mt-8 sm:pt-6">
               販売中の監視でも、AIがするのは「検知して知らせる」ところまでです。
               販売を止めるかどうかは、管理画面で人が判断します。
             </p>
@@ -173,7 +192,7 @@ export default function RoleSplit() {
       </Reveal>
 
       <Reveal delay={0.14} className="mt-5">
-        <div className="rounded-3xl border border-edge bg-white px-7 py-9 text-center shadow-lift sm:px-10 sm:py-10">
+        <div className="rounded-3xl border border-edge bg-white px-6 py-7 text-center shadow-lift sm:px-10 sm:py-10">
           <p className="h-display text-h3 text-balance text-slate">
             運営をなくすのではなく、面倒な部分を減らします。
           </p>

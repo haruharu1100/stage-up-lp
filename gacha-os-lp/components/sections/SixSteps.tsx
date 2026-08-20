@@ -61,29 +61,16 @@ const steps: Step[] = [
   },
 ];
 
-/** ステップ間をつなぐ細い矢印。PCは右向き・スマホは下向き。 */
+/**
+ * ステップ間をつなぐ細い矢印。PCでだけ出す。
+ * スマホは2列に並べるため、順序は 01〜06 の番号で示す。
+ */
 function StepArrow() {
   return (
     <div
       aria-hidden
-      className="flex shrink-0 items-center justify-center py-1 text-slate3 lg:px-1 lg:py-0"
+      className="hidden shrink-0 items-center justify-center text-slate3 lg:flex lg:px-1 lg:py-0"
     >
-      {/* スマホ：下向き */}
-      <svg
-        width="14"
-        height="20"
-        viewBox="0 0 14 20"
-        fill="none"
-        className="lg:hidden"
-      >
-        <path
-          d="M7 1v18M7 19l-4.5-4.5M7 19l4.5-4.5"
-          stroke="currentColor"
-          strokeWidth="1.1"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </svg>
       {/* PC：右向き */}
       <svg
         width="22"
@@ -120,13 +107,13 @@ export default function SixSteps() {
       lead="動画を見なくても、話は同じです。ガチャを作ってからお客様に届くまでを6つに分けました。それぞれの詳しい中身は、カードから先へ進めます。"
     >
       <Reveal>
-        <div className="flex flex-col lg:flex-row lg:items-stretch lg:gap-0">
+        <div className="grid grid-cols-2 gap-3 lg:flex lg:flex-row lg:items-stretch lg:gap-0">
           {steps.map((s, i) => (
             <Fragment key={s.no}>
               {i > 0 ? <StepArrow /> : null}
               <Link
                 href={s.href}
-                className="lp-card group block p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-lift2 sm:p-7 lg:min-w-0 lg:flex-1 lg:p-6"
+                className="lp-card group block p-5 transition-all duration-300 hover:-translate-y-1 hover:shadow-lift2 sm:p-6 lg:min-w-0 lg:flex-1 lg:p-6"
               >
                 <div className="flex items-baseline gap-3">
                   <span className="num text-h3 font-semibold leading-none text-blue-ink">
@@ -134,10 +121,10 @@ export default function SixSteps() {
                   </span>
                   <span className="num text-label text-slate3">{s.code}</span>
                 </div>
-                <h3 className="mt-5 text-h3 font-bold leading-none text-slate">
+                <h3 className="mt-3.5 text-h3 font-bold leading-none text-slate sm:mt-5">
                   {s.title}
                 </h3>
-                <p className="mt-4 text-note text-pretty text-slate2">
+                <p className="mt-3 text-note text-pretty text-slate2 sm:mt-4">
                   {s.body}
                 </p>
               </Link>
@@ -146,12 +133,12 @@ export default function SixSteps() {
         </div>
       </Reveal>
 
-      <Reveal delay={0.08} className="mt-5">
-        <div className="lp-tint rounded-3xl px-7 py-8 sm:px-10 sm:py-9">
+      <Reveal delay={0.08} className="mt-4">
+        <div className="lp-tint rounded-3xl px-6 py-6 sm:px-10 sm:py-9">
           <p className="text-body font-bold text-slate">
             このうち、判断が必要なのは 01 と 03 です。
           </p>
-          <p className="mt-3.5 max-w-[42em] text-note text-pretty text-slate2">
+          <p className="mt-3 max-w-[42em] text-note text-pretty text-slate2">
             条件を決めて入力する、出てきた中身を確認して承認する。この2つは人の仕事として残します。
             04で危険を検知したときも、販売を止めるかどうかを決めるのは人です。
           </p>

@@ -1,5 +1,6 @@
 import Section from "../ui/Section";
 import Reveal from "../ui/Reveal";
+import { MoreDetail } from "../ui/Act";
 import PriceFreshnessBadge from "../ui/PriceFreshnessBadge";
 import {
   RTP_CAUTION,
@@ -77,6 +78,16 @@ const unknownCauses = [
   },
 ];
 
+/** 市場価格の3つの状態。折りたたみの中で原因と一緒に見せる */
+const priceStates = [
+  { c: "FRESH", d: "価格は新しい。実還元率を計算して表示します。" },
+  {
+    c: "STALE",
+    d: `${STALE_DAYS} 日を超えて更新できていない。数字は表示しません。`,
+  },
+  { c: "UNKNOWN", d: "取り込めていない、または時刻が読み取れない。" },
+];
+
 const howToRead = [
   { n: "01", t: "赤（要対応）から見る", d: "その日に決めることは、たいてい赤の中にあります。" },
   { n: "02", t: "黄（確認推奨）を見る", d: "止めるかどうかではなく、原因を確認する対象です。" },
@@ -100,151 +111,137 @@ export default function StatusLights() {
           何を確認すればいいかが分かる。
         </>
       }
-      lead="数字を並べただけの画面は、慣れていない人には読めません。この製品では、販売中のガチャを4つの信号のどれかに寄せて表示します。見るべき順番が色で決まるので、その日に何を確認するかが画面の側から示されます。"
+      lead="数字を並べただけの画面は、慣れていない人には読めません。販売中のガチャを4つの信号のどれかに寄せて表示し、見るべき順番を色で決めます。"
     >
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-4">
         {signals.map((s, i) => (
           <Reveal key={s.code} delay={i * 0.05}>
             <div
-              className={`flex h-full flex-col rounded-3xl border ${s.edge} ${s.face} p-7 sm:p-8`}
+              className={`flex h-full flex-col rounded-3xl border ${s.edge} ${s.face} p-4 sm:p-8`}
             >
-              <div className="flex items-center gap-3">
-                <span className={`h-2.5 w-2.5 rounded-full ${s.dot}`} />
+              <div className="flex items-center gap-2.5">
+                <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${s.dot}`} />
                 <span className={`num text-label ${s.text}`}>{s.code}</span>
               </div>
-              <h3 className={`h-display mt-6 text-h3 ${s.text}`}>{s.label}</h3>
-              <p className="mt-4 text-note font-bold text-slate">{s.lead}</p>
-              <p className="mt-3 text-note text-slate2">{s.body}</p>
+              <h3 className={`h-display mt-3 text-h3 sm:mt-4 ${s.text}`}>
+                {s.label}
+              </h3>
+              <p className="mt-2 text-note font-bold text-slate sm:mt-3">
+                {s.lead}
+              </p>
             </div>
           </Reveal>
         ))}
       </div>
 
       <Reveal delay={0.1}>
+        <div className="mt-3">
+          <MoreDetail label="4つの判定は、何を見て決まるのか">
+            <ul className="space-y-6">
+              {signals.map((s) => (
+                <li key={s.code}>
+                  <p className="text-note font-bold text-slate">
+                    <span className="num">{s.code}</span> / {s.label}
+                  </p>
+                  <p className="mt-2 text-note text-slate2">{s.body}</p>
+                </li>
+              ))}
+            </ul>
+          </MoreDetail>
+        </div>
+      </Reveal>
+
+      <Reveal delay={0.1}>
         <div className="mt-3 overflow-hidden rounded-3xl border border-edge bg-white shadow-lift">
-          <div className="grid gap-10 p-8 sm:p-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] lg:gap-12">
+          <div className="grid gap-6 p-5 sm:gap-8 sm:p-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] lg:items-center lg:gap-12">
             <div>
               <span className="eyebrow-lite">SAFE FAIL</span>
-              <h3 className="h-display mt-6 text-h2 text-balance text-slate">
+              <h3 className="h-display mt-4 text-h2 text-balance text-slate sm:mt-5">
                 分からないものを、
                 <br />
                 「安全」とは表示しません。
               </h3>
-              <p className="mt-7 text-body text-slate2">
-                実還元率は、外から取り込んだ市場価格を使って計算します。取り込みに失敗したときに古い価格でそのまま計算を続けると、画面はいつも通り「安全」の顔をしたまま、判断の材料だけが古くなります。これがいちばん危ない壊れ方です。
-              </p>
-              <p className="mt-5 text-body text-slate2">
-                そこでこの製品は、材料がそろっていないときは緑にも赤にもせず、UNKNOWN と表示します。安全側に倒して止まる、という意味で SAFE FAIL と呼んでいます。
+              <p className="mt-5 text-body text-slate2 sm:mt-6">
+                取り込みに失敗した古い価格でそのまま計算を続けると、画面はいつも通り「安全」の顔をしたまま、判断の材料だけが古くなります。これがいちばん危ない壊れ方です。
               </p>
             </div>
 
-            <div>
-              <div className="space-y-2.5">
-                {unknownCauses.map((c) => (
-                  <div
-                    key={c.t}
-                    className="rounded-2xl border border-edge2 bg-paper2 px-6 py-5"
-                  >
-                    <h4 className="text-note font-bold text-slate">{c.t}</h4>
-                    <p className="mt-2.5 text-note text-slate2">{c.d}</p>
-                  </div>
-                ))}
-              </div>
-
-              <div className="flex justify-center py-5" aria-hidden>
-                <svg width="20" height="26" viewBox="0 0 20 26" fill="none">
-                  <path
-                    d="M10 1v22M3.5 16.5L10 23.5l6.5-7"
-                    stroke="#63708A"
-                    strokeWidth="1.4"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              </div>
-
-              <div className="rounded-2xl border border-edge bg-paper2 px-6 py-7 text-center">
-                <span className="num text-h3 font-semibold tracking-[0.14em] text-slate3">
-                  UNKNOWN
-                </span>
-                <p className="mt-4 text-note text-slate2">
-                  実還元率の欄は「—」になります。市場価格が FRESH でない限り、計算結果が
-                  <span className="num"> 94% </span>
-                  （普段なら SAFE にあたる数字）でも、SAFE とは表示しません。
-                </p>
-              </div>
+            <div className="rounded-2xl border border-edge bg-paper2 px-5 py-6 text-center sm:px-6 sm:py-7">
+              <span className="num text-h3 font-semibold tracking-[0.14em] text-slate3">
+                UNKNOWN
+              </span>
+              <p className="mt-3 text-note text-slate2 sm:mt-4">
+                実還元率の欄は「—」になります。市場価格が FRESH でない限り、計算結果が
+                <span className="num"> 94% </span>
+                （普段なら SAFE にあたる数字）でも、SAFE とは表示しません。
+              </p>
             </div>
           </div>
 
-          <div className="grid gap-3 border-t border-edge2 bg-paper2 p-8 sm:p-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] lg:gap-12">
-            <div>
-              <span className="eyebrow-lite">PRICE DATA STATE</span>
-              <p className="mt-5 text-note text-slate2">
-                市場価格の状態は、この3つで扱います。判定は画面を開いたときに行います。
-              </p>
-              <PriceFreshnessBadge className="mt-5" />
-              <p className="mt-4 text-note text-slate3">
-                上は、既定の更新周期（週1回・毎週月曜 04:00）で取り込めている場合の表示です。
-              </p>
-            </div>
-            <div className="grid gap-2.5 sm:grid-cols-3">
-              {[
-                {
-                  c: "FRESH",
-                  d: "価格は新しい。実還元率を計算して表示します。",
-                  t: "text-ok-ink",
-                  f: "bg-ok/[0.08]",
-                  e: "border-ok/30",
-                },
-                {
-                  c: "STALE",
-                  d: `${STALE_DAYS} 日を超えて更新できていない。数字は表示しません。`,
-                  t: "text-warn-ink",
-                  f: "bg-warn/[0.10]",
-                  e: "border-warn/35",
-                },
-                {
-                  c: "UNKNOWN",
-                  d: "取り込めていない、または時刻が読み取れない。",
-                  t: "text-slate3",
-                  f: "bg-white",
-                  e: "border-edge",
-                },
-              ].map((x) => (
-                <div
-                  key={x.c}
-                  className={`rounded-2xl border ${x.e} ${x.f} px-5 py-5`}
-                >
-                  <span className={`num text-label ${x.t}`}>{x.c}</span>
-                  <p className="mt-3 text-note text-slate2">{x.d}</p>
-                </div>
-              ))}
+          <div className="border-t border-edge2 bg-paper2 p-5 sm:p-10">
+            <div className="grid gap-4 sm:gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] lg:items-start lg:gap-12">
+              <div>
+                <span className="eyebrow-lite">PRICE DATA STATE</span>
+                <p className="mt-3 text-note text-slate2 sm:mt-4">
+                  市場価格は FRESH ／ STALE ／ UNKNOWN
+                  の3つの状態で扱います。判定は画面を開いたときに行います。
+                </p>
+                <PriceFreshnessBadge className="mt-4 sm:mt-5" />
+              </div>
+
+              <MoreDetail label="SAFE FAIL の考え方と、UNKNOWN になる原因">
+                {/* 本文から移した説明。消さずにここへ入れている */}
+                <p>
+                  材料がそろっていないときは緑にも赤にもせず、UNKNOWN
+                  と表示します。安全側に倒して止まる、という意味で SAFE FAIL
+                  と呼んでいます。上のバッジは、既定の更新周期（週1回・毎週月曜
+                  04:00）で取り込めている場合の表示です。
+                </p>
+                <ul className="mt-6 space-y-6 border-t border-edge2 pt-6">
+                  {unknownCauses.map((c) => (
+                    <li key={c.t}>
+                      <p className="text-note font-bold text-slate">{c.t}</p>
+                      <p className="mt-2 text-note text-slate2">{c.d}</p>
+                    </li>
+                  ))}
+                </ul>
+                <ul className="mt-7 space-y-3 border-t border-edge2 pt-6">
+                  {priceStates.map((x) => (
+                    <li key={x.c}>
+                      <span className="num text-label text-slate3">{x.c}</span>
+                      <p className="mt-1.5 text-note text-slate2">{x.d}</p>
+                    </li>
+                  ))}
+                </ul>
+              </MoreDetail>
             </div>
           </div>
         </div>
       </Reveal>
 
       <Reveal delay={0.14}>
-        <div className="mt-3 grid gap-3 lg:grid-cols-3">
-          {howToRead.map((h) => (
-            <div
-              key={h.n}
-              className="flex gap-5 rounded-3xl border border-edge bg-white p-7 sm:p-8"
-            >
-              <span className="num shrink-0 text-h3 font-semibold leading-none text-blue-ink">
-                {h.n}
-              </span>
-              <div className="min-w-0">
-                <h4 className="text-note font-bold text-slate">{h.t}</h4>
-                <p className="mt-3 text-note text-slate2">{h.d}</p>
-              </div>
-            </div>
-          ))}
+        {/* 読む順番の手引き。中身は残したまま畳んでいる */}
+        <div className="mt-3">
+          <MoreDetail label="信号をどの順番で見ればいいか（3ステップ）">
+            <ul className="space-y-5">
+              {howToRead.map((h) => (
+                <li key={h.n} className="flex gap-4">
+                  <span className="num shrink-0 font-semibold text-blue-ink">
+                    {h.n}
+                  </span>
+                  <div className="min-w-0">
+                    <p className="text-note font-bold text-slate">{h.t}</p>
+                    <p className="mt-1.5 text-note text-slate2">{h.d}</p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </MoreDetail>
         </div>
       </Reveal>
 
       <Reveal delay={0.18}>
-        <p className="mt-5 rounded-2xl border border-edge bg-paper2 px-6 py-6 text-note text-slate2">
+        <p className="mt-4 rounded-2xl border border-edge bg-paper2 px-5 py-5 text-note text-slate2 sm:mt-5 sm:px-6 sm:py-6">
           信号は、状況の整理と優先順位の提示までを行います。販売を止めるか、景品を差し替えるか、そのまま続けるかを決めるのは運営者です。しきい値（
           <span className="num">
             {RTP_CAUTION}% / {RTP_DANGER}%
