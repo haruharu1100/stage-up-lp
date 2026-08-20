@@ -208,6 +208,10 @@ CREATE TABLE IF NOT EXISTS order_items (
   check_id INTEGER,
   tax_rate INTEGER DEFAULT 0, -- 0＝標準税率。8＝軽減税率（注文時の値を写し取る）
   served_at TEXT DEFAULT '',  -- お出しした時刻。あとから上書きしない（提供時間を測るため）
+  -- 卓から外れた時刻。空なら「まだその席のお客様のもの」。
+  -- レジ会計の店は check_id が付かないので、これが無いと席を空けても
+  -- 次のお客様の画面に前の組の注文が出続ける。注文そのものは1行も消さない。
+  cleared_at TEXT,
   created_at TEXT NOT NULL,
   updated_at TEXT
 );

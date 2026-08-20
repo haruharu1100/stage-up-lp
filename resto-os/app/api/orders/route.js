@@ -269,6 +269,7 @@ export async function PATCH(req) {
     const before = await ctx.first('SELECT * FROM order_items WHERE SCOPE() AND id = ?', [Number(b.id)]);
     if (!before) throw new ApiError('NOT_FOUND', '見つかりません', 404);
     if (before.check_id) throw new ApiError('ALREADY_CLOSED', 'この注文は会計済みです', 409);
+    if (before.cleared_at) throw new ApiError('ALREADY_CLOSED', 'この注文は席を空けたあとなので操作できません', 409);
 
     if (b.status === 'void') {
       requireRole(ctx, FLOOR_ROLES);
@@ -289,7 +290,7 @@ export async function PATCH(req) {
         await withTx(async (tx) => {
           const t = ctx.bind(tx);
           const upd = await t.run(
-            'UPDATE order_items SET qty = qty - ?, updated_at = ? WHERE SCOPE() AND id = ? AND qty = ? AND check_id IS NULL',
+            'UPDATE order_items SET qty = qty - ?, updated_at = ? WHERE SCOPE() AND id = ? AND qty = ? AND check_id IS NULL AND cleared_at IS NULL',
             [cancelQty, ts, Number(b.id), have]
           );
           if (!Number(upd.rowsAffected)) {

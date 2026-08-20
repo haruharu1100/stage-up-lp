@@ -42,7 +42,7 @@ export async function GET() {
     // まだ誰も手をつけていない注文（届いていない疑いがあるもの）
     const pending = await ctx.first(
       `SELECT COUNT(*) AS c, MIN(created_at) AS oldest
-         FROM order_items WHERE SCOPE() AND status = 'received' AND check_id IS NULL`
+         FROM order_items WHERE SCOPE() AND status = 'received' AND check_id IS NULL AND cleared_at IS NULL`
     );
     const oldestSec = pending.oldest ? Math.round((now - new Date(pending.oldest).getTime()) / 1000) : 0;
 

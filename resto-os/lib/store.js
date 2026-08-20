@@ -86,7 +86,7 @@ export async function getTable(ctx, tableId) {
 export async function getOpenItems(ctx, tableId) {
   const rows = await ctx.query(
     `SELECT * FROM order_items
-      WHERE SCOPE() AND table_id = ? AND check_id IS NULL AND status <> 'void'
+      WHERE SCOPE() AND table_id = ? AND check_id IS NULL AND cleared_at IS NULL AND status <> 'void'
       ORDER BY id`,
     [Number(tableId) || 0]
   );
@@ -114,7 +114,7 @@ export async function applyOtoshi(ctx, table, guests) {
 
   const rows = await ctx.query(
     `SELECT qty FROM order_items
-      WHERE SCOPE() AND table_id = ? AND check_id IS NULL AND status <> 'void' AND via = 'otoshi'`,
+      WHERE SCOPE() AND table_id = ? AND check_id IS NULL AND cleared_at IS NULL AND status <> 'void' AND via = 'otoshi'`,
     [Number(table.id)]
   );
   const have = rows.reduce((s, r) => s + Number(r.qty), 0);

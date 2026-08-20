@@ -450,11 +450,16 @@ const MIGRATIONS = [
   `ALTER TABLE daily_facts ADD COLUMN order_total INTEGER DEFAULT 0`,
   `ALTER TABLE daily_facts ADD COLUMN cash_total INTEGER DEFAULT 0`,
   `ALTER TABLE daily_facts ADD COLUMN cash_entries INTEGER DEFAULT 0`,
+  // 席を空けたときに「卓から外れた」印を付ける。
+  // レジ会計の店は伝票（check_id）が付かないため、これが無いと空席にしても
+  // 次のお客様の画面に前の組の注文と合計が出続ける。
+  `ALTER TABLE order_items ADD COLUMN cleared_at TEXT`,
+  `CREATE INDEX IF NOT EXISTS ix_oi_cleared ON order_items(tenant_id, store_id, table_id, cleared_at)`,
 ];
 
 // 「もう追いついているか」を1回で見分けるための問い合わせ。
 // ★項目を足したら、必ずこの1行も最後に足したものへ合わせて更新すること。
-const SCHEMA_PROBE = 'SELECT sales_source FROM daily_facts LIMIT 1';
+const SCHEMA_PROBE = 'SELECT cleared_at FROM order_items LIMIT 1';
 
 async function migrate(db) {
   for (const sql of MIGRATIONS) {

@@ -147,7 +147,7 @@ export async function tableOpen(ctx, tableId) {
   if (!table) throw new ApiError('NOT_FOUND', 'テーブルが見つかりません', 404);
   const rows = await ctx.query(
     `SELECT id, unit_price, qty FROM order_items
-      WHERE SCOPE() AND table_id = ? AND check_id IS NULL AND status <> 'void'`,
+      WHERE SCOPE() AND table_id = ? AND check_id IS NULL AND cleared_at IS NULL AND status <> 'void'`,
     [Number(tableId)]
   );
   return {
@@ -196,6 +196,16 @@ export async function addCashSale(ctx, b, { clearTable = false, logAudit } = {})
     const covered = await coveredIds(ctx, date);
     const dup = ids.filter((id) => covered.has(id));
     if (dup.length) throw new ApiError('ALREADY_ENTERED', 'この卓のご注文は、すでに実会計に入っています', 409);
+    // 席を空けたあとの押し直しも止める。
+    // 空けた時点で注文は卓から外れるので、そのまま通すと
+    // 「注文0円・実会計だけある」という架空の売上ができてしまう。
+    if (!ids.length) {
+      const prev = await ctx.first(
+        'SELECT id FROM cash_sales WHERE SCOPE() AND business_date = ? AND table_id = ? LIMIT 1',
+        [date, tableId]
+      );
+      if (prev) throw new ApiError('ALREADY_ENTERED', 'この卓は、本日すでに実会計に入っています', 409);
+    }
   } else {
     orderTotal = Math.max(0, Math.floor(Number(b.orderTotal) || 0));
     tableName = String(b.tableName || '').slice(0, 40);
@@ -235,11 +245,12 @@ export async function addCashSale(ctx, b, { clearTable = false, logAudit } = {})
       updated_at: ts,
     });
     // 席を空ける。注文は消さず「提供済」にして必ず残す。
+    // cleared_at を入れて卓から外す。これが無いと、次のお客様の画面に前の組の注文が出続ける。
     if (clearTable && tableId) {
       await t.run(
-        `UPDATE order_items SET status = 'served', served_at = COALESCE(NULLIF(served_at, ''), ?)
-           WHERE SCOPE() AND table_id = ? AND check_id IS NULL AND status <> 'void'`,
-        [ts, tableId]
+        `UPDATE order_items SET status = 'served', served_at = COALESCE(NULLIF(served_at, ''), ?), cleared_at = ?
+           WHERE SCOPE() AND table_id = ? AND check_id IS NULL AND cleared_at IS NULL AND status <> 'void'`,
+        [ts, ts, tableId]
       );
       await t.run(
         `UPDATE tables SET status = 'empty', guests = 0, opened_at = NULL, token = ? WHERE SCOPE() AND id = ?`,

@@ -45,7 +45,7 @@ async function build(ctx, date) {
   const open = await ctx.query(
     `SELECT t.id, t.name, COUNT(oi.id) AS lines, COALESCE(SUM(oi.unit_price * oi.qty),0) AS total
        FROM tables t
-       JOIN order_items oi ON oi.table_id = t.id AND SCOPE(oi) AND oi.check_id IS NULL AND oi.status <> 'void'
+       JOIN order_items oi ON oi.table_id = t.id AND SCOPE(oi) AND oi.check_id IS NULL AND oi.cleared_at IS NULL AND oi.status <> 'void'
       WHERE SCOPE(t)
       GROUP BY t.id, t.name ORDER BY t.sort_order`
   );

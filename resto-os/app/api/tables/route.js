@@ -18,7 +18,7 @@ export async function GET() {
     const items = await ctx.query(
       `SELECT table_id, SUM(unit_price * qty) AS total, COUNT(*) AS lines,
               SUM(CASE WHEN status IN ('received','cooking') THEN 1 ELSE 0 END) AS pending
-         FROM order_items WHERE SCOPE() AND check_id IS NULL AND status <> 'void' GROUP BY table_id`
+         FROM order_items WHERE SCOPE() AND check_id IS NULL AND cleared_at IS NULL AND status <> 'void' GROUP BY table_id`
     );
     const calls = await ctx.query(`SELECT table_id, COUNT(*) AS c FROM calls WHERE SCOPE() AND status = 'open' GROUP BY table_id`);
     const byId = (rows) => Object.fromEntries(rows.map((r) => [Number(r.table_id), r]));
@@ -94,7 +94,7 @@ export async function PATCH(req) {
       requireRole(ctx, FLOOR_ROLES);
       // 未会計が残ったまま席を空けると売上が消える
       const open = await ctx.query(
-        `SELECT id, unit_price, qty FROM order_items WHERE SCOPE() AND table_id = ? AND check_id IS NULL AND status <> 'void'`,
+        `SELECT id, unit_price, qty FROM order_items WHERE SCOPE() AND table_id = ? AND check_id IS NULL AND cleared_at IS NULL AND status <> 'void'`,
         [id]
       );
       if (open.length && hasFeature(ctx.plan, 'pos')) {
@@ -111,10 +111,11 @@ export async function PATCH(req) {
             409
           );
         }
+        const ts = nowIso();
         await ctx.run(
-          `UPDATE order_items SET status = 'served', served_at = COALESCE(NULLIF(served_at, ''), ?)
-             WHERE SCOPE() AND table_id = ? AND check_id IS NULL AND status <> 'void'`,
-          [nowIso(), id]
+          `UPDATE order_items SET status = 'served', served_at = COALESCE(NULLIF(served_at, ''), ?), cleared_at = ?
+             WHERE SCOPE() AND table_id = ? AND check_id IS NULL AND cleared_at IS NULL AND status <> 'void'`,
+          [ts, ts, id]
         );
         await logAudit(ctx, {
           action: 'table.close_uncharged', targetType: 'table', targetId: id,
@@ -143,7 +144,7 @@ export async function PATCH(req) {
 
       const items = await ctx.query(
         `SELECT id, name, qty, unit_price FROM order_items
-          WHERE SCOPE() AND table_id = ? AND check_id IS NULL AND status <> 'void'`,
+          WHERE SCOPE() AND table_id = ? AND check_id IS NULL AND cleared_at IS NULL AND status <> 'void'`,
         [id]
       );
       if (!items.length) throw new ApiError('BAD_REQUEST', 'このテーブルに移せる注文がありません');
@@ -158,7 +159,7 @@ export async function PATCH(req) {
         const t = ctx.bind(tx);
         const upd = await t.run(
           `UPDATE order_items SET table_id = ?, updated_at = ?
-            WHERE SCOPE() AND table_id = ? AND check_id IS NULL AND status <> 'void'`,
+            WHERE SCOPE() AND table_id = ? AND check_id IS NULL AND cleared_at IS NULL AND status <> 'void'`,
           [toId, ts, id]
         );
         if (Number(upd.rowsAffected) !== items.length) {
@@ -218,7 +219,7 @@ export async function DELETE(req) {
     const before = await ctx.first('SELECT * FROM tables WHERE SCOPE() AND id = ?', [id]);
     if (!before) throw new ApiError('NOT_FOUND', 'テーブルが見つかりません', 404);
     const open = await ctx.query(
-      `SELECT id FROM order_items WHERE SCOPE() AND table_id = ? AND check_id IS NULL AND status <> 'void'`,
+      `SELECT id FROM order_items WHERE SCOPE() AND table_id = ? AND check_id IS NULL AND cleared_at IS NULL AND status <> 'void'`,
       [id]
     );
     if (open.length) throw new ApiError('HAS_OPEN_ITEMS', '未会計の注文が残っています', 409);

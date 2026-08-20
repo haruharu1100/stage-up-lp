@@ -6,8 +6,9 @@
 import { initDb, one, nowIso, businessDate } from '../lib/db.js';
 import { createCtx } from '../lib/tenant-db.js';
 import {
-  addCashSale, editCashSale, confirmDay, daySummary, revisions, decideSales, DIFF_REASONS,
+  addCashSale, editCashSale, confirmDay, daySummary, revisions, decideSales, tableOpen, DIFF_REASONS,
 } from '../lib/cash.js';
+import { getOpenItems } from '../lib/store.js';
 import { rebuildDay } from '../lib/learn.js';
 
 const url = process.env.DATABASE_URL || '';
@@ -102,6 +103,30 @@ async function main() {
   ok('卓が空席に戻り、QRも新しくなる（前の組の注文が次のお客様に見えない）',
     tbl1.status === 'empty' && Number(tbl1.guests) === 0 && tbl1.token !== tables[0].token);
 
+  // ★席を空けたら、その注文は「卓から外れた」状態にならなければならない。
+  //   ここが抜けていると、次のお客様のQR画面に前の組の注文と合計が出てしまう。
+  const stillOpen = await getOpenItems(A, tables[0].id);
+  ok('席を空けたら、卓に残る未会計は0件になる（次のお客様に前の組が見えない）',
+    stillOpen.length === 0, `${stillOpen.length}件`);
+  const openAfter = await tableOpen(A, tables[0].id);
+  ok('次のお客様から見た「注文上の合計」も0円に戻る', openAfter.total === 0, `${openAfter.total}円`);
+
+  // ★同じ卓に次のお客様が入っても、もう一度きちんと実会計を記録できる。
+  //   前の組の注文が卓に残っていると「すでに実会計に入っています」で止まり、
+  //   その卓はその日ずっと売上を記録できなくなる。
+  const o1b = await seatTable(A, tables[0], [{ name: 'ハイボール', price: 500, qty: 2 }]);
+  const nextOpen = await tableOpen(A, tables[0].id);
+  ok('次のお客様の注文だけが卓の合計になる（前の組が混ざらない）',
+    nextOpen.total === 1000 && nextOpen.ids.length === 1, `${nextOpen.total}円 / ${nextOpen.ids.length}件`);
+  const r1b = await addCashSale(A, {
+    tableId: tables[0].id, amount: 1000, guests: 2, paymentMethod: 'cash',
+  }, { clearTable: true, logAudit });
+  ok('同じ卓で2組目の実会計もちゃんと記録できる', r1b.ok && r1b.orderTotal === 1000, `${r1b.orderTotal}円`);
+  const hist1 = await A.query(
+    `SELECT id FROM order_items WHERE SCOPE() AND table_id = ?`, [tables[0].id]
+  );
+  ok('2組ぶんの注文履歴が両方とも残る', hist1.length === 3, `${hist1.length}件`);
+
   // ══════════ 2. 差額は自動でそろえない ══════════
   console.log('\n2. 注文合計と実会計の差');
 
@@ -134,8 +159,8 @@ async function main() {
   ok('同じ卓の同じ注文を、二度お金にできない', dupCode === 'ALREADY_ENTERED', dupCode);
 
   const sum1 = await daySummary(A, date);
-  ok('入力済みの実会計は2件、合計は注文合計とは別に出る',
-    sum1.entries.length === 2 && sum1.cashTotal === 15960 && sum1.orderTotal === 16360,
+  ok('入力済みの実会計は3件、合計は注文合計とは別に出る',
+    sum1.entries.length === 3 && sum1.cashTotal === 16960 && sum1.orderTotal === 17360,
     `注文合計 ${sum1.orderTotal}円／実会計 ${sum1.cashTotal}円／差 ${sum1.diff}円`);
 
   // ══════════ 4. 未入力が分かる ══════════
@@ -159,7 +184,7 @@ async function main() {
 
   const conf = await confirmDay(A, { date }, { logAudit });
   ok('全部入力すれば、その日の売上を確定できる',
-    conf.ok && conf.cashTotal === 20360 && conf.entries === 3,
+    conf.ok && conf.cashTotal === 21360 && conf.entries === 4,
     `実会計 ${conf.cashTotal}円／${conf.entries}件`);
 
   const lockedEdit = await mustFail(() => editCashSale(A, {
@@ -201,7 +226,7 @@ async function main() {
   console.log('\n7. 誰が・いつ・何をしたか');
 
   const acts = audits.map((a) => a.action);
-  ok('実会計の入力が操作ログに残る', acts.filter((a) => a === 'cash.create').length === 4,
+  ok('実会計の入力が操作ログに残る', acts.filter((a) => a === 'cash.create').length === 5,
     `${acts.filter((a) => a === 'cash.create').length}件`);
   ok('売上の確定が操作ログに残る', acts.includes('cash.confirm'));
   ok('直したことが操作ログに残る', acts.includes('cash.update'));
@@ -221,9 +246,9 @@ async function main() {
   // ══════════ 9. AIが使う売上の優先順位 ══════════
   console.log('\n9. AI学習に使う売上の出どころ');
 
-  const d1 = await decideSales(A, date, { posSales: 111111, posChecks: 9, posGuests: 20, orderTotal: 20760 });
+  const d1 = await decideSales(A, date, { posSales: 111111, posChecks: 9, posGuests: 20, orderTotal: 21760 });
   ok('確定した実会計があれば、それを最優先で使う（POSや注文合計より上）',
-    d1.source === 'cash_confirmed' && d1.confidence === 3 && d1.sales === 20360,
+    d1.source === 'cash_confirmed' && d1.confidence === 3 && d1.sales === 21360,
     `${d1.source}／${d1.sales}円`);
 
   const d2 = await decideSales(A, yday, { posSales: 50000, posChecks: 4, posGuests: 10, orderTotal: 33000 });
@@ -239,7 +264,7 @@ async function main() {
     d4.source === 'none' && d4.confidence === 0 && d4.sales === 0, d4.source);
 
   ok('確定した日でも、注文合計と実会計は別の数字として持ち回る',
-    d1.orderTotal === 20760 && d1.cashTotal === 20360 && d1.cashEntries === 3,
+    d1.orderTotal === 21760 && d1.cashTotal === 21360 && d1.cashEntries === 4,
     `注文 ${d1.orderTotal}円／実会計 ${d1.cashTotal}円`);
 
   // ══════════ 10. その日のまとめ（AIが読む所） ══════════
@@ -247,13 +272,13 @@ async function main() {
 
   await rebuildDay(A, date);
   const fact = await A.first('SELECT * FROM daily_facts WHERE SCOPE() AND business_date = ?', [date]);
-  ok('その日のまとめに、確定した実売上が入る', Number(fact.sales) === 20360, `${fact?.sales}円`);
+  ok('その日のまとめに、確定した実売上が入る', Number(fact.sales) === 21360, `${fact?.sales}円`);
   ok('その日のまとめに、売上の出どころが残る（AIが注文金額と実売上を混ぜない）',
     fact.sales_source === 'cash_confirmed' && Number(fact.sales_confidence) === 3,
     `${fact?.sales_source}／確かさ${fact?.sales_confidence}`);
-  ok('注文合計も参考値として別枠で残る', Number(fact.order_total) === 20760, `${fact?.order_total}円`);
+  ok('注文合計も参考値として別枠で残る', Number(fact.order_total) === 21760, `${fact?.order_total}円`);
   ok('実会計の合計と件数も別枠で残る',
-    Number(fact.cash_total) === 20360 && Number(fact.cash_entries) === 3);
+    Number(fact.cash_total) === 21360 && Number(fact.cash_entries) === 4);
 
   // AIの予測は、確定した実売上を書き換えない
   const before = Number(fact.sales);

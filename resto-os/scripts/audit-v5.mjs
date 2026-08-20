@@ -589,6 +589,16 @@ async function main() {
     keptItems.length > 0 && keptItems.every((r) => r.status !== 'void'),
     { level: '緊急', detail: `${keptItems.length}件` });
 
+  // 13-4b 席を空けたら、その注文は卓から外れていること。
+  // ここが抜けると、次のお客様のQR画面に前の組の注文と合計が出る（会計がずれる直接の原因）。
+  const nextGuest = await getOpenItems(L, cashTable.id);
+  check('13', '席を空けたら、次のお客様の画面に前の組の注文が出ない',
+    nextGuest.length === 0, { level: '緊急', detail: `${nextGuest.length}件残っている` });
+  const clearedFlags = await L.query(
+    `SELECT cleared_at FROM order_items WHERE SCOPE() AND table_id = ?`, [cashTable.id]);
+  check('13', '席を空けた注文には「卓から外れた」印が付く（履歴は消さない）',
+    clearedFlags.length > 0 && clearedFlags.every((r) => !!r.cleared_at), { level: '緊急' });
+
   // 13-5 過去の確定売上を書き換えない
   await confirmDay(L, { date: cashDate, force: true }, { logAudit: cashLog });
   const afterConfirm = await (async () => {

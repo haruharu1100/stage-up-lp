@@ -157,7 +157,7 @@ export async function POST(req) {
       // 次のお客様の伝票に前のお客様の商品が混ざる（会計がずれる）。
       const nowOpen = await t.query(
         `SELECT id FROM order_items
-          WHERE SCOPE() AND table_id = ? AND check_id IS NULL AND status <> 'void' ORDER BY id`,
+          WHERE SCOPE() AND table_id = ? AND check_id IS NULL AND cleared_at IS NULL AND status <> 'void' ORDER BY id`,
         [Number(r.table.id)]
       );
       const nowIds = nowOpen.map((x) => Number(x.id));
@@ -179,7 +179,7 @@ export async function POST(req) {
 
       const upd = await t.run(
         `UPDATE order_items SET check_id = ?, status = 'served', updated_at = ?
-          WHERE SCOPE() AND id IN (${itemIds.map(() => '?').join(',')}) AND check_id IS NULL AND status <> 'void'`,
+          WHERE SCOPE() AND id IN (${itemIds.map(() => '?').join(',')}) AND check_id IS NULL AND cleared_at IS NULL AND status <> 'void'`,
         [id, ts, ...itemIds]
       );
       if (Number(upd.rowsAffected) !== itemIds.length) {
@@ -190,7 +190,7 @@ export async function POST(req) {
       // 分割会計で先に払った人がいても、残りの人の注文が消えては困る。
       const left = await t.query(
         `SELECT id FROM order_items
-          WHERE SCOPE() AND table_id = ? AND check_id IS NULL AND status <> 'void' LIMIT 1`,
+          WHERE SCOPE() AND table_id = ? AND check_id IS NULL AND cleared_at IS NULL AND status <> 'void' LIMIT 1`,
         [Number(r.table.id)]
       );
       if (left.length) {
