@@ -25,7 +25,7 @@ export const maxDuration = 60;
  * そこで止めずに次の店へ進む。1店の通信エラーで全店の記録が欠けては困るため。
  */
 
-const JOBS = ['weather', 'live', 'nightly', 'calendar', 'report'];
+const JOBS = ['weather', 'live', 'nightly', 'calendar', 'report', 'daily'];
 
 /**
  * いま、その店の営業時間の中かどうか（日本時間で見る）。
@@ -84,6 +84,17 @@ async function eachStore(fn) {
 }
 
 async function runJob(job, slot) {
+  // daily：1日1回しか自動処理を置けない契約のとき用。
+  // 天気を取り直してから、昨日を確定させる。天気で失敗しても記録の確定は必ず行う。
+  if (job === 'daily') {
+    let weather = [];
+    try { weather = await runJob('weather', slot || 'am6'); } catch (e) {
+      weather = [{ error: String(e?.message || e).slice(0, 200) }];
+    }
+    const nightly = await runJob('nightly');
+    return { weather, nightly };
+  }
+
   if (job === 'report') {
     // 朝のレポート。読む人が起きている時間に、昨日の結果と今日の見込みをまとめて送る。
     // 深夜に通知が飛ぶのを避けるため、閉店後のぶんもここで拾えるようにしてある。
