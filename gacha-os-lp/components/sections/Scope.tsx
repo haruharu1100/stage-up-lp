@@ -7,7 +7,7 @@ export default function Scope() {
   return (
     <Section
       id="scope"
-      no="22"
+      no="17"
       eyebrow="HOW TO START"
       title={
         <>

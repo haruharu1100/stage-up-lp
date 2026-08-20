@@ -67,7 +67,7 @@ export default function Act({
   return (
     <section
       id={id}
-      className={`relative scroll-mt-24 overflow-hidden py-14 sm:py-28 lg:py-36 ${TONE[tone]} ${className}`}
+      className={`relative scroll-mt-24 overflow-hidden py-11 sm:py-24 lg:py-36 ${TONE[tone]} ${className}`}
     >
       {tone === "paper" && (
         <div className="pointer-events-none absolute inset-0 grid-lite opacity-45 [mask-image:radial-gradient(ellipse_at_50%_0%,#000_10%,transparent_72%)]" />

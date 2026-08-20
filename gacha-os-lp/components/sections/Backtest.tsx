@@ -72,7 +72,7 @@ export default function Backtest() {
   return (
     <Act
       id="backtest"
-      no="SECTION 11"
+      no="08"
       eyebrow="PRE-LAUNCH BACKTEST"
       tone="night"
       wide

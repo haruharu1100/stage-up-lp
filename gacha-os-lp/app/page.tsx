@@ -4,15 +4,12 @@ import MobileCTA from "@/components/MobileCTA";
 import Hero from "@/components/Hero";
 import CoreToScreen from "@/components/sections/CoreToScreen";
 import ProductVideo from "@/components/sections/ProductVideo";
-import SixSteps from "@/components/sections/SixSteps";
-import RoleSplit from "@/components/sections/RoleSplit";
+import OperatingDay from "@/components/sections/OperatingDay";
+import CustomerSide from "@/components/sections/CustomerSide";
+import RoleFlow from "@/components/sections/RoleFlow";
 import Problems from "@/components/sections/Problems";
 import Diagnose from "@/components/sections/Diagnose";
-import QuickTour from "@/components/sections/QuickTour";
-import OsOverview from "@/components/sections/OsOverview";
-import AiBuilder from "@/components/sections/AiBuilder";
 import RtpMonitor from "@/components/sections/RtpMonitor";
-import MarketPrice from "@/components/sections/MarketPrice";
 import PriceShock from "@/components/sections/PriceShock";
 import Backtest from "@/components/sections/Backtest";
 import Rush from "@/components/sections/Rush";
@@ -20,11 +17,9 @@ import Shipping from "@/components/sections/Shipping";
 import AiSupport from "@/components/sections/AiSupport";
 import AdminConsole from "@/components/sections/AdminConsole";
 import StatusLights from "@/components/sections/StatusLights";
-import TimeSaving from "@/components/sections/TimeSaving";
 import RoiCalculator from "@/components/sections/RoiCalculator";
 import BuiltFromOps from "@/components/sections/BuiltFromOps";
 import Security from "@/components/sections/Security";
-import Aws from "@/components/sections/Aws";
 import Scope from "@/components/sections/Scope";
 import Flow from "@/components/sections/Flow";
 import Pricing from "@/components/sections/Pricing";
@@ -32,30 +27,45 @@ import Faq from "@/components/sections/Faq";
 import ClosingMessage from "@/components/sections/ClosingMessage";
 import Cta from "@/components/sections/Cta";
 
+/*
+  ★セクションを足すときの決まり
+  「言いたいことが増えたから、セクションも増やす」を続けると、
+  スマホで延々スクロールするだけのページになります。
+  スクロールするたびに新しい価値が出ている状態を保つこと。
+  同じことを2回言っているセクションは、増やすのではなく畳むか統合する。
+
+  ・2026-08-21 に、次の5つを別セクションとして持つのをやめました。
+    3分ツアー / 機能一覧 / AIガチャ生成 / 市場価格 / AWS構成
+    内容は、新しい3セクションと セキュリティ・PriceShock の中へ移しています。
+    リンク（#tour / #os / #builder / #price / #infra）は移動先に残してあります。
+*/
+
 export default function Home() {
   return (
     <>
       <Header />
       <main>
-        {/* ── 導入：3D で全体像 → 本物の画面 → 30秒の実録 → 自分の役割 ── */}
+        {/* ── 導入：3Dで全体像 → 本物の画面 → 30秒の実録 ── */}
         <Hero />
         {/* 3Dが分解して、実際の管理画面へ組み上がる（イメージ映像で終わらせない） */}
         <CoreToScreen />
         {/* /demo の管理画面をそのまま操作して録画した30秒（動画は補助） */}
         <ProductVideo />
-        {/* 動画を見なくても同じことが分かる：作る→試す→公開→監視→発送→対応 */}
-        <SixSteps />
-        {/* 「結局、自分は何をするのか」に先に答える */}
-        <RoleSplit />
 
-        {/* ── 課題 → 30秒診断 → 3分で全体像 → 各機能 ── */}
+        {/*
+          ここからが購入判断のいちばん大事な流れ。順番を入れ替えないこと。
+          ① 伝える → AIが作る → 試す → 承認する（＝難しくない）
+          ② 承認したら、お客様の画面にこう出る（＝売る先が見える）
+          ③ 6つの役割のうち、自分がやるのはどこか（＝全部やらなくていい）
+        */}
+        <OperatingDay />
+        <CustomerSide />
+        <RoleFlow />
+
+        {/* ── いまの困りごと → 30秒診断 → 公開後を支える仕組み ── */}
         <Problems />
         <Diagnose />
-        <QuickTour />
-        <OsOverview />
-        <AiBuilder />
         <RtpMonitor />
-        <MarketPrice />
         {/* 価格急騰・残数の2大シミュレーター（触って価値が分かる中心セクション） */}
         <PriceShock />
         {/* 第2の柱：公開前に赤字リスクを試す（触って価値が分かる中心セクション） */}
@@ -68,11 +78,9 @@ export default function Home() {
         <StatusLights />
 
         {/* ── 効果 → 信頼 ── */}
-        <TimeSaving />
         <RoiCalculator />
         <BuiltFromOps />
         <Security />
-        <Aws />
 
         {/* ── 導入 → 料金 → 相談 ── */}
         <Scope />

@@ -494,7 +494,7 @@ export default function PriceShock() {
   return (
     <Section
       id="shock"
-      no="10"
+      no="07"
       eyebrow="PROFIT GUARD / 触って確かめる"
       title={
         <>
@@ -503,8 +503,12 @@ export default function PriceShock() {
           <span className="text-gradient-royal">利益は静かに消えます。</span>
         </>
       }
-      lead="採算が崩れるのは公開したあとです。相場が上がったときと、上位賞が残ったまま口数だけ減ったとき。その2つを動かして確かめられます。"
+      lead="採算が崩れるのは公開したあとです。相場が上がったときと、上位賞が残ったまま口数だけ減ったとき。その2つを動かして確かめられます。市場価格は、正規に利用できるデータソースと接続して定期的に取り込み、購入時価格との差がそのまま実還元率の計算に入ります。"
     >
+      {/* 以前あった「市場価格更新」セクションは、この中へ統合しました。
+          外から張られているリンクが切れないよう、飛び先だけ残しています。 */}
+      <span id="price" aria-hidden className="block scroll-mt-24" />
+
       <Reveal>
         <div className="mb-4 flex flex-wrap items-center gap-3">
           <span className="num rounded-full border border-warn-ink/25 bg-warn/10 px-3.5 py-1.5 text-label text-warn-ink">

@@ -5,6 +5,7 @@ import Link from "next/link";
 import Section from "../ui/Section";
 import Reveal from "../ui/Reveal";
 import { MoreDetail } from "../ui/Act";
+import TimeSaving from "./TimeSaving";
 import { roiDefaults, roiNote } from "@/content/site";
 import { activeTiers, type OsTier } from "@/config/pricing";
 import { EV, track, trackOnce } from "@/lib/track";
@@ -186,7 +187,7 @@ export default function RoiCalculator() {
   return (
     <Section
       id="roi"
-      no="18"
+      no="14"
       eyebrow="ROI SIMULATOR"
       title={
         <>
@@ -197,6 +198,15 @@ export default function RoiCalculator() {
       }
       lead="いまの運営規模を入力すると、削減できる時間と、その時間にかかっている人件費を試算します。入力した数値はこの画面の中だけで計算され、送信されません。"
     >
+      {/*
+        「1日の作業時間がどう変わるか」は、以前は別セクションでした。
+        いくら浮くのかを答える場所が2つに割れていたので、ここへ入れています。
+        時間の話 → その時間の金額、という1つの流れにするためです。
+      */}
+      <TimeSaving />
+
+      <div className="mt-10 border-t border-edge2 pt-10 sm:mt-14 sm:pt-14" />
+
       <div className="grid gap-4 lg:grid-cols-[minmax(0,400px)_1fr]">
         {/* 入力 */}
         <Reveal>

@@ -1,7 +1,7 @@
 import Section from "../ui/Section";
 import Reveal from "../ui/Reveal";
 import { MoreDetail } from "../ui/Act";
-import { security } from "@/content/site";
+import { security, awsStack } from "@/content/site";
 import { BACKTEST_ENGINE_VERSION, RUNS } from "@/lib/backtest";
 import { STALE_AFTER_HOURS } from "@/lib/priceFreshness";
 
@@ -52,7 +52,7 @@ export default function Security() {
   return (
     <Section
       id="security"
-      no="20"
+      no="16"
       eyebrow="SECURITY & INTEGRITY"
       title={
         <>
@@ -63,11 +63,17 @@ export default function Security() {
       }
       lead="ガチャは、抽選とポイントとお金が同時に動きます。二重抽選・残数のズレ・不正なポイント付与は、起きてから直すのでは遅い領域です。以下は、構築時の標準設計に含める項目です。"
     >
-      <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-4">
+      {/*
+        スマホで2列にすると、1枚の幅が120px程度しかなくなり、
+        「アプリケー／ション防御」のように見出しが単語の途中で割れます。
+        そのため 375px 級では1列にして、アイコンを左に置いた横並びにしています。
+        縦に積み上がるだけにならないよう、カード自体は薄くしています。
+      */}
+      <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
         {security.map((g, i) => (
           <Reveal key={g.group} delay={i * 0.05}>
-            <div className="lp-card h-full p-5 sm:p-7">
-              <span className="flex h-11 w-11 items-center justify-center rounded-2xl border border-blue-ink/15 bg-blue-pale">
+            <div className="lp-card flex h-full items-center gap-4 p-4 sm:block sm:p-7">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-blue-ink/15 bg-blue-pale">
                 <svg width="18" height="18" viewBox="0 0 16 16" fill="none" aria-hidden>
                   <path
                     d={icons[g.group]}
@@ -78,10 +84,14 @@ export default function Security() {
                   />
                 </svg>
               </span>
-              <h3 className="h-display mt-4 text-h3 text-slate">{g.group}</h3>
-              <p className="num mt-3 text-label text-slate3">
-                {g.items.length} 項目
-              </p>
+              <span className="min-w-0 flex-1 sm:block">
+                <h3 className="h-display text-h3 text-slate sm:mt-4">
+                  {g.group}
+                </h3>
+                <p className="num mt-1.5 text-label text-slate3 sm:mt-3">
+                  {g.items.length} 項目
+                </p>
+              </span>
             </div>
           </Reveal>
         ))}
@@ -192,6 +202,62 @@ export default function Security() {
               </ul>
               <p className="mt-8 border-t border-edge2 pt-6 text-note text-slate3">
                 ※ 事前のシミュレーションと検証であり、運営の成果や損失が出ないことをお約束するものではありません。
+              </p>
+            </MoreDetail>
+          </div>
+        </div>
+      </Reveal>
+
+      {/*
+        ── サーバー構成（旧 AWS セクションをここへ統合）──
+        独立した1セクションにすると、読む人にとっては
+        「セキュリティの話がもう1回続く」だけになっていたため、
+        同じ「安心して預けられるか」の話としてまとめている。
+      */}
+      <Reveal delay={0.06}>
+        <div
+          id="infra"
+          className="mt-3 scroll-mt-24 rounded-3xl border border-edge bg-paper2 px-6 py-8 sm:px-10 sm:py-11"
+        >
+          <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">
+            <span className="eyebrow-lite">AWS INFRASTRUCTURE</span>
+            <span className="num text-label text-slate3">
+              {awsStack.length} SERVICES
+            </span>
+          </div>
+          <h3 className="h-display mt-4 text-h3 text-balance text-slate sm:mt-5">
+            公開初日に、人が集まる前提でつくる。
+          </h3>
+          <p className="mt-4 max-w-[42em] text-note text-pretty leading-[1.95] text-slate2">
+            新しいガチャの公開直後やSNSで話題になった瞬間に、アクセスは一気に伸びます。
+            AWSのマネージドサービスを組み合わせ、アクセス集中を想定した構成と、異常に気づける監視をセットで設計します。
+          </p>
+
+          <div className="mt-5 flex flex-wrap gap-2 sm:mt-6">
+            {awsStack.map((a) => (
+              <span
+                key={a.name}
+                className="num whitespace-nowrap rounded-full border border-edge bg-white px-3.5 py-1.5 text-note leading-normal text-blue-ink shadow-lift"
+              >
+                {a.name}
+              </span>
+            ))}
+          </div>
+
+          <div className="mt-5">
+            <MoreDetail label="それぞれの役割を見る">
+              <ul className="space-y-3">
+                {awsStack.map((a) => (
+                  <li key={a.name} className="flex flex-wrap gap-x-3 gap-y-1">
+                    <span className="num shrink-0 font-bold text-slate">
+                      {a.name}
+                    </span>
+                    <span className="text-slate2">{a.role}</span>
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-6 border-t border-edge2 pt-5 text-note text-slate3">
+                どんな条件でも停止しないとお約束するものではありません。想定される規模をうかがったうえで、必要な構成と、監視・復旧の体制をご提案します。
               </p>
             </MoreDetail>
           </div>

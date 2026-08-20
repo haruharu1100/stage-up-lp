@@ -56,7 +56,7 @@ export default function Pricing() {
   return (
     <Section
       id="pricing"
-      no="24"
+      no="19"
       eyebrow="PRICING"
       title={
         <>

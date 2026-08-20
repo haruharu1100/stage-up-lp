@@ -42,7 +42,7 @@ export default function Flow() {
   return (
     <Section
       id="flow"
-      no="23"
+      no="18"
       eyebrow="ONBOARDING"
       title={
         <>

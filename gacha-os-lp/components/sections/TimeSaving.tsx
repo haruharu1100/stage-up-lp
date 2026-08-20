@@ -1,4 +1,3 @@
-import Section from "../ui/Section";
 import Reveal from "../ui/Reveal";
 import { MoreDetail } from "../ui/Act";
 import { timeModel, timeModelNote } from "@/content/site";
@@ -12,21 +11,29 @@ const maxRow = Math.max(...timeModel.map((r) => r.before));
 const hrs = (n: number) =>
   n >= 1 ? `${Number(n.toFixed(1))}h` : `${Math.round(n * 60)}分`;
 
+/**
+ * 「1日の作業時間がどう変わるか」を見せるブロック。
+ *
+ * 以前は独立したセクション（SECTION 17 / TIME SAVED）でした。
+ * ただ、すぐ次の ROI シミュレーターも「いくら浮くのか」を答える場所で、
+ * 見出し・導入文・上下の余白を2回ぶん使って同じ話をしていました。
+ * いまは ROI セクションの冒頭に置いて、
+ * 「時間がこう変わる → その時間はいくらか」を1つの流れにしています。
+ */
 export default function TimeSaving() {
   return (
-    <Section
-      id="time"
-      no="17"
-      eyebrow="TIME SAVED"
-      title={
-        <>
-          ガチャ運営に使っていた時間を、
-          <br />
-          仕入れと企画へ。
-        </>
-      }
-      lead="AI GACHA OS が消すのは「作業」であって、「判断」ではありません。数字を集める・計算する・転記する・同じ返信を書く。この4つがなくなると、1日の中身はここまで変わります。"
-    >
+    <div id="time" className="scroll-mt-24">
+      <div className="mb-6 sm:mb-8">
+        <span className="eyebrow-lite">TIME SAVED</span>
+        <h3 className="h-display mt-3 text-h2 text-balance text-slate sm:mt-4">
+          ガチャ運営に使っていた時間を、仕入れと企画へ。
+        </h3>
+        <p className="mt-4 max-w-[36em] text-body text-pretty text-slate2 sm:mt-5">
+          AI GACHA OS
+          が消すのは「作業」であって、「判断」ではありません。数字を集める・計算する・転記する・同じ返信を書く。この4つがなくなると、1日の中身はここまで変わります。
+        </p>
+      </div>
+
       {/* 合計の対比 */}
       <Reveal>
         <div className="grid gap-3 sm:grid-cols-[1fr_auto_1fr] sm:items-stretch sm:gap-4">
@@ -162,6 +169,6 @@ export default function TimeSaving() {
           {timeModelNote}
         </p>
       </Reveal>
-    </Section>
+    </div>
   );
 }

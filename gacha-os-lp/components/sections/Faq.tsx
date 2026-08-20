@@ -12,7 +12,7 @@ export default function Faq() {
   return (
     <Section
       id="faq"
-      no="25"
+      no="20"
       eyebrow="FAQ"
       title={<>よくいただく質問</>}
       lead="導入前に確認されることの多い項目をまとめました。ここに無いことは、そのままご相談ください。"
@@ -50,7 +50,13 @@ export default function Faq() {
                   <span
                     className={`mt-[7px] shrink-0 transition-transform duration-300 ${isOpen ? "rotate-45" : ""}`}
                   >
-                    <svg width="18" height="18" viewBox="0 0 16 16" fill="none" aria-hidden>
+                    <svg
+                      width="18"
+                      height="18"
+                      viewBox="0 0 16 16"
+                      fill="none"
+                      aria-hidden
+                    >
                       <path
                         d="M8 3v10M3 8h10"
                         stroke={isOpen ? "#1B4BD8" : "#63708A"}
@@ -71,9 +77,19 @@ export default function Faq() {
                       exit={{ height: 0, opacity: 0 }}
                       transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
                     >
-                      <p className="px-6 pb-7 pl-[72px] text-note text-slate2 sm:px-8 sm:pl-[80px]">
-                        {f.a}
-                      </p>
+                      {/*
+                        質問と回答は必ず Q01 → A01 の形で並べる。
+                        番号のない答えがぶら下がっているだけだと、
+                        どこからが回答なのかが読み取りにくくなる。
+                      */}
+                      <div className="flex items-start gap-4 border-t border-edge2 px-6 pb-7 pt-6 sm:px-8">
+                        <span className="num mt-[3px] shrink-0 text-label text-blue-ink">
+                          A{String(i + 1).padStart(2, "0")}
+                        </span>
+                        <p className="min-w-0 flex-1 text-note text-pretty leading-[1.95] text-slate2">
+                          {f.a}
+                        </p>
+                      </div>
                     </motion.div>
                   )}
                 </AnimatePresence>

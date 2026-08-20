@@ -102,7 +102,7 @@ export default function StatusLights() {
   return (
     <Section
       id="signals"
-      no="16"
+      no="13"
       eyebrow="STATUS SIGNALS"
       title={
         <>

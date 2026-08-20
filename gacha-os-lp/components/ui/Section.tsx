@@ -22,10 +22,15 @@ export default function Section({
   className = "",
   align = "left",
 }: Props) {
+  /*
+    スマホの上下余白は py-11（上下44pxずつ）。
+    ここを1段大きくすると、セクションの数だけページ全体が伸びます。
+    PCは画面が広いので、これまでどおりゆったり取っています。
+  */
   return (
     <section
       id={id}
-      className={`relative scroll-mt-24 py-14 sm:py-28 lg:py-36 ${className}`}
+      className={`relative scroll-mt-24 py-11 sm:py-24 lg:py-36 ${className}`}
     >
       <div className="container-x">
         <Reveal>
@@ -61,7 +66,7 @@ export default function Section({
             ) : null}
           </div>
         </Reveal>
-        <div className="mt-9 sm:mt-16 lg:mt-20">{children}</div>
+        <div className="mt-7 sm:mt-14 lg:mt-20">{children}</div>
       </div>
     </section>
   );

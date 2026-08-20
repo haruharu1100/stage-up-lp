@@ -5,7 +5,6 @@ import Section from "../ui/Section";
 import Reveal from "../ui/Reveal";
 import { MoreDetail } from "../ui/Act";
 import BeforeAfter from "../ui/BeforeAfter";
-import DashboardMock from "../DashboardMock";
 
 const qa = [
   {
@@ -89,7 +88,7 @@ export default function AdminConsole() {
   return (
     <Section
       id="admin"
-      no="15"
+      no="12"
       eyebrow="OPERATION CONSOLE"
       title={
         <>
@@ -102,20 +101,13 @@ export default function AdminConsole() {
     >
       <BeforeAfter id="admin" className="mb-3" />
 
-      <Reveal>
-        {/*
-          同じ管理画面の全体像は上のセクションで一度出しているので、
-          スマホでは要点だけの表示にして重複を減らす（大きい画面はそのまま）。
-        */}
-        <div className="lg:hidden">
-          <DashboardMock compact />
-        </div>
-        <div className="hidden lg:block">
-          <DashboardMock />
-        </div>
-      </Reveal>
+      {/*
+        管理画面そのものは、ページ上部（#realscreen）で一度大きく見せています。
+        ここで同じものをもう一度出すと、スクロールしても新しい情報が出てこない
+        ページになるため、このセクションは AI OPERATOR の会話だけに絞っています。
+      */}
 
-      <div className="mt-3 grid gap-3 lg:grid-cols-[1fr_380px]">
+      <div className="grid gap-3 lg:grid-cols-[1fr_380px]">
         <Reveal delay={0.06}>
           <div className="flex h-full flex-col overflow-hidden rounded-3xl border border-edge bg-white shadow-lift">
             <div className="flex items-center justify-between border-b border-edge2 bg-paper2 px-5 py-3.5">
