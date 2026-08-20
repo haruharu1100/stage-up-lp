@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { createClient, type Client, type InValue } from '@libsql/client';
-import { ADD_COLUMNS, SCHEMA, SCHEMA_OBSERVATION } from './schema';
+import { ADD_COLUMNS, SCHEMA, SCHEMA_COST, SCHEMA_OBSERVATION } from './schema';
 import { config, DATA_DIR } from '../env';
 
 let client: Client | null = null;
@@ -32,6 +32,8 @@ export async function migrate(): Promise<void> {
   for (const stmt of SCHEMA) await c.execute(stmt);
   // Phase 3.6（実市場の出品追跡）。CREATE TABLE IF NOT EXISTS なので何度実行しても安全。
   for (const stmt of SCHEMA_OBSERVATION) await c.execute(stmt);
+  // Phase 3.7（支払方法ごとの手数料）。
+  for (const stmt of SCHEMA_COST) await c.execute(stmt);
   // 列追加は「既にある」だけを握りつぶす。それ以外のエラーは隠さない。
   for (const stmt of ADD_COLUMNS) {
     try {

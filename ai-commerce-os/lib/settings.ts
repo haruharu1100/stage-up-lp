@@ -447,6 +447,50 @@ export const SETTING_DEFS: SettingDef[] = [
     group_key: '卒業条件',
     hint: 'AIはこの値を書き換えない。卒業条件を全部満たしても、人間がここを true にしない限り実取引には進まない。なお Phase 3.5 時点では、true にしても実購入のコード自体が存在しない。',
   },
+
+  // --- 費用（Phase 3.7） ---
+  {
+    key: 'DEFAULT_MERCARI_BUY_PAYMENT_METHOD',
+    value: 'CREDIT_CARD',
+    value_type: 'text',
+    label: 'メルカリで仕入れるときの支払方法',
+    group_key: '費用',
+    hint:
+      '実際に当社が使う支払方法を選ぶ。安い方法をAIが勝手に選ぶことはしない。'
+      + 'CREDIT_CARD / MERCARI_BALANCE / APPLE_PAY / FAMIPAY / CONVENIENCE_STORE / ATM / CARRIER_PAYMENT / OTHER。'
+      + 'コンビニ・ATM・キャリア決済は金額に応じた手数料があり、その実額をまだ確認できていない。'
+      + 'それらを選ぶと仕入総額が確定しないため、STRONG BUY まで上げない。',
+  },
+  {
+    key: 'PAYOUT_ITEMS_PER_REQUEST',
+    value: '1',
+    value_type: 'int',
+    label: '振込申請1回でまとめる件数',
+    group_key: '費用',
+    hint:
+      '売上金の振込手数料（メルカリは1回200円）を1商品あたりに割るときの分母。'
+      + '例：1回で100件分まとめて申請するなら100と入れる（1商品あたり2円）。'
+      + 'この数字は「参考表示」にしか使わない。買う／買わないの判定には一切入れない。'
+      + '実績が出るまでは1（＝1件ずつ申請した場合）のままにしておく。',
+  },
+  {
+    key: 'PILOT_SIZE',
+    value: '10',
+    value_type: 'int',
+    label: '操作性テスト（PILOT）の件数',
+    group_key: '検証',
+    hint: 'いきなり100件入力しない。まずこの件数だけ入れて、入力の手間と詰まりを実測する。',
+  },
+  {
+    key: 'VALIDATION_TARGET',
+    value: '100',
+    value_type: 'int',
+    label: '検証可能商品の目標件数',
+    group_key: '検証',
+    hint:
+      '「100件登録した」ではなく「100件のうち何件が実際に検証できたか」を見る。'
+      + 'この数字だけを追いかけないこと。',
+  },
 ];
 
 let cache: Map<string, string> | null = null;
@@ -580,6 +624,37 @@ export async function getGateThresholds(): Promise<GateThresholds> {
  * そして Phase 3.5 時点では、true にしたところで実購入のコードが存在しない。
  * 二重に止めてある。
  */
+/**
+ * 費用まわりの設定（Phase 3.7）。
+ *
+ * 【なぜ Thresholds に混ぜないのか】
+ * Thresholds は判定のしきい値。ここに支払方法や振込のまとめ件数を混ぜると、
+ * 「運用の都合」で routeRuleVersion（判定ルールの版）が変わってしまう。
+ * 版が変われば過去の判断と比べられなくなる。だから別の箱に置く。
+ */
+export type CostSettings = {
+  /** 実際に使う仕入の支払方法。AIが安い方法を選び直すことはしない。 */
+  mercariBuyPaymentMethod: string;
+  /** 振込申請1回でまとめる件数（按分表示専用）。 */
+  payoutItemsPerRequest: number;
+  pilotSize: number;
+  validationTarget: number;
+};
+
+export async function getCostSettings(): Promise<CostSettings> {
+  const s = await loadSettings();
+  const n = (k: string, fallback: number) => {
+    const v = Number(s.get(k));
+    return Number.isFinite(v) && v >= 1 ? Math.floor(v) : fallback;
+  };
+  return {
+    mercariBuyPaymentMethod: String(s.get('DEFAULT_MERCARI_BUY_PAYMENT_METHOD') ?? 'CREDIT_CARD'),
+    payoutItemsPerRequest: n('PAYOUT_ITEMS_PER_REQUEST', 1),
+    pilotSize: n('PILOT_SIZE', 10),
+    validationTarget: n('VALIDATION_TARGET', 100),
+  };
+}
+
 export async function isPhase4Unlocked(): Promise<boolean> {
   const s = await loadSettings();
   return String(s.get('PHASE4_UNLOCKED') ?? 'false').toLowerCase() === 'true';

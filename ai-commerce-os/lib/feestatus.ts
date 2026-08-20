@@ -45,6 +45,9 @@ export type FeeStatus = 'VERIFIED' | 'ESTIMATED' | 'OUTDATED' | 'UNKNOWN';
 export const VENUE_RATE_FIELDS = [
   'fee_rate', 'payment_fee_rate', 'currency_fee_rate', 'tax_rate',
   'import_duty_rate', 'advertising_fee_rate', 'fixed_fee', 'authentication_fee',
+  // Phase 3.7。振込手数料は市場が決めている＝公式ページで確認できる種類。
+  // ただし「1回の申請ごと」の費用なので、1商品ごとの利益計算には入れない（lib/payout.ts）。
+  'payout_fee_fixed', 'payout_fee_rate',
 ] as const;
 
 /**
@@ -60,7 +63,8 @@ export const ITEM_COST_FIELDS = [
 export const FEE_FIELD_JA: Record<string, string> = {
   fee_rate: '販売手数料率', payment_fee_rate: '決済手数料率', currency_fee_rate: '為替手数料率',
   tax_rate: '税率', import_duty_rate: '関税率', advertising_fee_rate: '広告費率',
-  fixed_fee: '固定手数料', authentication_fee: '鑑定料',
+  fixed_fee: '1取引ごとの固定手数料', authentication_fee: '鑑定料',
+  payout_fee_fixed: '売上金の振込手数料（申請1回ごと）', payout_fee_rate: '振込手数料率',
   shipping_cost: '送料', packing_cost: '梱包費', warehouse_cost: '保管費',
   return_loss_fixed: '返品損失（定額）', return_loss_rate: '返品損失率', other_cost: 'その他費用',
 };
@@ -83,15 +87,36 @@ export function parseVerifiedFields(raw: unknown): string[] {
  * 0のまま未確認なら費用を少なく見積もっている＝利益を多く見せている可能性がある。
  * ただし全項目を必須にすると現実に確認できないので、
  * **0でない項目は必ず確認を要求し、0の項目は「未確認の0」として別に報告する**。
+ *
+ * 【Phase 3.7：0円で見逃してはいけない項目】
+ * 決済手数料だけは例外にした。理由はユーザーの指摘そのもの。
+ *
+ *   「メルカリで仕入れる側の支払い手数料も固定ではありません。
+ *     クレジットカード払い、メルペイ残高払い、Apple Pay、FamiPay などは現在無料ですが、
+ *     コンビニ・ATM・キャリア決済では金額に応じた手数料があります。」
+ *
+ * つまり決済手数料の「0」は、市場が0円と決めているのではなく、
+ * **こちらがどの支払方法を使うかで変わる**。未確認のまま0で通すと、
+ * コンビニ払いの手数料が永久に計算へ入らないまま「確認済み」の顔をすることになる。
+ * だから0でも確認を要求する（Fail Closed）。
+ *
+ * これは**仕入（BUY）側だけ**の話。売る側にこちらの支払方法は関係しないので、
+ * 販売（SELL）側まで巻き込んで「確認済みにできない」とはしない。
  */
+export const NEVER_ASSUME_ZERO_FIELDS: Record<string, readonly string[]> = {
+  BUY: ['payment_fee_rate'],
+  SELL: [],
+};
+
 export function unverifiedRateFields(
   f: Record<string, unknown>, verified: string[],
 ): { blocking: string[]; zeroUnchecked: string[] } {
   const blocking: string[] = [];
   const zeroUnchecked: string[] = [];
+  const neverZero = NEVER_ASSUME_ZERO_FIELDS[String(f.side ?? '')] ?? [];
   for (const k of VENUE_RATE_FIELDS) {
     if (verified.includes(k)) continue;
-    if (Number(f[k] ?? 0) !== 0) blocking.push(k);
+    if (neverZero.includes(k) || Number(f[k] ?? 0) !== 0) blocking.push(k);
     else zeroUnchecked.push(k);
   }
   return { blocking, zeroUnchecked };
@@ -203,7 +228,10 @@ export function deriveFeeStatus(f: FeeStatusInput, now = Date.now()): FeeStatusR
     return {
       ...base,
       status: 'ESTIMATED',
-      note: `出典はあるが、金額に効く項目が未確認のまま：${blocking.map((k) => FEE_FIELD_JA[k] ?? k).join('・')}`,
+      note: `出典はあるが、金額に効く項目が未確認のまま：${blocking.map((k) => FEE_FIELD_JA[k] ?? k).join('・')}`
+        + (blocking.includes('payment_fee_rate')
+          ? '。決済手数料は支払方法（コンビニ・ATM・キャリア決済など）で変わるため、0円と決めつけない'
+          : ''),
     };
   }
 

@@ -7,9 +7,12 @@ import { runAnalyze } from '@/lib/pipeline/analyze';
 import { runRoutes } from '@/lib/pipeline/routes';
 import { importMarketData } from '@/lib/marketdata';
 import { importListingObservations, recordWork, WORK_STEPS, type WorkStepCode } from '@/lib/observation';
+import { recordMatchReview } from '@/lib/matchreview';
+import { isMatchVerdict, MATCH_VERDICT_JA } from '@/lib/listing';
 import { ensureReady } from '@/lib/queries';
 import { invalidateSettingsCache, setSetting, SETTING_DEFS } from '@/lib/settings';
 import { CONDITION_RANKS, type ConditionRank } from '@/lib/conditions';
+import { isBuyPaymentMethod } from '@/lib/paymentmethods';
 
 /**
  * 画面から呼べる操作はここだけ。
@@ -145,13 +148,66 @@ export async function recordWorkAction(_prev: unknown, form: FormData) {
   if (!Number.isFinite(seconds) || seconds <= 0) {
     return { ok: false, message: 'かかった時間（秒）を入れてください。' };
   }
+  // 同じ日に同じ工程を何度でも記録できるよう、batch_id には時刻まで入れる。
   await recordWork(
-    `MANUAL-${nowIso().slice(0, 10)}`, step as WorkStepCode, seconds, rows,
+    `MANUAL-${nowIso()}`, step as WorkStepCode, seconds, rows,
     String(form.get('note') ?? '') || undefined,
   );
   await audit('RECORD_WORK_TIME', 'observation_work_log', { step, seconds, rows });
   revalidatePath('/validation');
   return { ok: true, message: `記録しました（${seconds}秒 / ${rows}件）。` };
+}
+
+/**
+ * 同一商品判定の答え合わせを記録する（ユーザー指示11／12）。
+ *
+ * 機械が「同じ商品だ」と判定した組み合わせに、人が答えを付ける。
+ * ここで付けた答えは機械の判定を**上書きしない**。別の欄に残す。
+ * 上書きすると「機械が何回間違えたか」が数えられなくなり、精度を測れなくなる。
+ *
+ * 「違う商品だった（INCORRECT_MATCH）」は重大として扱い、
+ * 1件でもあるうちは100件へ進まない。
+ * 利益商品の見逃しは儲け損ねで済むが、取り違えは実際にお金を失うため。
+ */
+export async function recordMatchReviewAction(_prev: unknown, form: FormData) {
+  await ensureReady();
+  /*
+   * 画面では「この出品」と「比べた市場」を1つの選択肢にまとめているので、
+   * `出品キー::市場コード` の形で送られてくる。個別に送られた場合も受ける。
+   */
+  const pair = String(form.get('pair') ?? '');
+  const [pairKey, pairVenue] = pair.includes('::') ? pair.split('::') : ['', ''];
+  const listingKey = (String(form.get('listing_key') ?? '') || pairKey).trim();
+  const venue = (String(form.get('matched_venue_code') ?? '') || pairVenue).trim();
+  const verdict = String(form.get('verdict') ?? '');
+  if (listingKey === '' || venue === '') {
+    return { ok: false, message: '確認する出品と、比べた市場を選んでください。' };
+  }
+  if (!isMatchVerdict(verdict)) {
+    return { ok: false, message: '確認結果を選んでください。' };
+  }
+  const note = String(form.get('note') ?? '').trim();
+  // 「違う商品だった」を選んだのに何が違ったか書かれていないと、次に同じ間違いを防げない。
+  if (verdict === 'INCORRECT_MATCH' && note === '') {
+    return {
+      ok: false,
+      message: '「違う商品だった」を選んだときは、何が違ったか（色・サイズ・年式・国内版か等）を書いてください。'
+        + 'ここが空だと、次に同じ取り違えを防げません。',
+    };
+  }
+  try {
+    await recordMatchReview(listingKey, venue, verdict, note || undefined);
+  } catch (e) {
+    return { ok: false, message: e instanceof Error ? e.message : '記録に失敗しました。' };
+  }
+  await audit('RECORD_MATCH_REVIEW', 'identity_match_reviews', { listingKey, venue, verdict });
+  revalidatePath('/validation');
+  return {
+    ok: true,
+    message: verdict === 'INCORRECT_MATCH'
+      ? '取り違えとして記録しました。重大な間違いなので、原因が分かるまで100件へは進みません。'
+      : `記録しました（${MATCH_VERDICT_JA[verdict]}）。`,
+  };
 }
 
 export async function rebuildRoutesAction() {
@@ -173,6 +229,18 @@ export async function saveSettingsAction(_prev: unknown, form: FormData) {
     if (raw === null) continue;
     const value = String(raw).trim();
     if (value === '') continue;
+
+    // 文字で選ぶ設定（支払方法など）。数値として検査しない。
+    // 知らない言葉は保存しない。近そうな方に寄せたり、空欄で埋めたりしない。
+    if (def.value_type === 'text') {
+      if (def.key === 'DEFAULT_MERCARI_BUY_PAYMENT_METHOD' && !isBuyPaymentMethod(value)) {
+        return { ok: false, message: `${def.label} に知らない支払方法が入っています。一覧から選んでください。` };
+      }
+      await setSetting(def.key, value);
+      changed[def.key] = value;
+      continue;
+    }
+
     const n = Number(value);
     if (Number.isNaN(n)) return { ok: false, message: `${def.label} には数値を入れてください。` };
     if (n < 0) return { ok: false, message: `${def.label} にマイナスは入れられません。` };

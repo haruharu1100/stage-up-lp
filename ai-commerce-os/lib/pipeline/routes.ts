@@ -6,9 +6,10 @@ import { calibrationFor, loadCalibrations, NO_CALIBRATION } from '../forecast';
 import { rebuildHalfLife } from '../halflife';
 import { loadObservations, type ObservationMap } from '../marketdata';
 import { classifyCause, recordOpportunities, type OpportunityObservation } from '../opportunity';
+import { loadPaymentRules, resolvePaymentFee } from '../payment';
 import { shadowIsRealMarket } from '../realdata';
 import { calcRoute, loadFeeProfiles, pickFee, type FeeProfile, type MarketObservation, type RouteResult } from '../route';
-import { getThresholds, routeRuleVersion, type Thresholds } from '../settings';
+import { getCostSettings, getThresholds, routeRuleVersion, type Thresholds } from '../settings';
 import { buildShadow, type ShadowSource } from '../shadow';
 import { ensureVenues, routeBlockedReason, type Venue } from '../venues';
 
@@ -80,6 +81,9 @@ export async function runRoutes(opts: { onlyIds?: number[] } = {}): Promise<Rout
   // これが ESTIMATED のままの市場は、この後どれだけ利益が大きくても STRONG BUY にならない（§2）。
   await syncFeeStatuses();
   const t = await getThresholds();
+  // Phase 3.7。支払方法と振込のまとめ件数は「運用の都合」なので、判定ルールの版には含めない。
+  const cs = await getCostSettings();
+  const paymentRules = await loadPaymentRules();
   const rv = await routeRuleVersion();
   const now = nowIso();
 
@@ -160,6 +164,14 @@ export async function runRoutes(opts: { onlyIds?: number[] } = {}): Promise<Rout
         const crossBorder = b.venue.currency !== 'JPY' || s.venue.currency !== 'JPY'
           || buyFee.currency_fee_rate > 0 || sellFee.currency_fee_rate > 0;
 
+        // 【Phase 3.7】実際に使う支払方法の手数料。
+        // 支払方法が登録されている市場（今はメルカリだけ）にだけ効く。
+        // 未登録の市場では null を渡し、従来通りの計算にする（勝手に0円を足さない）。
+        const venueRules = paymentRules.filter((p) => p.venueCode === b.venue.code);
+        const pay = venueRules.length > 0
+          ? resolvePaymentFee(venueRules, cs.mercariBuyPaymentMethod, b.price)
+          : null;
+
         const res = calcRoute({
           buyVenueCode: b.venue.code,
           sellVenueCode: s.venue.code,
@@ -189,6 +201,11 @@ export async function runRoutes(opts: { onlyIds?: number[] } = {}): Promise<Rout
           calibration: calibrationFor(calibrations, `${b.venue.code}→${s.venue.code}`) ?? NO_CALIBRATION,
           forecastDefaultBand: t.forecastDefaultBand,
           conservativeHaircut: t.conservativeHaircut,
+          // --- Phase 3.7 ---
+          buyPaymentMethod: pay ? { code: pay.methodCode, fee: pay.fee, status: pay.status } : null,
+          // 振込費用の按分は「参考表示」だけに使う。判定には入らない。
+          payoutItemsPerRequest: cs.payoutItemsPerRequest,
+          payoutBasis: 'SETTING',
         });
         results.push({ buy: b, sell: s, res, blocked, buyFee, sellFee });
 
@@ -441,8 +458,12 @@ function routeStatement(
        raw_expected_sell_price, calibrated_expected_sell_price, conservative_sell_price,
        sell_price_low_80, sell_price_high_80, interval_basis,
        raw_expected_roi, calibrated_expected_roi, conservative_expected_roi, calibration_source,
-       conservative_net_profit, downside_profit, max_expected_loss)
-     VALUES (?,?,?,?,?, ?,?,?,?,?, ?,?,?,?,?, ?,?,?,?,?, ?,?,?,?,?, ?,?,?,?, ?,?,?, ?,?,?,?,?, ?,?,?,?,?,?, ?,?,?,?,?,?, ?,?,?,?,?, ?,?,?,?,?,?, ?,?,?, ?,?,?, ?,?,?, ?,?,?,?, ?,?,?)
+       conservative_net_profit, downside_profit, max_expected_loss,
+       gross_profit, transaction_cost, payout_fee_fixed, payout_items_per_request,
+       payout_allocated_cost, payout_allocated_net_profit,
+       buy_payment_method, buy_payment_method_fee, buy_payment_fee_known,
+       cost_confidence, cost_items_json)
+     VALUES (?,?,?,?,?, ?,?,?,?,?, ?,?,?,?,?, ?,?,?,?,?, ?,?,?,?,?, ?,?,?,?, ?,?,?, ?,?,?,?,?, ?,?,?,?,?,?, ?,?,?,?,?,?, ?,?,?,?,?, ?,?,?,?,?,?, ?,?,?, ?,?,?, ?,?,?, ?,?,?,?, ?,?,?, ?,?,?,?, ?,?, ?,?,?, ?,?)
      ON CONFLICT(supplier_product_id, buy_venue_code, sell_venue_code, rule_version) DO UPDATE SET
        acquisition_price = excluded.acquisition_price,
        acquisition_total_cost = excluded.acquisition_total_cost,
@@ -476,7 +497,18 @@ function routeStatement(
        conservative_expected_roi = excluded.conservative_expected_roi,
        calibration_source = excluded.calibration_source,
        conservative_net_profit = excluded.conservative_net_profit,
-       downside_profit = excluded.downside_profit, max_expected_loss = excluded.max_expected_loss`,
+       downside_profit = excluded.downside_profit, max_expected_loss = excluded.max_expected_loss,
+       gross_profit = excluded.gross_profit,
+       transaction_cost = excluded.transaction_cost,
+       payout_fee_fixed = excluded.payout_fee_fixed,
+       payout_items_per_request = excluded.payout_items_per_request,
+       payout_allocated_cost = excluded.payout_allocated_cost,
+       payout_allocated_net_profit = excluded.payout_allocated_net_profit,
+       buy_payment_method = excluded.buy_payment_method,
+       buy_payment_method_fee = excluded.buy_payment_method_fee,
+       buy_payment_fee_known = excluded.buy_payment_fee_known,
+       cost_confidence = excluded.cost_confidence,
+       cost_items_json = excluded.cost_items_json`,
     args: [
       c.id, c.product_id, b.venue.code, s.venue.code, rv,
       r.buy.itemPrice, r.buy.buyerFee, r.buy.paymentFee, r.buy.domesticShipping, r.buy.authenticationFee,
@@ -500,6 +532,13 @@ function routeStatement(
       r.forecast.rawRoi, r.forecast.calibratedRoi, r.forecast.conservativeRoi,
       r.forecast.sellPrice.calibrationSource,
       r.forecast.conservativeNetProfit, r.forecast.downsideProfit, r.forecast.maxExpectedLoss,
+      // --- Phase 3.7（費用の分離：取引費用 と 振込費用） ---
+      // 振込費用は「申請1回ごと」の費用。ここに入れるのは按分した参考値だけで、
+      // expected_net_profit（＝判断に使う利益）からは引かない。
+      r.profits.grossProfit, r.transactionCost, r.payout.payoutFeeFixed, r.payout.itemsPerRequest,
+      r.payout.allocatedPerItem, r.profits.payoutAllocatedNetProfit,
+      r.buy.paymentMethodCode, r.buy.paymentMethodFee, r.buyPaymentFeeKnown ? 1 : 0,
+      r.costConfidence, JSON.stringify(r.costItems),
     ],
   };
 }

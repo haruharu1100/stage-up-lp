@@ -3,6 +3,8 @@ import { ensureReady } from '../lib/queries';
 import { validationProgress, listingsDue, workSummary, LISTING_STATE_JA, TRACK_CHECKPOINTS, type ListingState } from '../lib/observation';
 import { precisionReport } from '../lib/precision';
 import { feeStatusCoverage, FEE_STATUS_JA, type FeeStatus } from '../lib/feestatus';
+import { shippingAccuracy } from '../lib/observation';
+import { pilotReport } from '../lib/pilot';
 import { peekPhase4Gate } from '../lib/gate';
 
 /**
@@ -31,6 +33,55 @@ async function main() {
   console.log('='.repeat(72));
   console.log('【実市場での答え合わせ REAL MARKET VALIDATION】');
   console.log('='.repeat(72));
+
+  /*
+   * まず10件（PILOT）。ここを通るまで100件へ進まない。
+   * 件数のカードより先に出す。順番そのものが「何を先に見るべきか」の指示になる。
+   */
+  const pilot = await pilotReport();
+  console.log(`\n[まず${pilot.pilotSize}件の操作性テスト]`);
+  for (const c of pilot.checks) {
+    const mark = c.ok ? '○' : c.unmeasurable ? '△' : '×';
+    line(`${mark} ${c.ja}`, `${c.valueJa}（目安 ${c.targetJa}）`);
+  }
+  line('合格', `${pilot.passedCount} / ${pilot.totalCount} 項目`);
+  console.log(`  結論：${pilot.verdictJa}`);
+  console.log(`  ${pilot.automateNextJa}`);
+  if (pilot.issues.length > 0) {
+    console.log('  見つかった問題：');
+    for (const t of pilot.issues) console.log(`   ・${t}`);
+  }
+  line('入力の合計時間', pilot.rowsWithSeconds === 0 ? '未計測'
+    : `${Math.round(pilot.totalSeconds / 60)}分（${pilot.rowsWithSeconds}件分）`);
+  line('1件あたりの平均', pilot.avgSecondsPerItem === null ? '未計測'
+    : `${pilot.avgSecondsPerItem}秒 → 100件でおよそ ${Math.round(pilot.avgSecondsPerItem * 100 / 60)}分`);
+
+  // 検証ファネル。「100件」だけを追わないための表。
+  const f = pilot.funnel;
+  console.log('\n[検証ファネル]');
+  for (const s of f.stages) {
+    const top = s.rateFromTop === null ? '—' : `${(s.rateFromTop * 100).toFixed(0)}%`;
+    const prev = s.rateFromPrev === null ? '—' : `${(s.rateFromPrev * 100).toFixed(0)}%`;
+    line(s.ja, `${s.count} 件（入口比 ${top}／前段比 ${prev}${s.lost > 0 ? `／落ち ${s.lost}件` : ''}）`);
+  }
+  console.log(`  ${f.bottleneckJa}`);
+  console.log('  ※ STRONG BUY候補を増やすために判定を甘くすることはしません。');
+
+  if (f.byCategory.length > 0) {
+    console.log('\n[カテゴリの偏り]');
+    for (const c of f.byCategory) line(c.category, `${c.count} 件（${(c.share * 100).toFixed(0)}%）`);
+    if (f.topCategoryShare !== null && f.topCategoryShare > 0.6) {
+      console.log('  ⚠ 1種類に偏っています。他のカテゴリでも同じ結果になるとは限りません。');
+    }
+  }
+
+  const ship = await shippingAccuracy();
+  console.log('\n[送料の精度]');
+  line('荷物サイズが分かっている', `${ship.withPackageSize} / ${ship.total} 件`);
+  line('発送方法が分かっている', `${ship.withShippingMethod} / ${ship.total} 件`);
+  line('送料の負担者が分かっている', `${ship.withPayer} / ${ship.total} 件`);
+  line('見込みと実額を比べられる', `${ship.comparable} 件`);
+  console.log(`  ${ship.verdictJa}`);
 
   console.log('\n[集めた出品]');
   line('目標', `${p.goal} 件`);

@@ -2,6 +2,7 @@
 
 import { useFormState, useFormStatus } from 'react-dom';
 import { saveFeeRuleAction, saveSettingsAction } from '../actions';
+import { BUY_PAYMENT_METHODS } from '@/lib/paymentmethods';
 
 const initial = { ok: false, message: '' } as any;
 
@@ -39,7 +40,9 @@ function Save({ label }: { label: string }) {
   );
 }
 
-export function ThresholdForm({ settings }: { settings: Setting[] }) {
+export function ThresholdForm(
+  { settings, unknownFeeMethods = [] }: { settings: Setting[]; unknownFeeMethods?: string[] },
+) {
   const [state, action] = useFormState(saveSettingsAction, initial);
   const groups = Array.from(new Set(settings.map((s) => s.group_key)));
 
@@ -57,14 +60,25 @@ export function ThresholdForm({ settings }: { settings: Setting[] }) {
                     {s.label}
                     {s.hint && <span className="small muted"> {s.hint}</span>}
                   </label>
-                  <input
-                    id={s.key}
-                    name={s.key}
-                    type="number"
-                    step={s.value_type === 'rate' ? '0.001' : '1'}
-                    min="0"
-                    defaultValue={s.value}
-                  />
+                  {s.key === 'DEFAULT_MERCARI_BUY_PAYMENT_METHOD' ? (
+                    <select id={s.key} name={s.key} defaultValue={s.value}>
+                      {BUY_PAYMENT_METHODS.map((m) => (
+                        <option key={m.code} value={m.code}>
+                          {m.ja}
+                          {unknownFeeMethods.includes(m.code) ? '（手数料が未確認）' : ''}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input
+                      id={s.key}
+                      name={s.key}
+                      type="number"
+                      step={s.value_type === 'rate' ? '0.001' : '1'}
+                      min="0"
+                      defaultValue={s.value}
+                    />
+                  )}
                 </div>
               ))}
           </div>

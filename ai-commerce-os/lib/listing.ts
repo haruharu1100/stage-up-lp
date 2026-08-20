@@ -176,27 +176,239 @@ export function listingKeyOf(url: string): string | null {
 export const REQUIRED_FIRST = ['product_url', 'observed_at', 'product_name', 'listing_price', 'condition'];
 export const REQUIRED_FOLLOWUP = ['product_url', 'observed_at', 'sold_status'];
 
+/**
+ * 上の5つとは別に、初回だけもう1つ必須にしているもの（Phase 3.8）。
+ *
+ * ユーザー指示：「最低でも TOTAL_INPUT_SECONDS は必須です。」
+ *
+ * 【なぜ商品の情報ではないものを必須にするのか】
+ * この10件は商品データを集めるために入れるのではなく、
+ * **どこを自動化すべきかを決めるために**入れる。
+ * 秒数が無いと、その目的が達成できない。「あとでまとめて書く」は必ず忘れるし、
+ * 思い出しながら書いた秒数は実測ではない。だから入力の場で必須にする。
+ *
+ * 追跡（2回目以降）では必須にしない。追跡は数秒で終わる作業で、そこは論点ではない。
+ */
+export const REQUIRED_FIRST_MEASURE = ['entry_seconds'];
+
+// ============================================================
+// 送料の精度（Phase 3.7）
+// ============================================================
+
+/**
+ * 送料は「だいたい◯円」で済ませると、そこが利益の一番大きな誤差になる。
+ * ユーザー指示：荷物のサイズ・発送方法・送料の負担者・見込み送料・実際の送料 を持たせる。
+ *
+ * 【全部必須にしない】
+ * 見ただけでは分からない項目（実際の送料など）を必須にすると、人は適当に埋める。
+ * 分からないものは空欄のまま受け取り、「分からない」として集計する。
+ */
+export const PACKAGE_SIZES = [
+  { code: 'NEKOPOS', ja: 'ネコポス／ゆうパケット（薄い小物）' },
+  { code: 'COMPACT', ja: '宅急便コンパクト／ゆうパケットプラス' },
+  { code: 'SIZE_60', ja: '60サイズ' },
+  { code: 'SIZE_80', ja: '80サイズ' },
+  { code: 'SIZE_100', ja: '100サイズ' },
+  { code: 'SIZE_120_PLUS', ja: '120サイズ以上（大きい荷物）' },
+  { code: 'UNKNOWN', ja: '不明' },
+] as const;
+export type PackageSizeCode = (typeof PACKAGE_SIZES)[number]['code'];
+
+export const SHIPPING_METHODS = [
+  { code: 'RAKURAKU', ja: 'らくらくメルカリ便' },
+  { code: 'YUYU', ja: 'ゆうゆうメルカリ便' },
+  { code: 'YAMATO', ja: 'ヤマト運輸（通常）' },
+  { code: 'JAPAN_POST', ja: '日本郵便（通常）' },
+  { code: 'SAGAWA', ja: '佐川急便' },
+  { code: 'OTHER', ja: 'その他' },
+  { code: 'UNKNOWN', ja: '不明' },
+] as const;
+export type ShippingMethodCode = (typeof SHIPPING_METHODS)[number]['code'];
+
+/** 誰が送料を持つか。ここを取り違えると利益がまるごとずれる。 */
+export const SHIPPING_PAYERS = [
+  { code: 'SELLER', ja: '出品者が負担（送料込み）' },
+  { code: 'BUYER', ja: '購入者が負担（着払い）' },
+  { code: 'UNKNOWN', ja: '不明' },
+] as const;
+export type ShippingPayerCode = (typeof SHIPPING_PAYERS)[number]['code'];
+
+function fromList(
+  list: readonly { code: string; ja: string }[],
+  raw: string | null | undefined,
+): string | null {
+  const c = canon(String(raw ?? ''));
+  if (c === '') return null;
+  for (const x of list) if (canon(x.code) === c) return x.code;
+  for (const x of list) if (canon(x.ja) === c) return x.code;
+  for (const x of list) if (c.includes(canon(x.code)) && x.code !== 'UNKNOWN' && x.code !== 'OTHER') return x.code;
+  return null;
+}
+
+/** 読み取れなければ null。「たぶん60サイズ」に寄せない（CLAUDE.md ルール17と同じ考え方）。 */
+export function parsePackageSize(raw: string | null | undefined): PackageSizeCode | null {
+  const c = canon(String(raw ?? ''));
+  if (c === '') return null;
+  // 数字だけ書かれた場合（「60」「80」）も受け止める。
+  const bySize: Record<string, PackageSizeCode> = {
+    '60': 'SIZE_60', '80': 'SIZE_80', '100': 'SIZE_100',
+    '120': 'SIZE_120_PLUS', '140': 'SIZE_120_PLUS', '160': 'SIZE_120_PLUS',
+  };
+  const m = c.match(/^(\d{2,3})(サイズ)?$/);
+  if (m && bySize[m[1]]) return bySize[m[1]];
+  if (['ネコポス', 'ゆうパケット'].some((w) => c.includes(canon(w)))) return 'NEKOPOS';
+  if (['宅急便コンパクト', 'コンパクト', 'ゆうパケットプラス'].some((w) => c.includes(canon(w)))) return 'COMPACT';
+  return fromList(PACKAGE_SIZES, raw) as PackageSizeCode | null;
+}
+
+export function parseShippingMethod(raw: string | null | undefined): ShippingMethodCode | null {
+  const c = canon(String(raw ?? ''));
+  if (c === '') return null;
+  if (['らくらく', 'らくらくメルカリ便', 'rakuraku'].some((w) => c.includes(canon(w)))) return 'RAKURAKU';
+  if (['ゆうゆう', 'ゆうゆうメルカリ便', 'yuyu'].some((w) => c.includes(canon(w)))) return 'YUYU';
+  if (['ヤマト', 'クロネコ', '宅急便'].some((w) => c.includes(canon(w)))) return 'YAMATO';
+  if (['日本郵便', 'ゆうパック', 'ゆうメール', '郵便'].some((w) => c.includes(canon(w)))) return 'JAPAN_POST';
+  if (['佐川'].some((w) => c.includes(canon(w)))) return 'SAGAWA';
+  return fromList(SHIPPING_METHODS, raw) as ShippingMethodCode | null;
+}
+
+export function parseShippingPayer(raw: string | null | undefined): ShippingPayerCode | null {
+  const c = canon(String(raw ?? ''));
+  if (c === '') return null;
+  if (['送料込み', '送料込', '出品者負担', 'seller', 'included'].some((w) => c.includes(canon(w)))) return 'SELLER';
+  if (['着払い', '着払', '購入者負担', 'buyer'].some((w) => c.includes(canon(w)))) return 'BUYER';
+  return fromList(SHIPPING_PAYERS, raw) as ShippingPayerCode | null;
+}
+
+export function packageSizeJa(code: string | null | undefined): string {
+  if (!code) return '不明';
+  return PACKAGE_SIZES.find((x) => x.code === code)?.ja ?? code;
+}
+export function shippingMethodJa(code: string | null | undefined): string {
+  if (!code) return '不明';
+  return SHIPPING_METHODS.find((x) => x.code === code)?.ja ?? code;
+}
+export function shippingPayerJa(code: string | null | undefined): string {
+  if (!code) return '不明';
+  return SHIPPING_PAYERS.find((x) => x.code === code)?.ja ?? code;
+}
+
 
 // ============================================================
 // 人間の作業時間（§19 §20）
 // ============================================================
 
 /**
- * 工程。ここを細かくしすぎると計測そのものが面倒になって続かないので5つに絞る。
+ * 工程（Phase 3.8 でユーザー指示の6つに合わせ直した）。
+ *
+ * 【なぜ名前を変えたか】
+ * 元は「商品を探す／同じ商品かを確かめる／数字を書き写す／取り込む／結果を確かめる」の5つだった。
+ * ユーザー指示は「商品発見・商品情報確認・CSV入力・型番確認・状態確認・その他」の6つ。
+ *
+ * ここで大事なのは、**型番確認と状態確認を別々に測ること**。
+ * この2つは自動化の難易度がまるで違う。
+ *   型番確認 … 商品名から型番を引き当てる。カタログ照合で自動化できる余地がある。
+ *   状態確認 … 写真と説明文を人が見て決める。今の技術では自動化しにくい。
+ * ひとまとめに測ると「同定に時間がかかる」としか分からず、**どちらを自動化すべきかが決められない**。
+ *
+ * 【自動化のしやすさを一緒に持たせる】
+ * いちばん時間を食っている工程が、いちばん自動化しやすい工程とは限らない。
+ * 「時間 × 自動化しやすさ」で順番を決めたいので、ここに難易度を書いておく。
+ * これは見込みであって実測ではないので、`automatableNote` に理由を書いて根拠を残す。
  */
 export const WORK_STEPS = [
-  { code: 'FIND', ja: '商品を探す' },
-  { code: 'IDENTIFY', ja: '同じ商品かを確かめる' },
-  { code: 'RECORD', ja: '数字を書き写す' },
-  { code: 'IMPORT', ja: '取り込む' },
-  { code: 'VERIFY', ja: '結果を見て確かめる' },
+  {
+    code: 'FIND', ja: '商品発見',
+    automatable: 'HARD',
+    automatableNote: '公式APIか正式なデータ提供が無いと自動化できない（無断の自動巡回はしない）',
+  },
+  {
+    code: 'INSPECT', ja: '商品情報確認',
+    automatable: 'HARD',
+    automatableNote: '同上。画面を見る作業なので、正規の取得手段が無い限り人がやるしかない',
+  },
+  {
+    code: 'MODEL_CHECK', ja: '型番確認',
+    automatable: 'EASY',
+    automatableNote: '商品名からの型番の引き当ては、カタログ照合で自動化できる余地が大きい',
+  },
+  {
+    code: 'CONDITION_CHECK', ja: '状態確認',
+    automatable: 'MEDIUM',
+    automatableNote: '出品者の言葉を共通6段階へ直す部分は自動化できる。写真の判断は人が要る',
+  },
+  {
+    code: 'ENTRY', ja: 'CSV入力',
+    automatable: 'EASY',
+    automatableNote: '入力欄の作り方（貼り付け・前回値の引き継ぎ）で減らせる。外部サイトに触らずに改善できる',
+  },
+  {
+    code: 'OTHER', ja: 'その他',
+    automatable: 'UNKNOWN',
+    automatableNote: '中身が分からないので判断できない。備考に書かれた内容を読むこと',
+  },
 ] as const;
 
 export type WorkStepCode = (typeof WORK_STEPS)[number]['code'];
 
-export function workStepJa(code: string): string {
-  return WORK_STEPS.find((s) => s.code === code)?.ja ?? code;
+/** 自動化のしやすさ。数字が大きいほど手を付けやすい。 */
+export const AUTOMATABLE_WEIGHT: Record<string, number> = {
+  EASY: 1.0, MEDIUM: 0.6, HARD: 0.25, UNKNOWN: 0.3,
+};
+export const AUTOMATABLE_JA: Record<string, string> = {
+  EASY: '自動化しやすい',
+  MEDIUM: '一部だけ自動化できる',
+  HARD: '正規の取得手段が無いと難しい',
+  UNKNOWN: '判断できない',
+};
+
+/**
+ * 旧コードの受け皿。Phase 3.7 までに記録された作業時間を読めなくしないために残す。
+ * **新規では使わない。** 対応が曖昧なもの（IMPORT・VERIFY）は OTHER に寄せる。
+ * ここで無理に MODEL_CHECK などへ割り当てると、測っていない工程の秒数を捏造することになる。
+ */
+const WORK_STEP_ALIASES: Record<string, WorkStepCode> = {
+  IDENTIFY: 'MODEL_CHECK',
+  RECORD: 'ENTRY',
+  IMPORT: 'OTHER',
+  VERIFY: 'OTHER',
+};
+
+/** 書かれた工程コードを今の6つへ寄せる。読み取れなければ null（推測で OTHER にしない）。 */
+export function normalizeWorkStep(code: string | null | undefined): WorkStepCode | null {
+  const raw = String(code ?? '').trim().toUpperCase().replace(/[\s-]/g, '_');
+  if (raw === '') return null;
+  if (WORK_STEPS.some((s) => s.code === raw)) return raw as WorkStepCode;
+  return WORK_STEP_ALIASES[raw] ?? null;
 }
+
+export function workStepJa(code: string): string {
+  const s = WORK_STEPS.find((x) => x.code === code);
+  if (s) return s.ja;
+  const n = normalizeWorkStep(code);
+  return n ? `${WORK_STEPS.find((x) => x.code === n)!.ja}（旧：${code}）` : code;
+}
+
+export function workStepAutomatable(code: string): { level: string; ja: string; note: string } {
+  const n = normalizeWorkStep(code);
+  const s = WORK_STEPS.find((x) => x.code === n);
+  if (!s) return { level: 'UNKNOWN', ja: AUTOMATABLE_JA.UNKNOWN, note: '未知の工程' };
+  return { level: s.automatable, ja: AUTOMATABLE_JA[s.automatable], note: s.automatableNote };
+}
+
+/**
+ * 観測CSVの、工程ごとの秒数の列。
+ * 全部書かせると計測そのものが面倒になって続かないので、**空欄でよい**。
+ * 必須は合計（`entry_seconds` ＝ TOTAL_INPUT_SECONDS）だけ。
+ */
+export const WORK_STEP_SECONDS_FIELDS: { field: string; step: WorkStepCode }[] = [
+  { field: 'sec_find', step: 'FIND' },
+  { field: 'sec_inspect', step: 'INSPECT' },
+  { field: 'sec_model', step: 'MODEL_CHECK' },
+  { field: 'sec_condition', step: 'CONDITION_CHECK' },
+  { field: 'sec_entry', step: 'ENTRY' },
+  { field: 'sec_other', step: 'OTHER' },
+];
 
 /**
  * 記入見本。
@@ -210,7 +422,55 @@ export function workStepJa(code: string): string {
  * わざとサンプルの印を付けてある（lib/realdata.ts の SAMPLE_MARKERS で弾かれる）。
  * 実際に記録するときは、この3行を消して自分が見た内容を書く。
  */
-export const OBSERVATION_CSV_TEMPLATE = `確認日時,市場,商品名,ブランド,カテゴリ,型番,JAN,SKU,サイズ,色,状態,出品価格,送料込み,出品者,商品URL,販売状況,成約価格,成約日,備考,入力秒数
-2026-08-20 21:30,MERCARI,ナイキ エアジョーダン1 ハイ OG,NIKE,スニーカー,DZ5485-612,,,27.5,シカゴ,未使用に近い,105000,送料込み,個人,https://jp.mercari.com/item/mSAMPLE0000001,出品中,,,記入例（サンプル）,45
-2026-08-20 21:34,MERCARI,ポケモンカード リザードンex SAR,,トレカ,,,,,,目立った傷や汚れなし,38000,送料込み,個人,https://jp.mercari.com/item/mSAMPLE0000002,出品中,,,記入例（サンプル）型番が無いので同定は画像頼み,60
-2026-08-27 21:10,MERCARI,,,,,,,,,,,,,https://jp.mercari.com/item/mSAMPLE0000001,売り切れ,,,記入例（サンプル）7日後の確認。売れた値段は表示されず不明,20`;
+export const OBSERVATION_CSV_TEMPLATE = `確認日時,市場,商品名,ブランド,カテゴリ,型番,JAN,SKU,サイズ,色,状態,出品価格,送料込み,出品者,商品URL,販売状況,成約価格,成約日,荷物サイズ,発送方法,送料負担,見込み送料,実際の送料,備考,入力秒数,発見秒数,情報確認秒数,型番確認秒数,状態確認秒数,記入秒数,その他秒数
+2026-08-20 21:30,MERCARI,ナイキ エアジョーダン1 ハイ OG,NIKE,スニーカー,DZ5485-612,,,27.5,シカゴ,未使用に近い,105000,送料込み,個人,https://jp.mercari.com/item/mSAMPLE0000001,出品中,,,80サイズ,らくらくメルカリ便,出品者が負担（送料込み）,850,,記入例（サンプル）,145,40,25,35,20,25,0
+2026-08-20 21:34,MERCARI,ポケモンカード リザードンex SAR,,トレカ,,,,,,目立った傷や汚れなし,38000,送料込み,個人,https://jp.mercari.com/item/mSAMPLE0000002,出品中,,,ネコポス,らくらくメルカリ便,出品者が負担（送料込み）,210,,記入例（サンプル）型番が無いので同定は画像頼み,160,35,30,50,25,20,0
+2026-08-27 21:10,MERCARI,,,,,,,,,,,,,https://jp.mercari.com/item/mSAMPLE0000001,売り切れ,,,,,,,,記入例（サンプル）7日後の確認。売れた値段は表示されず不明,20,,,,,,`;
+
+/**
+ * 同一商品判定の答え合わせに使う言葉（Phase 3.8・ユーザー指示11／12）。
+ *
+ * 【なぜここ（外部依存ゼロのファイル）に置くか】
+ * 確認するのは人なので、画面（`'use client'`）から読む必要がある。
+ * 集計側の `lib/matchreview.ts` はデータベース層を抱えているため、
+ * 画面から読むとビルドが落ちる（CLAUDE.md ルール37）。
+ * 状態ランクを `lib/conditions.ts` に分けてあるのと同じ理由。
+ *
+ * 【「たぶん合っている」を作らない】
+ * 選択肢は3つだけにしてある。「たぶん合っている」を足すと、
+ * 迷ったものが全部そこへ入り、結局それが合格として扱われる。
+ * 迷ったものは `UNCERTAIN`（判断が付かない）に置き、合格にも不合格にもしない。
+ */
+export const MATCH_VERDICTS = [
+  {
+    code: 'CORRECT_MATCH',
+    ja: '同じ商品で合っている',
+    note: '型番・色・サイズ・年式・付属品まで見て、同じ商品だと言い切れる場合だけ選ぶ。',
+    severe: false,
+  },
+  {
+    code: 'INCORRECT_MATCH',
+    ja: '違う商品だった（重大）',
+    note: '別モデル・色違い・サイズ違い・海外版・セット品など、実際には別の商品だった場合。'
+      + 'このまま仕入れると実際にお金を失う種類の間違いなので、重大として数える。',
+    severe: true,
+  },
+  {
+    code: 'UNCERTAIN',
+    ja: '判断が付かない',
+    note: '写真や説明では決められない場合。合っている側に寄せない。',
+    severe: false,
+  },
+] as const;
+
+export type MatchVerdict = (typeof MATCH_VERDICTS)[number]['code'];
+
+export const MATCH_VERDICT_JA: Record<string, string> = {
+  CORRECT_MATCH: '同じ商品で合っている',
+  INCORRECT_MATCH: '違う商品だった（重大）',
+  UNCERTAIN: '判断が付かない',
+};
+
+export function isMatchVerdict(v: string): v is MatchVerdict {
+  return MATCH_VERDICTS.some((m) => m.code === v);
+}

@@ -2,7 +2,8 @@ import { all } from '@/lib/db/client';
 import { config } from '@/lib/env';
 import { listSuppliers } from '@/lib/connectors/registry';
 import { ensureReady } from '@/lib/queries';
-import { listSettings, ruleVersion } from '@/lib/settings';
+import { getCostSettings, listSettings, ruleVersion } from '@/lib/settings';
+import { paymentMethodCoverage } from '@/lib/payment';
 import { FeeForm, ThresholdForm } from './SettingsForms';
 
 export const dynamic = 'force-dynamic';
@@ -52,6 +53,13 @@ export default async function SettingsPage() {
   const channels = await all('SELECT * FROM channels ORDER BY code');
   const rv = await ruleVersion();
 
+  // 支払方法ごとの手数料（Phase 3.7）。分かっていない支払方法を隠さない。
+  const cost = await getCostSettings();
+  const pay = await paymentMethodCoverage('MERCARI', cost.mercariBuyPaymentMethod);
+  const unknownFeeMethods = pay.rows
+    .filter((r) => r.feeFixed === null && r.feeRate === null)
+    .map((r) => r.methodCode);
+
   return (
     <main>
       <h1>設定</h1>
@@ -92,8 +100,56 @@ export default async function SettingsPage() {
         <FeeForm key={f.id} fee={f} />
       ))}
 
+      <h2>メルカリで仕入れるときの支払方法</h2>
+      <p className="small muted">
+        同じ商品を同じ値段で買っても、支払方法が違えば支払総額が変わります。
+        いま設定されているのは <strong>{pay.rows.find((r) => r.methodCode === pay.defaultMethod)?.methodJa ?? pay.defaultMethod}</strong> です。
+        安い方法をAIが勝手に選ぶことはしません。実際に使う方法を選んでください。
+      </p>
+      {!pay.defaultKnown && (
+        <div className="note neg">
+          いま選ばれている支払方法の手数料が分かっていません。
+          仕入総額が確定しないため、この状態では最上位の判定（STRONG BUY）まで上げません。
+        </div>
+      )}
+      <div className="scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>支払方法</th>
+              <th>手数料</th>
+              <th>確からしさ</th>
+              <th>備考</th>
+            </tr>
+          </thead>
+          <tbody>
+            {pay.rows.map((r) => (
+              <tr key={r.methodCode}>
+                <td>
+                  {r.methodJa}
+                  {r.methodCode === pay.defaultMethod && <span className="badge buy" style={{ marginLeft: 8 }}>使用中</span>}
+                </td>
+                <td>
+                  {r.feeFixed === null && r.feeRate === null
+                    ? <span className="neg">不明</span>
+                    : `${(r.feeRate ?? 0) > 0 ? `${((r.feeRate ?? 0) * 100).toFixed(1)}% + ` : ''}${(r.feeFixed ?? 0).toLocaleString()}円`}
+                </td>
+                <td className="small">
+                  {r.feeStatus === 'VERIFIED' ? '公式で確認済み' : r.feeStatus === 'ESTIMATED' ? '概算（未確認）' : '未確認'}
+                </td>
+                <td className="small muted" style={{ whiteSpace: 'normal', maxWidth: 380 }}>{r.note}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p className="small muted">
+        {pay.total} 件のうち、手数料が分かっているのは {pay.known} 件、分かっていないのは {pay.unknown} 件です。
+        分からないものは0円ではなく「不明」として扱います。
+      </p>
+
       <h2>判定のしきい値</h2>
-      <ThresholdForm settings={settings} />
+      <ThresholdForm settings={settings} unknownFeeMethods={unknownFeeMethods} />
 
       <h2>仕入先</h2>
       <div className="scroll">

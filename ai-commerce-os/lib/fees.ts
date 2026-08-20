@@ -20,6 +20,9 @@ const MONEY_FIELDS: (keyof FeeProfile)[] = [
   'fee_rate', 'payment_fee_rate', 'currency_fee_rate', 'tax_rate', 'import_duty_rate',
   'advertising_fee_rate', 'return_loss_rate', 'fixed_fee', 'shipping_cost',
   'authentication_fee', 'packing_cost', 'warehouse_cost', 'return_loss_fixed', 'other_cost',
+  // Phase 3.7。振込費用は1商品ごとの利益には入れないが、金額そのものは費用なので版に含める。
+  // ここを外すと「200円が0円になった」ことに気づけない。
+  'payout_fee_fixed', 'payout_fee_rate',
 ];
 
 function hash(s: string): string {

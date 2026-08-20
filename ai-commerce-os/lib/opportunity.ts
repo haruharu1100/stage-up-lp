@@ -180,8 +180,13 @@ export async function recordOpportunities(
                              THEN excluded.last_seen_at ELSE best_seen_at END,
          last_profitable_at = CASE WHEN excluded.last_net_profit > 0
                                    THEN excluded.last_seen_at ELSE last_profitable_at END,
-         -- 一度消えた機会がまた儲かるようになったら、消滅の記録を取り消す
+         -- 一度消えた機会がまた儲かるようになったら、消滅の記録を取り消す。
+         -- このとき「どれくらいで消えたか（lifetime_hours）」と「速さの点数（speed_score）」も
+         -- 一緒に消す。これは前回消えたときの数字であって、まだ生きている今の機会の数字ではない。
+         -- 残したままにすると「生きているのに消えた速さが付いている」矛盾した行になる。
          expired_at = CASE WHEN excluded.last_net_profit > 0 THEN NULL ELSE expired_at END,
+         lifetime_hours = CASE WHEN excluded.last_net_profit > 0 THEN NULL ELSE lifetime_hours END,
+         speed_score = CASE WHEN excluded.last_net_profit > 0 THEN NULL ELSE speed_score END,
          cause_class = excluded.cause_class,
          cause_note = excluded.cause_note,
          updated_at = excluded.updated_at`,

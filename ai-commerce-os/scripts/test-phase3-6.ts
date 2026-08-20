@@ -346,8 +346,8 @@ async function main() {
 
   const url2 = 'https://jp.mercari.com/item/mACCEPT0000002';
   await importListingObservations(
-    `確認日時,市場,商品名,型番,状態,出品価格,商品URL,販売状況
-2026-08-01 10:00,MERCARI,消えた商品の例,ABC-123,未使用に近い,50000,${url2},出品中`);
+    `確認日時,市場,商品名,型番,状態,出品価格,商品URL,販売状況,入力秒数
+2026-08-01 10:00,MERCARI,消えた商品の例,ABC-123,未使用に近い,50000,${url2},出品中,40`);
   const gone = await importListingObservations(
     `確認日時,商品URL,販売状況,成約価格\n2026-08-02 10:00,${url2},消えた,50000`);
   const goneRow = (await all('SELECT * FROM tracked_listings WHERE listing_key = ?', [listingKeyOf(url2)]))[0];
@@ -362,8 +362,8 @@ async function main() {
 
   const url3 = 'https://jp.mercari.com/item/mACCEPT0000003';
   await importListingObservations(
-    `確認日時,市場,商品名,型番,状態,出品価格,商品URL,販売状況
-2026-08-01 10:00,MERCARI,売り切れ商品の例,DEF-456,目立った傷や汚れなし,100000,${url3},出品中`);
+    `確認日時,市場,商品名,型番,状態,出品価格,商品URL,販売状況,入力秒数
+2026-08-01 10:00,MERCARI,売り切れ商品の例,DEF-456,目立った傷や汚れなし,100000,${url3},出品中,40`);
   const soldNoPrice = await importListingObservations(
     `確認日時,商品URL,販売状況\n2026-08-05 10:00,${url3},売り切れ`);
   const soldRow = (await all('SELECT * FROM tracked_listings WHERE listing_key = ?', [listingKeyOf(url3)]))[0];
@@ -380,8 +380,8 @@ async function main() {
 
   const url4 = 'https://jp.mercari.com/item/mACCEPT0000004';
   await importListingObservations(
-    `確認日時,市場,商品名,型番,状態,出品価格,商品URL,販売状況
-2026-08-01 10:00,MERCARI,成約価格まで分かった例,GHI-789,新品、未使用,70000,${url4},出品中`);
+    `確認日時,市場,商品名,型番,状態,出品価格,商品URL,販売状況,入力秒数
+2026-08-01 10:00,MERCARI,成約価格まで分かった例,GHI-789,新品、未使用,70000,${url4},出品中,40`);
   await importListingObservations(
     `確認日時,商品URL,販売状況,成約価格,成約日\n2026-08-06 10:00,${url4},売り切れ,64000,2026-08-06`);
   const knownRow = (await all('SELECT * FROM tracked_listings WHERE listing_key = ?', [listingKeyOf(url4)]))[0];
@@ -425,12 +425,12 @@ async function main() {
   section('8. 人間の作業時間を実測する');
 
   const before = await workSummary(100, 0);
-  check('工程は5つ', WORK_STEPS.length === 5, WORK_STEPS.map((s) => s.ja).join('・'));
+  check('工程は6つ', WORK_STEPS.length === 6, WORK_STEPS.map((s) => s.ja).join('・'));
   check('CSVに書いた入力秒数を拾っている', first.entrySecondsTotal === 50 && first.entrySecondsRows === 1,
     `${first.entrySecondsTotal}秒 / ${first.entrySecondsRows}件`);
 
   await recordWork('ACCEPT', 'FIND', 600, 10, '受入テスト');
-  await recordWork('ACCEPT', 'RECORD', 300, 10, '受入テスト');
+  await recordWork('ACCEPT', 'ENTRY', 300, 10, '受入テスト');
   const after = await workSummary(100, 0);
   check('工程ごとの時間を集計できる', after.measured);
   check('いちばん時間を食っている工程を名指しできる',

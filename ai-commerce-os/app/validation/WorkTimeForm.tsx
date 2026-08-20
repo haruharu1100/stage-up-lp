@@ -30,7 +30,7 @@ export default function WorkTimeForm() {
       <form action={action} className="panel">
         <div className="field">
           <label htmlFor="wt-step">工程</label>
-          <select id="wt-step" name="step" defaultValue="RECORD">
+          <select id="wt-step" name="step" defaultValue="ENTRY">
             {WORK_STEPS.map((s) => (
               <option key={s.code} value={s.code}>{s.ja}</option>
             ))}

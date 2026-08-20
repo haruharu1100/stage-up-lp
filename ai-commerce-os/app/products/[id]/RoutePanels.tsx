@@ -4,6 +4,8 @@ import { routesForProduct } from '@/lib/routequeries';
 import { LIQUIDITY_BASIS_JA, PRICE_BASIS_JA, ROUTE_SKIP_JA } from '@/lib/route';
 import { BLOCKED_REASON_JA, type Venue } from '@/lib/venues';
 import { DECISION_CLASS, DECISION_JA, num, pct, yen } from '@/lib/format';
+import { buyPaymentMethodJa } from '@/lib/paymentmethods';
+import { FEE_STATUS_JA } from '@/lib/feestatus';
 
 const BUY_LABELS: [string, string][] = [
   ['itemPrice', '商品代金'],
@@ -56,6 +58,15 @@ export default async function RoutePanels({ supplierProductId }: { supplierProdu
   const buy = best?.breakdown_json ? JSON.parse(String(best.breakdown_json)).buy : null;
   const sell = best?.breakdown_json ? JSON.parse(String(best.breakdown_json)).sell : null;
 
+  // Phase 3.7。費目ごとの確からしさ。無ければ（古い行なら）出さない。推測で埋めない。
+  let costItems: { code: string; ja: string; status: string; active: boolean; note: string }[] = [];
+  try {
+    const raw = best?.cost_items_json;
+    if (typeof raw === 'string' && raw !== '') costItems = JSON.parse(raw);
+  } catch {
+    costItems = [];
+  }
+
   return (
     <>
       {best && (
@@ -107,6 +118,101 @@ export default async function RoutePanels({ supplierProductId }: { supplierProdu
                 && 'この販売先の相場が未登録のため、参考相場を当てはめた仮定値で計算しています。'}
             </p>
           )}
+        </div>
+      )}
+
+      {best && (
+        <div className="panel">
+          <h3 style={{ marginTop: 0 }}>4つの利益（どこまで引いた数字なのかを分けています）</h3>
+          <div className="scroll">
+            <table>
+              <tbody>
+                <tr>
+                  <td>粗利（手数料を引く前の値差）</td>
+                  <td className="num">{yen(Number(best.gross_profit ?? 0))}</td>
+                  <td className="small muted" style={{ whiteSpace: 'normal' }}>
+                    売値 − 買値。ここから費用を引いていきます。
+                  </td>
+                </tr>
+                <tr>
+                  <td>取引後利益</td>
+                  <td className={`num ${Number(best.expected_net_profit) >= 0 ? 'pos' : 'neg'}`}>
+                    {yen(Number(best.expected_net_profit))}
+                  </td>
+                  <td className="small muted" style={{ whiteSpace: 'normal' }}>
+                    販売手数料・送料・梱包費など、<strong>この商品1件にかかる費用</strong>だけを引いた金額。
+                  </td>
+                </tr>
+                <tr>
+                  <td>振込費按分後利益<span className="badge skip" style={{ marginLeft: 8 }}>参考</span></td>
+                  <td className="num">{yen(Number(best.payout_allocated_net_profit ?? 0))}</td>
+                  <td className="small muted" style={{ whiteSpace: 'normal' }}>
+                    売上金を銀行へ振り込む費用（メルカリは{yen(Number(best.payout_fee_fixed ?? 0))}／申請1回）を
+                    {num(Number(best.payout_items_per_request ?? 1))}件で割った
+                    1件あたり{yen(Number(best.payout_allocated_cost ?? 0))}を引いた数字です。
+                    <strong>商品ごとの費用ではないので、買う／買わないの判定には使っていません。</strong>
+                  </td>
+                </tr>
+                <tr style={{ background: '#16241c' }}>
+                  <td><strong>保守利益</strong></td>
+                  <td className={`num ${Number(best.conservative_net_profit ?? 0) >= 0 ? 'pos' : 'neg'}`}>
+                    <strong>{yen(Number(best.conservative_net_profit ?? 0))}</strong>
+                  </td>
+                  <td className="small muted" style={{ whiteSpace: 'normal' }}>
+                    <strong>いちばん大事な数字。</strong>控えめな売値で売れた場合に残るお金です。
+                    買うかどうかはこの金額で考えてください。
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p className="small muted" style={{ marginBottom: 0 }}>
+            振込手数料は「申請1回ごと」の費用です。1商品ごとに引くと、安い商品ほど不当に不利になります。
+            そのため上の表では分けて出しています。
+          </p>
+        </div>
+      )}
+
+      {best && costItems.length > 0 && (
+        <div className="panel">
+          <h3 style={{ marginTop: 0 }}>
+            費用の確からしさ：{num(Number(best.cost_confidence ?? 0))}点
+            <span className="small muted" style={{ marginLeft: 8 }}>（満点にはしません）</span>
+          </h3>
+          <p className="small muted">
+            一部の費用が公式で確認できていても、全体を「確認済み」とは扱いません。
+            いちばん弱い費目に引っ張られる形で点数を出しています。
+          </p>
+          <div className="scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>費目</th>
+                  <th>確からしさ</th>
+                  <th>いま効いているか</th>
+                  <th>備考</th>
+                </tr>
+              </thead>
+              <tbody>
+                {costItems.map((c) => (
+                  <tr key={c.code}>
+                    <td>{c.ja}</td>
+                    <td className={c.status === 'VERIFIED' ? 'pos' : c.status === 'UNKNOWN' ? 'neg' : ''}>
+                      {FEE_STATUS_JA[c.status as keyof typeof FEE_STATUS_JA] ?? c.status}
+                    </td>
+                    <td className="small">{c.active ? '金額として効いている' : '0円（効いていない）'}</td>
+                    <td className="small muted" style={{ whiteSpace: 'normal', maxWidth: 360 }}>{c.note}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="small muted" style={{ marginBottom: 0 }}>
+            仕入時の支払方法：{buyPaymentMethodJa(best.buy_payment_method === null ? null : String(best.buy_payment_method))}
+            {Number(best.buy_payment_fee_known ?? 1) === 1
+              ? `（手数料 ${yen(Number(best.buy_payment_method_fee ?? 0))}）`
+              : '（手数料が未確認のため、最上位の判定まで上げていません）'}
+          </p>
         </div>
       )}
 

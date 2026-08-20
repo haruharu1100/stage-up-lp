@@ -2,8 +2,10 @@ import {
   calcFreshness, combineConfidence, feeDataConfidence, marketDataConfidence, matchConfidence,
   type ConfidenceSet, type Freshness,
 } from './confidence';
+import { costConfidence, costItemStatuses, type CostItemStatus, type ProfitLadder } from './cost';
 import { all } from './db/client';
 import { deriveFeeStatus, type FeeStatus } from './feestatus';
+import { allocatePayoutCost, type PayoutAllocation, type PayoutBasis } from './payout';
 import {
   buildSellPriceForecast, NO_CALIBRATION,
   type Calibration, type SellPriceForecast,
@@ -55,6 +57,12 @@ export type FeeProfile = {
   effective_to?: string | null;
   source_name?: string | null;
   fee_status?: string | null;
+  verified_fields?: string | null;
+  // Phase 3.7。売上金の振込費用。**1商品ごとの費用ではない**ので、
+  // calcNetReceipt には絶対に入れない（lib/payout.ts の説明を読むこと）。
+  payout_fee_fixed?: number | null;
+  payout_fee_rate?: number | null;
+  payout_note?: string | null;
 };
 
 // ---------------------------------------------------------------- BUY 側
@@ -63,6 +71,14 @@ export type AcquisitionCost = {
   itemPrice: number;
   buyerFee: number;
   paymentFee: number;
+  /**
+   * Phase 3.7。支払方法（クレジットカード／コンビニ／ATM／キャリア決済など）ごとの手数料。
+   * 分からないときは0を入れるが、`paymentMethodFeeKnown` を false にして
+   * 「0円だと確定した」ではないことを必ず持ち回る。
+   */
+  paymentMethodFee: number;
+  paymentMethodFeeKnown: boolean;
+  paymentMethodCode: string | null;
   domesticShipping: number;
   authenticationFee: number;
   tax: number;
@@ -72,10 +88,24 @@ export type AcquisitionCost = {
   total: number;
 };
 
-/** 仕入総額。ここに販売側の費用は一切入れない。 */
-export function calcAcquisitionCost(itemPrice: number, fee: FeeProfile): AcquisitionCost {
+/**
+ * 仕入総額。ここに販売側の費用は一切入れない。
+ *
+ * 【支払方法の手数料（Phase 3.7）】
+ * ユーザー指摘：「メルカリで仕入れる側の支払い手数料も固定ではありません。」
+ * 同じ商品を同じ値段で買っても、コンビニ払いなら手数料がかかる。
+ * 実際に使う支払方法の手数料を第3引数で渡す。null は「まだ分からない」。
+ * **null を0円と読み替えない。** 0円にすると費用を少なく見積もり、利益を多く見せてしまう。
+ */
+export function calcAcquisitionCost(
+  itemPrice: number,
+  fee: FeeProfile,
+  paymentMethod?: { code: string; fee: number | null } | null,
+): AcquisitionCost {
   const buyerFee = Math.ceil(itemPrice * fee.fee_rate) + fee.fixed_fee;
   const paymentFee = Math.ceil(itemPrice * fee.payment_fee_rate);
+  const paymentMethodFeeKnown = paymentMethod ? paymentMethod.fee !== null : true;
+  const paymentMethodFee = paymentMethod?.fee ?? 0;
   const tax = Math.ceil(itemPrice * fee.tax_rate);
   const importDuty = Math.ceil(itemPrice * fee.import_duty_rate);
   const currencyFee = Math.ceil(itemPrice * fee.currency_fee_rate);
@@ -83,9 +113,13 @@ export function calcAcquisitionCost(itemPrice: number, fee: FeeProfile): Acquisi
   const authenticationFee = fee.authentication_fee;
   const otherBuyCost = fee.other_cost;
   const total =
-    itemPrice + buyerFee + paymentFee + domesticShipping + authenticationFee +
+    itemPrice + buyerFee + paymentFee + paymentMethodFee + domesticShipping + authenticationFee +
     tax + importDuty + currencyFee + otherBuyCost;
-  return { itemPrice, buyerFee, paymentFee, domesticShipping, authenticationFee, tax, importDuty, currencyFee, otherBuyCost, total };
+  return {
+    itemPrice, buyerFee, paymentFee,
+    paymentMethodFee, paymentMethodFeeKnown, paymentMethodCode: paymentMethod?.code ?? null,
+    domesticShipping, authenticationFee, tax, importDuty, currencyFee, otherBuyCost, total,
+  };
 }
 
 // ---------------------------------------------------------------- SELL 側
@@ -106,7 +140,27 @@ export type NetReceipt = {
   netReceipt: number;
 };
 
-/** 販売後の手取り。ここに仕入側の費用は一切入れない。 */
+/**
+ * 販売後の手取り（TRANSACTION COST を引いたあと）。
+ *
+ * 【入れてはいけないもの】
+ *   ・仕入側の費用（商品代・仕入手数料）
+ *   ・売上金の振込手数料（`payout_fee_fixed`）
+ *
+ * 【振込手数料を入れてはいけない理由（Phase 3.7 の修正）】
+ * ユーザー指摘：「メルカリの『振込手数料200円』は、1商品ごとの販売コストではなく、
+ * 売上金を銀行へ振り込む"申請1回ごと"の費用です。」
+ *
+ * 以前はこれを fixed_fee に入れていたため、商品1件ごとに200円を引いていた。
+ * 1回の申請で100件まとめれば1商品2円なので、100倍の費用を見込んでいたことになる。
+ * その結果、本当は利益が出る商品を「利益が小さい」として捨ててしまう。
+ *
+ * この関数の中に `payout_` で始まる項目が出てきたら、それは間違い。
+ * 受け入れテスト（payoutLeakCheck）でも見張っている。
+ *
+ * なお `fixed_fee` はここに残す。これは「1取引ごとにかかる固定手数料」で、
+ * 実際に商品1件ごとにかかる市場（海外市場など）がある。メルカリでは0円。
+ */
 export function calcNetReceipt(sellPrice: number, fee: FeeProfile): NetReceipt {
   const sellerFee = Math.ceil(sellPrice * fee.fee_rate) + fee.fixed_fee;
   const paymentFee = Math.ceil(sellPrice * fee.payment_fee_rate);
@@ -271,6 +325,20 @@ export type RouteInput = {
   conservativeHaircut?: number;
   /** この相場データが実市場のものか。テストデータは false のまま。 */
   realMarketData?: boolean;
+
+  // ---- Phase 3.7（費用の分離。省略可） ----
+  /**
+   * 実際に使う仕入の支払方法と、その手数料（円）。
+   * `fee: null` は「まだ分からない」。0円と読み替えない。
+   * 渡さなければ「支払方法という考え方を使っていない」＝従来通りの計算になる。
+   */
+  buyPaymentMethod?: { code: string; fee: number | null; status?: 'VERIFIED' | 'ESTIMATED' | 'UNKNOWN' } | null;
+  /**
+   * 振込申請1回で何件分をまとめるか。按分表示にしか使わない。
+   * **判定（decision）には影響させない。**
+   */
+  payoutItemsPerRequest?: number;
+  payoutBasis?: PayoutBasis;
 };
 
 /**
@@ -326,11 +394,29 @@ export type RouteResult = {
   realMarketData: boolean;
   buyFeeStatus: FeeStatus;
   sellFeeStatus: FeeStatus;
+
+  // ---- Phase 3.7 ----
+  /**
+   * 商品1件を売るたびにかかる費用の合計（＝ sell.total）。
+   * 振込手数料はここに含まれない。
+   */
+  transactionCost: number;
+  /** 売上金の振込費用。商品単位ではないので、按分は参考値として別に持つ。 */
+  payout: PayoutAllocation;
+  /** 4段階に分けた利益。お金を出す判断に使うのは conservativeNetProfit。 */
+  profits: ProfitLadder;
+  /** 費目ごとの確認状況。全体を一括で「確認済み」と言わないためにある。 */
+  costItems: CostItemStatus[];
+  /** 費用全体の信頼度（0〜100・上限95）。100にはしない。 */
+  costConfidence: number;
+  /** 実際に使う支払方法の手数料が分かっているか。 */
+  buyPaymentFeeKnown: boolean;
 };
 
 export function calcRoute(input: RouteInput): RouteResult {
   const t = input.thresholds;
-  const buy = calcAcquisitionCost(input.itemPrice, input.buyFee);
+  const buy = calcAcquisitionCost(input.itemPrice, input.buyFee, input.buyPaymentMethod ?? null);
+  // sell.total は TRANSACTION COST（商品1件ごとの費用）。振込費用は入っていない。
   const sell = calcNetReceipt(input.sellPrice, input.sellFee);
 
   const expectedNetProfit = sell.netReceipt - buy.total;
@@ -379,6 +465,8 @@ export function calcRoute(input: RouteInput): RouteResult {
   // 古い相場で「今も儲かる」と判断しない（§13）
   if (freshness.tier === 'STALE') risk += 10;
   else if (freshness.tier === 'UNKNOWN') risk += 5;
+  // Phase 3.7。実際に使う支払方法の手数料が分からないなら、仕入総額が確定していない。
+  if (!buy.paymentMethodFeeKnown) risk += 10;
   const riskScore = Math.round(clamp(risk, 0, 100));
 
   // --- 除外条件 ---
@@ -430,6 +518,13 @@ export function calcRoute(input: RouteInput): RouteResult {
     confidenceCapped = true;
   }
 
+  // Phase 3.7。実際に使う支払方法の手数料が分からないなら、仕入にいくらかかるかが確定していない。
+  // 「たぶん無料だろう」で STRONG BUY まで上げない（分からないなら買わない、の手前の段階）。
+  if (decision === 'STRONG_BUY' && !buy.paymentMethodFeeKnown) {
+    decision = 'BUY';
+    confidenceCapped = true;
+  }
+
   // --- Phase 3.5：理論／補正後／保守の3本立て（§11〜§16） ---
   // 判定（decision）そのものはここでは変えない。
   // 変えてしまうと Phase 3 までの答え合わせと地続きでなくなり、
@@ -457,6 +552,28 @@ export function calcRoute(input: RouteInput): RouteResult {
     calibratedRoi: roiAt(calibratedNetProfit),
     conservativeRoi: roiAt(conservativeNetProfit),
   };
+
+  // --- Phase 3.7：TRANSACTION COST と PAYOUT COST を分ける ---
+  // 振込費用は商品単位ではない。按分値は「参考」としてだけ持ち、
+  // ここまでに決まった decision / routeScore には一切触らない。
+  const payout = allocatePayoutCost(
+    input.sellFee,
+    input.payoutItemsPerRequest ?? 1,
+    input.payoutBasis ?? 'SETTING',
+  );
+  const profits: ProfitLadder = {
+    grossProfit: input.sellPrice - input.itemPrice,
+    transactionNetProfit: expectedNetProfit,
+    payoutAllocatedNetProfit: expectedNetProfit - payout.allocatedPerItem,
+    conservativeNetProfit,
+  };
+  const costItems = costItemStatuses({
+    buyFee: input.buyFee as unknown as Record<string, unknown>,
+    sellFee: input.sellFee as unknown as Record<string, unknown>,
+    buyPaymentFeeStatus: input.buyPaymentMethod
+      ? (input.buyPaymentMethod.status ?? (buy.paymentMethodFeeKnown ? 'ESTIMATED' : 'UNKNOWN'))
+      : 'UNKNOWN',
+  });
 
   return {
     buy, sell,
@@ -486,6 +603,12 @@ export function calcRoute(input: RouteInput): RouteResult {
     realMarketData: input.realMarketData === true,
     buyFeeStatus: deriveFeeStatus(input.buyFee, now).status,
     sellFeeStatus: deriveFeeStatus(input.sellFee, now).status,
+    transactionCost: sell.total,
+    payout,
+    profits,
+    costItems,
+    costConfidence: costConfidence(costItems),
+    buyPaymentFeeKnown: buy.paymentMethodFeeKnown,
   };
 }
 

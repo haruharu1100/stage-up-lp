@@ -892,6 +892,107 @@ export const ADD_COLUMNS: string[] = [
   // 行ごと VERIFIED にすると、確認していない800円まで確認済みの顔をしてしまう。
   // そこで「どの項目を確認したか」を項目名の配列で持つ（JSON文字列）。
   `ALTER TABLE venue_fee_profiles ADD COLUMN verified_fields TEXT`,
+
+  // ---- Phase 3.7（費用の分離：取引費用 と 振込費用） ----
+  /*
+   * 【なぜ列を分けるのか】
+   * メルカリの「振込手数料200円」は、1商品ごとの販売費用ではなく
+   * 「売上金を銀行へ振り込む申請1回ごと」の費用。
+   *
+   * これを fixed_fee（＝1取引ごとの固定手数料）に入れていたため、
+   * 商品1件ごとに200円を引いてしまっていた。1回の申請で100件分まとめて振り込めば
+   * 1商品あたり2円なので、100倍近く費用を大きく見積もっていたことになる。
+   *
+   * 「安全側だからいい」ではない。費用を過大にすれば、本当は買えた商品を見送る。
+   * それは Fail Closed ではなく、ただの計算間違い。
+   *
+   * だから振込費用は別の列に置き、**1商品ごとの利益計算には絶対に入れない**。
+   */
+  `ALTER TABLE venue_fee_profiles ADD COLUMN payout_fee_fixed INTEGER NOT NULL DEFAULT 0`,
+  `ALTER TABLE venue_fee_profiles ADD COLUMN payout_fee_rate REAL NOT NULL DEFAULT 0`,
+  `ALTER TABLE venue_fee_profiles ADD COLUMN payout_note TEXT`,
+
+  /*
+   * 【送料の精度を上げるための項目】
+   * 今の送料は「たぶん800円くらい」という当て推量。
+   * 大きさ・発送方法・どちらが送料を持つかを記録しておき、
+   * 実際に発送したときの実額と突き合わせて、推定のズレを学習できるようにする。
+   * ここで推定式は作らない（実績が1件も無いのに式を作れば、それは推測を数式にしただけ）。
+   */
+  `ALTER TABLE tracked_listings ADD COLUMN package_size TEXT`,
+  `ALTER TABLE tracked_listings ADD COLUMN shipping_method TEXT`,
+  `ALTER TABLE tracked_listings ADD COLUMN shipping_payer TEXT`,
+  `ALTER TABLE tracked_listings ADD COLUMN estimated_shipping_cost INTEGER`,
+  `ALTER TABLE tracked_listings ADD COLUMN actual_shipping_cost INTEGER`,
+
+  /*
+   * 【4段階の利益を別々に保存する】
+   * ユーザー指示：「商品詳細では 粗利 / 取引後利益 / 振込費按分後利益 / 保守利益 を分けて表示してください。」
+   *
+   * 1つの「利益」という言葉に4つの意味が混ざっていたので、列も分ける。
+   * conservative_net_profit（保守利益）は Phase 3.5 で既にある。
+   */
+  `ALTER TABLE arbitrage_routes ADD COLUMN gross_profit INTEGER NOT NULL DEFAULT 0`,
+  `ALTER TABLE arbitrage_routes ADD COLUMN transaction_cost INTEGER NOT NULL DEFAULT 0`,
+  `ALTER TABLE arbitrage_routes ADD COLUMN payout_fee_fixed INTEGER NOT NULL DEFAULT 0`,
+  `ALTER TABLE arbitrage_routes ADD COLUMN payout_items_per_request INTEGER NOT NULL DEFAULT 1`,
+  `ALTER TABLE arbitrage_routes ADD COLUMN payout_allocated_cost INTEGER NOT NULL DEFAULT 0`,
+  `ALTER TABLE arbitrage_routes ADD COLUMN payout_allocated_net_profit INTEGER NOT NULL DEFAULT 0`,
+  `ALTER TABLE arbitrage_routes ADD COLUMN buy_payment_method TEXT`,
+  `ALTER TABLE arbitrage_routes ADD COLUMN buy_payment_method_fee INTEGER NOT NULL DEFAULT 0`,
+  `ALTER TABLE arbitrage_routes ADD COLUMN buy_payment_fee_known INTEGER NOT NULL DEFAULT 1`,
+  `ALTER TABLE arbitrage_routes ADD COLUMN cost_confidence INTEGER NOT NULL DEFAULT 0`,
+  `ALTER TABLE arbitrage_routes ADD COLUMN cost_items_json TEXT`,
+];
+
+/**
+ * Phase 3.7 で追加するテーブル（仕入側の支払方法ごとの手数料）。
+ *
+ * 【なぜ手数料の行に混ぜないのか】
+ * venue_fee_profiles は「市場 × BUY/SELL × カテゴリ」で1行。
+ * 支払方法（クレジットカード／残高／コンビニ／ATM／キャリア決済）で金額が変わるものを
+ * その1行に押し込むと、どれか1つの方法の数字が全部を代表してしまう。
+ *
+ * しかも コンビニ・ATM・キャリア決済は「金額に応じて」変わるので、
+ * 1つの数字では表せない。だから金額帯（min_amount〜max_amount）を持つ別表にする。
+ *
+ * 【分からない金額は NULL のまま】
+ * fee_fixed / fee_rate を NULL にできるのが要点。
+ * 「まだ調べていない」を0円として計算に入れると、費用を少なく見積もって
+ * 利益を多く見せることになる。NULL のときは金額不明として扱い、STRONG BUY へ上げない。
+ *
+ * 【名前について】
+ * この表は「支払方法ごとの手数料の一覧」であって、決済を実行する表ではない。
+ * `payment` という語を名前に入れると、受け入れテストの
+ * 「購入・注文・決済・出品公開・発送のテーブルが存在しない」検査に引っかかる。
+ * 検査の方を緩めると、本当に決済テーブルが増えたときに気づけなくなる。
+ * だから検査は緩めず、表の名前を実態どおり（手数料ルール）にしてある。
+ */
+export const SCHEMA_COST: string[] = [
+  // 旧名（venue_payment_methods）の後始末。同じ Phase 3.7 の作業中に付けた名前なので、
+  // 人が手で確認した内容はまだ入っていない。中身は起動時に定義から入れ直される。
+  `DROP TABLE IF EXISTS venue_payment_methods`,
+  `CREATE TABLE IF NOT EXISTS venue_method_fee_rules (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    venue_code TEXT NOT NULL,
+    side TEXT NOT NULL DEFAULT 'BUY',
+    method_code TEXT NOT NULL,
+    method_ja TEXT NOT NULL,
+    min_amount INTEGER NOT NULL DEFAULT 0,
+    max_amount INTEGER,
+    fee_fixed INTEGER,
+    fee_rate REAL,
+    fee_status TEXT NOT NULL DEFAULT 'UNKNOWN',
+    source_url TEXT,
+    source_name TEXT,
+    verified_at TEXT,
+    verified_by TEXT,
+    note TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    UNIQUE(venue_code, side, method_code, min_amount)
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_method_fee_rules_venue ON venue_method_fee_rules(venue_code, side)`,
 ];
 
 /**
@@ -1001,4 +1102,45 @@ export const SCHEMA_OBSERVATION: string[] = [
     recorded_at TEXT NOT NULL
   )`,
   `CREATE INDEX IF NOT EXISTS idx_work_log_step ON observation_work_log(step)`,
+
+  /*
+   * 【観測CSVから入った工程別秒数だけ、二重取り込みを防ぐ（Phase 3.8）】
+   *
+   * 同じCSVを2回入れても観測は増えない（ON CONFLICT DO NOTHING）のに、
+   * 作業時間だけ倍に積み上がると「1件あたり◯秒」が実際の倍になる。
+   * その数字で「ここを自動化しよう」と決めると、判断そのものが間違う。
+   *
+   * 手で記録した分（batch_id が MANUAL-…）まで一意にすると、
+   * 「同じ日に同じ工程を2回記録した」が黙って捨てられる。それは記録漏れになるので、
+   * 条件付き（WHERE）にしてCSV由来の行だけに限定する。
+   */
+  `CREATE UNIQUE INDEX IF NOT EXISTS ux_work_log_listing
+     ON observation_work_log(batch_id, step) WHERE batch_id LIKE 'LISTING:%'`,
+
+  /*
+   * 【同一商品判定の答え合わせ（Phase 3.8・ユーザー指示11 12）】
+   *
+   * ユーザー指示：「利益商品を見逃すより、違う商品を同じ商品として扱う方が危険です。」
+   *
+   * その通りで、この2つの間違いは重さが全く違う。
+   *   見逃し（FALSE NEGATIVE）… 儲け損なう。損はしない。
+   *   誤一致（FALSE MATCH）  … 別物の相場で利益を計算する。買えば損をする。
+   *                            しかも画面上は「利益が大きい優良Route」として上位に出る。
+   *
+   * だから機械の判定を人が確かめた結果を、別の表に残す。
+   * 機械の判定（identity_key）を書き換えるのではなく、**判定と答えを並べて保存する**。
+   * 上書きしてしまうと「機械が何と言ったか」が消え、精度を測れなくなる。
+   */
+  `CREATE TABLE IF NOT EXISTS identity_match_reviews (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    listing_key TEXT NOT NULL,
+    identity_key TEXT,
+    matched_venue_code TEXT NOT NULL,
+    verdict TEXT NOT NULL,
+    reviewer TEXT,
+    note TEXT,
+    reviewed_at TEXT NOT NULL,
+    UNIQUE(listing_key, matched_venue_code)
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_match_reviews_verdict ON identity_match_reviews(verdict)`,
 ];

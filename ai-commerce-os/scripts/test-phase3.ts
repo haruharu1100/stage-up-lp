@@ -21,6 +21,7 @@ import { classifyCause, speedScore } from '../lib/opportunity';
 import { combineConfidence, calcFreshness, feeDataConfidence, matchConfidence } from '../lib/confidence';
 import { calcRoute, MAX_SCORE_ADJUSTMENT, type FeeProfile } from '../lib/route';
 import { feeVersionOf } from '../lib/fees';
+import { VENUE_RATE_FIELDS } from '../lib/feestatus';
 import { canAutoFetch, marketConnectorFor } from '../lib/connectors/market';
 import { MONEY_ACTIONS_IMPLEMENTED } from '../lib/env';
 
@@ -368,9 +369,14 @@ async function main() {
     sellVenueTermsStatus: 'VERIFIED', crossBorder: false, humanVerified: true,
     identityKey,
   });
+  // 「公式ページで全部確認できた手数料」のつもりの見本。
+  // Phase 3.7 で、確認した項目名（verified_fields）まで書かないと確認済みと認めなくなった。
+  // 特に決済手数料は、0円のまま黙って通すと支払方法ごとの手数料が計算に入らないため、
+  // 明示して初めて確認済みになる。ここは見本なので全項目を確認したことにしてある。
   const VERIFIED_FEE = {
     is_estimated: 0, source_url: 'https://example.com/fee',
     verified_at: iso, manually_verified_by: '本人',
+    verified_fields: JSON.stringify([...VENUE_RATE_FIELDS]),
   } as Partial<FeeProfile>;
 
   const estimated = sample({ is_estimated: 1, source_url: null }, 'gtin:4901234567894');
