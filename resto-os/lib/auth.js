@@ -4,6 +4,7 @@ import { NextResponse } from 'next/server';
 import { all, one, run, nowIso } from './db.js';
 import { createCtx } from './tenant-db.js';
 import { planFeatures } from './plans.js';
+import { ApiError } from './errors.js';
 
 export const SESSION_COOKIE = 'resto_session';
 const SESSION_DAYS = 14;
@@ -100,13 +101,7 @@ export async function getCtx() {
 
 // ===== APIの入口で使う3つの門 =====
 
-export class ApiError extends Error {
-  constructor(code, message, status = 400) {
-    super(message);
-    this.code = code;
-    this.status = status;
-  }
-}
+export { ApiError };
 
 export function apiFail(e) {
   if (e instanceof ApiError) {

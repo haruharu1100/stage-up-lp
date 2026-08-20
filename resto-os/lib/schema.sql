@@ -540,6 +540,12 @@ CREATE TABLE IF NOT EXISTS daily_facts (
   staff_count INTEGER DEFAULT 0,
   waste_amount INTEGER DEFAULT 0,      -- 廃棄（未入力なら0）
   closed INTEGER DEFAULT 0,            -- 締めが済んでいるか
+  -- その売上がどこから来た数字か。AIが「注文金額」と「実売上」を同じものとして扱わないために持つ。
+  sales_source TEXT DEFAULT '',        -- cash_confirmed ＞ pos ＞ order ＞ none
+  sales_confidence INTEGER DEFAULT 0,  -- 3＝実会計の確定値 / 2＝POS / 1＝注文合計 / 0＝データなし
+  order_total INTEGER DEFAULT 0,       -- 注文上の合計（参考。売上として使うとは限らない）
+  cash_total INTEGER DEFAULT 0,        -- 入力された実会計の合計
+  cash_entries INTEGER DEFAULT 0,      -- 実会計の入力件数
   computed_at TEXT NOT NULL
 );
 CREATE UNIQUE INDEX IF NOT EXISTS ux_daily_facts ON daily_facts(tenant_id, store_id, business_date);
@@ -879,3 +885,70 @@ CREATE TABLE IF NOT EXISTS shifts (
   updated_at TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS ix_shifts ON shifts(tenant_id, store_id, business_date);
+
+-- ===== 実会計（第1層：レジで実際に受け取った金額） =====
+--
+-- レジ会計を別のシステムや現金レジで行う店でも、AIの学習に使える「本物の売上」を残すための表。
+-- 注文データ（order_items）とは完全に別に持ち、注文は1行も書き換えない。
+-- 注文上の合計と、実際に受け取った金額がずれても自動で直さず、理由を選んで残す。
+CREATE TABLE IF NOT EXISTS cash_sales (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  tenant_id INTEGER NOT NULL,
+  store_id INTEGER NOT NULL,
+  business_date TEXT NOT NULL,
+  table_id INTEGER,
+  table_name TEXT DEFAULT '',
+  order_total INTEGER DEFAULT 0,       -- 入力した時点の「注文上の合計」（あとから動かさない）
+  amount INTEGER NOT NULL,             -- 実際に受け取った金額
+  diff INTEGER DEFAULT 0,              -- amount - order_total（マイナスなら受け取りが少ない）
+  diff_reason TEXT DEFAULT '',         -- discount／service／mistake／other
+  diff_note TEXT DEFAULT '',
+  guests INTEGER DEFAULT 0,
+  payment_method TEXT DEFAULT '',      -- 任意
+  paid_at TEXT NOT NULL,
+  note TEXT DEFAULT '',
+  item_ids_json TEXT DEFAULT '',       -- どの注文ぶんか（二重入力を防ぐための控え。注文自体は変えない）
+  staff_id INTEGER,
+  staff_name TEXT DEFAULT '',
+  revision INTEGER DEFAULT 1,
+  locked INTEGER DEFAULT 0,            -- その日の売上を確定したら1。以後は直せない
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS ix_cash_sales ON cash_sales(tenant_id, store_id, business_date);
+
+-- 直したときの控え。上書きせず、before／afterを積み上げて残す（消す入口は作らない）。
+CREATE TABLE IF NOT EXISTS cash_sale_revisions (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  tenant_id INTEGER NOT NULL,
+  store_id INTEGER NOT NULL,
+  cash_sale_id INTEGER NOT NULL,
+  revision INTEGER NOT NULL,
+  before_json TEXT DEFAULT '',
+  after_json TEXT DEFAULT '',
+  reason TEXT DEFAULT '',
+  staff_id INTEGER,
+  staff_name TEXT DEFAULT '',
+  created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS ix_cash_rev ON cash_sale_revisions(tenant_id, store_id, cash_sale_id);
+
+-- 営業終了時の「本日の売上を確定」。確定した日は、その日の実会計を直せなくなる。
+CREATE TABLE IF NOT EXISTS cash_day_closes (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  tenant_id INTEGER NOT NULL,
+  store_id INTEGER NOT NULL,
+  business_date TEXT NOT NULL,
+  order_total INTEGER DEFAULT 0,
+  cash_total INTEGER DEFAULT 0,
+  diff INTEGER DEFAULT 0,
+  entries INTEGER DEFAULT 0,
+  missing INTEGER DEFAULT 0,           -- 実会計が入っていない卓の数
+  missing_total INTEGER DEFAULT 0,     -- そのぶんの注文金額
+  guests INTEGER DEFAULT 0,
+  note TEXT DEFAULT '',
+  staff_id INTEGER,
+  staff_name TEXT DEFAULT '',
+  created_at TEXT NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS ux_cash_day ON cash_day_closes(tenant_id, store_id, business_date);

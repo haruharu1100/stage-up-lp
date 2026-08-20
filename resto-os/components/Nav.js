@@ -4,13 +4,15 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
-// [パス, 表示名, 見られる権限, 必要な機能]
+// [パス, 表示名, 見られる権限, 必要な機能, （あれば）この機能を持つ店には出さない]
 const LINKS = [
   ['/admin', 'ダッシュボード', ['owner', 'admin', 'manager'], 'analytics'],
   ['/pos', 'テーブル / 会計', ['owner', 'admin', 'manager', 'staff'], 'pos'],
   ['/pos/close', 'レジ締め', ['owner', 'admin', 'manager'], 'pos'],
   ['/kitchen', '厨房モニター', ['owner', 'admin', 'manager', 'staff', 'kitchen'], 'kds'],
   ['/staff', 'スタッフ注文', ['owner', 'admin', 'manager', 'staff'], 'order'],
+  // 会計をお店のレジで行う店だけに出す（簡易POSがある店は会計画面で売上が残るので不要）
+  ['/admin/sales', '売上入力・確定', ['owner', 'admin', 'manager', 'staff'], 'order', 'pos'],
   ['/admin/menu', '商品管理', ['owner', 'admin', 'manager'], 'menu'],
   ['/admin/tables', 'テーブル・QR', ['owner', 'admin', 'manager'], 'table'],
   ['/admin/orders', '注文履歴', ['owner', 'admin', 'manager'], 'history'],
@@ -49,7 +51,8 @@ export default function Nav() {
   }
 
   const visible = me
-    ? LINKS.filter(([, , roles, feature]) => roles.includes(me.role) && me.features.includes(feature))
+    ? LINKS.filter(([, , roles, feature, hideIf]) => roles.includes(me.role)
+      && me.features.includes(feature) && !(hideIf && me.features.includes(hideIf)))
     : [];
 
   return (

@@ -6,12 +6,13 @@ import { demoEnabled } from '../lib/demo.js';
 
 export const dynamic = 'force-dynamic';
 
-// [パス, 表示名, 説明, アイコン, 見られる権限, 必要な機能]
+// [パス, 表示名, 説明, アイコン, 見られる権限, 必要な機能, （あれば）この機能を持つ店には出さない]
 const MENUS = [
   ['/admin', 'ダッシュボード', '売上・客数・客単価・ランキングを一画面で', '📊', ['owner', 'admin', 'manager'], 'analytics'],
   ['/pos', 'テーブル / 会計', '卓の状況、呼び出し対応、お会計（クーポン・割り勘）', '🧾', ['owner', 'admin', 'manager', 'staff'], 'pos'],
   ['/kitchen', '厨房モニター', '注文を場所ごとに振り分けて表示。経過時間で遅れを警告', '👨‍🍳', ['owner', 'admin', 'manager', 'staff', 'kitchen'], 'kds'],
   ['/staff', 'スタッフ注文', '口頭注文をスタッフのスマホから入力', '📱', ['owner', 'admin', 'manager', 'staff'], 'order'],
+  ['/admin/sales', '売上入力・確定', 'レジで受け取った金額を記録し、その日の売上を確定する', '💴', ['owner', 'admin', 'manager', 'staff'], 'order', 'pos'],
   ['/admin/menu', '商品管理', '価格・原価・写真・売り切れ・オプションの設定', '🍽', ['owner', 'admin', 'manager'], 'menu'],
   ['/admin/tables', 'テーブル・QR', 'テーブルごとのQRコード発行と印刷', '🔳', ['owner', 'admin', 'manager'], 'table'],
   ['/admin/orders', '注文履歴', '取消も含めた全注文の記録', '🗂', ['owner', 'admin', 'manager'], 'history'],
@@ -30,7 +31,8 @@ export default async function Home() {
   if (!ctx) redirect('/login');
 
   const features = planFeatures(ctx.plan);
-  const menus = MENUS.filter(([, , , , roles, f]) => roles.includes(ctx.role) && features.includes(f));
+  const menus = MENUS.filter(([, , , , roles, f, hideIf]) => roles.includes(ctx.role)
+    && features.includes(f) && !(hideIf && features.includes(hideIf)));
 
   // テストプレイ中は、QRを読まなくてもお客様の画面をそのまま開けるようにする
   const demo = demoEnabled();

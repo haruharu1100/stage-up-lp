@@ -62,6 +62,8 @@ const SCOPED_TABLES = new Set([
   'venues', 'venue_events',
   // 待ち時間の実測と、人が組んだシフト（どちらも第1層＝測った事実・決めた事実）
   'waitlist', 'shifts',
+  // 実会計（レジで実際に受け取った金額）と、その修正の控え・日次の確定
+  'cash_sales', 'cash_sale_revisions', 'cash_day_closes',
 ]);
 
 export function createCtx({ tenantId, storeId, role, staffId = null, staffName = '', plan = 'standard', tenant = null, store = null, exec = null }) {

@@ -17,6 +17,9 @@ import { getTable, getOpenItems } from '../lib/store.js';
 import { waitStats } from '../lib/waitlist.js';
 import { shiftPlan } from '../lib/shift.js';
 import { hasFeature } from '../lib/plans.js';
+import {
+  addCashSale, editCashSale, confirmDay, daySummary, revisions, decideSales,
+} from '../lib/cash.js';
 
 const url = process.env.DATABASE_URL || '';
 if (!url.startsWith('file:')) {
@@ -79,6 +82,7 @@ async function main() {
     'forecasts', 'forecast_results', 'ai_insights', 'ai_answers', 'daily_reports',
     'ingredients', 'recipe_lines', 'stock_moves', 'order_plans', 'stockouts',
     'venues', 'venue_events', 'waitlist', 'shifts',
+    'cash_sales', 'cash_sale_revisions', 'cash_day_closes',
   ];
   let leak = '';
   for (const t of scopedTables) {
@@ -512,6 +516,160 @@ async function main() {
     && !/logAudit\(/.test(fs.readFileSync(path.join(root, r), 'utf8')));
   check('12', 'お金・権限・商品が動く操作は、すべて記録を残している',
     noLog.length === 0, { level: '高', detail: noLog.join(' ') });
+
+  // ══════════ 13. 簡易売上入力（実会計）で既存の安全性が壊れていない ══════════
+  console.log('\n13. 簡易売上入力を足しても、これまでの安全性が壊れていない');
+
+  const L = mk(s1, t1, 'light');   // レジ会計の店（簡易POSなし）
+  const LB = mk(s2, t2, 'light');
+  const cashDate = addDays(today, -3);
+  for (const c of [L, LB]) {
+    for (const t of ['cash_sale_revisions', 'cash_sales', 'cash_day_closes']) {
+      await c.run(`DELETE FROM ${t} WHERE SCOPE()`);
+    }
+  }
+  const auditTrail = [];
+  const cashLog = async (ctx, a) => { auditTrail.push({ by: ctx.staffName, ...a }); };
+
+  // 監査用に、注文の残っている卓を1つ作る（金額の分かる1品だけ）
+  const cashTable = await L.first('SELECT * FROM tables WHERE SCOPE() ORDER BY id DESC LIMIT 1');
+  const cashOrderId = await L.insert('orders', {
+    public_id: `cash_${Date.now()}`, table_id: Number(cashTable.id),
+    client_order_id: `cash_${Date.now()}`, source: 'audit', staff_id: null, created_at: nowIso(),
+  });
+  await L.insert('order_items', {
+    order_id: cashOrderId, table_id: Number(cashTable.id), item_id: null, name: '監査用コース',
+    unit_price: 6000, cost: 1800, qty: 1, station: 'kitchen', status: 'received',
+    via: 'audit', check_id: null, created_at: nowIso(), updated_at: nowIso(),
+  });
+
+  const cs1 = await addCashSale(L, {
+    date: cashDate, amount: 12000, orderTotal: 12400, tableName: '監査卓', guests: 4, diffReason: 'discount',
+  }, { logAudit: cashLog });
+
+  // 13-1 他店舗の売上を閲覧できない
+  const bSee = await daySummary(LB, cashDate);
+  check('13', '他店からは、この店の実会計が1件も見えない',
+    bSee.entries.length === 0 && bSee.cashTotal === 0, { level: '緊急', detail: `${bSee.entries.length}件` });
+
+  // 13-2 ライトプラン以外の処理を突破できない
+  const cashApi = fs.readFileSync(path.join(root, 'app/api/cash-sales/route.js'), 'utf8');
+  check('13', '簡易POSのある店は、実会計の入口を使えない（同じ売上を二か所から数えない）',
+    /hasFeature\(ctx\.plan, 'pos'\)[\s\S]{0,120}POS_PLAN/.test(cashApi)
+      && /requireCashPlan\(requireFeature\(requireRole\(await requireAuth\(\)/.test(cashApi),
+    { level: '緊急' });
+  check('13', '実会計の入口も、ログイン・権限・プランの3つを必ず通る',
+    (cashApi.match(/requireCashPlan\(requireFeature\(requireRole\(await requireAuth\(\)/g) || []).length >= 3,
+    { level: '高' });
+  check('13', '「本日の売上を確定」と「直す」は、店長より上だけができる',
+    /action === 'confirm'[\s\S]{0,160}requireRole\(ctx, MANAGE_ROLES\)/.test(cashApi)
+      && /export async function PATCH[\s\S]{0,300}requireRole\(await requireAuth\(\), MANAGE_ROLES\)/.test(cashApi),
+    { level: '高' });
+
+  // 13-3 二重会計にならない
+  const dupCash = await (async () => {
+    try {
+      await addCashSale(L, { date: cashDate, tableId: cashTable.id, amount: 6000 },
+        { clearTable: true, logAudit: cashLog });
+      await addCashSale(L, { date: cashDate, tableId: cashTable.id, amount: 6000 }, { logAudit: cashLog });
+      return '';
+    } catch (e) { return e.code || 'ERROR'; }
+  })();
+  check('13', '同じ卓のご注文を、二度お金として数えられない',
+    dupCash === 'ALREADY_ENTERED', { level: '緊急', detail: dupCash || '二度入ってしまった' });
+
+  // 13-4 席を空けても注文履歴は残る
+  const cashLib = fs.readFileSync(path.join(root, 'lib/cash.js'), 'utf8');
+  check('13', '実会計の処理に、注文を消す・金額を書き換える命令が1つも無い',
+    !/DELETE FROM order_items/.test(cashLib) && !/UPDATE order_items SET unit_price/.test(cashLib)
+      && /UPDATE order_items SET status = 'served'/.test(cashLib), { level: '緊急' });
+  const keptItems = await L.query(
+    `SELECT status, check_id FROM order_items WHERE SCOPE() AND table_id = ?`, [cashTable.id]);
+  check('13', '実会計を入れて席を空けても、その卓の注文が残っている',
+    keptItems.length > 0 && keptItems.every((r) => r.status !== 'void'),
+    { level: '緊急', detail: `${keptItems.length}件` });
+
+  // 13-5 過去の確定売上を書き換えない
+  await confirmDay(L, { date: cashDate, force: true }, { logAudit: cashLog });
+  const afterConfirm = await (async () => {
+    try { await editCashSale(L, { id: cs1.id, amount: 99999, reason: '監査' }, { logAudit: cashLog }); return ''; }
+    catch (e) { return e.code || 'ERROR'; }
+  })();
+  check('13', '確定した売上は、あとから書き換えられない', afterConfirm === 'LOCKED',
+    { level: '緊急', detail: afterConfirm || '書き換えできてしまった' });
+  const addAfter = await (async () => {
+    try { await addCashSale(L, { date: cashDate, amount: 500, orderTotal: 500 }, { logAudit: cashLog }); return ''; }
+    catch (e) { return e.code || 'ERROR'; }
+  })();
+  check('13', '確定した日に、あとから売上を足せない', addAfter === 'DAY_CONFIRMED',
+    { level: '緊急', detail: addAfter || '足せてしまった' });
+
+  // 13-6 修正した場合は変更履歴が残る
+  const editDate = addDays(today, -2);
+  const cs2 = await addCashSale(L, {
+    date: editDate, amount: 8000, orderTotal: 8000, tableName: '監査卓2', guests: 2,
+  }, { logAudit: cashLog });
+  const noWhy = await (async () => {
+    try { await editCashSale(L, { id: cs2.id, amount: 7000 }, { logAudit: cashLog }); return ''; }
+    catch (e) { return e.code || 'ERROR'; }
+  })();
+  check('13', '理由を書かずに売上を直せない', noWhy === 'REASON_REQUIRED', { level: '高', detail: noWhy });
+  await editCashSale(L, { id: cs2.id, amount: 7500, diffReason: 'mistake', reason: '入れ間違い' }, { logAudit: cashLog });
+  const revs = await revisions(L, cs2.id);
+  check('13', '直したときは、直す前と後の金額・理由・直した人が控えに残る',
+    revs.length === 1 && revs[0].before.amount === 8000 && revs[0].after.amount === 7500
+      && revs[0].reason === '入れ間違い' && Boolean(revs[0].by), { level: '高' });
+
+  // 13-7 誰が入力・修正したか操作ログに残る
+  const cashActions = auditTrail.map((a) => a.action);
+  check('13', '実会計の入力・修正・確定が、すべて操作ログに残る',
+    cashActions.includes('cash.create') && cashActions.includes('cash.update')
+      && cashActions.includes('cash.confirm') && auditTrail.every((a) => Boolean(a.by)),
+    { level: '高', detail: [...new Set(cashActions)].join(' ') });
+  const auditLabels = fs.readFileSync(path.join(root, 'lib/audit.js'), 'utf8');
+  check('13', '操作ログに日本語の名前が付いていて、店主が読んで分かる',
+    /'cash\.create'/.test(auditLabels) && /'cash\.update'/.test(auditLabels)
+      && /'cash\.confirm'/.test(auditLabels), { level: '中' });
+
+  // 13-8 AI予測値が実売上を書き換えない／売上の出どころを区別している
+  await rebuildDay(L, cashDate);
+  const cashFact = await L.first('SELECT * FROM daily_facts WHERE SCOPE() AND business_date = ?', [cashDate]);
+  check('13', 'AIが読むまとめに、売上の出どころと確かさが残る',
+    cashFact?.sales_source === 'cash_confirmed' && Number(cashFact.sales_confidence) === 3,
+    { level: '高', detail: `${cashFact?.sales_source}／確かさ${cashFact?.sales_confidence}` });
+  check('13', 'AIが「注文金額」と「実際の売上」を同じものとして扱わない',
+    Number(cashFact.order_total) !== Number(cashFact.cash_total)
+      && Number(cashFact.sales) === Number(cashFact.cash_total),
+    { level: '緊急', detail: `注文 ${cashFact?.order_total}円／実売上 ${cashFact?.sales}円` });
+
+  const salesBefore = Number(cashFact.sales);
+  await L.insert('forecasts', {
+    target_date: cashDate, metric: 'sales', value: 777777, low: 700000, high: 800000,
+    engine: 'rule', basis_json: '{}', created_at: nowIso(),
+  });
+  await rebuildDay(L, cashDate);
+  const cashFact2 = await L.first('SELECT sales, sales_source FROM daily_facts WHERE SCOPE() AND business_date = ?', [cashDate]);
+  check('13', 'AIの予測値が、確定した実売上を書き換えない',
+    Number(cashFact2.sales) === salesBefore && cashFact2.sales_source === 'cash_confirmed',
+    { level: '緊急', detail: `${cashFact2?.sales}円` });
+
+  // 売上の出どころの優先順位（実会計の確定 > POS > 注文合計 > データなし）
+  const dNone = await decideSales(L, '2000-01-02', {});
+  const dOrder = await decideSales(L, '2000-01-02', { orderTotal: 50000 });
+  const dPos = await decideSales(L, '2000-01-02', { posSales: 60000, posChecks: 5, orderTotal: 50000 });
+  const dCash = await decideSales(L, cashDate, { posSales: 60000, posChecks: 5, orderTotal: 50000 });
+  check('13', '売上は「実会計の確定 → POS → 注文合計 → データなし」の順に信頼して使う',
+    dNone.confidence === 0 && dOrder.confidence === 1 && dPos.confidence === 2 && dCash.confidence === 3,
+    { level: '高', detail: `${dNone.source}<${dOrder.source}<${dPos.source}<${dCash.source}` });
+  check('13', 'データが無い日に、0円の売上を勝手に作らない',
+    dNone.source === 'none' && dNone.sales === 0, { level: '高' });
+
+  // 画面の導線（レジ会計の店にだけ出て、簡易POSの店には出さない）
+  const navSrc = fs.readFileSync(path.join(root, 'components/Nav.js'), 'utf8');
+  const homeSrc = fs.readFileSync(path.join(root, 'app/page.js'), 'utf8');
+  check('13', '「売上入力・確定」は、レジ会計の店にだけ出る（簡易POSの店には出さない）',
+    /'\/admin\/sales'[\s\S]{0,80}'order', 'pos'/.test(navSrc) && /'\/admin\/sales'[\s\S]{0,160}'order', 'pos'/.test(homeSrc)
+      && /hideIf/.test(navSrc) && /hideIf/.test(homeSrc), { level: '中' });
 
   // ══════════ まとめ ══════════
   console.log('\n' + '═'.repeat(60));

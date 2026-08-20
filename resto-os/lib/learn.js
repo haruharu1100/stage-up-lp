@@ -14,6 +14,7 @@ import { nowIso, businessRange, withTx } from './db.js';
 import { calendarFacts } from './domain/calendar.js';
 import { getForecast, getActual, providerName } from './weather/provider.js';
 import { weatherGroup } from './weather/open-meteo.js';
+import { decideSales } from './cash.js';
 
 export { weatherGroup };
 
@@ -252,6 +253,7 @@ export async function rebuildDay(ctx, date) {
   );
   const o = await ctx.first(
     `SELECT COUNT(DISTINCT order_id) AS orders, COALESCE(SUM(qty),0) AS qty,
+            COALESCE(SUM(unit_price * qty),0) AS order_total,
             COALESCE(SUM(CASE WHEN via IN ('ai','upsell') THEN unit_price * qty ELSE 0 END),0) AS ai_sales
        FROM order_items WHERE SCOPE() AND status <> 'void' AND created_at >= ? AND created_at < ?`,
     [s, e]
@@ -323,9 +325,18 @@ export async function rebuildDay(ctx, date) {
   );
   const catByName = new Map(cats.map((r) => [r.name, { id: r.cid, name: r.cname || '' }]));
 
-  const sales = Number(c.sales);
-  const guests = Number(c.guests);
-  const checksCount = Number(c.checks);
+  // その日の売上として、どの数字を使うかを決める。
+  // 実会計の確定値 ＞ POSの会計 ＞ 注文合計（参考） ＞ データなし。
+  // 決めた出どころはそのまま残し、AIには「実売上か、注文金額か」が分かる形で渡す。
+  const decided = await decideSales(ctx, date, {
+    posSales: Number(c.sales),
+    posChecks: Number(c.checks),
+    posGuests: Number(c.guests),
+    orderTotal: Number(o.order_total),
+  });
+  const sales = decided.sales;
+  const guests = decided.guests;
+  const checksCount = decided.checks;
   const cost = Number(c.cost);
   const seats = Number(seatsRow?.seats || 0);
   const ts = nowIso();
@@ -356,6 +367,11 @@ export async function rebuildDay(ctx, date) {
     staff_count: 0,
     waste_amount: 0,
     closed: closeRow ? 1 : 0,
+    sales_source: decided.source,
+    sales_confidence: decided.confidence,
+    order_total: Number(o.order_total),
+    cash_total: decided.cashTotal,
+    cash_entries: decided.cashEntries,
     computed_at: ts,
   };
 
@@ -480,6 +496,15 @@ export async function learningStatus(ctx) {
     [yesterday]
   );
 
+  // 売上の出どころの内訳。「実売上で学んだ日」と「注文金額しか無い日」を混ぜて見せない。
+  const bySource = await ctx.query(
+    `SELECT COALESCE(NULLIF(sales_source,''), CASE WHEN source = 'import' THEN 'import' ELSE 'pos' END) AS src,
+            COUNT(*) AS days
+       FROM daily_facts WHERE SCOPE() AND sales > 0 GROUP BY src`
+  );
+  const sourceDays = {};
+  for (const r of bySource) sourceDays[r.src] = Number(r.days);
+
   const days = Number(f?.days || 0);
   const span = f?.first_day && f?.last_day ? dayDiff(f.first_day, f.last_day) + 1 : 0;
   const phase = PHASES.find((p) => days < p.max) || PHASES[PHASES.length - 1];
@@ -494,6 +519,9 @@ export async function learningStatus(ctx) {
     items: Number(f?.items || 0),
     guests: Number(f?.guests || 0),
     importedDays: Number(imported?.days || 0),
+    sourceDays,
+    realSalesDays: (sourceDays.cash_confirmed || 0) + (sourceDays.pos || 0) + (sourceDays.import || 0),
+    orderOnlyDays: sourceDays.order || 0,
     weatherDays: Number(weatherDays?.days || 0),
     weatherMissing: Number(wxMissing?.c || 0),
     events: Number(events?.c || 0),

@@ -395,11 +395,66 @@ const MIGRATIONS = [
 
   // ---- 廃棄の理由（決まった選択肢） ----
   `ALTER TABLE stock_moves ADD COLUMN waste_reason TEXT DEFAULT ''`,
+
+  // ---- 実会計（レジで実際に受け取った金額）----
+  // 注文データとは別の表に置く。注文は1行も書き換えない。
+  // 「注文上の合計」と「実際に受け取った金額」がずれても自動で直さず、理由を残す。
+  `CREATE TABLE IF NOT EXISTS cash_sales (
+     id INTEGER PRIMARY KEY AUTOINCREMENT,
+     tenant_id INTEGER NOT NULL, store_id INTEGER NOT NULL,
+     business_date TEXT NOT NULL,
+     table_id INTEGER, table_name TEXT DEFAULT '',
+     order_total INTEGER DEFAULT 0,
+     amount INTEGER NOT NULL,
+     diff INTEGER DEFAULT 0,
+     diff_reason TEXT DEFAULT '', diff_note TEXT DEFAULT '',
+     guests INTEGER DEFAULT 0,
+     payment_method TEXT DEFAULT '',
+     paid_at TEXT NOT NULL,
+     note TEXT DEFAULT '',
+     item_ids_json TEXT DEFAULT '',
+     staff_id INTEGER, staff_name TEXT DEFAULT '',
+     revision INTEGER DEFAULT 1,
+     locked INTEGER DEFAULT 0,
+     created_at TEXT NOT NULL, updated_at TEXT NOT NULL
+   )`,
+  `CREATE INDEX IF NOT EXISTS ix_cash_sales ON cash_sales(tenant_id, store_id, business_date)`,
+  // 直したときの控え。あとから「誰がいつ何をいくらに直したか」をたどれる（消せない）
+  `CREATE TABLE IF NOT EXISTS cash_sale_revisions (
+     id INTEGER PRIMARY KEY AUTOINCREMENT,
+     tenant_id INTEGER NOT NULL, store_id INTEGER NOT NULL,
+     cash_sale_id INTEGER NOT NULL, revision INTEGER NOT NULL,
+     before_json TEXT DEFAULT '', after_json TEXT DEFAULT '',
+     reason TEXT DEFAULT '',
+     staff_id INTEGER, staff_name TEXT DEFAULT '',
+     created_at TEXT NOT NULL
+   )`,
+  `CREATE INDEX IF NOT EXISTS ix_cash_rev ON cash_sale_revisions(tenant_id, store_id, cash_sale_id)`,
+  // 営業終了時の「本日の売上を確定」。確定した日は直せなくなる。
+  `CREATE TABLE IF NOT EXISTS cash_day_closes (
+     id INTEGER PRIMARY KEY AUTOINCREMENT,
+     tenant_id INTEGER NOT NULL, store_id INTEGER NOT NULL,
+     business_date TEXT NOT NULL,
+     order_total INTEGER DEFAULT 0, cash_total INTEGER DEFAULT 0,
+     diff INTEGER DEFAULT 0,
+     entries INTEGER DEFAULT 0, missing INTEGER DEFAULT 0, missing_total INTEGER DEFAULT 0,
+     guests INTEGER DEFAULT 0,
+     note TEXT DEFAULT '',
+     staff_id INTEGER, staff_name TEXT DEFAULT '',
+     created_at TEXT NOT NULL
+   )`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS ux_cash_day ON cash_day_closes(tenant_id, store_id, business_date)`,
+  // 集計に「その売上がどこから来た数字か」を残す。AIが注文合計と実売上を同じ扱いにしないため。
+  `ALTER TABLE daily_facts ADD COLUMN sales_source TEXT DEFAULT ''`,
+  `ALTER TABLE daily_facts ADD COLUMN sales_confidence INTEGER DEFAULT 0`,
+  `ALTER TABLE daily_facts ADD COLUMN order_total INTEGER DEFAULT 0`,
+  `ALTER TABLE daily_facts ADD COLUMN cash_total INTEGER DEFAULT 0`,
+  `ALTER TABLE daily_facts ADD COLUMN cash_entries INTEGER DEFAULT 0`,
 ];
 
 // 「もう追いついているか」を1回で見分けるための問い合わせ。
 // ★項目を足したら、必ずこの1行も最後に足したものへ合わせて更新すること。
-const SCHEMA_PROBE = 'SELECT waste_reason FROM stock_moves LIMIT 1';
+const SCHEMA_PROBE = 'SELECT sales_source FROM daily_facts LIMIT 1';
 
 async function migrate(db) {
   for (const sql of MIGRATIONS) {
