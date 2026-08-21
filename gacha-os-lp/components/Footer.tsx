@@ -49,7 +49,12 @@ export default function Footer() {
               { label: "FAQ", href: "/#faq" },
               { label: "導入フロー", href: "/#flow" },
               { label: "営業資料ページ", href: "/sales" },
-              { label: "導入について相談する", href: "/#contact" },
+              /*
+                ★ここは短い言葉だけを並べること。
+                  「導入について相談する」は375pxで列(144px)から16pxはみ出し、
+                  隣の列とのすき間に食い込んで並びが崩れていました。
+              */
+              { label: "導入の相談", href: "/#contact" },
             ].map((l) => (
               /*
                 リンク名は短いので、途中で折り返さない。

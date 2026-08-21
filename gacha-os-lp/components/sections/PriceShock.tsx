@@ -230,8 +230,14 @@ function PriceShockSim() {
               className="rounded-3xl border border-edge bg-white p-5 shadow-lift last:col-span-2 sm:p-6 sm:last:col-span-1"
             >
               <p className="text-note text-slate3">{m.l}</p>
+              {/*
+                ★スマホで text-h3 のまま出さないこと。
+                  375px だとこの札は162px、内側は122pxしかなく、
+                  ¥1,500,000 が枠から8pxはみ出して線に触ります。
+                  金額は一瞬で読めることが最優先なので、狭い画面では少しだけ小さくします。
+              */}
               <p
-                className={`num mt-3.5 text-h3 font-semibold leading-none transition-colors duration-500 ${m.tone}`}
+                className={`num-lead mt-3.5 text-[19px] font-semibold leading-none transition-colors duration-500 sm:text-h3 ${m.tone}`}
               >
                 {m.v}
               </p>

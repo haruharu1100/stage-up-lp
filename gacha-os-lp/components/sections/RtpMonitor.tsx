@@ -71,13 +71,21 @@ function Gauge({
           : "border-edge bg-paper2/70"
       }`}
     >
-      <div className="flex items-baseline justify-between gap-4">
-        <div>
+      {/*
+        ★横に並べたまま固定しないこと。
+          768px ではカードが219pxしかなく、
+          「市場価格ベース実還元率」＋「87.8%」は横に並びません。
+          並べたままだと数字が枠の外へ80px以上はみ出して読めなくなります
+          （実際にそうなっていた）。
+          入りきらないときは、数字を次の行に落とします。
+      */}
+      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">
+        <div className="min-w-0">
           <p className="text-note font-semibold text-slate">{label}</p>
           <p className="num mt-1 text-label text-slate3">{sub}</p>
         </div>
         <p
-          className={`num shrink-0 text-h3 font-bold leading-none ${
+          className={`num-lead shrink-0 text-h3 font-bold leading-none ${
             emphasize ? tone.color : "text-slate"
           }`}
         >
