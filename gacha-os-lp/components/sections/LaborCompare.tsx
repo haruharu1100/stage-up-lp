@@ -148,7 +148,7 @@ export default function LaborCompare() {
           <div className="flex flex-wrap items-end gap-x-12 gap-y-6">
             <div>
               <p className="num text-label text-slate3">減る作業時間</p>
-              <p className="num mt-3 text-h1 font-semibold leading-none text-slate">
+              <p className="num-lead mt-3 text-h1 font-semibold leading-none text-slate">
                 {savedHours}
                 <span className="ml-2 text-note font-normal text-slate3">
                   時間／月
@@ -157,7 +157,7 @@ export default function LaborCompare() {
             </div>
             <div>
               <p className="num text-label text-slate3">人件費の差</p>
-              <p className="num mt-3 text-h1 font-semibold leading-none text-blue-ink">
+              <p className="num-lead mt-3 text-h1 font-semibold leading-none text-blue-ink">
                 {jpy(savedCost)}
                 <span className="ml-2 text-note font-normal text-slate3">
                   ／月

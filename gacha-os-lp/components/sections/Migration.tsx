@@ -415,10 +415,11 @@ function MigrationStory() {
       <div className="sticky top-0 h-screen overflow-hidden">
         {/*
           pt … 固定ヘッダーの下に文字が潜らない値。これ以上詰めないこと。
-          pb … スマホは画面下に固定の「相談する」バー（実測157px）が重なるので、
-                その高さぶんを必ずあけておく。詰めると説明文が読めなくなる。
+          pb … スマホは画面下に固定のバーが重なるので、その高さぶんをあける。
+               高さは MobileCTA が実測して --mobile-cta-h に入れている。
+               ★170px のような決め打ちに戻さないこと。文言を変えるとずれる。
         */}
-        <div className="container-x flex h-full flex-col pb-[170px] pt-16 sm:pb-8 sm:pt-20">
+        <div className="pb-mobile-cta container-x flex h-full flex-col pt-16 sm:pt-20">
           <div className="relative min-h-0 flex-1">
             <MigrationWorld compact={narrow} trackRef={outer} onBeat={setBeat} />
           </div>

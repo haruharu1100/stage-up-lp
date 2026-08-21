@@ -8,8 +8,12 @@ import {
 
 export default function Footer() {
   return (
-    // 下の余白は、スマホの固定CTAバー（実測157px）に文章が隠れない高さにしている
-    <footer className="relative border-t border-edge bg-paper2 pb-44 pt-16 sm:py-20">
+    /*
+      下の余白は、スマホの固定CTAバーに文章が隠れない高さにしている。
+      高さは MobileCTA が実測して --mobile-cta-h に入れている。
+      ★pb-44 のような決め打ちに戻さないこと。ボタンの文言を変えるとずれる。
+    */
+    <footer className="pb-mobile-cta relative border-t border-edge bg-paper2 pt-16 sm:pt-20">
       <div className="container-x">
         {/*
           横並びにするのは lg（1024px）から。

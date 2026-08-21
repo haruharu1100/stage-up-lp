@@ -144,7 +144,7 @@ export default function Backtest() {
             </span>
           </div>
           <p
-            className={`num mt-4 text-mega font-bold ${surgeTone.text}`}
+            className={`num-lead mt-4 text-mega font-bold ${surgeTone.text}`}
           >
             {surge.distribution.rtpMedian.toFixed(1)}
             <span className="text-[0.32em] opacity-70">%</span>

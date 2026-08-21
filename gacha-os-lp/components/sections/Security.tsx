@@ -185,7 +185,7 @@ export default function Security() {
                 >
                   <span className="num text-label text-slate3">{x.k}</span>
                   <p className="mt-3 flex flex-wrap items-baseline gap-x-2">
-                    <span className="num text-h2 font-semibold leading-none text-blue-ink">
+                    <span className="num-lead text-h2 font-semibold leading-none text-blue-ink">
                       {x.v}
                     </span>
                     <span className="text-note text-slate2">{x.s}</span>

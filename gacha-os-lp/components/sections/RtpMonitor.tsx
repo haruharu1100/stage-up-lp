@@ -157,7 +157,7 @@ export default function RtpMonitor() {
             <div className="flex flex-wrap items-end justify-between gap-4 sm:gap-6">
               <div>
                 <p className="num text-label text-slate3">LIVE RTP / いま高い方</p>
-                <p className={`num mt-3 text-mega font-bold ${tone.color}`}>
+                <p className={`num-lead mt-3 text-mega font-bold ${tone.color}`}>
                   {worst.toFixed(1)}
                   <span className="text-[0.28em] opacity-70">%</span>
                 </p>

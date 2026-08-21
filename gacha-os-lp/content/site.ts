@@ -93,6 +93,54 @@ export const activeHeroVariant: HeroVariantKey = ((): HeroVariantKey => {
 export const activeHero = heroVariants[activeHeroVariant];
 
 /* ────────────────────────────────────────────────
+   スマホ下部の固定バー（A/Bテスト）
+   ──────────────────────────────────────────────── */
+
+/**
+ * スマホの下に出しっぱなしにするボタンの案。
+ *
+ * ★ボタンを3つ並べる形に戻さないこと。
+ *   以前は「料金を見る」の1行＋2行組みのボタン2つで高さが約157pxあり、
+ *   390px の画面のおよそ3割を占めていました。読ませたい本文が隠れます。
+ *   いまは「主ボタン1つ＋副ボタン1つ、料金は細いリンク」に絞っています。
+ *
+ * どちらを主ボタンにすると問い合わせが増えるかは、やってみないと分かりません。
+ * Heroのコピーと同じやり方で、環境変数 NEXT_PUBLIC_MOBILE_CTA_VARIANT で
+ * 切り替えられるようにしてあります（未設定なら A）。
+ */
+export type MobileCtaVariantKey = "A" | "B";
+
+export const mobileCtaVariants: Record<
+  MobileCtaVariantKey,
+  {
+    /** 主ボタン（塗りつぶし） */
+    primary: { label: string; href: string; target: string };
+    /** 副ボタン（枠線） */
+    secondary: { label: string; href: string; target: string };
+    note: string;
+  }
+> = {
+  A: {
+    primary: { label: "無料デモを試す", href: "/demo", target: "demo" },
+    secondary: { label: "導入を相談", href: "/#contact", target: "contact" },
+    note: "まず触ってもらう案",
+  },
+  B: {
+    primary: { label: "導入を相談する", href: "/#contact", target: "contact" },
+    secondary: { label: "無料デモ", href: "/demo", target: "demo" },
+    note: "先に商談へつなぐ案",
+  },
+};
+
+export const activeMobileCtaVariant: MobileCtaVariantKey =
+  ((): MobileCtaVariantKey => {
+    const v = (process.env.NEXT_PUBLIC_MOBILE_CTA_VARIANT ?? "A").toUpperCase();
+    return v === "B" ? "B" : "A";
+  })();
+
+export const activeMobileCta = mobileCtaVariants[activeMobileCtaVariant];
+
+/* ────────────────────────────────────────────────
    製品デモ動画（15〜30秒）の差し込み枠
    ・src に動画パスを入れると、ファーストビュー直下に自動で出ます
    ・null の間は何も表示しません（「準備中」は出しません）

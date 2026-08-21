@@ -284,7 +284,7 @@ export default function RoiCalculator() {
                   <p className="mt-4 text-body leading-[1.9] text-slate2">
                     あなたの場合、年間 約
                   </p>
-                  <p className="num mt-2 break-words text-mega font-bold text-gradient-royal">
+                  <p className="num-lead mt-2 break-words text-mega font-bold text-gradient-royal">
                     {man(r.yearlyDiff)}
                   </p>
                   <p className="mt-3 text-body leading-[1.9] text-slate2">
@@ -293,7 +293,7 @@ export default function RoiCalculator() {
                 </>
               ) : (
                 <>
-                  <p className="num mt-4 text-h2 font-bold leading-tight text-slate">
+                  <p className="num-lead mt-4 text-h2 font-bold leading-tight text-slate">
                     現在の規模では、
                     <br />
                     金額面の効果は限定的です。

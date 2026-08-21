@@ -48,7 +48,7 @@ export default function TimeSaving() {
               <span className="h-1.5 w-1.5 rounded-full bg-slate3/50" />
               従来の運営
             </span>
-            <p className="num mt-4 text-h1 font-semibold leading-none text-slate3">
+            <p className="num-lead mt-4 text-h1 font-semibold leading-none text-slate3">
               {beforeTotal}
               <span className="ml-2 text-note font-normal text-slate3">
                 時間 / 日
@@ -95,7 +95,7 @@ export default function TimeSaving() {
               <span className="h-1.5 w-1.5 rounded-full bg-blue-ink" />
               AI&nbsp;GACHA&nbsp;OS
             </span>
-            <p className="num mt-4 text-h1 font-semibold leading-none text-slate">
+            <p className="num-lead mt-4 text-h1 font-semibold leading-none text-slate">
               1〜2
               <span className="ml-2 text-note font-normal text-slate3">
                 時間 / 日

@@ -27,56 +27,24 @@ import { MoreDetail } from "../ui/Act";
 import { OS } from "@/lib/text";
 /* ★日本語の本文は jp() を通すこと。「確／認する」のような途中改行を止めます */
 import { jp } from "@/lib/jp";
+/* ★賞の色・格付けは lib/rank.ts に一本化。ここで色を書かないこと */
+import { rank } from "@/lib/rank";
 
 /* ────────────────────────────────
    ACT 2 で組み上がる賞の構成（デモの数値）
    ──────────────────────────────── */
+/*
+  ★色や格付けをここに書き直さないこと。
+    S / A / B / C / ラストワン の見た目は lib/rank.ts が持っています。
+    ここで別の色を書くと、同じ S 賞なのに管理画面とお客様画面で
+    色が違う、という状態に戻ります。
+*/
 const tiers = [
-  {
-    rank: "S",
-    label: "S賞",
-    item: "高額シングル・封入BOX",
-    n: 3,
-    p: "0.3%",
-    tone: "from-blue-ink to-blue-deep",
-    text: "text-white",
-  },
-  {
-    rank: "A",
-    label: "A賞",
-    item: "人気シングル",
-    n: 12,
-    p: "1.2%",
-    tone: "from-blue/85 to-blue-ink",
-    text: "text-white",
-  },
-  {
-    rank: "B",
-    label: "B賞",
-    item: "中位カード・パック",
-    n: 85,
-    p: "8.5%",
-    tone: "from-blue-pale to-white",
-    text: "text-blue-ink",
-  },
-  {
-    rank: "C",
-    label: "C賞",
-    item: "参加賞カード",
-    n: 899,
-    p: "89.9%",
-    tone: "from-white to-white",
-    text: "text-slate2",
-  },
-  {
-    rank: "L",
-    label: "ラストワン賞",
-    item: "最後の1口に確定",
-    n: 1,
-    p: "確定",
-    tone: "from-gold-soft to-gold",
-    text: "text-slate",
-  },
+  { ...rank("S"), item: "高額シングル・封入BOX", n: 3, p: "0.3%" },
+  { ...rank("A"), item: "人気シングル", n: 12, p: "1.2%" },
+  { ...rank("B"), item: "中位カード・パック", n: 85, p: "8.5%" },
+  { ...rank("C"), item: "参加賞カード", n: 899, p: "89.9%" },
+  { ...rank("L"), item: "最後の1口に確定", n: 1, p: "確定" },
 ];
 
 /** 中央のCOREを通って流れていくデータの並び（HUMAN → OS → CUSTOMER） */
@@ -614,7 +582,7 @@ function ActTwo({ reduce }: { reduce: boolean }) {
                 同じ要素に translateZ を書くと消されてしまいます。
               */
               <div
-                key={t.rank}
+                key={t.key}
                 style={{ transform: `translateZ(${(tiers.length - i) * 9}px)` }}
               >
                 <motion.div
@@ -630,12 +598,28 @@ function ActTwo({ reduce }: { reduce: boolean }) {
                           ease: [0.16, 1, 0.3, 1],
                         }
                   }
-                  className="flex min-w-0 items-center gap-3 rounded-2xl border border-edge bg-white p-3 shadow-lift sm:gap-4 sm:p-4"
+                  className={`flex min-w-0 items-center gap-3 rounded-2xl border border-edge p-3 shadow-lift sm:gap-4 sm:p-4 ${t.row}`}
                 >
+                  {/*
+                    ★小さい四角に1文字、に戻さないこと。
+                      60〜72px の面と英字の格付け（PREMIUM / HIGH / …）が
+                      あって初めて、初めて見る人にも上下が伝わります。
+                  */}
                   <span
-                    className={`num flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br text-[15px] font-bold shadow-lift sm:h-12 sm:w-12 ${t.tone} ${t.text}`}
+                    className={`flex h-[60px] w-[60px] shrink-0 flex-col items-center justify-center rounded-2xl shadow-lift sm:h-[68px] sm:w-[68px] ${t.face} ${t.edge}`}
                   >
-                    {t.rank}
+                    <span
+                      className={`num font-bold leading-none ${t.ink} ${
+                        t.mark.length > 1 ? "text-[13px]" : "text-[22px]"
+                      }`}
+                    >
+                      {t.mark}
+                    </span>
+                    <span
+                      className={`num mt-1 text-[9px] leading-none tracking-[0.14em] opacity-75 ${t.ink}`}
+                    >
+                      {t.tier}
+                    </span>
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="block text-note font-bold text-slate">

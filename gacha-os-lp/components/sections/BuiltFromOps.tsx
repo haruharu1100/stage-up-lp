@@ -62,7 +62,7 @@ export default function BuiltFromOps() {
                   <p className="text-note leading-tight text-slate3">
                     {m.label}
                   </p>
-                  <p className="num mt-3 text-h1 font-semibold leading-none text-slate">
+                  <p className="num-lead mt-3 text-h1 font-semibold leading-none text-slate">
                     {m.value.toLocaleString("ja-JP")}
                     <span className="ml-2 text-note font-normal text-slate3">
                       {m.unit}

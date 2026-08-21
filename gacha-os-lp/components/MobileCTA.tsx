@@ -1,11 +1,35 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { EV, track } from "@/lib/track";
+import {
+  activeMobileCta as raw_cta,
+  activeMobileCtaVariant,
+} from "@/content/site";
+/* ★画面に出す文字は jpDeep() を通す。日本語が語の途中で割れるのを止める */
+import { jpDeep } from "@/lib/jp";
 
+const cta = jpDeep(raw_cta);
+
+/**
+ * スマホの下に出しっぱなしにする問い合わせ導線。
+ *
+ * ここで気をつけていること
+ *  1. 高さを増やさない。
+ *     以前はボタンが3枠あって高さが約157pxあり、390pxの画面の3割を
+ *     覆っていました。いまは主ボタン・副ボタンを1行ずつの横並びにして、
+ *     料金へのリンクはその上の細い1行に逃がしています。
+ *  2. 隠れる分を、ページ側に必ず返す。
+ *     「本文の最後がバーの下に潜って読めない」という壊れ方を防ぐため、
+ *     実際に描かれた高さを測って --mobile-cta-h に入れ、
+ *     globals.css の body がその分だけ下に余白を作ります。
+ *     決め打ちの pb-[170px] のような数字は、文言を変えた瞬間にずれます。
+ *  3. どちらのボタンを主役にするかは content/site.ts の A/B で切り替える。
+ */
 export default function MobileCTA() {
   const [show, setShow] = useState(false);
+  const ref = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const onScroll = () => setShow(window.scrollY > window.innerHeight * 0.9);
@@ -14,26 +38,50 @@ export default function MobileCTA() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  /* 実際の高さをページに伝える。文言を変えても余白がずれない */
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const root = document.documentElement;
+    const apply = () =>
+      root.style.setProperty(
+        "--mobile-cta-h",
+        `${Math.round(el.getBoundingClientRect().height)}px`,
+      );
+    apply();
+    const ro = new ResizeObserver(apply);
+    ro.observe(el);
+    return () => {
+      ro.disconnect();
+      root.style.removeProperty("--mobile-cta-h");
+    };
+  }, []);
+
+  const go = (target: string) => () =>
+    track(EV.ctaClick, {
+      place: "mobile_bar",
+      target,
+      variant: activeMobileCtaVariant,
+    });
+
   return (
     <div
-      className={`fixed inset-x-0 bottom-0 z-40 border-t border-edge bg-white/85 px-4 pt-3.5 pb-[env(safe-area-inset-bottom)] shadow-float backdrop-blur-xl backdrop-saturate-150 transition-transform duration-500 ease-out sm:hidden ${
+      ref={ref}
+      className={`fixed inset-x-0 bottom-0 z-40 border-t border-edge bg-white/85 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2 shadow-float backdrop-blur-xl backdrop-saturate-150 transition-transform duration-500 ease-out sm:hidden ${
         show ? "translate-y-0" : "translate-y-full"
       }`}
     >
       {/*
-        検討中の人がいちばん探すのは料金です。
-        ここに1行足しておくと、どこまでスクロールしていても1タップで料金へ行けます。
-        （文字は小さくできないので、ボタンを3つ横並びにはせず、細い1行にしています）
+        料金は、検討中の人がいちばん探すものなので必ず置きます。
+        ただしボタンにはしません。ここを枠にすると高さが戻ります。
       */}
       <Link
         href="/#pricing"
-        onClick={() =>
-          track(EV.ctaClick, { place: "mobile_bar", target: "pricing" })
-        }
-        className="mb-2.5 flex items-center justify-center gap-1.5 rounded-xl border border-edge bg-paper2 py-2 text-note font-semibold text-blue-ink"
+        onClick={go("pricing")}
+        className="mb-2 flex items-center justify-center gap-1 py-0.5 text-note font-semibold text-blue-ink underline-offset-4"
       >
         料金を見る
-        <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden>
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden>
           <path
             d="M3 8h10M9 4l4 4-4 4"
             stroke="currentColor"
@@ -44,25 +92,24 @@ export default function MobileCTA() {
         </svg>
       </Link>
 
-      <div className="flex items-stretch gap-2.5 pb-3.5">
+      <div className="flex items-stretch gap-2.5">
+        {/*
+          ★ボタンの中で2行に折り返さないこと。
+            短い言葉にしてあるので1行で入ります。折り返すと高さが戻ります。
+        */}
         <Link
-          href="/demo"
-          onClick={() => track(EV.ctaClick, { place: "mobile_bar", target: "demo" })}
-          className="btn-outline flex-1 flex-col !gap-0 !px-3 !py-3 text-center !leading-snug"
+          href={cta.secondary.href}
+          onClick={go(cta.secondary.target)}
+          className="btn-outline flex-1 whitespace-nowrap !px-3 !py-3"
         >
-          {/* 390px でも読める大きさを保つため、2行に分けて折り返しを固定する */}
-          <span className="block">無料デモを</span>
-          <span className="block">体験する</span>
+          {cta.secondary.label}
         </Link>
         <Link
-          href="/#contact"
-          onClick={() =>
-            track(EV.ctaClick, { place: "mobile_bar", target: "contact" })
-          }
-          className="btn-primary flex-[1.35] flex-col !gap-0 !px-3 !py-3 text-center !leading-snug"
+          href={cta.primary.href}
+          onClick={go(cta.primary.target)}
+          className="btn-primary flex-[1.3] whitespace-nowrap !px-3 !py-3"
         >
-          <span className="block">導入について</span>
-          <span className="block">相談する</span>
+          {cta.primary.label}
         </Link>
       </div>
     </div>

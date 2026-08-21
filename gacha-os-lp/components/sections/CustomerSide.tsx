@@ -24,36 +24,60 @@ import { MoreDetail } from "../ui/Act";
 import { EV, track } from "@/lib/track";
 /* ★画面に出す文字は jp() を通す。日本語が語の途中で割れるのを止める */
 import { jp } from "@/lib/jp";
+/* ★賞の色・格付けは lib/rank.ts に一本化。ここで色を書かないこと */
+import { rank } from "@/lib/rank";
 
 type Phase = "draft" | "published" | "playing" | "result" | "chosen";
 
+/**
+ * 空っぽの画面を初期表示にしないこと。
+ *
+ * ここは「商品が動いているところ」を見せる場所です。
+ * 以前は draft から始まっていたため、スマホで見た人には
+ * 「MY SHOP / 12,500pt」の下に「まだガチャがありません」が出るだけで、
+ * 何を売っているのか分からない画面が最初に見えていました。
+ *
+ * そこで初期値を published（ガチャが並んでいる完成状態）にしています。
+ * 「承認する前は空」という説明も残したいので、［もう一度見る］を押したときだけ
+ * 下書きの画面を EMPTY_MS のあいだ見せ、そのあと自動で公開状態へ進みます。
+ * 空のまま放置される状態は作りません。
+ */
+const EMPTY_MS = 1600;
+
 export default function CustomerSide() {
-  const [phase, setPhase] = useState<Phase>("draft");
+  const [phase, setPhase] = useState<Phase>("published");
   const [choice, setChoice] = useState<"ship" | "point" | null>(null);
   const reduce = useReducedMotion() ?? false;
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useEffect(
-    () => () => {
-      if (timer.current) clearTimeout(timer.current);
-    },
-    [],
-  );
+  const clear = () => {
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = null;
+  };
+
+  useEffect(() => () => clear(), []);
 
   const publish = () => {
+    clear();
     setPhase("published");
     track(EV.ctaClick, { place: "customer_side", target: "publish" });
   };
 
   const draw = () => {
+    clear();
     setPhase("playing");
     timer.current = setTimeout(() => setPhase("result"), reduce ? 400 : 1700);
   };
 
+  /* 最初から見直す。下書きは一瞬だけ見せて、必ず公開状態まで戻す */
   const reset = () => {
-    if (timer.current) clearTimeout(timer.current);
+    clear();
     setChoice(null);
     setPhase("draft");
+    timer.current = setTimeout(
+      () => setPhase("published"),
+      reduce ? 400 : EMPTY_MS,
+    );
   };
 
   const live = phase !== "draft";
@@ -384,8 +408,9 @@ function OperatorPanel({
             </svg>
           )}
         </button>
+        {/* ★「右の」と書かないこと。スマホでは上下に並ぶので方向が合わなくなります */}
         <p className="mt-3 text-note leading-[1.9] text-slate3">
-          押すと、右のお客様画面に反映されます。押すまでは公開されません。
+          押すと、お客様の画面に反映されます。押すまでは公開されません。
         </p>
       </div>
     </div>
@@ -528,10 +553,10 @@ function ScreenEmpty() {
         </svg>
       </span>
       <p className="mt-4 text-note font-semibold text-slate2">
-        まだガチャがありません
+        承認待ちです
       </p>
       <p className="mt-2 text-[13px] leading-[1.7] text-slate3">
-        左の管理画面で承認すると、
+        管理画面で承認すると、
         <br />
         ここに並びます。
       </p>
@@ -551,15 +576,36 @@ function ScreenGacha({ onDraw }: { onDraw: () => void }) {
         </span>
       </div>
 
-      {/* メイン景品 */}
+      {/*
+        メイン景品。
+        ★白い枠に文字だけ、に戻さないこと。
+          画像が読み込めなかった画面に見えてしまい、
+          「売り物が並んでいる」という肝心のところが伝わりません。
+          写真は入れられないので、カードが3枚重なった形を描いています。
+      */}
       <div className="relative mt-2.5 overflow-hidden rounded-2xl border border-edge bg-gradient-to-b from-blue-pale to-white p-3 shadow-lift">
-        <div className="flex h-[92px] items-center justify-center rounded-xl border border-edge2 bg-white">
-          <span className="num text-[11px] tracking-[0.2em] text-slate3">
-            S賞 メイン景品
+        <div className="relative flex h-[92px] items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-blue-deep to-slate">
+          <span
+            aria-hidden
+            className="absolute h-[62px] w-[44px] -translate-x-[30px] rotate-[-11deg] rounded-md bg-white/25 ring-1 ring-inset ring-white/30"
+          />
+          <span
+            aria-hidden
+            className="absolute h-[62px] w-[44px] translate-x-[30px] rotate-[11deg] rounded-md bg-white/25 ring-1 ring-inset ring-white/30"
+          />
+          <span
+            aria-hidden
+            className="absolute h-[70px] w-[50px] rounded-md bg-gradient-to-b from-gold-soft to-gold shadow-float ring-1 ring-inset ring-white/40"
+          />
+          <span className="num absolute bottom-1.5 left-2 rounded-full bg-white/90 px-2 py-[2px] text-[9px] font-bold tracking-[0.1em] text-slate">
+            S賞
           </span>
         </div>
         <p className="mt-2.5 text-[13px] font-bold leading-[1.5] text-slate">
           人気カード 500円ガチャ
+        </p>
+        <p className="num mt-1 text-[11px] leading-none text-slate3">
+          1回 500pt / 全 1,000口
         </p>
       </div>
 
@@ -574,16 +620,30 @@ function ScreenGacha({ onDraw }: { onDraw: () => void }) {
         <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-mist">
           <div className="h-full w-[82%] rounded-full bg-blue-ink" />
         </div>
+        {/*
+          ★同じ大きさの灰色の四角を4つ並べる形に戻さないこと。
+            どれが上位賞なのかが伝わりません。色は lib/rank.ts に合わせ、
+            残り本数は数字を大きくして、ひと目で読めるようにしています。
+        */}
         <div className="mt-2.5 grid grid-cols-4 gap-1">
           {[
-            { k: "S", v: "2" },
-            { k: "A", v: "9" },
-            { k: "B", v: "68" },
-            { k: "L", v: "1" },
+            { ...rank("S"), v: "2" },
+            { ...rank("A"), v: "9" },
+            { ...rank("B"), v: "68" },
+            { ...rank("L"), v: "1" },
           ].map((t) => (
-            <div key={t.k} className="rounded-lg bg-paper2 py-1.5 text-center">
-              <p className="num text-[10px] text-slate3">{t.k}賞</p>
-              <p className="num text-[12px] font-bold text-slate">{t.v}</p>
+            <div
+              key={t.key}
+              className={`overflow-hidden rounded-lg border border-edge2 text-center ${t.row}`}
+            >
+              <p
+                className={`num py-[3px] text-[9px] font-bold leading-none tracking-[0.08em] ${t.face} ${t.ink}`}
+              >
+                {t.mark}
+              </p>
+              <p className="num py-1 text-[13px] font-bold leading-none text-slate">
+                {t.v}
+              </p>
             </div>
           ))}
         </div>
@@ -656,9 +716,19 @@ function ScreenResult({
   return (
     <motion.div {...screenIn} className="flex h-full flex-col">
       <div className="rounded-2xl border border-blue-ink/20 bg-gradient-to-b from-blue-pale to-white p-3 text-center shadow-lift">
-        <p className="num text-[10px] tracking-[0.22em] text-blue-ink">A賞</p>
-        <div className="mt-2 flex h-[86px] items-center justify-center rounded-xl border border-edge2 bg-white">
-          <span className="num text-[11px] tracking-[0.16em] text-slate3">
+        {/* 当たった賞は、格が分かる形で出す（色は lib/rank.ts） */}
+        <span
+          className={`num inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[10px] font-bold tracking-[0.14em] ${rank("A").face} ${rank("A").ink} ${rank("A").edge}`}
+        >
+          {rank("A").mark}
+          <span className="opacity-70">{rank("A").tier}</span>
+        </span>
+        <div className="relative mt-2 flex h-[86px] items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-blue to-blue-ink">
+          <span
+            aria-hidden
+            className="absolute h-[64px] w-[46px] rounded-md bg-white/85 shadow-float ring-1 ring-inset ring-white/60"
+          />
+          <span className="num relative text-[10px] font-bold tracking-[0.14em] text-blue-ink">
             人気シングル
           </span>
         </div>
