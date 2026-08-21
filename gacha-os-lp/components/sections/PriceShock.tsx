@@ -373,8 +373,13 @@ function LeftoverSim() {
         が出ます。
       </p>
 
-      {/* タイムライン */}
-      <div className="mt-8 grid grid-cols-4 gap-2.5 sm:gap-3">
+      {/*
+        タイムライン。
+        ★スマホで4列に戻さないこと。390px だと1枚66pxしかなく、
+          「残り 1000 口」と還元率の計器が枠からはみ出して読めません。
+          2×2 なら 1000→800→500→200 の順序も左上から自然に追えます。
+      */}
+      <div className="mt-8 grid grid-cols-2 gap-2.5 sm:grid-cols-4 sm:gap-3">
         {snaps.map((s, i) => {
           const v = snapRtp(s);
           const t = rtpTone(v);

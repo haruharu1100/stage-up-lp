@@ -8,6 +8,10 @@ import { faqs as raw_faqs } from "@/content/site";
 /* ★画面に出す文字は jpDeep() を通す。日本語が語の途中で割れるのを止める */
 import { jpDeep } from "@/lib/jp";
 
+/* ★編集画面（/admin/lp-content）で直した文章があれば、そちらを優先する */
+import { lpText } from "@/lib/lpText";
+import LpText from "../ui/LpText";
+
 const faqs = jpDeep(raw_faqs);
 
 export default function Faq() {
@@ -24,6 +28,8 @@ export default function Faq() {
       <div className="mx-auto max-w-3xl space-y-3.5">
         {faqs.map((f, i) => {
           const isOpen = open === i;
+          /* 編集画面で「この質問を出さない」にされていたら、質問ごと消す */
+          if (lpText(`faq.${i}.q`, f.q).hidden) return null;
           return (
             <Reveal key={f.q} delay={i * 0.03}>
               <div
@@ -48,9 +54,11 @@ export default function Faq() {
                   >
                     Q{String(i + 1).padStart(2, "0")}
                   </span>
-                  <span className="flex-1 text-body font-semibold leading-[1.65] text-slate">
-                    {f.q}
-                  </span>
+                  <LpText
+                    id={`faq.${i}.q`}
+                    fallback={f.q}
+                    className="flex-1 text-body font-semibold leading-[1.65] text-slate"
+                  />
                   <span
                     className={`mt-[7px] shrink-0 transition-transform duration-300 ${isOpen ? "rotate-45" : ""}`}
                   >
@@ -90,9 +98,12 @@ export default function Faq() {
                         <span className="num mt-[3px] shrink-0 text-label text-blue-ink">
                           A{String(i + 1).padStart(2, "0")}
                         </span>
-                        <p className="min-w-0 flex-1 text-note text-pretty leading-[1.95] text-slate2">
-                          {f.a}
-                        </p>
+                        <LpText
+                          as="p"
+                          id={`faq.${i}.a`}
+                          fallback={f.a}
+                          className="min-w-0 flex-1 text-note text-pretty leading-[1.95] text-slate2"
+                        />
                       </div>
                     </motion.div>
                   )}

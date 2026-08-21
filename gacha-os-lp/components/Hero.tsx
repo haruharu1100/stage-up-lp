@@ -9,6 +9,9 @@ import { activeHero as raw_activeHero, activeHeroVariant, site } from "@/content
 import { jpDeep } from "@/lib/jp";
 
 const activeHero = jpDeep(raw_activeHero);
+/* ★編集画面（/admin/lp-content）で直した文章があれば、そちらを優先する */
+import { lpText } from "@/lib/lpText";
+import LpText from "./ui/LpText";
 import { setLeadVariant } from "@/lib/lead";
 import { EV, track } from "@/lib/track";
 import { useIsNarrow, useQuality } from "@/lib/quality";
@@ -52,6 +55,13 @@ export default function Hero() {
     transition: reduce ? { duration: 0 } : { duration: 0.85, delay, ease },
   });
 
+  /* 編集画面で直された文章。直されていなければ、いつも通りの表示に戻る */
+  const badge = lpText("hero.badge", "オンラインガチャ / オリパ 事業者向け");
+  const head = lpText("hero.headline", "");
+  const edited = head.pc.trim().length > 0;
+  const headPc = head.pc.split("\n");
+  const headSp = head.sp.split("\n");
+
   return (
     <section className="relative overflow-hidden bg-paper pb-20 pt-28 sm:pb-24 sm:pt-32 lg:pb-24 lg:pt-32">
       {/* ── 背景。白を基調に、薄いブルーの光だけを置く ── */}
@@ -62,49 +72,85 @@ export default function Hero() {
 
       <div className="container-wide relative z-10">
         {/* ── 見出しは横幅いっぱいに置く。日本語の大きな文字を途中で折らないため ── */}
-        <motion.span
-          {...rise(0)}
-          className="inline-flex items-center gap-2.5 rounded-full border border-edge bg-white px-4 py-2 text-[14px] font-medium text-slate2 shadow-lift"
-        >
-          <span className="h-2 w-2 rounded-full bg-ok-ink" />
-          オンラインガチャ / オリパ 事業者向け
-        </motion.span>
+        {badge.hidden ? null : (
+          <motion.span
+            {...rise(0)}
+            className="inline-flex items-center gap-2.5 rounded-full border border-edge bg-white px-4 py-2 text-[14px] font-medium text-slate2 shadow-lift"
+          >
+            <span className="h-2 w-2 rounded-full bg-ok-ink" />
+            {badge.pc}
+          </motion.span>
+        )}
 
         <motion.h1
           {...rise(0.08)}
           className="h-display mt-7 text-hero text-slate [text-wrap:nowrap]"
         >
-          {/* スマホ：意味の切れ目で改行した行を使う */}
-          <span className="lg:hidden">
-            {activeHero.headlineSp.map((line, i) => (
-              <span
-                key={line}
-                className={`block ${i >= activeHero.accentFrom ? "text-gradient-royal" : ""}`}
-              >
-                {line}
+          {/*
+            編集画面で見出しを直した場合は、そちらの改行をそのまま使う。
+            ★何行目から色を変えるかは accentFrom のまま。
+              行数が変わっても「後ろのほうを色にする」意味は保ちたいので、
+              最後の1行を必ず色にしています。
+          */}
+          {edited ? (
+            <>
+              <span className="lg:hidden">
+                {headSp.map((line, i) => (
+                  <span
+                    key={`sp-${i}`}
+                    className={`block ${i >= headSp.length - 1 ? "text-gradient-royal" : ""}`}
+                  >
+                    {jpDeep(line)}
+                  </span>
+                ))}
               </span>
-            ))}
-          </span>
-          {/* PC：横幅が足りるので2行 */}
-          <span className="hidden lg:block">
-            <span className="block">{activeHero.headline[0]}</span>
-            <span className="block text-gradient-royal">
-              {activeHero.headline[1]}
-            </span>
-          </span>
+              <span className="hidden lg:block">
+                {headPc.map((line, i) => (
+                  <span
+                    key={`pc-${i}`}
+                    className={`block ${i >= headPc.length - 1 ? "text-gradient-royal" : ""}`}
+                  >
+                    {jpDeep(line)}
+                  </span>
+                ))}
+              </span>
+            </>
+          ) : (
+            <>
+              {/* スマホ：意味の切れ目で改行した行を使う */}
+              <span className="lg:hidden">
+                {activeHero.headlineSp.map((line, i) => (
+                  <span
+                    key={line}
+                    className={`block ${i >= activeHero.accentFrom ? "text-gradient-royal" : ""}`}
+                  >
+                    {line}
+                  </span>
+                ))}
+              </span>
+              {/* PC：横幅が足りるので2行 */}
+              <span className="hidden lg:block">
+                <span className="block">{activeHero.headline[0]}</span>
+                <span className="block text-gradient-royal">
+                  {activeHero.headline[1]}
+                </span>
+              </span>
+            </>
+          )}
         </motion.h1>
 
         <div className="mt-10 grid items-start gap-10 lg:mt-4 lg:grid-cols-[minmax(0,0.76fr)_minmax(0,1.24fr)] lg:gap-10">
           {/* ───────────── 左：ひとことの説明と、進む先 ───────────── */}
           <div className="lg:pt-10">
-            <motion.p
-              {...rise(0.16)}
-              className="max-w-[24em] text-body text-pretty text-slate2"
-            >
-              AIに指示。内容を確認。
-              <br className="hidden sm:block" />
-              あとは運営をシステムが支える。
-            </motion.p>
+            <motion.div {...rise(0.16)}>
+              <LpText
+                as="p"
+                id="hero.sub"
+                fallback={"AIに指示。内容を確認。\nあとは運営をシステムが支える。"}
+                fallbackSp="AIに指示。内容を確認。あとは運営をシステムが支える。"
+                className="max-w-[24em] text-body text-pretty text-slate2"
+              />
+            </motion.div>
 
             {/* 担当する範囲。長い文章にせず、札で見せる */}
             <motion.ul

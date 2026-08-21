@@ -13,6 +13,7 @@ export default function robots(): MetadataRoute.Robots {
           "/sales",
           "/sales-demo",
           "/launch",
+          "/admin",
           "/contact/",
         ],
       },

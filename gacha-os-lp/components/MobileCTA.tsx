@@ -10,6 +10,9 @@ import {
 /* ★画面に出す文字は jpDeep() を通す。日本語が語の途中で割れるのを止める */
 import { jpDeep } from "@/lib/jp";
 
+/* ★編集画面（/admin/lp-content）で直した文章があれば、そちらを優先する */
+import { lpLabelSp } from "./ui/LpText";
+
 const cta = jpDeep(raw_cta);
 
 /**
@@ -57,6 +60,14 @@ export default function MobileCTA() {
     };
   }, []);
 
+  /*
+    編集画面で直された文字。
+    ★スマホ用（sp）を優先して読むこと。ここはスマホにしか出ないバーです。
+  */
+  const priceLink = lpLabelSp("mobilecta.pricing", "料金を見る");
+  const primary = lpLabelSp("mobilecta.primary", cta.primary.label);
+  const secondary = lpLabelSp("mobilecta.secondary", cta.secondary.label);
+
   const go = (target: string) => () =>
     track(EV.ctaClick, {
       place: "mobile_bar",
@@ -75,12 +86,13 @@ export default function MobileCTA() {
         料金は、検討中の人がいちばん探すものなので必ず置きます。
         ただしボタンにはしません。ここを枠にすると高さが戻ります。
       */}
+      {priceLink.hidden ? null : (
       <Link
         href="/#pricing"
         onClick={go("pricing")}
         className="mb-2 flex items-center justify-center gap-1 py-0.5 text-note font-semibold text-blue-ink underline-offset-4"
       >
-        料金を見る
+        {priceLink.text}
         <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden>
           <path
             d="M3 8h10M9 4l4 4-4 4"
@@ -91,6 +103,7 @@ export default function MobileCTA() {
           />
         </svg>
       </Link>
+      )}
 
       <div className="flex items-stretch gap-2.5">
         {/*
@@ -102,14 +115,14 @@ export default function MobileCTA() {
           onClick={go(cta.secondary.target)}
           className="btn-outline flex-1 whitespace-nowrap !px-3 !py-3"
         >
-          {cta.secondary.label}
+          {secondary.text}
         </Link>
         <Link
           href={cta.primary.href}
           onClick={go(cta.primary.target)}
           className="btn-primary flex-[1.3] whitespace-nowrap !px-3 !py-3"
         >
-          {cta.primary.label}
+          {primary.text}
         </Link>
       </div>
     </div>

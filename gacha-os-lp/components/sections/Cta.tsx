@@ -7,6 +7,9 @@ import { ctaTrio as raw_ctaTrio } from "@/content/site";
 /* ★画面に出す文字は jpDeep() を通す。日本語が語の途中で割れるのを止める */
 import { jpDeep } from "@/lib/jp";
 
+/* ★編集画面（/admin/lp-content）で直した文章があれば、そちらを優先する */
+import LpText, { lpLabel } from "../ui/LpText";
+
 const ctaTrio = jpDeep(raw_ctaTrio);
 import {
   captureLeadSource,
@@ -39,6 +42,18 @@ const INTENTS = [
 const INPUT_CLS =
   "mt-3 w-full rounded-xl border border-edge bg-white px-5 py-4 text-note text-slate outline-none transition-all duration-200 placeholder:text-slate3/60 hover:border-edge focus:border-blue-ink focus:ring-4 focus:ring-blue-ink/10";
 
+/*
+  編集画面（/admin/lp-content）から直せる文章の、コード側の元の値。
+  ★ここを直したら、画面に渡している fallback も同じ値のままにすること。
+    ずれると「編集していないのに文章が変わった」ように見えます。
+*/
+const CONTACT_HEADING = "まず、いまの運営を\n見せてください。";
+const CONTACT_LEAD =
+  "どこに時間が溶けているのかを一緒に整理します。デモ画面をお見せしながら、必要な機能範囲とお見積りの目安をその場でお伝えします。";
+const CONTACT_SUBMIT = "送信する";
+const CONTACT_NOTE =
+  "その他の詳細は、ご相談の中でうかがいます。送信された内容は、ご相談への回答のみに使用します。営業目的での第三者提供は行いません。詳しくは";
+
 export default function Cta() {
   const [state, setState] = useState<State>("idle");
   const [error, setError] = useState("");
@@ -58,6 +73,10 @@ export default function Cta() {
   const noteRef = useRef<HTMLTextAreaElement | null>(null);
   /** 未選択のまま送信されたときに、その場所まで画面を戻すため */
   const runningRef = useRef<HTMLFieldSetElement | null>(null);
+
+  /* 編集画面で直された文章。直されていなければ、これまでどおりの表示に戻る */
+  const headEdited = lpLabel("contact.heading", "").text.length > 0;
+  const submitLabel = lpLabel("contact.submit", CONTACT_SUBMIT).text;
 
   /**
    * 送信内容に必ず同梱する情報。
@@ -194,15 +213,30 @@ export default function Cta() {
                     もう一度「SECTION 10」と出すと章が増えたように見えます。 */}
               <span className="eyebrow-lite">GET STARTED</span>
             </div>
-            <h2 className="h-display mt-5 text-h2 text-slate sm:mt-7">
-              まず、いまの運営を
-              <br />
-              <span className="text-gradient-royal">見せてください。</span>
-            </h2>
-            <p className="mx-auto mt-5 max-w-2xl text-body text-slate2 sm:mt-7">
-              どこに時間が溶けているのかを一緒に整理します。デモ画面をお見せしながら、
-              必要な機能範囲とお見積りの目安をその場でお伝えします。
-            </p>
+            {/*
+              見出しは編集画面から直せる。
+              直していないときは、これまでどおり「見せてください。」だけを色にする。
+            */}
+            {headEdited ? (
+              <LpText
+                as="h2"
+                id="contact.heading"
+                fallback={CONTACT_HEADING}
+                className="h-display mt-5 text-h2 text-slate sm:mt-7"
+              />
+            ) : (
+              <h2 className="h-display mt-5 text-h2 text-slate sm:mt-7">
+                まず、いまの運営を
+                <br />
+                <span className="text-gradient-royal">見せてください。</span>
+              </h2>
+            )}
+            <LpText
+              as="p"
+              id="contact.lead"
+              fallback={CONTACT_LEAD}
+              className="mx-auto mt-5 max-w-2xl text-body text-slate2 sm:mt-7"
+            />
           </div>
         </Reveal>
 
@@ -574,11 +608,12 @@ export default function Cta() {
                     disabled={state === "sending"}
                     className="btn-primary btn-lg w-full rounded-xl disabled:opacity-50"
                   >
-                    {state === "sending" ? "送信中…" : "送信する"}
+                    {state === "sending" ? "送信中…" : submitLabel}
                   </button>
 
                   <p className="text-note text-slate3">
-                    その他の詳細は、ご相談の中でうかがいます。送信された内容は、ご相談への回答のみに使用します。営業目的での第三者提供は行いません。詳しくは
+                    <LpText id="contact.note" fallback={CONTACT_NOTE} />
+
                     <Link
                       href="/legal/privacy"
                       className="ml-1 text-blue-ink underline underline-offset-4 transition hover:text-slate"
