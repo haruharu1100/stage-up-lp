@@ -108,7 +108,7 @@ export default function LaborCompare() {
           {/* AFTER */}
           <div className="rounded-3xl border border-blue-ink/20 bg-white p-6 shadow-lift2 sm:p-8">
             <span className="num text-label text-blue-ink">
-              AFTER ／ AI GACHA OS
+              AFTER ／ AI&nbsp;GACHA&nbsp;OS
             </span>
 
             <div className="mt-6 flex flex-wrap gap-x-10 gap-y-5">

@@ -3,6 +3,8 @@
 import { motion, useReducedMotion } from "framer-motion";
 import Reveal from "../ui/Reveal";
 import { MoreDetail } from "../ui/Act";
+/* ★製品名は必ず OS を使うこと。"AI GACHA OS" と直接書くと狭い画面で割れます */
+import { OS } from "@/lib/text";
 
 /**
  * 「6つ全部を、あなたがやるわけではない」を見せるセクション。
@@ -53,7 +55,7 @@ const roles: Role[] = [
   {
     no: "02",
     side: "ai",
-    actor: "AI GACHA OS",
+    actor: OS,
     title: "作る・試す",
     body: "商品候補から賞の構成までを組み上げ、公開前に結果のばらつきまで試算します。",
     detail: [
@@ -79,7 +81,7 @@ const roles: Role[] = [
   {
     no: "04",
     side: "ai",
-    actor: "AI GACHA OS",
+    actor: OS,
     title: "販売中を監視する",
     body: "公開したあとも、数字を見続けます。危ないと判断した内容は管理画面と通知で知らせます。",
     detail: [
@@ -106,7 +108,7 @@ const roles: Role[] = [
   {
     no: "06",
     side: "ai",
-    actor: "AI GACHA OS",
+    actor: OS,
     title: "問い合わせに答える",
     body: "よくある質問はAIが一次対応します。判断が必要なものは、AIが答えずに管理者へ引き継ぎます。",
     detail: [
@@ -189,7 +191,7 @@ export default function RoleFlow() {
           <div className="text-center">
             <span className="num text-label text-blue-ink/70">右のレーン</span>
             <p className="mt-2 text-body font-bold text-blue-ink">
-              AI GACHA OS がすること
+              AI&nbsp;GACHA&nbsp;OS がすること
             </p>
           </div>
         </div>
@@ -473,8 +475,8 @@ function Roadmap() {
       </div>
 
       <p className="mt-5 border-t border-edge2 pt-5 text-note text-pretty leading-[1.9] text-slate3">
-        この自動学習は、現時点では実装していません。 今のAI GACHA
-        OSは、登録済みのデータと入力条件をもとにガチャ案を作ります。
+        この自動学習は、現時点では実装していません。
+        今のAI&nbsp;GACHA&nbsp;OSは、登録済みのデータと入力条件をもとにガチャ案を作ります。
         いつ提供できるかが決まっていない機能を、すでに使えるものとしては書きません。
       </p>
 

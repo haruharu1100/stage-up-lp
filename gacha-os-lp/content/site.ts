@@ -1,3 +1,12 @@
+/*
+  ★画面に出る文章の中で製品名を書くときは、必ず OS / OPERATOR を使うこと。
+    "AI GACHA OS" と半角スペースで書くと、狭い画面で
+    「AI GACHA／OS」のように製品名が2行に割れます。
+    下の brand だけは、検索結果やブラウザのタブ名にも使うため、
+    普通の空白のままにしています。
+*/
+import { OS, OPERATOR } from "@/lib/text";
+
 export const site = {
   brand: "AI GACHA OS",
   brandJa: "AIガチャ運営OS",
@@ -599,7 +608,7 @@ export const builtFromOps = {
    ──────────────────────────────────────────────── */
 
 export const pricingStructure = {
-  lead: "AI GACHA OS は「作って納品して終わり」ではありません。初期構築のうえで、OSとして毎月使い続けていただく形です。",
+  lead: `${OS} は「作って納品して終わり」ではありません。初期構築のうえで、OSとして毎月使い続けていただく形です。`,
   blocks: [
     {
       code: "INITIAL SETUP",
@@ -628,7 +637,7 @@ export const ctaTrio = [
     key: "demo",
     code: "01",
     label: "無料デモを体験する",
-    body: "本番を模したサンプル管理画面とAI OPERATORを、その場で触っていただけます。登録不要です。",
+    body: `本番を模したサンプル管理画面と${OPERATOR}を、その場で触っていただけます。登録不要です。`,
     href: "/demo",
     primary: true,
   },
@@ -691,7 +700,7 @@ export const tourSteps = [
     no: "05",
     code: "OPERATION CONSOLE",
     title: "運営分析",
-    body: "売上・粗利・危険なガチャ・未発送・抽選監査ログを1画面に集約。AI OPERATORに日本語で聞けば、根拠つきの数字が返ってきます。",
+    body: `売上・粗利・危険なガチャ・未発送・抽選監査ログを1画面に集約。${OPERATOR}に日本語で聞けば、根拠つきの数字が返ってきます。`,
     highlight: "数字を探しに行く時間そのものが消えます。",
     href: "/#admin",
   },

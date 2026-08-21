@@ -29,7 +29,8 @@ export default function TimeSaving() {
           ガチャ運営に使っていた時間を、仕入れと企画へ。
         </h3>
         <p className="mt-4 max-w-[36em] text-body text-pretty text-slate2 sm:mt-5">
-          AI GACHA OS
+          {/* 製品名の中の空白は必ず &nbsp;。半角スペースだとそこで行が折れます */}
+          AI&nbsp;GACHA&nbsp;OS
           が消すのは「作業」であって、「判断」ではありません。数字を集める・計算する・転記する・同じ返信を書く。この4つがなくなると、1日の中身はここまで変わります。
         </p>
       </div>
@@ -87,7 +88,7 @@ export default function TimeSaving() {
           <div className="rounded-3xl border border-blue-ink/20 bg-white p-6 shadow-lift2 sm:p-9">
             <span className="num inline-flex items-center gap-2.5 text-label text-blue-ink">
               <span className="h-1.5 w-1.5 rounded-full bg-blue-ink" />
-              AI GACHA OS
+              AI&nbsp;GACHA&nbsp;OS
             </span>
             <p className="num mt-4 text-h1 font-semibold leading-none text-slate">
               1〜2

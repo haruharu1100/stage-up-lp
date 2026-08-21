@@ -169,7 +169,10 @@ export default function CustomerSide() {
                 運営者だけではなく、お客様の体験も支えます。
               </h3>
               <p className="mt-4 text-note text-pretty leading-[1.95] text-slate2">
-                「発送はいつですか」「まだ届きません」。この種の問い合わせは件数が多く、内容もほぼ同じです。
+                {/* 「問い合わせ」は途中で割らせない（1024px で「問い合／わせ」と切れていました） */}
+                「発送はいつですか」「まだ届きません」。この種の
+                <span className="whitespace-nowrap">問い合わせ</span>
+                は件数が多く、内容もほぼ同じです。
                 権限の範囲でマイページの情報を参照し、AIがその場で答えます。
               </p>
 
@@ -489,7 +492,7 @@ function Phone({
         </div>
       </div>
 
-      <p className="num mt-4 text-center text-[11px] tracking-[0.18em] text-slate3">
+      <p className="num mt-4 whitespace-nowrap text-center text-[11px] tracking-[0.18em] text-slate3">
         CUSTOMER VIEW — DEMO
       </p>
     </div>

@@ -5,6 +5,8 @@ import Section from "../ui/Section";
 import Reveal from "../ui/Reveal";
 import { saveDiagnosis } from "@/lib/lead";
 import { EV, track, trackOnce } from "@/lib/track";
+/* ★製品名は必ず OPERATOR を使うこと。"AI OPERATOR" と直接書くと狭い画面で割れます */
+import { OPERATOR } from "@/lib/text";
 
 /**
  * 「いま何に困っていますか？」の簡易診断。
@@ -81,7 +83,7 @@ const MAP: Record<Trouble, { name: string; why: string; modules: string[] }> = {
       "実還元率・市場価格連動",
       "発送自動化",
       "AI顧客対応",
-      "AI OPERATOR",
+      OPERATOR,
     ],
   },
 };

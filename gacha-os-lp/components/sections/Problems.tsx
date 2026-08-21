@@ -42,7 +42,9 @@ export default function Problems() {
           <p className="text-body text-pretty text-slate2">
             <span className="font-bold text-blue-ink">仕入れは、人にしかできません。</span>
             <br className="hidden sm:block" />
-            それ以外の「計算・監視・転記・返信」を、システムとAIに寄せる。これが AI GACHA OS の考え方です。
+            {/* 製品名の中の空白は &nbsp;。ふつうの空白だと「AI GACHA／OS」と割れます */}
+            それ以外の「計算・監視・転記・返信」を、システムとAIに寄せる。これが
+            AI&nbsp;GACHA&nbsp;OS の考え方です。
           </p>
         </div>
       </Reveal>

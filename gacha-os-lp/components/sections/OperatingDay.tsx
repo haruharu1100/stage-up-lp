@@ -23,6 +23,8 @@ import {
 } from "framer-motion";
 import Reveal from "../ui/Reveal";
 import { MoreDetail } from "../ui/Act";
+/* ★製品名は必ず OS を使うこと。"AI GACHA OS" と直接書くと狭い画面で割れます */
+import { OS } from "@/lib/text";
 
 /* ────────────────────────────────
    ACT 2 で組み上がる賞の構成（デモの数値）
@@ -97,7 +99,7 @@ const SIDE_STYLE: Record<string, { chip: string; dot: string; name: string }> =
     os: {
       chip: "border-blue-ink/18 bg-blue-pale text-blue-ink",
       dot: "bg-blue-ink",
-      name: "AI GACHA OS",
+      name: OS,
     },
     customer: {
       chip: "border-ok-ink/20 bg-ok/10 text-ok-ink",
@@ -203,7 +205,7 @@ export default function OperatingDay() {
             </div>
 
             <p className="mt-4 text-note text-pretty leading-[1.95] text-slate2">
-              白＝あなた、青＝AI GACHA OS、緑＝お客様の画面です。
+              白＝あなた、青＝AI&nbsp;GACHA&nbsp;OS、緑＝お客様の画面です。
               このうち白は2か所。残りはこの下から順番に、実際の画面で見ていきます。
             </p>
           </div>
@@ -234,8 +236,9 @@ export default function OperatingDay() {
               </span>
             </p>
             <p className="mx-auto mt-5 max-w-[38em] text-note text-pretty leading-[1.95] text-slate2">
-              賞の構成も、本数も、確率も、還元率の計算も、公開前の試算も、AI
-              GACHA OS
+              {/* 製品名の中の空白は必ず &nbsp;。375px で「AI GACHA／OS」と割れていました */}
+              賞の構成も、本数も、確率も、還元率の計算も、公開前の試算も、
+              AI&nbsp;GACHA&nbsp;OS
               側で組み上がります。承認しないかぎり、ガチャは公開されません。
             </p>
           </div>
@@ -287,7 +290,14 @@ function Stage({
               foot="入力するのは、方針だけ。"
             >
               <div className="relative rounded-2xl rounded-bl-md border border-edge bg-white p-4 text-note leading-[1.85] text-slate shadow-lift">
-                「今人気のポケカ中心で、1回500円、1000口。
+                {/*
+                  ★金額・口数は whitespace-nowrap で囲むこと。
+                    日本語は原則どこでも改行できるため、囲まないと
+                    「1回5／00円」のように数字の途中で割れます（390px で実際に発生）。
+                */}
+                「今人気のポケカ中心で、
+                <span className="whitespace-nowrap">1回500円</span>、
+                <span className="whitespace-nowrap">1000口</span>。
                 <br className="hidden sm:block" />
                 S賞は豪華にして、ラストワンも入れて。」
               </div>
@@ -486,7 +496,11 @@ function ActOne() {
         <div className="rounded-2xl border border-edge2 bg-paper2 p-4 sm:p-6">
           <div className="flex justify-end">
             <div className="max-w-[30em] rounded-2xl rounded-br-md bg-blue-ink px-4 py-3 text-note leading-[1.8] text-white shadow-blue-lift">
-              今人気のポケカ中心で、1回500円、1000口。S賞は豪華にして、ラストワンも入れて。
+              {/* 金額・口数は必ず whitespace-nowrap で囲む（数字の途中で割れるため） */}
+              今人気のポケカ中心で、
+              <span className="whitespace-nowrap">1回500円</span>、
+              <span className="whitespace-nowrap">1000口</span>
+              。S賞は豪華にして、ラストワンも入れて。
             </div>
           </div>
 
@@ -571,7 +585,7 @@ function ActTwo({ reduce }: { reduce: boolean }) {
     <div className="lp-card overflow-hidden p-5 sm:p-8">
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">
         <span className="eyebrow-lite">ACT 02 — THE AI BUILDS IT</span>
-        <span className="num text-label text-slate3">AI GACHA OS</span>
+        <span className="num text-label text-slate3">{OS}</span>
       </div>
       <h3 className="mt-4 text-h3 font-bold text-balance text-slate sm:mt-5">
         賞の構成・本数・確率・還元率が、同時に組み上がります。

@@ -9,6 +9,8 @@ import TimeSaving from "./TimeSaving";
 import { roiDefaults, roiNote } from "@/content/site";
 import { activeTiers, type OsTier } from "@/config/pricing";
 import { EV, track, trackOnce } from "@/lib/track";
+/* ★製品名は必ず OS を使うこと。"AI GACHA OS" と直接書くと狭い画面で割れます */
+import { OS } from "@/lib/text";
 
 /* ────────────────────────────────────────────────
    試算モデル
@@ -318,7 +320,7 @@ export default function RoiCalculator() {
                   tone="ok"
                 />
                 <CostRow
-                  label={`AI GACHA OS 年間費用（${r.plan.name}）`}
+                  label={`${OS} 年間費用（${r.plan.name}）`}
                   value={`− ${yen(r.annualOsCost)}`}
                   tone="mute"
                 />

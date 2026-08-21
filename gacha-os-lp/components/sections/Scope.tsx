@@ -2,6 +2,7 @@ import Link from "next/link";
 import Section from "../ui/Section";
 import Reveal from "../ui/Reveal";
 import { scopeOptions } from "@/content/site";
+import { OS } from "@/lib/text";
 
 export default function Scope() {
   return (
@@ -16,7 +17,12 @@ export default function Scope() {
           全部捨てる必要はありません。
         </>
       }
-      lead="乗り換えは、いちばん重い決断です。AI GACHA OS は「まるごと入れ替える」以外の入り方も用意しています。いま困っている部分だけを、先に軽くしてください。"
+      /*
+        ★製品名は必ず OS（lib/text.ts）を使うこと。
+          "AI GACHA OS" と半角スペースで直接書くと、
+          狭い画面で「AI GACHA／OS」と2行に割れます。
+      */
+      lead={`乗り換えは、いちばん重い決断です。${OS} は「まるごと入れ替える」以外の入り方も用意しています。いま困っている部分だけを、先に軽くしてください。`}
     >
       <Reveal>
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">

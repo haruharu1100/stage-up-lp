@@ -46,8 +46,13 @@ export default function DashboardMock({ compact = false }: { compact?: boolean }
           <span className="h-2.5 w-2.5 rounded-full bg-danger/55" />
           <span className="h-2.5 w-2.5 rounded-full bg-warn/60" />
           <span className="h-2.5 w-2.5 rounded-full bg-ok/60" />
+          {/*
+            ここは横幅ぎりぎりの飾りラベル。
+            whitespace-nowrap を付けると 768px で画面全体が横にはみ出したため、
+            付けずに、代わりに製品名の中だけを &nbsp; で固めている。
+          */}
           <span className="num ml-3 hidden text-[11px] tracking-[0.16em] text-slate3 sm:inline">
-            AI GACHA OS / OPERATION DASHBOARD
+            AI&nbsp;GACHA&nbsp;OS / OPERATION DASHBOARD
           </span>
         </div>
         <div className="flex items-center gap-2">

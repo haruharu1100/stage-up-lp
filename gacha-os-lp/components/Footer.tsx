@@ -11,13 +11,19 @@ export default function Footer() {
     // 下の余白は、スマホの固定CTAバー（実測157px）に文章が隠れない高さにしている
     <footer className="relative border-t border-edge bg-paper2 pb-44 pt-16 sm:py-20">
       <div className="container-x">
-        <div className="flex flex-col gap-14 md:flex-row md:items-start md:justify-between">
+        {/*
+          横並びにするのは lg（1024px）から。
+          768px で横に並べると、折り返さないリンク名と説明文が入りきらず、
+          ページ全体が横にはみ出していた（実測 +72px）。
+        */}
+        <div className="flex flex-col gap-14 lg:flex-row lg:items-start lg:justify-between">
           <div className="max-w-sm">
             <div className="flex items-center gap-3">
               <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-navy">
                 <Logo className="h-6 w-6" />
               </span>
-              <span className="num text-label font-bold text-slate">
+              {/* 製品名なので、狭い画面でも「AI GACHA／OS」と割れないようにする */}
+              <span className="num whitespace-nowrap text-label font-bold text-slate">
                 AI GACHA <span className="text-gradient-royal">OS</span>
               </span>
             </div>
@@ -41,10 +47,14 @@ export default function Footer() {
               { label: "営業資料ページ", href: "/sales" },
               { label: "導入について相談する", href: "/#contact" },
             ].map((l) => (
+              /*
+                リンク名は短いので、途中で折り返さない。
+                768px で「実還元／率」「管理画面／デモ」と割れていた。
+              */
               <Link
                 key={l.href + l.label}
                 href={l.href}
-                className="text-slate2 transition-colors hover:text-blue-ink"
+                className="whitespace-nowrap text-slate2 transition-colors hover:text-blue-ink"
               >
                 {l.label}
               </Link>
@@ -80,7 +90,10 @@ export default function Footer() {
         <div className="rule my-10" />
 
         <div className="flex flex-col gap-4 text-note text-slate3 sm:flex-row sm:items-center sm:justify-between">
-          <p>© {new Date().getFullYear()} AI GACHA OS. All rights reserved.</p>
+          <p>
+            © {new Date().getFullYear()} AI&nbsp;GACHA&nbsp;OS. All rights
+            reserved.
+          </p>
           <p className="text-pretty sm:text-right">
             記載金額は税別・目安です。個別の法的適合性については専門家のご確認をお願いしています。
           </p>

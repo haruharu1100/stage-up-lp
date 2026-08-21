@@ -21,6 +21,8 @@ import { MIGRATION_BEATS } from "../three/MigrationWorld";
 import StaticCore from "../hero/StaticCore";
 import Reveal from "../ui/Reveal";
 import { MoreDetail } from "../ui/Act";
+/* ★製品名は必ず OS を使うこと。"AI GACHA OS" と直接書くと狭い画面で割れます */
+import { OS } from "@/lib/text";
 
 const MigrationWorld = dynamic(() => import("../three/MigrationWorld"), {
   ssr: false,
@@ -50,7 +52,7 @@ const WAYS = [
   {
     code: "FULL MIGRATION",
     ja: "全面移行",
-    d: "今のドメインをそのまま使い、サイトと管理をAI GACHA OSへ切り替えます。URLは変わりません。",
+    d: `今のドメインをそのまま使い、サイトと管理を${OS}へ切り替えます。URLは変わりません。`,
     url: "example-gacha.jp",
   },
   {
@@ -91,7 +93,7 @@ export default function Migration() {
               運営している方へ。
             </h2>
             <p className="mt-5 max-w-[36em] text-body text-pretty text-slate2 sm:mt-7">
-              今のお客様体験を大きく変えず、裏側の運営をAI GACHA OSへ。
+              今のお客様体験を大きく変えず、裏側の運営をAI&nbsp;GACHA&nbsp;OSへ。
             </p>
           </div>
         </Reveal>
@@ -153,8 +155,11 @@ export default function Migration() {
         <Reveal delay={0.1}>
           <div className="mt-4 rounded-3xl border border-edge bg-white p-7 shadow-lift sm:p-10">
             <p className="text-body text-pretty leading-[1.95] text-slate">
-              現在お使いのドメインを維持したまま、AI GACHA OSへ移行できる構成があります。
-              お客様はこれまでと同じURLからアクセスし、運営側では、AIガチャ設計・実還元率・価格監視・発送管理・AI問い合わせ対応などを使えるようにします。
+              現在お使いのドメインを維持したまま、AI&nbsp;GACHA&nbsp;OSへ移行できる構成があります。
+              {/* 機能名は途中で割らせない。1024/768/375px で「問い合／わせ」と切れていました */}
+              お客様はこれまでと同じURLからアクセスし、運営側では、AIガチャ設計・実還元率・価格監視・発送管理・
+              <span className="whitespace-nowrap">AI問い合わせ対応</span>
+              などを使えるようにします。
             </p>
             <p className="mt-5 text-note text-pretty leading-[1.95] text-slate3">
               ※ 移行できる範囲は、既存システムの構成・契約・データ仕様によって異なります。
@@ -262,7 +267,7 @@ function DomainStrip() {
           <div className="mt-5 flex flex-col gap-3.5 sm:flex-row sm:items-center">
             <Cell tag="BEFORE" value="OLD ADMIN" />
             <Arrow label="MIGRATION" />
-            <Cell tag="AFTER" value="AI GACHA OS" strong />
+            <Cell tag="AFTER" value={OS} strong />
           </div>
           <p className="h-display mt-6 text-h3 text-blue-deep">
             管理側だけ、進化する。

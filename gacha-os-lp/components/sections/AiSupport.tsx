@@ -6,6 +6,8 @@ import Section from "../ui/Section";
 import Reveal from "../ui/Reveal";
 import BeforeAfter from "../ui/BeforeAfter";
 import { MoreDetail } from "../ui/Act";
+/* ★製品名は必ず OPERATOR を使うこと。"AI OPERATOR" と直接書くと狭い画面で割れます */
+import { OPERATOR, nowrap } from "@/lib/text";
 
 type Msg =
   | { role: "user"; text: string }
@@ -37,7 +39,11 @@ const watching: { l: string; v: string; u: string; tone: string }[] = [
   { l: "販売中のガチャ", v: "18", u: "本", tone: "text-slate" },
   { l: "価格警告", v: "3", u: "件", tone: "text-danger-ink" },
   { l: "未発送", v: "26", u: "件", tone: "text-blue-ink" },
-  { l: "人へ回った問い合わせ", v: "4", u: "件", tone: "text-warn-ink" },
+  /*
+    「問い合わせ」は途中で割らせない。
+    囲まないと 768px で「問い合／わせ」と切れていた。
+  */
+  { l: `人へ回った${nowrap("問い合わせ")}`, v: "4", u: "件", tone: "text-warn-ink" },
 ];
 
 /** 上から順に片付ければいい形にした、その日の指示 */
@@ -88,7 +94,7 @@ export default function AiSupport() {
     <Section
       id="support"
       no=""
-      eyebrow="AI OPERATOR"
+      eyebrow={OPERATOR}
       title={
         <>
           聞かれてから探すAIではなく、
@@ -96,7 +102,7 @@ export default function AiSupport() {
           持ち場を見ているAIにする。
         </>
       }
-      lead="AI OPERATOR は、下の4つを同じ画面で見ています。聞けば、いま何から手を付けるかを順番にして返します。"
+      lead={`${OPERATOR} は、下の4つを同じ画面で見ています。聞けば、いま何から手を付けるかを順番にして返します。`}
     >
       <BeforeAfter id="support" className="mb-3" />
 
@@ -107,7 +113,9 @@ export default function AiSupport() {
               <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-blue-deep to-blue text-[10px] font-bold text-white">
                 AI
               </span>
-              <span className="text-note font-semibold text-slate">AI OPERATOR</span>
+              <span className="text-note font-semibold text-slate">
+                AI&nbsp;OPERATOR
+              </span>
             </div>
             <span className="flex items-center gap-2">
               <span className="h-1.5 w-1.5 animate-pulseline rounded-full bg-ok" />
@@ -176,7 +184,7 @@ export default function AiSupport() {
             </div>
 
             <p className="mt-4 border-t border-edge2 pt-4 text-note text-slate3 sm:mt-5 sm:pt-5">
-              AI OPERATOR は状況を整理して優先順位を提案します。実行するかどうかは運営者が判断します。
+              AI&nbsp;OPERATOR は状況を整理して優先順位を提案します。実行するかどうかは運営者が判断します。
             </p>
           </div>
         </div>
@@ -194,7 +202,7 @@ export default function AiSupport() {
                   AI
                 </span>
                 <span className="text-[12px] font-semibold text-slate">
-                  AI OPERATOR ／ お客様対応
+                  AI&nbsp;OPERATOR ／ お客様対応
                 </span>
               </div>
               <span className="num text-[10px] text-slate3">user_2841 でログイン中</span>

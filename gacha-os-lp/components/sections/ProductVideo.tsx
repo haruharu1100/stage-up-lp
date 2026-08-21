@@ -33,7 +33,7 @@ export default function ProductVideo() {
             <h2 className="h-display mt-5 text-h2 text-balance text-slate">
               <span className="num">30秒</span>で分かる、
               <br className="sm:hidden" />
-              AI GACHA OS。
+              AI&nbsp;GACHA&nbsp;OS。
             </h2>
             <p className="mx-auto mt-6 max-w-[34em] text-note text-pretty leading-[1.95] text-slate2">
               資料ではなく、動いている画面です。

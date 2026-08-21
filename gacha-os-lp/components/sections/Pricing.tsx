@@ -98,7 +98,7 @@ export default function Pricing() {
           {/* AI GACHA OS = SYSTEM + AI + AUTOMATION + SUPPORT */}
           <div className="flex flex-wrap items-center gap-x-4 gap-y-5">
             <span className="num text-h3 font-semibold tracking-[0.04em] text-gradient-royal">
-              AI GACHA OS
+              AI&nbsp;GACHA&nbsp;OS
             </span>
             <span className="num text-h3 font-light text-slate3/60">=</span>
             {EQUATION.map((e, i) => (

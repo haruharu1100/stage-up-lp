@@ -5,6 +5,8 @@ import Section from "../ui/Section";
 import Reveal from "../ui/Reveal";
 import { MoreDetail } from "../ui/Act";
 import BeforeAfter from "../ui/BeforeAfter";
+/* ★製品名は必ず OPERATOR を使うこと。"AI OPERATOR" と直接書くと狭い画面で割れます */
+import { OPERATOR } from "@/lib/text";
 
 const qa = [
   {
@@ -97,7 +99,7 @@ export default function AdminConsole() {
           <span className="text-gradient-royal">聞けば、答えが返ってくる。</span>
         </>
       }
-      lead="管理画面はSaaS水準で設計します。さらに右上には AI OPERATOR。日本語で聞くだけで、根拠つきの数字がその場で返ります。"
+      lead={`管理画面はSaaS水準で設計します。さらに右上には ${OPERATOR}。日本語で聞くだけで、根拠つきの数字がその場で返ります。`}
     >
       <BeforeAfter id="admin" className="mb-3" />
 
@@ -115,7 +117,9 @@ export default function AdminConsole() {
                 <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-blue-deep to-blue text-[10px] font-bold text-white">
                   AI
                 </span>
-                <span className="text-[12px] font-semibold text-slate">AI OPERATOR</span>
+                <span className="text-[12px] font-semibold text-slate">
+                  AI&nbsp;OPERATOR
+                </span>
               </div>
               <span className="num text-[10px] text-slate3">管理画面 右上に常駐</span>
             </div>
@@ -137,7 +141,7 @@ export default function AdminConsole() {
               ))}
               {asked === 0 && (
                 <p className="py-4 text-center text-[12px] text-slate3 sm:py-8">
-                  下のボタンを押すと、AI OPERATOR の回答が表示されます
+                  下のボタンを押すと、AI&nbsp;OPERATOR の回答が表示されます
                 </p>
               )}
             </div>
