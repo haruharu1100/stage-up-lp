@@ -1,6 +1,11 @@
 import Section from "../ui/Section";
 import Reveal from "../ui/Reveal";
-import { builtFromOps, metrics } from "@/content/site";
+import { builtFromOps as raw_builtFromOps, metrics as raw_metrics } from "@/content/site";
+/* ★画面に出す文字は jpDeep() を通す。日本語が語の途中で割れるのを止める */
+import { jpDeep } from "@/lib/jp";
+
+const builtFromOps = jpDeep(raw_builtFromOps);
+const metrics = jpDeep(raw_metrics);
 
 export default function BuiltFromOps() {
   /* 実績は「確認できる数字」だけを表示する。null のものは出さない */

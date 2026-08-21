@@ -29,6 +29,8 @@ import Pricing from "@/components/sections/Pricing";
 import Faq from "@/components/sections/Faq";
 import ClosingMessage from "@/components/sections/ClosingMessage";
 import Cta from "@/components/sections/Cta";
+/* ★画面に出す文字は jp() を通す。日本語が語の途中で割れるのを止める */
+import { jp } from "@/lib/jp";
 
 /*
   ★このページの決まり（2026-08-21 に作り直しました）
@@ -102,7 +104,9 @@ export default function Home() {
         <StatusLights />
         <DetailBlock
           label="RUSH（当たりが続く演出）の仕組みを見る"
-          note="盛り上がる演出も、還元率の計算に必ず含めています。演出だけ別勘定にしないための考え方です。"
+          note={jp(
+            "盛り上がる演出も、還元率の計算に必ず含めています。演出だけ別勘定にしないための考え方です。",
+          )}
           ids={["rush"]}
         >
           <Rush />

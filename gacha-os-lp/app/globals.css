@@ -238,8 +238,41 @@
     line-break: strict;
   }
 
+  /*
+   * 数字。
+   *
+   * 以前は tracking-tight（字間を詰める）を入れていました。
+   * ところが「94.8%」の 4 や「119.0%」の 1 が隣とくっついて読みにくく、
+   * 高額な業務システムの画面としては致命的でした。
+   * 字間は詰めず、数字の幅だけ揃えます（1 と 8 が同じ幅になる指定）。
+   */
   .num {
-    @apply font-mono tabular-nums tracking-tight;
+    @apply font-mono;
+    font-variant-numeric: tabular-nums lining-nums;
+    font-feature-settings: "tnum" 1, "lnum" 1;
+    letter-spacing: 0;
+  }
+
+  /*
+   * 大きく見せる数字（還元率・金額）。
+   * 見た目より「一瞬で読めること」を優先し、ほんの少しだけ字間を開ける。
+   */
+  .num-lead {
+    @apply num;
+    letter-spacing: 0.012em;
+  }
+
+  /*
+   * 途中で折り返してはいけない言葉。
+   *
+   * ★これだけに頼らないこと。
+   *   iPhone(Safari)では期待どおりに効かない場面があり、
+   *   実際に「確／認する」と割れていました。
+   *   本体は components/ui/jp.tsx が文字のあいだに入れる「改行禁止の印」です。
+   *   このクラスはその補助です。
+   */
+  .nw {
+    white-space: nowrap;
   }
 
   .btn {

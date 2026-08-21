@@ -1,5 +1,9 @@
 import Reveal from "../ui/Reveal";
-import { timeModel } from "@/content/site";
+import { timeModel as raw_timeModel } from "@/content/site";
+/* ★画面に出す文字は jpDeep() を通す。日本語が語の途中で割れるのを止める */
+import { jpDeep } from "@/lib/jp";
+
+const timeModel = jpDeep(raw_timeModel);
 import { activeTiers, tierPriceLabel } from "@/config/pricing";
 
 /**

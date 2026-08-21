@@ -1,4 +1,6 @@
-const menu = [
+/* ★画面に出す文字は jpDeep() を通す。日本語が語の途中で割れるのを止める */
+import { jpDeep } from "@/lib/jp";
+const menu = jpDeep([
   "ダッシュボード",
   "ガチャ管理",
   "還元率モニタ",
@@ -7,16 +9,16 @@ const menu = [
   "会員 / ポイント",
   "問い合わせ",
   "監査ログ",
-];
+]);
 
-const kpis = [
+const kpis = jpDeep([
   { label: "本日売上", value: "¥1,284,300", delta: "+12.4%", up: true },
   { label: "月間売上", value: "¥28,410,900", delta: "+6.8%", up: true },
   { label: "プレイ回数", value: "3,914", delta: "+8.1%", up: true },
   { label: "ARPU", value: "¥4,120", delta: "+2.2%", up: true },
-];
+]);
 
-const gauges = [
+const gauges = jpDeep([
   { label: "設定時還元率", value: "100.5%", pct: 50, tone: "text-slate3", bar: "bg-slate3/45" },
   { label: "残数ベース還元率", value: "103.2%", pct: 68, tone: "text-warn-ink", bar: "bg-warn" },
   {
@@ -26,14 +28,14 @@ const gauges = [
     tone: "text-danger-ink",
     bar: "bg-danger",
   },
-];
+]);
 
-const rows = [
+const rows = jpDeep([
   { name: "#128 スニーカーBOX", left: "128 / 500", rtp: "108.7%", tone: "text-danger-ink", state: "警告" },
   { name: "#131 PSA10 スペシャル", left: "402 / 800", rtp: "103.2%", tone: "text-warn-ink", state: "注意" },
   { name: "#134 家電フェス", left: "611 / 700", rtp: "96.4%", tone: "text-ok-ink", state: "正常" },
   { name: "#136 ハイブランド", left: "88 / 300", rtp: "99.1%", tone: "text-ok-ink", state: "正常" },
-];
+]);
 
 const spark = [28, 36, 31, 48, 42, 58, 52, 67, 61, 78, 72, 90];
 

@@ -1,6 +1,8 @@
 import Section from "../ui/Section";
 import Reveal from "../ui/Reveal";
 import { MoreDetail } from "../ui/Act";
+/* ★画面に出す文字は jpDeep() を通す。日本語が語の途中で割れるのを止める */
+import { jpDeep } from "@/lib/jp";
 
 /**
  * 導入すると何が起きるかの時間軸。
@@ -10,7 +12,7 @@ import { MoreDetail } from "../ui/Act";
  * 　必要な作業量は、移行の有無・独自機能・決済の審査状況で大きく変わるためです。
  * 　DAY 1 だけは「初回のヒアリング」の意味で使い、それ以降の段階に日数を振りません。
  */
-const STAGES: { code: string; title: string; body: string }[] = [
+const STAGES: { code: string; title: string; body: string }[] = jpDeep([
   {
     code: "DAY 1",
     title: "ヒアリング",
@@ -36,7 +38,7 @@ const STAGES: { code: string; title: string; body: string }[] = [
     title: "継続改善",
     body: "公開後は監視と保守を継続します。実際の運営データを見ながら、還元率の設定や運用の手順を一緒に整えていきます。",
   },
-];
+]);
 
 export default function Flow() {
   return (

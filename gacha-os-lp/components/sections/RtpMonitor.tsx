@@ -4,6 +4,8 @@ import { useMemo, useState } from "react";
 import Act, { MoreDetail } from "../ui/Act";
 import BeforeAfter from "../ui/BeforeAfter";
 import { buildGacha, jpy, recalcRtp } from "@/lib/simulate";
+/* ★日本語の本文は jp() を通すこと。「実還元／率」のような途中改行を止めます */
+import { jp } from "@/lib/jp";
 
 const PRICE = 1000;
 const TOTAL = 500;
@@ -131,12 +133,15 @@ export default function RtpMonitor() {
       wide
       title={
         <>
-          設定した還元率ではなく、
+          {jp("設定した還元率ではなく、")}
           <br />
-          <span className="text-gradient-royal">いまの実還元率</span>を見る。
+          <span className="text-gradient-royal">{jp("いまの実還元率")}</span>
+          {jp("を見る。")}
         </>
       }
-      lead="上位賞が抜ければ残った口数の価値は下がり、相場が上がれば同じ景品でも実質の還元率は上がります。この2つを常に計算し続けます。スライダーを動かすと、実際に数字が動きます。"
+      lead={jp(
+        "上位賞が抜ければ残った口数の価値は下がり、相場が上がれば同じ景品でも実質の還元率は上がります。この2つを常に計算し続けます。スライダーを動かすと、実際に数字が動きます。",
+      )}
     >
       <BeforeAfter id="rtp" className="mb-4 sm:mb-8" />
 
@@ -185,15 +190,19 @@ export default function RtpMonitor() {
           </div>
 
           <div className="grid gap-3 sm:grid-cols-3 sm:gap-4">
-            <Gauge label="設定時還元率" sub="DESIGNED" value={state.designed} />
             <Gauge
-              label="残数ベース還元率"
+              label={jp("設定時還元率")}
+              sub="DESIGNED"
+              value={state.designed}
+            />
+            <Gauge
+              label={jp("残数ベース還元率")}
               sub="REMAINING BASED"
               value={state.remaining}
               emphasize
             />
             <Gauge
-              label="市場価格ベース実還元率"
+              label={jp("市場価格ベース実還元率")}
               sub="MARKET BASED"
               value={state.market}
               emphasize

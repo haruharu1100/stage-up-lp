@@ -1,6 +1,10 @@
 import Section from "../ui/Section";
 import Reveal from "../ui/Reveal";
-import { problems } from "@/content/site";
+import { problems as raw_problems } from "@/content/site";
+/* ★画面に出す文字は jpDeep() を通す。日本語が語の途中で割れるのを止める */
+import { jpDeep } from "@/lib/jp";
+
+const problems = jpDeep(raw_problems);
 
 export default function Problems() {
   return (

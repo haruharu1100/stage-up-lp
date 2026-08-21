@@ -7,6 +7,8 @@ import {
   RTP_DANGER,
   STALE_AFTER_HOURS,
 } from "@/lib/priceFreshness";
+/* ★日本語の本文は jp() / jpDeep() を通すこと。途中改行を止めます */
+import { jp, jpDeep } from "@/lib/jp";
 
 /**
  * 信号機UIと UNKNOWN（SAFE FAIL）のセクション。
@@ -20,7 +22,7 @@ import {
 
 const STALE_DAYS = Math.round(STALE_AFTER_HOURS / 24);
 
-const signals = [
+const signals = jpDeep([
   {
     code: "SAFE",
     label: "問題なし",
@@ -61,9 +63,9 @@ const signals = [
     lead: "判断の材料がそろっていない状態です。",
     body: "計算に使う情報が古い、または足りません。数字を出さず「—」と表示します。安全とも危険とも表示しません。",
   },
-];
+]);
 
-const unknownCauses = [
+const unknownCauses = jpDeep([
   {
     t: "市場価格が古い（STALE）",
     d: `既定の更新周期は週1回です。${STALE_DAYS} 日を過ぎても更新できていない場合、少なくとも1回は取り込みに失敗しています。`,
@@ -76,19 +78,19 @@ const unknownCauses = [
     t: "景品の情報が足りない",
     d: "景品が未登録、価格の対象が特定できないなど、実還元率の計算に届かない状態です。",
   },
-];
+]);
 
 /** 市場価格の3つの状態。折りたたみの中で原因と一緒に見せる */
-const priceStates = [
+const priceStates = jpDeep([
   { c: "FRESH", d: "価格は新しい。実還元率を計算して表示します。" },
   {
     c: "STALE",
     d: `${STALE_DAYS} 日を超えて更新できていない。数字は表示しません。`,
   },
   { c: "UNKNOWN", d: "取り込めていない、または時刻が読み取れない。" },
-];
+]);
 
-const howToRead = [
+const howToRead = jpDeep([
   { n: "01", t: "赤（要対応）から見る", d: "その日に決めることは、たいてい赤の中にあります。" },
   { n: "02", t: "黄（確認推奨）を見る", d: "止めるかどうかではなく、原因を確認する対象です。" },
   {
@@ -96,7 +98,7 @@ const howToRead = [
     t: "UNKNOWN は情報を足す",
     d: "判断ではなく、価格の取り込みや景品登録という作業に変わります。",
   },
-];
+]);
 
 export default function StatusLights() {
   return (
@@ -171,7 +173,9 @@ export default function StatusLights() {
                 UNKNOWN
               </span>
               <p className="mt-3 text-note text-slate2 sm:mt-4">
-                実還元率の欄は「—」になります。市場価格が FRESH でない限り、計算結果が
+                {jp(
+                  "実還元率の欄は「—」になります。市場価格が FRESH でない限り、計算結果が",
+                )}
                 <span className="num"> 94% </span>
                 （普段なら SAFE にあたる数字）でも、SAFE とは表示しません。
               </p>

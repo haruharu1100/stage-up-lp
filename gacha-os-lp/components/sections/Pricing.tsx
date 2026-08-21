@@ -2,7 +2,12 @@ import Section from "../ui/Section";
 import Reveal from "../ui/Reveal";
 import ViewTracker from "../ui/ViewTracker";
 import TrackedLink from "../ui/TrackedLink";
-import { baseFeatures, pricingStructure } from "@/content/site";
+import { baseFeatures as raw_baseFeatures, pricingStructure as raw_pricingStructure } from "@/content/site";
+/* ★画面に出す文字は jpDeep() を通す。日本語が語の途中で割れるのを止める */
+import { jp, jpDeep } from "@/lib/jp";
+
+const baseFeatures = jpDeep(raw_baseFeatures);
+const pricingStructure = jpDeep(raw_pricingStructure);
 import {
   activeTiers,
   initialSetup,
@@ -305,7 +310,7 @@ export default function Pricing() {
 
       {/* 標準機能（一覧が長いので畳む。中身はそのまま） */}
       <Reveal delay={0.1} className="mt-4">
-        <MoreDetail label="標準機能の一覧（ユーザー側／管理画面）">
+        <MoreDetail label={jp("標準機能の一覧（ユーザー側／管理画面）")}>
           <div className="grid gap-5 lg:grid-cols-2">
             {(
               [

@@ -23,6 +23,8 @@ import Reveal from "../ui/Reveal";
 import { MoreDetail } from "../ui/Act";
 /* ★製品名は必ず OS を使うこと。"AI GACHA OS" と直接書くと狭い画面で割れます */
 import { OS } from "@/lib/text";
+/* ★画面に出す文字は jpDeep() を通す。日本語が語の途中で割れるのを止める */
+import { jpDeep } from "@/lib/jp";
 
 const MigrationWorld = dynamic(() => import("../three/MigrationWorld"), {
   ssr: false,
@@ -30,14 +32,14 @@ const MigrationWorld = dynamic(() => import("../three/MigrationWorld"), {
 });
 
 /** 移行前に必ず確認するもの（項目23）。IPアドレスだけではない、が言いたいこと */
-const CHECKLIST = [
+const CHECKLIST = jpDeep([
   { g: "つながり", items: ["ドメイン", "DNS", "サーバー", "SSL"] },
   { g: "お客様のデータ", items: ["会員", "ポイント", "購入履歴", "配送先"] },
   { g: "つないでいる先", items: ["決済", "Webhook", "配送", "メール", "外部API"] },
-];
+]);
 
 /** できるだけ残すもの（項目27） */
-const KEEP = [
+const KEEP = jpDeep([
   "ブランド",
   "ドメイン",
   "会員",
@@ -45,10 +47,10 @@ const KEEP = [
   "ガチャ",
   "発送待ち",
   "顧客データ",
-];
+]);
 
 /** 3つの進め方（項目30） */
-const WAYS = [
+const WAYS = jpDeep([
   {
     code: "FULL MIGRATION",
     ja: "全面移行",
@@ -67,7 +69,7 @@ const WAYS = [
     d: "既存システムを残し、AIガチャ設計・実還元率・発送管理など、必要な部分だけを使います。",
     url: "既存サイト ＋ 管理機能",
   },
-];
+]);
 
 export default function Migration() {
   return (
@@ -253,7 +255,14 @@ function DomainStrip() {
         {/* お客様側 */}
         <div className="p-7 sm:p-10">
           <span className="num text-label text-slate3">お客様が見るURL</span>
-          <div className="mt-5 flex flex-col gap-3.5 sm:flex-row sm:items-center">
+          {/*
+            ★横並びに戻さないこと。
+              BEFORE / 矢印 / AFTER を横に3つ並べると、
+              画面を2列に割る 1024px 付近で1枠が 147px まで痩せ、
+              「example-gacha.jp」や製品名が2行に割れていました。
+              縦に積めば、どの幅でも1行で読めます。
+          */}
+          <div className="mt-5 flex flex-col gap-3">
             <Cell tag="BEFORE" value="example-gacha.jp" />
             <Arrow label="MIGRATION" />
             <Cell tag="AFTER" value="example-gacha.jp" strong />
@@ -264,7 +273,14 @@ function DomainStrip() {
         {/* 運営側 */}
         <div className="bg-paper2/60 p-7 sm:p-10">
           <span className="num text-label text-slate3">運営が使う管理画面</span>
-          <div className="mt-5 flex flex-col gap-3.5 sm:flex-row sm:items-center">
+          {/*
+            ★横並びに戻さないこと。
+              BEFORE / 矢印 / AFTER を横に3つ並べると、
+              画面を2列に割る 1024px 付近で1枠が 147px まで痩せ、
+              「example-gacha.jp」や製品名が2行に割れていました。
+              縦に積めば、どの幅でも1行で読めます。
+          */}
+          <div className="mt-5 flex flex-col gap-3">
             <Cell tag="BEFORE" value="OLD ADMIN" />
             <Arrow label="MIGRATION" />
             <Cell tag="AFTER" value={OS} strong />
@@ -287,6 +303,12 @@ function Cell({
   value: string;
   strong?: boolean;
 }) {
+  /*
+    ★タグと値を上下に積まないこと。
+      上に BEFORE、下に値、という形だと、値が短いぶん
+      カードの右側が丸ごと余ります（390px でカード292px・文字86px＝
+      右に206px の空白）。同じ行に置けば幅を使い切れます。
+  */
   return (
     <div
       className={`min-w-0 flex-1 rounded-2xl border px-5 py-4 ${
@@ -295,32 +317,41 @@ function Cell({
           : "border-edge2 bg-paper2/70"
       }`}
     >
-      <span
-        className={`num text-label ${strong ? "text-blue-ink" : "text-slate3"}`}
-      >
-        {tag}
-      </span>
-      <p
-        className={`num mt-2 break-all text-note font-bold ${
-          strong ? "text-blue-deep" : "text-slate2"
-        }`}
-      >
-        {value}
-      </p>
+      <div className="flex items-baseline justify-between gap-3">
+        <span
+          className={`num shrink-0 text-label ${
+            strong ? "text-blue-ink" : "text-slate3"
+          }`}
+        >
+          {tag}
+        </span>
+        <p
+          className={`num min-w-0 text-right text-note font-bold ${
+            strong ? "text-blue-deep" : "text-slate2"
+          }`}
+        >
+          {value}
+        </p>
+      </div>
     </div>
   );
 }
 
 function Arrow({ label }: { label: string }) {
   return (
-    <div className="flex shrink-0 items-center gap-2.5 sm:flex-col sm:gap-1.5">
+    /*
+      ★sm: で横向きに戻さないこと。
+        上下の枠は全幅で縦に積むようになったので、
+        矢印はどの画面幅でも「下向き」で意味が通ります。
+    */
+    <div className="flex shrink-0 items-center justify-center gap-2.5">
       <svg
         width="22"
         height="22"
         viewBox="0 0 16 16"
         fill="none"
         aria-hidden
-        className="rotate-90 text-blue-ink sm:rotate-0"
+        className="rotate-90 text-blue-ink"
       >
         <path
           d="M3 8h10M9 4l4 4-4 4"

@@ -6,7 +6,11 @@ import Section from "../ui/Section";
 import Reveal from "../ui/Reveal";
 import { MoreDetail } from "../ui/Act";
 import TimeSaving from "./TimeSaving";
-import { roiDefaults, roiNote } from "@/content/site";
+import { roiDefaults, roiNote as raw_roiNote } from "@/content/site";
+/* ★画面に出す文字は jpDeep() を通す。日本語が語の途中で割れるのを止める */
+import { jpDeep } from "@/lib/jp";
+
+const roiNote = jpDeep(raw_roiNote);
 import { activeTiers, type OsTier } from "@/config/pricing";
 import { EV, track, trackOnce } from "@/lib/track";
 /* ★製品名は必ず OS を使うこと。"AI GACHA OS" と直接書くと狭い画面で割れます */
@@ -280,7 +284,7 @@ export default function RoiCalculator() {
                   <p className="mt-4 text-body leading-[1.9] text-slate2">
                     あなたの場合、年間 約
                   </p>
-                  <p className="num mt-2 break-all text-mega font-bold text-gradient-royal">
+                  <p className="num mt-2 break-words text-mega font-bold text-gradient-royal">
                     {man(r.yearlyDiff)}
                   </p>
                   <p className="mt-3 text-body leading-[1.9] text-slate2">
@@ -493,7 +497,7 @@ function Metric({
   return (
     <div className="rounded-3xl border border-edge bg-white p-5 shadow-lift sm:p-6">
       <p className="text-note leading-snug text-slate3">{label}</p>
-      <p className={`num mt-2.5 break-all text-h3 font-bold leading-none ${color}`}>
+      <p className={`num mt-2.5 break-words text-h3 font-bold leading-none ${color}`}>
         {value}
         <span className="ml-1.5 text-note font-normal text-slate3">
           {unit}

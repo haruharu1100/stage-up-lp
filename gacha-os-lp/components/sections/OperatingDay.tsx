@@ -25,6 +25,8 @@ import Reveal from "../ui/Reveal";
 import { MoreDetail } from "../ui/Act";
 /* ★製品名は必ず OS を使うこと。"AI GACHA OS" と直接書くと狭い画面で割れます */
 import { OS } from "@/lib/text";
+/* ★日本語の本文は jp() を通すこと。「確／認する」のような途中改行を止めます */
+import { jp } from "@/lib/jp";
 
 /* ────────────────────────────────
    ACT 2 で組み上がる賞の構成（デモの数値）
@@ -150,7 +152,9 @@ export default function OperatingDay() {
               <span className="inline-block">分からなくても大丈夫。</span>
             </h2>
             <p className="mx-auto mt-5 max-w-[34em] text-body text-pretty text-slate2 sm:mt-7">
-              AIに、「どういうガチャを作りたいか」を伝えてください。市場価格や商品候補など、利用可能なデータを参照しながら、ガチャの構成案を作成します。
+              {jp(
+                "AIに、「どういうガチャを作りたいか」を伝えてください。市場価格や商品候補など、利用可能なデータを参照しながら、ガチャの構成案を作成します。",
+              )}
             </p>
           </div>
         </Reveal>
@@ -229,17 +233,23 @@ export default function OperatingDay() {
         {/* ───────── 中央の一文 ───────── */}
         <Reveal delay={0.1} className="mt-5 sm:mt-8">
           <div className="relative overflow-hidden rounded-3xl border border-blue-ink/15 bg-gradient-to-b from-blue-pale/70 to-white px-6 py-9 text-center shadow-lift2 sm:px-12 sm:py-12">
+            {/*
+              ★1行に詰め込まないこと。
+                「ここまでで人がしたのは…だけ。」は長いうえ、
+                スマホで「確／認する」と割れていました。
+                意味のかたまりごとに span を分け、語そのものは jp() で守ります。
+            */}
             <p className="h-display text-h3 text-balance text-slate">
-              <span className="inline-block">ここまでで人がしたのは、</span>
+              <span className="inline-block">ここまでであなたがするのは、</span>
               <span className="inline-block">
-                「伝える」と「確認する」だけ。
+                {jp("「伝える」と「確認する」。")}
               </span>
             </p>
             <p className="mx-auto mt-5 max-w-[38em] text-note text-pretty leading-[1.95] text-slate2">
               {/* 製品名の中の空白は必ず &nbsp;。375px で「AI GACHA／OS」と割れていました */}
-              賞の構成も、本数も、確率も、還元率の計算も、公開前の試算も、
+              {jp("賞の構成も、確率も、還元率の計算も、")}
               AI&nbsp;GACHA&nbsp;OS
-              側で組み上がります。承認しないかぎり、ガチャは公開されません。
+              {jp("側で組み上がります。承認しないかぎり、公開されません。")}
             </p>
           </div>
         </Reveal>
@@ -514,11 +524,13 @@ function ActOne() {
               </p>
               <ul className="mt-2.5 space-y-1 text-note text-slate2">
                 <li>・1回 500円 / 総口数 1,000口</li>
-                <li>・S / A / B / C とラストワン賞</li>
-                <li>・設定還元率 94.8%</li>
+                <li>{jp("・S / A / B / C とラストワン賞")}</li>
+                <li>{jp("・設定還元率 94.8%")}</li>
               </ul>
               <p className="mt-2.5 text-note leading-[1.8] text-slate2">
-                内容を確認して、承認するか、直したいところを伝えてください。
+                {jp(
+                  "内容を確認して、承認するか、直したいところを伝えてください。",
+                )}
               </p>
             </div>
           </div>
@@ -588,7 +600,7 @@ function ActTwo({ reduce }: { reduce: boolean }) {
         <span className="num text-label text-slate3">{OS}</span>
       </div>
       <h3 className="mt-4 text-h3 font-bold text-balance text-slate sm:mt-5">
-        賞の構成・本数・確率・還元率が、同時に組み上がります。
+        {jp("賞の構成・本数・確率・還元率が、同時に組み上がります。")}
       </h3>
 
       <div className="mt-6 grid gap-4 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] sm:mt-8">
@@ -735,7 +747,9 @@ function ActThree() {
         <div className="rounded-2xl border border-edge bg-white p-5 shadow-lift sm:p-6">
           <span className="num text-label text-slate3">APPROVE</span>
           <p className="mt-3.5 text-note text-pretty leading-[1.9] text-slate2">
-            ここが人の仕事です。内容を見て、承認するか、AIに直しを伝えるかを決めます。
+            {jp(
+              "ここが人の仕事です。内容を見て、承認するか、AIに直しを伝えるかを決めます。",
+            )}
           </p>
           <div className="mt-5 space-y-2">
             <div className="rounded-xl bg-blue-ink py-3 text-center text-note font-bold text-white shadow-blue-lift">

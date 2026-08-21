@@ -4,7 +4,11 @@ import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useEffect } from "react";
 import { motion, useReducedMotion } from "framer-motion";
-import { activeHero, activeHeroVariant, site } from "@/content/site";
+import { activeHero as raw_activeHero, activeHeroVariant, site } from "@/content/site";
+/* ★画面に出す文字は jpDeep() を通す。日本語が語の途中で割れるのを止める */
+import { jpDeep } from "@/lib/jp";
+
+const activeHero = jpDeep(raw_activeHero);
 import { setLeadVariant } from "@/lib/lead";
 import { EV, track } from "@/lib/track";
 import { useIsNarrow, useQuality } from "@/lib/quality";

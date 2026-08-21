@@ -1,6 +1,11 @@
 import Reveal from "../ui/Reveal";
 import { MoreDetail } from "../ui/Act";
-import { timeModel, timeModelNote } from "@/content/site";
+import { timeModel as raw_timeModel, timeModelNote as raw_timeModelNote } from "@/content/site";
+/* ★画面に出す文字は jpDeep() を通す。日本語が語の途中で割れるのを止める */
+import { jpDeep } from "@/lib/jp";
+
+const timeModel = jpDeep(raw_timeModel);
+const timeModelNote = jpDeep(raw_timeModelNote);
 
 const beforeTotal = timeModel.reduce((a, r) => a + r.before, 0);
 const afterTotal = timeModel.reduce((a, r) => a + r.after, 0);

@@ -4,7 +4,11 @@ import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import Section from "../ui/Section";
 import Reveal from "../ui/Reveal";
-import { faqs } from "@/content/site";
+import { faqs as raw_faqs } from "@/content/site";
+/* ★画面に出す文字は jpDeep() を通す。日本語が語の途中で割れるのを止める */
+import { jpDeep } from "@/lib/jp";
+
+const faqs = jpDeep(raw_faqs);
 
 export default function Faq() {
   const [open, setOpen] = useState<number | null>(0);

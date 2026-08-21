@@ -5,6 +5,8 @@ import Reveal from "../ui/Reveal";
 import { MoreDetail } from "../ui/Act";
 /* ★製品名は必ず OS を使うこと。"AI GACHA OS" と直接書くと狭い画面で割れます */
 import { OS } from "@/lib/text";
+/* ★画面に出す文字は jpDeep() を通す。日本語が語の途中で割れるのを止める */
+import { jpDeep } from "@/lib/jp";
 
 /**
  * 「6つ全部を、あなたがやるわけではない」を見せるセクション。
@@ -36,7 +38,7 @@ type Role = {
   quote?: string;
 };
 
-const roles: Role[] = [
+const roles: Role[] = jpDeep([
   {
     no: "01",
     side: "human",
@@ -117,7 +119,7 @@ const roles: Role[] = [
       "返金・例外対応・重大な申し出は管理者へエスカレーション",
     ],
   },
-];
+]);
 
 const SIDE_META: Record<
   Side,

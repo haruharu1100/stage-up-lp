@@ -1,5 +1,9 @@
 import Reveal from "./Reveal";
-import { beforeAfter } from "@/content/site";
+import { beforeAfter as raw_beforeAfter } from "@/content/site";
+/* ★画面に出す文字は jpDeep() を通す。日本語が語の途中で割れるのを止める */
+import { jpDeep } from "@/lib/jp";
+
+const beforeAfter = jpDeep(raw_beforeAfter);
 
 type Props = {
   /** content/site.ts の beforeAfter のキー */

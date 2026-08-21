@@ -4,34 +4,36 @@ import { useState } from "react";
 import Act, { MoreDetail } from "../ui/Act";
 import Reveal from "../ui/Reveal";
 import BeforeAfter from "../ui/BeforeAfter";
+/* ★画面に出す文字は jpDeep() を通す。日本語が語の途中で割れるのを止める */
+import { jpDeep } from "@/lib/jp";
 
-const steps = [
+const steps = jpDeep([
   { n: "01", t: "当選者が発送依頼", d: "マイページから対象の景品を選んで依頼", who: "お客様" },
   { n: "02", t: "管理画面へ自動反映", d: "発送キューに集約。住所は暗号化して保持", who: "システム" },
   { n: "03", t: "発送対象を選ぶ", d: "まとめて選択。同一住所は自動でまとめる", who: "運営者" },
   { n: "04", t: "配送データ生成", d: "主要配送業者向けの伝票データを書き出し", who: "システム" },
   { n: "05", t: "追跡番号を登録", d: "取り込むだけでステータスが進む", who: "運営者" },
   { n: "06", t: "発送通知とマイページ反映", d: "お客様へ自動通知。履歴にも残る", who: "システム" },
-];
+]);
 
-const queue = [
+const queue = jpDeep([
   { user: "user_2841", item: "AJ1 Retro High OG 27.5cm", price: "¥51,800", state: "仕入れ待ち" },
   { user: "user_1190", item: "PSA10 リザードン ex SAR", price: "¥139,500", state: "梱包中" },
   { user: "user_3372", item: "限定復刻 ダンク Low 26.0cm", price: "¥28,600", state: "発送済" },
-];
+]);
 
 /** 誰がやる作業なのかを、色で見分けられるようにする */
-const WHO: Record<string, string> = {
+const WHO: Record<string, string> = jpDeep({
   システム: "bg-ok/[0.10] text-ok-ink",
   運営者: "bg-blue-pale text-blue-ink",
   お客様: "bg-paper2 text-slate3",
-};
+});
 
-const STATE: Record<string, string> = {
+const STATE: Record<string, string> = jpDeep({
   発送済: "bg-ok/[0.10] text-ok-ink",
   梱包中: "bg-blue-pale text-blue-ink",
   仕入れ待ち: "bg-warn/[0.12] text-warn-ink",
-};
+});
 
 /* ────────────────────────────────────────────────
    1回ぶんの発送作業を、押しながら進める。
@@ -41,14 +43,14 @@ const STATE: Record<string, string> = {
 const TARGET = 26;
 
 /** 押すたびに、どこまで進むか（stage 0〜3） */
-const ROWS: { stage: number; code: string; label: string; who: string }[] = [
+const ROWS: { stage: number; code: string; label: string; who: string }[] = jpDeep([
   { stage: 0, code: "QUEUE", label: `発送対象 ${TARGET} 件が集まっている`, who: "システム" },
   { stage: 1, code: "SELECT ALL", label: `${TARGET} 件をまとめて選択`, who: "運営者" },
   { stage: 2, code: "GENERATE SHIPPING DATA", label: "配送伝票データを書き出し", who: "システム" },
   { stage: 2, code: `READY ${TARGET} / ${TARGET}`, label: "発送準備が整った状態", who: "システム" },
   { stage: 3, code: "MARK AS SHIPPED", label: "追跡番号を取り込んで発送済みに", who: "運営者" },
   { stage: 3, code: "NOTIFY", label: `${TARGET} 件の発送通知が飛ぶ・マイページにも反映`, who: "システム" },
-];
+]);
 
 const ACTIONS = ["SELECT ALL", "GENERATE SHIPPING DATA", "MARK AS SHIPPED"];
 

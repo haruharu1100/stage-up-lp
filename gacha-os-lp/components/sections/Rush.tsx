@@ -1,8 +1,10 @@
 import Section from "../ui/Section";
 import Reveal from "../ui/Reveal";
 import { MoreDetail } from "../ui/Act";
+/* ★画面に出す文字は jpDeep() を通す。日本語が語の途中で割れるのを止める */
+import { jpDeep } from "@/lib/jp";
 
-const settings = [
+const settings = jpDeep([
   { l: "突入条件", v: "対象ガチャで特定カードを引いたとき" },
   { l: "継続条件", v: "継続判定に成功した場合" },
   { l: "継続率", v: "段階ごとに設定（管理画面から変更可）" },
@@ -10,7 +12,7 @@ const settings = [
   { l: "当選内容", v: "ポイント / BOX / パック / PSA / 上乗せ / 倍率" },
   { l: "対象ガチャ", v: "個別に選択（対象外にもできる）" },
   { l: "終了条件", v: "継続失敗・上限到達・手動終了" },
-];
+]);
 
 const chain = [
   { name: "CHANCE", tone: "from-blue-ink/6" },

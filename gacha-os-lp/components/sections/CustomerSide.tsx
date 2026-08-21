@@ -22,6 +22,8 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import Reveal from "../ui/Reveal";
 import { MoreDetail } from "../ui/Act";
 import { EV, track } from "@/lib/track";
+/* ★画面に出す文字は jp() を通す。日本語が語の途中で割れるのを止める */
+import { jp } from "@/lib/jp";
 
 type Phase = "draft" | "published" | "playing" | "result" | "chosen";
 
@@ -140,7 +142,9 @@ export default function CustomerSide() {
                 {
                   n: "04",
                   t: "運営側に戻る",
-                  b: "発送依頼は管理画面に集まり、実還元率の監視は公開と同時に始まります。",
+                  b: jp(
+                    "発送依頼は管理画面に集まり、実還元率の監視は公開と同時に始まります。",
+                  ),
                 },
               ].map((s) => (
                 <li

@@ -36,6 +36,8 @@ import {
 import { AdminLaptop, CustomerPhone } from "./world/screens";
 import type { PhoneScreenKey } from "./screen/customer";
 import StaticCore from "../hero/StaticCore";
+/* ★画面に出す文字は jp() を通す。日本語が語の途中で割れるのを止める */
+import { jp } from "@/lib/jp";
 
 /* ────────────────────────────────────────────
    台本。0→1 のスクロール位置に、話の場面を割り当てる
@@ -85,7 +87,9 @@ export const BEATS: Beat[] = [
   {
     at: 0.88,
     title: "当たったら、発送を依頼できる",
-    body: "お客様は「発送」か「ポイントに戻す」かを選べます。選ばれた発送は、管理画面の発送待ちに入ります。",
+    body: jp(
+      "お客様は「発送」か「ポイントに戻す」かを選べます。選ばれた発送は、管理画面の発送待ちに入ります。",
+    ),
     who: "CUSTOMER",
   },
 ];

@@ -5,6 +5,8 @@ import Section from "../ui/Section";
 import Reveal from "../ui/Reveal";
 import { MoreDetail } from "../ui/Act";
 import { jpy, rtpTone } from "@/lib/simulate";
+/* ★日本語の本文は jp() を通すこと。「実還元／率」のような途中改行を止めます */
+import { jp } from "@/lib/jp";
 import { EV, track } from "@/lib/track";
 
 /* ────────────────────────────────────────────────
@@ -367,7 +369,7 @@ function LeftoverSim() {
 
       <p className="mt-6 text-note text-slate2">
         1回 {jpy(LEFT_PRICE)} / 全 1,000 口。残り口数を押すと、その時点の
-        <span className="font-bold text-slate">残数ベース実還元率</span>
+        <span className="font-bold text-slate">{jp("残数ベース実還元率")}</span>
         が出ます。
       </p>
 

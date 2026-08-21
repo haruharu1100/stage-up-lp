@@ -3,7 +3,11 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Reveal from "../ui/Reveal";
-import { ctaTrio } from "@/content/site";
+import { ctaTrio as raw_ctaTrio } from "@/content/site";
+/* ★画面に出す文字は jpDeep() を通す。日本語が語の途中で割れるのを止める */
+import { jpDeep } from "@/lib/jp";
+
+const ctaTrio = jpDeep(raw_ctaTrio);
 import {
   captureLeadSource,
   readDiagnosis,

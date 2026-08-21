@@ -8,13 +8,15 @@ import BeforeAfter from "../ui/BeforeAfter";
 import { MoreDetail } from "../ui/Act";
 /* ★製品名は必ず OPERATOR を使うこと。"AI OPERATOR" と直接書くと狭い画面で割れます */
 import { OPERATOR, nowrap } from "@/lib/text";
+/* ★画面に出す文字は jpDeep() を通す。日本語が語の途中で割れるのを止める */
+import { jpDeep } from "@/lib/jp";
 
 type Msg =
   | { role: "user"; text: string }
   | { role: "ai"; text: string }
   | { role: "trace"; text: string };
 
-const script: Msg[] = [
+const script: Msg[] = jpDeep([
   { role: "user", text: "発送はいつですか？" },
   { role: "trace", text: "ログイン中の会員を特定（user_2841）" },
   { role: "trace", text: "発送依頼を照合：2件（8/16 21:04 / 8/17 09:22）" },
@@ -29,13 +31,13 @@ const script: Msg[] = [
     role: "ai",
     text: "返金に関するご相談は、担当者からご案内いたします。内容を引き継ぎましたので、順番にご連絡します。お手数ですが少々お待ちください。",
   },
-];
+]);
 
 /**
  * AI OPERATOR の「持ち場」。
  * いま何を見ているかを先に出す。チャット窓に見せないための土台。
  */
-const watching: { l: string; v: string; u: string; tone: string }[] = [
+const watching: { l: string; v: string; u: string; tone: string }[] = jpDeep([
   { l: "販売中のガチャ", v: "18", u: "本", tone: "text-slate" },
   { l: "価格警告", v: "3", u: "件", tone: "text-danger-ink" },
   { l: "未発送", v: "26", u: "件", tone: "text-blue-ink" },
@@ -44,10 +46,10 @@ const watching: { l: string; v: string; u: string; tone: string }[] = [
     囲まないと 768px で「問い合／わせ」と切れていた。
   */
   { l: `人へ回った${nowrap("問い合わせ")}`, v: "4", u: "件", tone: "text-warn-ink" },
-];
+]);
 
 /** 上から順に片付ければいい形にした、その日の指示 */
-const briefing = [
+const briefing = jpDeep([
   {
     no: "01",
     t: "価格が上昇したガチャを確認",
@@ -66,16 +68,16 @@ const briefing = [
     d: "本日 37 件のうち 33 件はAIが一次回答済み。返金・補償にあたる 4 件だけが担当者に回っています。",
     cost: "10分",
   },
-];
+]);
 
-const escalations = [
+const escalations = jpDeep([
   "返金・キャンセル",
   "法的トラブル",
   "アカウント停止",
   "高額補償",
   "不正利用の疑い",
   "個人情報の訂正・削除請求",
-];
+]);
 
 export default function AiSupport() {
   const ref = useRef<HTMLDivElement>(null);
