@@ -4,12 +4,19 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import Logo from "./ui/Logo";
 
-/** 迷わせないよう、行き先は6つまでに絞る */
+/**
+ * 迷わせないよう、行き先は6つまでに絞る。
+ *
+ * ★リンク先の id が本当にページにあるか、増やすたびに確認すること。
+ *   以前 /#how というどこにも無い場所を指していて、押しても動きませんでした。
+ * ★「詳しく見る」の中に畳んだセクションへ飛ばす場合は、
+ *   DetailBlock の ids にその id を必ず書くこと（書けば自動で開きます）。
+ */
 const nav = [
-  { label: "できること", href: "/#how" },
   { label: "ガチャを作る", href: "/#builder" },
   { label: "公開前バックテスト", href: "/#backtest" },
-  { label: "導入効果", href: "/#roi" },
+  { label: "お客様の画面", href: "/#customer" },
+  { label: "既存サイトの移行", href: "/#migration" },
   { label: "料金", href: "/#pricing" },
   { label: "FAQ", href: "/#faq" },
 ];

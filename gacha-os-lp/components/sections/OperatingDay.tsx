@@ -138,7 +138,7 @@ export default function OperatingDay() {
           <div className="mx-auto max-w-4xl text-center">
             <div className="flex flex-wrap items-center justify-center gap-x-3.5 gap-y-2">
               <span className="num whitespace-nowrap text-label text-slate3">
-                SECTION 01
+                SECTION 02
               </span>
               <span className="hidden h-px w-8 bg-edge sm:block" />
               <span className="eyebrow-lite">A DAY IN OPERATION</span>

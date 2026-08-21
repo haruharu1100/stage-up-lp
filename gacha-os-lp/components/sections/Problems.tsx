@@ -6,7 +6,7 @@ export default function Problems() {
   return (
     <Section
       id="problems"
-      no="04"
+      no=""
       eyebrow="THE PROBLEM"
       title={
         <>

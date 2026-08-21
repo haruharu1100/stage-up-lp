@@ -158,8 +158,8 @@ export default function Cta() {
         <Reveal>
           <div className="mx-auto max-w-3xl text-center">
             <div className="flex items-center justify-center gap-4">
-              <span className="num text-label text-slate3">SECTION 23</span>
-              <span className="h-px w-10 bg-edge" />
+              {/* ★ここに章番号は出さないこと。FAQと同じ第10章の続きなので、
+                    もう一度「SECTION 10」と出すと章が増えたように見えます。 */}
               <span className="eyebrow-lite">GET STARTED</span>
             </div>
             <h2 className="h-display mt-5 text-h2 text-slate sm:mt-7">

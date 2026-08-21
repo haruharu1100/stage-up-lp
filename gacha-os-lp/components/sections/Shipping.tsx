@@ -186,7 +186,7 @@ export default function Shipping() {
   return (
     <Act
       id="shipping"
-      no="10"
+      no="07"
       eyebrow="SHIPPING ENGINE"
       wide
       title={

@@ -46,10 +46,20 @@ export default function Section({
                 align === "center" ? "justify-center" : ""
               }`}
             >
-              <span className="num whitespace-nowrap text-label text-slate3">
-                SECTION {no}
-              </span>
-              <span className="hidden h-px w-8 bg-edge sm:block" />
+              {/*
+                no が空のときは「SECTION」の文字ごと出さないこと。
+                同じ章を2つ3つのセクションに分けて見せている場合、
+                2つ目以降に番号を出すと、章がいくつあるのか分からなくなります。
+                （空にしたのに "SECTION ———" だけ残って表示された事故あり）
+              */}
+              {no && (
+                <>
+                  <span className="num whitespace-nowrap text-label text-slate3">
+                    SECTION {no}
+                  </span>
+                  <span className="hidden h-px w-8 bg-edge sm:block" />
+                </>
+              )}
               <span className="eyebrow-lite">{eyebrow}</span>
             </div>
             <h2 className="h-display mt-4 text-h2 text-balance text-slate sm:mt-6">

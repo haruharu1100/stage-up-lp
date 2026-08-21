@@ -87,7 +87,7 @@ export default function AiSupport() {
   return (
     <Section
       id="support"
-      no="11"
+      no=""
       eyebrow="AI OPERATOR"
       title={
         <>

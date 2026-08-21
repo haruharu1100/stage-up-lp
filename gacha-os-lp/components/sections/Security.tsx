@@ -52,7 +52,7 @@ export default function Security() {
   return (
     <Section
       id="security"
-      no="16"
+      no=""
       eyebrow="SECURITY & INTEGRITY"
       title={
         <>

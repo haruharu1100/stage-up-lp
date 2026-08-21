@@ -187,7 +187,7 @@ export default function RoiCalculator() {
   return (
     <Section
       id="roi"
-      no="14"
+      no=""
       eyebrow="ROI SIMULATOR"
       title={
         <>

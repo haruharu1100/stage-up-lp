@@ -11,7 +11,7 @@ export default function BuiltFromOps() {
   return (
     <Section
       id="ops"
-      no="15"
+      no=""
       eyebrow="BUILT FROM OPERATIONS"
       title={
         <>

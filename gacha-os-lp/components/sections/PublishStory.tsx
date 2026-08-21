@@ -160,7 +160,7 @@ function Head() {
     <div className="max-w-4xl">
       <div className="flex flex-wrap items-center gap-x-3.5 gap-y-2">
         <span className="num whitespace-nowrap text-label text-slate3">
-          SECTION 05
+          SECTION 04
         </span>
         <span className="hidden h-px w-8 bg-edge sm:block" />
         <span className="eyebrow-lite">APPROVE &amp; PUBLISH</span>

@@ -24,7 +24,7 @@ export default function Rush() {
   return (
     <Section
       id="rush"
-      no="09"
+      no=""
       eyebrow="RUSH MODE"
       title={
         <>

@@ -162,7 +162,7 @@ export default function RoleFlow() {
       <div className="container-x relative">
         {/* ───────── 見出し ───────── */}
         <div className="flex flex-wrap items-baseline gap-x-5 gap-y-2">
-          <span className="num text-label text-slate3">SECTION 03</span>
+          <span className="num text-label text-slate3">MORE DETAIL</span>
           <span className="eyebrow-lite">WHO DOES WHAT</span>
         </div>
         <h2 className="h-display mt-4 text-h1 text-balance text-slate sm:mt-6">

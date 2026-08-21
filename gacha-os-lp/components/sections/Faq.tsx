@@ -12,7 +12,7 @@ export default function Faq() {
   return (
     <Section
       id="faq"
-      no="20"
+      no="10"
       eyebrow="FAQ"
       title={<>よくいただく質問</>}
       lead="導入前に確認されることの多い項目をまとめました。ここに無いことは、そのままご相談ください。"

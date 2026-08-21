@@ -68,7 +68,7 @@ export default function CustomerSide() {
           <div className="mx-auto max-w-4xl text-center">
             <div className="flex flex-wrap items-center justify-center gap-x-3.5 gap-y-2">
               <span className="num whitespace-nowrap text-label text-slate3">
-                SECTION 02
+                SECTION 05
               </span>
               <span className="hidden h-px w-8 bg-edge sm:block" />
               <span className="eyebrow-lite">CUSTOMER SIDE</span>
