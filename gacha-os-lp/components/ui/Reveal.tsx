@@ -22,10 +22,20 @@ export default function Reveal({
   return (
     <motion.div
       className={className}
-      initial={reduce ? false : { opacity: 0, y }}
-      whileInView={reduce ? undefined : { opacity: 1, y: 0 }}
+      /*
+        ★initial はサーバーとクライアントで必ず同じ値にすること。
+          「動きを減らす」設定の端末だけ initial を変えると、
+          最初の表示がサーバーの結果と食い違って hydration エラーになる。
+          動きを止めたいときは、初期値ではなく所要時間を0にする。
+      */
+      initial={{ opacity: 0, y }}
+      whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once, margin: "-12% 0px -8% 0px" }}
-      transition={{ duration: 0.8, delay, ease: [0.16, 1, 0.3, 1] }}
+      transition={
+        reduce
+          ? { duration: 0 }
+          : { duration: 0.8, delay, ease: [0.16, 1, 0.3, 1] }
+      }
     >
       {children}
     </motion.div>

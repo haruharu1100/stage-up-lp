@@ -469,7 +469,7 @@ function Phone({
               <AnimatePresence mode="wait">
                 {phase === "draft" && <ScreenEmpty key="empty" />}
                 {phase === "published" && (
-                  <ScreenGacha key="gacha" onDraw={onDraw} reduce={reduce} />
+                  <ScreenGacha key="gacha" onDraw={onDraw} />
                 )}
                 {phase === "playing" && (
                   <ScreenPlaying key="play" reduce={reduce} />
@@ -532,20 +532,13 @@ function ScreenEmpty() {
   );
 }
 
-function ScreenGacha({
-  onDraw,
-  reduce,
-}: {
-  onDraw: () => void;
-  reduce: boolean;
-}) {
+function ScreenGacha({ onDraw }: { onDraw: () => void }) {
   return (
     <motion.div {...screenIn} className="flex h-full flex-col">
       <div className="flex items-center gap-2">
         <span
-          className={`num rounded-full bg-ok/12 px-2 py-[3px] text-[10px] tracking-[0.16em] text-ok-ink ${
-            reduce ? "" : "animate-pulseline"
-          }`}
+          // 動きの打ち消しは globals.css の prefers-reduced-motion に任せる
+          className="num animate-pulseline rounded-full bg-ok/12 px-2 py-[3px] text-[10px] tracking-[0.16em] text-ok-ink"
         >
           NEW GACHA
         </span>

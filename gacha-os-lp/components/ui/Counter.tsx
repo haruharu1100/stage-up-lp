@@ -23,10 +23,17 @@ export default function Counter({
   const ref = useRef<HTMLSpanElement>(null);
   const inView = useInView(ref, { once: true, margin: "-15% 0px" });
   const reduce = useReducedMotion();
-  const [value, setValue] = useState(reduce ? to : 0);
+  // ★最初の値は必ず0から。「動きを減らす」設定のときだけ初期値を変えると、
+  //   サーバーの書き出し（常に0）と食い違って hydration エラーになる。
+  //   動きを止めたいときは、初期値ではなく「一瞬で終わらせる」で対応する。
+  const [value, setValue] = useState(0);
 
   useEffect(() => {
-    if (!inView || reduce) return;
+    if (!inView) return;
+    if (reduce) {
+      setValue(to);
+      return;
+    }
     let raf = 0;
     const start = performance.now();
     const tick = (now: number) => {

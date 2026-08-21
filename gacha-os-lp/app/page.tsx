@@ -5,6 +5,7 @@ import Hero from "@/components/Hero";
 import CoreToScreen from "@/components/sections/CoreToScreen";
 import ProductVideo from "@/components/sections/ProductVideo";
 import OperatingDay from "@/components/sections/OperatingDay";
+import PublishStory from "@/components/sections/PublishStory";
 import CustomerSide from "@/components/sections/CustomerSide";
 import RoleFlow from "@/components/sections/RoleFlow";
 import Problems from "@/components/sections/Problems";
@@ -17,6 +18,7 @@ import Shipping from "@/components/sections/Shipping";
 import AiSupport from "@/components/sections/AiSupport";
 import AdminConsole from "@/components/sections/AdminConsole";
 import StatusLights from "@/components/sections/StatusLights";
+import Migration from "@/components/sections/Migration";
 import RoiCalculator from "@/components/sections/RoiCalculator";
 import BuiltFromOps from "@/components/sections/BuiltFromOps";
 import Security from "@/components/sections/Security";
@@ -59,6 +61,12 @@ export default function Home() {
           ③ 6つの役割のうち、自分がやるのはどこか（＝全部やらなくていい）
         */}
         <OperatingDay />
+        {/*
+          このサイトの代表シーン。
+          承認 → 公開処理 → お客様のスマホに出る → 引く → 当たる を、
+          画面を貼り付けたまま、ひと続きの3Dで見せる。
+        */}
+        <PublishStory />
         <CustomerSide />
         <RoleFlow />
 
@@ -76,6 +84,14 @@ export default function Home() {
         <AdminConsole />
         {/* 緑・黄・赤・UNKNOWN。分からないものを「安全」とは表示しない */}
         <StatusLights />
+
+        {/*
+          すでにガチャサイトを運営している人向けの章。
+          ここまでは「これから始める人」に向けて書いてあるので、
+          既存事業者の「全部作り直しになるのでは」という不安を、
+          料金の話に入る前に外しておく。順番を後ろへ動かさないこと。
+        */}
+        <Migration />
 
         {/* ── 効果 → 信頼 ── */}
         <RoiCalculator />

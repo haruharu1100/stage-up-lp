@@ -50,7 +50,13 @@ export default function Act({
   const dark = tone === "night";
 
   const reveal = {
-    initial: reduce ? false : { opacity: 0, y: 26 },
+    /**
+     * ★initial はサーバーとクライアントで必ず同じ値にすること。
+     * 「動きを減らす」設定のときだけ初期値を変えると、最初の表示が
+     * サーバーの結果と食い違って hydration エラーになります。
+     * 動きを止めたいときは、初期値ではなく所要時間を0にします。
+     */
+    initial: { opacity: 0, y: 26 },
     whileInView: { opacity: 1, y: 0 },
     /**
      * ★「画面の何％が入ったら表示する」という指定は使わないこと。
@@ -61,7 +67,7 @@ export default function Act({
      * 「少しでも画面に入ったら表示する」に統一します。
      */
     viewport: { once: true, margin: "-10% 0px -10% 0px" },
-    transition: { duration: 0.8, ease },
+    transition: reduce ? { duration: 0 } : { duration: 0.8, ease },
   } as const;
 
   return (
@@ -131,10 +137,12 @@ export default function Act({
 
         {children && (
           <motion.div
-            initial={reduce ? false : { opacity: 0, y: 30 }}
+            initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: "-8% 0px -8% 0px" }}
-            transition={{ duration: 0.85, delay: 0.1, ease }}
+            transition={
+              reduce ? { duration: 0 } : { duration: 0.85, delay: 0.1, ease }
+            }
             className="mt-9 sm:mt-16 lg:mt-20"
           >
             {children}

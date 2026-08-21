@@ -155,7 +155,7 @@ export default function OperatingDay() {
 
         {/* ───────── 3Dステージ：HUMAN → CORE → CUSTOMER ───────── */}
         <div ref={stage} className="relative mt-8 sm:mt-14 lg:mt-20">
-          <Stage gather={gather} reduce={reduce} />
+          <Stage gather={gather} />
           <p className="mt-2 text-center text-note text-slate3 lg:hidden">
             → 横になぞると、人 → AI → お客様の順に見られます
           </p>
@@ -261,10 +261,8 @@ const INBOUND = [
 
 function Stage({
   gather,
-  reduce,
 }: {
   gather: ReturnType<typeof useTransform<number, number>>;
-  reduce: boolean;
 }) {
   return (
     /*
@@ -298,7 +296,7 @@ function Stage({
 
           {/* ── 中央：AI GACHA OS CORE ── */}
           <div className="relative w-[82%] shrink-0 snap-center lg:w-auto lg:[transform:translateZ(60px)]">
-            <Core gather={gather} reduce={reduce} />
+            <Core gather={gather} />
           </div>
 
           {/* ── 右：CUSTOMER ── */}
@@ -373,24 +371,25 @@ function SidePanel({
 /** 中央の核。同心円を別々の深さに置いて、CSSだけで立体に見せる。 */
 function Core({
   gather,
-  reduce,
 }: {
   gather: ReturnType<typeof useTransform<number, number>>;
-  reduce: boolean;
 }) {
   return (
     <div className="relative flex min-h-[280px] items-center justify-center py-6 sm:min-h-[340px]">
-      {/* 集まってくるデータ（PCのみ。スマホでは重なって読めなくなるため出さない） */}
-      {!reduce && (
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-0 hidden items-center justify-center lg:flex"
-        >
-          {INBOUND.map((p) => (
-            <Inbound key={p.t} p={p} gather={gather} />
-          ))}
-        </div>
-      )}
+      {/* 集まってくるデータ（PCのみ。スマホでは重なって読めなくなるため出さない）
+
+          ★「動きを減らす」設定のときに、この かたまり を JSX ごと消してはいけない。
+            サーバーは常に「動きあり」で書き出すため、消すと最初の表示が食い違い、
+            ページ全体が hydration エラーで作り直しになる（実際に起きました）。
+            出し分けは CSS（motion-reduce）に任せて、HTMLは常に同じにしておく。 */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 hidden items-center justify-center lg:flex lg:motion-reduce:hidden"
+      >
+        {INBOUND.map((p) => (
+          <Inbound key={p.t} p={p} gather={gather} />
+        ))}
+      </div>
 
       <div className="relative [perspective:900px]">
         {/* 外周のリング（奥に傾ける） */}
@@ -409,9 +408,9 @@ function Core({
 
         {/* 核そのもの */}
         <div
-          className={`relative flex h-[152px] w-[152px] items-center justify-center rounded-full border border-blue-ink/20 bg-gradient-to-b from-white via-blue-pale to-white shadow-lift2 sm:h-[184px] sm:w-[184px] ${
-            reduce ? "" : "animate-breathe"
-          }`}
+          // 動きの打ち消しは globals.css の prefers-reduced-motion に任せる
+          // （ここでクラスを出し分けると hydration エラーになる）
+          className="relative flex h-[152px] w-[152px] animate-breathe items-center justify-center rounded-full border border-blue-ink/20 bg-gradient-to-b from-white via-blue-pale to-white shadow-lift2 sm:h-[184px] sm:w-[184px]"
           style={{ animationDuration: "7s" }}
         >
           <span className="absolute inset-[12px] rounded-full border border-edge2" />
@@ -593,14 +592,18 @@ function ActTwo({ reduce }: { reduce: boolean }) {
                 style={{ transform: `translateZ(${(tiers.length - i) * 9}px)` }}
               >
                 <motion.div
-                  initial={reduce ? false : { opacity: 0, y: 16 }}
+                  initial={{ opacity: 0, y: 16 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true, margin: "-10% 0px -10% 0px" }}
-                  transition={{
-                    duration: 0.55,
-                    delay: i * 0.07,
-                    ease: [0.16, 1, 0.3, 1],
-                  }}
+                  transition={
+                    reduce
+                      ? { duration: 0 }
+                      : {
+                          duration: 0.55,
+                          delay: i * 0.07,
+                          ease: [0.16, 1, 0.3, 1],
+                        }
+                  }
                   className="flex min-w-0 items-center gap-3 rounded-2xl border border-edge bg-white p-3 shadow-lift sm:gap-4 sm:p-4"
                 >
                   <span

@@ -7,19 +7,29 @@ import { motion, useReducedMotion } from "framer-motion";
 import { activeHero, activeHeroVariant, site } from "@/content/site";
 import { setLeadVariant } from "@/lib/lead";
 import { EV, track } from "@/lib/track";
-import { useQuality } from "@/lib/quality";
+import { useIsNarrow, useQuality } from "@/lib/quality";
 import CoreTelemetry from "./hero/CoreTelemetry";
 import StaticCore from "./hero/StaticCore";
 
-const OperatingCore = dynamic(() => import("./three/OperatingCore"), {
+const HeroWorld = dynamic(() => import("./three/HeroWorld"), {
   ssr: false,
   loading: () => <StaticCore />,
 });
 
 const ease = [0.16, 1, 0.3, 1] as const;
 
+/** ファーストビューで見せる担当範囲。「/」を文章に混ぜず、札で並べる */
+const SCOPE = [
+  "ガチャ設計",
+  "公開前検証",
+  "実還元率",
+  "発送",
+  "問い合わせ",
+];
+
 export default function Hero() {
   const tier = useQuality();
+  const narrow = useIsNarrow(1024);
   const reduce = useReducedMotion();
   const show3D = tier === "high" || tier === "medium";
 
@@ -28,10 +38,14 @@ export default function Hero() {
     setLeadVariant(activeHeroVariant);
   }, []);
 
+  // ★initial はサーバーとクライアントで必ず同じ値にすること。
+  //   「動きを減らす」設定のときだけ initial を変えると、最初の表示が
+  //   サーバーの結果と食い違って hydration エラーになる。
+  //   動きを止めたいときは、初期値ではなく所要時間を0にする。
   const rise = (delay: number) => ({
-    initial: reduce ? false : { opacity: 0, y: 22 },
+    initial: { opacity: 0, y: 22 },
     animate: { opacity: 1, y: 0 },
-    transition: { duration: 0.85, delay, ease },
+    transition: reduce ? { duration: 0 } : { duration: 0.85, delay, ease },
   });
 
   return (
@@ -76,17 +90,32 @@ export default function Hero() {
           </span>
         </motion.h1>
 
-        <div className="mt-10 grid items-start gap-10 lg:mt-4 lg:grid-cols-[minmax(0,0.86fr)_minmax(0,1.14fr)] lg:gap-12">
+        <div className="mt-10 grid items-start gap-10 lg:mt-4 lg:grid-cols-[minmax(0,0.76fr)_minmax(0,1.24fr)] lg:gap-10">
           {/* ───────────── 左：ひとことの説明と、進む先 ───────────── */}
           <div className="lg:pt-10">
             <motion.p
               {...rise(0.16)}
-              className="max-w-[30em] text-body text-pretty text-slate2"
+              className="max-w-[24em] text-body text-pretty text-slate2"
             >
-              ガチャ設計、還元率、市場価格、発送、問い合わせ。
+              AIに指示。内容を確認。
               <br className="hidden sm:block" />
-              運営のくり返し作業を、ひとつのシステムにまとめました。
+              あとは運営をシステムが支える。
             </motion.p>
+
+            {/* 担当する範囲。長い文章にせず、札で見せる */}
+            <motion.ul
+              {...rise(0.2)}
+              className="mt-6 flex flex-wrap gap-2"
+            >
+              {SCOPE.map((s) => (
+                <li
+                  key={s}
+                  className="whitespace-nowrap rounded-full border border-edge2 bg-white px-3.5 py-1.5 text-note text-slate2 shadow-lift"
+                >
+                  {s}
+                </li>
+              ))}
+            </motion.ul>
 
             <motion.div
               {...rise(0.24)}
@@ -138,16 +167,14 @@ export default function Hero() {
 
           {/* ───────────── 右：運営のしくみ、そのもの ───────────── */}
           <motion.div
-            initial={reduce ? false : { opacity: 0, scale: 0.94 }}
+            initial={{ opacity: 0, scale: 0.94 }}
             animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 1.15, delay: 0.12, ease }}
-            className="relative h-[340px] sm:h-[440px] lg:-mt-6 lg:h-[540px]"
+            transition={
+              reduce ? { duration: 0 } : { duration: 1.15, delay: 0.12, ease }
+            }
+            className="relative h-[380px] sm:h-[470px] lg:-mt-10 lg:h-[620px]"
           >
-            {show3D ? (
-              <OperatingCore quality={tier === "high" ? "high" : "medium"} />
-            ) : (
-              <StaticCore />
-            )}
+            {show3D ? <HeroWorld compact={narrow} /> : <StaticCore />}
           </motion.div>
         </div>
       </div>

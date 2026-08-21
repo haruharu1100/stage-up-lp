@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useReducedMotion } from "framer-motion";
 import Act, { MoreDetail } from "../ui/Act";
 import Reveal from "../ui/Reveal";
 import BeforeAfter from "../ui/BeforeAfter";
@@ -62,8 +61,10 @@ const STAGE_STATUS = [
 
 function ShippingFlow() {
   const [stage, setStage] = useState(0);
-  const reduce = useReducedMotion();
-  const dur = reduce ? "0ms" : "420ms";
+  // ★「動きを減らす」設定の打ち消しは globals.css の
+  //   @media (prefers-reduced-motion: reduce) が !important で全部やっている。
+  //   ここで値を出し分けると、サーバーの書き出しと食い違って hydration エラーになる。
+  const dur = "420ms";
   const done = stage >= ACTIONS.length;
 
   return (
