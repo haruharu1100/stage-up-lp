@@ -8,6 +8,7 @@ import ProductVideo from "@/components/sections/ProductVideo";
 import OperatingDay from "@/components/sections/OperatingDay";
 import PublishStory from "@/components/sections/PublishStory";
 import CustomerSide from "@/components/sections/CustomerSide";
+import CustomerPlay from "@/components/sections/CustomerPlay";
 import RoleFlow from "@/components/sections/RoleFlow";
 import Problems from "@/components/sections/Problems";
 import Diagnose from "@/components/sections/Diagnose";
@@ -94,8 +95,15 @@ export default function Home() {
             画面を貼り付けたまま、ひと続きの3Dで見せる。 */}
         <PublishStory />
 
-        {/* ── 05 お客様から見た、実際の売り場 ── */}
+        {/* ── 05 お客様から見た、実際の売り場 ──
+            ★ここは2つで1つです。章は増やしていません。
+              CustomerSide … 承認した瞬間に、お客様の画面へ出るところ（左PC／右スマホ）
+              CustomerPlay … そのあとお客様が実際に引いて、当たって、
+                              発送を依頼して、問い合わせるところ（触れるデモ）
+              管理画面だけ見せて終わると、初めて見た人に
+              「で、お客さんはどうやって遊ぶの？」が残ります。そこを埋めるための並びです。 */}
         <CustomerSide />
+        <CustomerPlay />
 
         {/* ── 06 販売中は、システムが見張る ── */}
         <RtpMonitor />

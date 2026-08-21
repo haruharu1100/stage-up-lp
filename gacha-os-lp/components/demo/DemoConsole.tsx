@@ -446,11 +446,23 @@ function Dash({
           ))}
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        /*
+          ★4つ横並びにするのは、本当に幅があるときだけにすること。
+            lg（1024px）で4列にしていたところ、1枚あたりの中身が53pxしかなく、
+            「¥12,840,000」（145px必要）が枠から飛び出していました。
+            1280pxでも足りません。売上の金額が枠から出ているのは、
+            会計まわりのシステムとして、いちばん見せてはいけない壊れ方です。
+        */
+        <div className="grid grid-cols-2 gap-3 min-[1400px]:grid-cols-4">
           {kpis.map((k) => (
-            <div key={k.l} className="rounded-2xl border border-white/10 bg-white/[0.025] p-5">
+            <div
+              key={k.l}
+              className="min-w-0 rounded-2xl border border-white/10 bg-white/[0.025] p-4 sm:p-5"
+            >
               <p className="text-[11px] text-white/40">{k.l}</p>
-              <p className="num mt-2 text-[18px] font-bold text-ink sm:text-[22px]">{k.v}</p>
+              <p className="num mt-2 truncate text-[17px] font-bold text-ink sm:text-[22px]">
+                {k.v}
+              </p>
               <p className="num mt-1 text-[10px] text-ok">{k.d}</p>
             </div>
           ))}

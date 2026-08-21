@@ -69,6 +69,13 @@ export const EV = {
   /** 公開前バックテストのセクションが画面に入った */
   backtestView: "backtest_view",
   /**
+   * お客様側のデモでガチャを引いた（params に count: 1 | 10）。
+   * 「管理画面のデモ」と「お客様側のデモ」のどちらが触られているかを分けて見るため。
+   */
+  playDraw: "customer_play_draw",
+  /** お客様側のデモを、発送依頼まで進めた */
+  playComplete: "customer_play_complete",
+  /**
    * 料金プランのボタンを押した（params に plan: "starter" 等を付ける）。
    * 「プラン別の成約率」を出すための入口。
    * 実際の成約はサイト側では分からないので、受け取り側の台帳と突き合わせます。

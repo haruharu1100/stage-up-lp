@@ -15,7 +15,14 @@ import Logo from "./ui/Logo";
 const nav = [
   { label: "ガチャを作る", href: "/#builder" },
   { label: "公開前バックテスト", href: "/#backtest" },
-  { label: "お客様の画面", href: "/#customer" },
+  /*
+    ★行き先を #customer から #play へ変えています。
+      #customer は「承認した瞬間に、お客様の画面へ出る」ところ。
+      #play は「そのお客様が、実際に引いて当たって発送を頼む」ところ。
+      ここを見に来る人が知りたいのは後者なので、触れる方へ直接降ろします。
+      #customer はそのすぐ上にあるので、見落とされません。
+  */
+  { label: "お客様が引く画面", href: "/#play" },
   { label: "既存サイトの移行", href: "/#migration" },
   { label: "料金", href: "/#pricing" },
   { label: "FAQ", href: "/#faq" },
