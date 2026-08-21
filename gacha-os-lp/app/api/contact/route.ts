@@ -257,6 +257,13 @@ export async function POST(req: Request) {
     company: str(body.company, 120),
     tel: str(body.tel, 40),
     stage: str(body.stage, 80),
+    /**
+     * いま運営しているサイトのURL。
+     * 「運営している」を選んだ方にだけ入力欄が出るので、
+     * それ以外の方からは空で届きます（空でも正常）。
+     * 商談前に現状のドメイン・決済・会員のつくりを見るために使います。
+     */
+    siteUrl: str(body.siteUrl, 300),
     intent: str(body.intent, 80),
     message: str(body.message, 4000),
     interests: Array.isArray(body.interests)

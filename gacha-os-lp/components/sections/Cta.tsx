@@ -39,10 +39,21 @@ export default function Cta() {
   const [state, setState] = useState<State>("idle");
   const [error, setError] = useState("");
   const [intent, setIntent] = useState<string>(INTENTS[0].key);
-  const [running, setRunning] = useState<string>(RUNNING[0]);
+  /**
+   * ★最初は、どれも選ばれていない状態にすること。
+   *
+   *   以前は「運営している」を最初から選んだ状態にしていました。
+   *   これだと、触っていない人まで全員「運営している」として営業側に届き、
+   *   本当に運営している人と見分けがつきません。
+   *   さらに、この選択でいまのサイトのURL欄を出し分けているため、
+   *   これから始める方にも答えようのない欄が最初から見えてしまいます。
+   */
+  const [running, setRunning] = useState<string>("");
   const [openNote, setOpenNote] = useState(false);
   const [diagnosis, setDiagnosis] = useState<Diagnosis | null>(null);
   const noteRef = useRef<HTMLTextAreaElement | null>(null);
+  /** 未選択のまま送信されたときに、その場所まで画面を戻すため */
+  const runningRef = useRef<HTMLFieldSetElement | null>(null);
 
   /**
    * 送信内容に必ず同梱する情報。
@@ -91,6 +102,21 @@ export default function Cta() {
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (state === "sending") return;
+
+    /*
+      「運営しているか」は必須。ここが空のまま届くと、
+      営業側が「移行の話」か「これから始める話」かを判断できません。
+      画面の上のほうへ戻さないと、押しても何も起きないように見えます。
+    */
+    if (!running) {
+      // ★state も error にすること。error の文言は state==="error" のときだけ
+      //   画面に出るので、文言だけ入れても何も表示されません。
+      setState("error");
+      setError("「現在、オンラインガチャを運営していますか？」をお選びください。");
+      runningRef.current?.scrollIntoView({ block: "center", behavior: "smooth" });
+      return;
+    }
+
     setState("sending");
     setError("");
 
@@ -104,6 +130,8 @@ export default function Cta() {
       name: String(fd.get("name") ?? ""),
       email: String(fd.get("email") ?? ""),
       stage: running,
+      // すでに運営している方だけ入力欄が出る。出ていなければ空で届く
+      siteUrl: String(fd.get("siteUrl") ?? ""),
       intent: INTENTS.find((x) => x.key === intent)?.label ?? "",
       message: String(fd.get("message") ?? ""),
       hp: String(fd.get("hp") ?? ""),
@@ -396,7 +424,7 @@ export default function Cta() {
                     placeholder="you@example.com"
                   />
 
-                  <fieldset>
+                  <fieldset ref={runningRef} className="scroll-mt-28">
                     <legend className="text-note font-medium text-slate2">
                       現在、オンラインガチャを運営していますか？
                       <span className="ml-2 text-blue-ink">必須</span>
@@ -408,7 +436,16 @@ export default function Cta() {
                           <button
                             key={r}
                             type="button"
-                            onClick={() => setRunning(r)}
+                            onClick={() => {
+                              setRunning(r);
+                              /* 「選んでください」と出したあとに選んでもらえたら、
+                                 その注意書きはすぐ消すこと。
+                                 直したのに赤いままだと、まだ怒られている気分になります。 */
+                              if (state === "error") {
+                                setState("idle");
+                                setError("");
+                              }
+                            }}
                             aria-pressed={on}
                             className={`rounded-full border px-5 py-3 text-note leading-normal transition-all duration-200 ${
                               on
@@ -421,6 +458,28 @@ export default function Cta() {
                         );
                       })}
                     </div>
+
+                    {/*
+                      すでに運営している方にだけ、いまのサイトを聞く。
+                      ★最初から出しておかないこと。
+                        これから始める方には答えようのない欄なので、
+                        常時出すと「自分向けではない」と思わせて離脱します。
+                      ★必須にしないこと。URLを出したくない段階の方もいます。
+                        ここが空でも相談は受けられます。
+                    */}
+                    {running === RUNNING[0] && (
+                      <div className="mt-6">
+                        <Field
+                          label="いま運営しているサイトのURL（任意）"
+                          name="siteUrl"
+                          type="url"
+                          placeholder="https://example-gacha.jp"
+                        />
+                        <p className="mt-2.5 text-note text-pretty text-slate2">
+                          先に拝見しておくと、移行できる範囲を具体的にお答えできます。
+                        </p>
+                      </div>
+                    )}
                   </fieldset>
 
                   <fieldset>
