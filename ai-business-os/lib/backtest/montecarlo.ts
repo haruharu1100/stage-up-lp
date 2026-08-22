@@ -512,10 +512,22 @@ export function solveBreakEven(a: FunnelAssumption, runs = 400): BreakEven {
   };
 }
 
+/**
+ * 画面に出す価格シナリオと同じ前提を作る。
+ * 逆算・分類・表示が全部この1つの前提から出るようにして、価格ラベルと数字がズレないようにする。
+ */
+export function assumptionForShownPrice(
+  a: FunnelAssumption,
+  scenarios: PriceScenario[],
+  best: PriceScenario['label'] | null
+): FunnelAssumption {
+  const s = best === null ? null : scenarios.find((x) => x.label === best);
+  return s ? adjustForPrice(a, s.monthlyPrice) : a;
+}
+
 /** 赤字の原因を分類する。同じ赤字でも打ち手が違うため、FAILの一言で終わらせない */
 function classify(
-  a: FunnelAssumption,
-  out: MonteCarloOutput,
+  netProfitYear1Median: number,
   be: BreakEven | null,
   verdict: SalesBacktest['verdict']
 ): { verdictClass: ProfitVerdict; whatMustChange: string[] } {
@@ -563,7 +575,7 @@ function classify(
   }
 
   // 利益は出ているのに合格線に届いていないだけなら、条件つき黒字として残す
-  if (out.netProfitYear1.median >= 0) {
+  if (netProfitYear1Median >= 0) {
     return { verdictClass: 'CONDITIONAL_PASS', whatMustChange: must };
   }
 
@@ -623,8 +635,17 @@ export async function runSalesBacktest(
     reason = `悲観側(P10)の契約数が ${out.contracts.p10}件で、外れた時に事業が成立しない。`;
   }
 
-  const breakEven = verdict === 'INSUFFICIENT_DATA' ? null : solveBreakEven(assumption, runs);
-  const { verdictClass, whatMustChange } = classify(assumption, out, breakEven, verdict);
+  /**
+   * 黒字化の逆算も、画面に出している価格シナリオの前提で解く。
+   * 表示は月額98,000円なのに逆算だけ49,800円の前提だと、
+   * 「単価を46,065円→198,712円へ上げる」のように画面の価格と食い違う打ち手が出てしまう。
+   */
+  const shownAssumption = assumptionForShownPrice(assumption, priced.scenarios, priced.best);
+  const shownNetProfit =
+    priced.scenarios.find((s) => s.label === priced.best)?.netProfitYear1Median ??
+    out.netProfitYear1.median;
+  const breakEven = verdict === 'INSUFFICIENT_DATA' ? null : solveBreakEven(shownAssumption, runs);
+  const { verdictClass, whatMustChange } = classify(shownNetProfit, breakEven, verdict);
 
   const result: SalesBacktest = {
     ideaId,

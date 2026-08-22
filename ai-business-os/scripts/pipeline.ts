@@ -126,7 +126,8 @@ async function main() {
   // --- 段6: 上位を表示 ---
   const top = await topOpportunities(10);
   console.log('\n=== TOP AI BUSINESS OPPORTUNITIES ===');
-  for (const o of top) {
+  console.log(`（材料不足で順位を付けられず除外: ${top.excluded}件）`);
+  for (const o of top.rows) {
     console.log(
       `${String(o.rank).padStart(2)}. Money ${String(o.money100 ?? '—').padStart(5)} / 事業性 ${String(o.viability100 ?? '—').padStart(5)} / 機会 ${String(o.opportunityScore ?? '—').padStart(5)}  ${o.title.slice(0, 46)}`
     );

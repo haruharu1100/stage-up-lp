@@ -5,6 +5,7 @@ import { gradeFromScore } from '../lib/score';
 import { stageFromHits, stageRatio } from '../lib/japan';
 import {
   adjustForPrice,
+  assumptionForShownPrice,
   compareChannels,
   comparePrices,
   DEFAULT_ASSUMPTION,
@@ -45,6 +46,7 @@ import { clusterOf, japanGapFactor } from '../lib/cluster';
 import { computeMoneyScore, MONEY_WEIGHTS } from '../lib/economics/money-score';
 import { DEFAULT_CONTENT_ASSUMPTION, NOTE_PRICES, runContentFunnel } from '../lib/economics/content-funnel';
 import { buildRankingsFrom, RANKING_FORMULA, type Material } from '../lib/ranking';
+import { selectRankable } from '../lib/opportunities';
 
 type Check = { name: string; ok: boolean; detail?: string };
 const checks: Check[] = [];
@@ -206,6 +208,13 @@ add('価格候補が標準価格でないなら、全体試算の数字とは別
   (view.priceCandidateYen === DEFAULT_ASSUMPTION.monthlyPrice ||
     view.ltvCacMedian !== salesLike.ltvCac.median),
   `価格候補${view?.priceCandidateYen} / シナリオLTV÷CAC ${view?.ltvCacMedian} / 全体LTV÷CAC ${salesLike.ltvCac.median}`);
+const shownAssumption = assumptionForShownPrice(DEFAULT_ASSUMPTION, priced.scenarios, priced.best);
+add('黒字化の逆算は、画面に出している価格シナリオと同じ前提で計算する',
+  shownAssumption.monthlyPrice === (view?.priceCandidateYen ?? -1),
+  `逆算の前提${shownAssumption.monthlyPrice}円 / 画面の価格候補${view?.priceCandidateYen}円`);
+add('価格候補が標準価格と違うなら、逆算の前提も標準価格のままにしない',
+  view?.priceCandidateYen === DEFAULT_ASSUMPTION.monthlyPrice ||
+    shownAssumption.closeRate[1] < DEFAULT_ASSUMPTION.closeRate[1]);
 add('価格ごとに11項目すべてが揃っている',
   priced.scenarios.every((s) =>
     [s.contractsMedian, s.mrrMedian, s.revenueYear1Median, s.grossProfitYear1Median,
@@ -661,6 +670,24 @@ const rankingDoc = fs.readFileSync('docs/RANKING.md', 'utf8');
 add('順位の計算式がドキュメントに書かれている',
   rankingDoc.includes('BEST BUSINESS') && rankingDoc.includes('JAPAN GAP') &&
   rankingDoc.includes('TRENDING') && rankingDoc.includes('MONEY'));
+
+// --- TOP OPPORTUNITIES の並び（未調査案件が上に来ないこと） ---
+const wide = JSON.stringify({ moneyBreakdown: { availableWeight: 85 } });
+const thin = JSON.stringify({ moneyBreakdown: { availableWeight: 10 } });
+const picked = selectRankable(
+  [
+    // 実際のDBの並び順（Money×確度の降順）を再現する。
+    // バックテスト未実施の案件は70点で頭打ちでも、赤字と分かった案件より上に並んでしまう
+    { idea_id: 'unresearched', money100: 70, fit_json: thin },
+    { idea_id: 'researched-loss', money100: 39.3, fit_json: wide },
+    { idea_id: 'no-score', money100: null, fit_json: null },
+  ],
+  10
+);
+add('バックテスト未実施の案件は、赤字と分かった案件より上位に来ない',
+  picked.ideaIds[0] === 'researched-loss', picked.ideaIds.join(','));
+add('ほとんど採点できていない案件はTOPの表から外す（0点で載せない）',
+  picked.ideaIds.includes('unresearched') === false && picked.excluded === 2);
 
 // --- 出力 ---
 let failed = 0;

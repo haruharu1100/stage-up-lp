@@ -89,6 +89,8 @@ export type DashboardData = {
   ideaCount: number;
   scoredCount: number;
   opportunities: Opportunity[];
+  /** 材料不足で TOP OPPORTUNITIES に載せられなかった件数（0点として載せない） */
+  opportunitiesExcluded: number;
   attribution: Attribution[];
   clusters: ClusterSummary[];
   contentFunnel: ContentFunnelResult;
@@ -125,7 +127,8 @@ export async function buildDashboard(): Promise<DashboardData> {
     outboundFlags: OUTBOUND_FLAGS,
     ideaCount: ideas.length,
     scoredCount: scored.length,
-    opportunities,
+    opportunities: opportunities.rows,
+    opportunitiesExcluded: opportunities.excluded,
     attribution: attribution.slice(0, 10),
     clusters,
     contentFunnel,

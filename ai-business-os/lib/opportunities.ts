@@ -3,6 +3,7 @@ import { getSalesBacktest } from './backtest/montecarlo';
 import { bestPriceView, type PriceView } from './economics/price-view';
 import type { MoneyScore } from './economics/money-score';
 import { STAGE_LABEL } from './japan';
+import { MONEY_MIN_WEIGHT } from './ranking';
 import { getJapanResearch } from './research/japan-researcher';
 import { getViability, SALES_FIT_LABEL, regulatoryNote, type SalesFitKey } from './viability';
 import { getScore } from './score';
@@ -124,24 +125,67 @@ function buildWhyJapanNow(parts: {
   return s.join('');
 }
 
-export async function topOpportunities(limit = 10): Promise<Opportunity[]> {
+export type OpportunityList = {
+  rows: Opportunity[];
+  /** 材料が足りず、この表に載せられなかった件数（0点として載せない） */
+  excluded: number;
+};
+
+export type OpportunityCandidate = {
+  idea_id: string;
+  money100: number | null;
+  fit_json: string | null;
+};
+
+/**
+ * 採点できた配点が少ない案件を落とす。
+ * バックテスト未実施の案件は「売りやすさ」しか採点できず、分母が10点しかないため、
+ * 70点で頭打ちにしても、実際に赤字と分かって半分に減点された案件より上に出てしまう。
+ * これは「調べていないほど上位に来る」という一番避けたい並びなので、
+ * 点を下げるのではなく、順位を付けられないものとしてこの表から外す（除外件数は画面に出す）。
+ */
+export function selectRankable(
+  candidates: OpportunityCandidate[],
+  limit: number
+): { ideaIds: string[]; excluded: number } {
+  const passed: string[] = [];
+  let excluded = 0;
+  for (const c of candidates) {
+    let weight = 0;
+    try {
+      weight =
+        (JSON.parse(c.fit_json ?? '{}') as { moneyBreakdown?: { availableWeight?: number } })
+          .moneyBreakdown?.availableWeight ?? 0;
+    } catch {
+      weight = 0;
+    }
+    if (c.money100 === null || weight < MONEY_MIN_WEIGHT) {
+      excluded++;
+      continue;
+    }
+    passed.push(c.idea_id);
+  }
+  return { ideaIds: passed.slice(0, limit), excluded };
+}
+
+export async function topOpportunities(limit = 10): Promise<OpportunityList> {
   // 並び順は Money Score そのものではなく「Money Score × 確度」。
   // 点数だけで並べると、日本市場を調べられていない案件（＝減点材料が無いだけの案件）が
   // 実測で競合が多いと分かった案件より上に出てしまい、調べていないほど得をする並びになるため。
-  const rows = await all<{ idea_id: string; money100: number | null }>(
-    `SELECT i.id as idea_id, v.money100 as money100
+  const candidates = await all<OpportunityCandidate>(
+    `SELECT i.id as idea_id, v.money100 as money100, v.fit_json as fit_json
      FROM ideas i
      LEFT JOIN viability_scores v ON v.idea_id = i.id
      LEFT JOIN scores s ON s.idea_id = i.id
-     ORDER BY COALESCE(v.money100 * v.confidence, -1) DESC, COALESCE(s.normalized100, -1) DESC, i.fetched_at DESC
-     LIMIT ?`,
-    [limit]
+     ORDER BY COALESCE(v.money100 * v.confidence, -1) DESC, COALESCE(s.normalized100, -1) DESC, i.fetched_at DESC`
   );
+
+  const { ideaIds, excluded } = selectRankable(candidates, limit);
 
   const out: Opportunity[] = [];
   let rank = 0;
-  for (const r of rows) {
-    const idea = await fetchIdea(r.idea_id);
+  for (const ideaId of ideaIds) {
+    const idea = await fetchIdea(ideaId);
     if (!idea) continue;
     rank += 1;
 
@@ -217,5 +261,5 @@ export async function topOpportunities(limit = 10): Promise<Opportunity[]> {
       regulatory: regulatoryNote(idea),
     });
   }
-  return out;
+  return { rows: out, excluded };
 }

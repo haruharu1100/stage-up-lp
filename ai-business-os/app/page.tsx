@@ -182,6 +182,8 @@ export default async function Page() {
       <p className="sub">
         「面白いAI」ではなく「実際に金になる候補」を上から並べています。並び順は Money Score × 確度。
         調べられていない案件が上に来ないようにするため、確度の低い案件は順位が下がります。
+        さらに、Money Score の100点中50点分も採点できていない案件（＝販売シミュレーションがまだで、
+        減点材料が無いだけの案件）は、点を下げるのではなくこの表から外しています。除外 {d.opportunitiesExcluded}件。
         数字が取れていない欄は空欄（—）です。埋めるために推測はしていません。
       </p>
       <div className="card">
