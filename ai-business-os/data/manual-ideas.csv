@@ -1,0 +1,3 @@
+title,summary,url,service_name,country,published_at,source_name
+# 公式APIが無いソース（YC / Indie Hackers / AppSumo / Substack 等）はここに手で書く
+# 例: AI Receptionist for Roofing,屋根工事会社向けAI電話受付。月$299,https://example.com,ExampleAI,US,2026-06-01,Indie Hackers

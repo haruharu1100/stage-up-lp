@@ -1,0 +1,3 @@
+idea_id,key,score_0_to_5,reason
+# 人の判断で採点する項目。0〜5 の6段階。書かない項目は「未評価」として採点対象外になる（0点ではない）。
+# key: overseasGrowth / japanUnpenetrated / marketSize / customerPain / recurring / grossMargin / buildEase / sellEase / differentiation / automation

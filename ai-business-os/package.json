@@ -1,0 +1,32 @@
+{
+  "name": "ai-business-os",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AI BUSINESS OS — 海外AIビジネスを発掘→日本市場評価→採点→バックテスト→商品化→販売→計測→学習まで一気通貫で回すOS（MVP）",
+  "scripts": {
+    "dev": "next dev -p 3930",
+    "build": "next build",
+    "start": "next start -p 3930",
+    "init": "tsx scripts/init-db.ts",
+    "collect": "tsx scripts/collect.ts",
+    "evaluate": "tsx scripts/evaluate.ts",
+    "backtest": "tsx scripts/backtest.ts",
+    "productize": "tsx scripts/productize.ts",
+    "report": "tsx scripts/report.ts",
+    "obsidian": "tsx scripts/obsidian-sync.ts",
+    "test": "tsx scripts/test-core.ts"
+  },
+  "dependencies": {
+    "@libsql/client": "^0.14.0",
+    "next": "^15.5.23",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}
