@@ -37,6 +37,7 @@ next-env.d.ts
 
 # 本番確認用のビルド出力
 .next-prod/
+.next-verify/
 
 # 検証用のスクリーンショット・録画（容量が大きいのでgitに入れない）
 /_verify/

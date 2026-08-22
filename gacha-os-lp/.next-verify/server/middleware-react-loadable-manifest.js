@@ -1,1 +1,0 @@
-self.__REACT_LOADABLE_MANIFEST='{"components/Hero.tsx -> ./three/HeroScene":{"id":9982,"files":["static/chunks/b536a0f1.1249f719d932f90b.js","static/chunks/283.c46e2c3ebf57bb14.js","static/chunks/982.8fde01db8f56160f.js"]},"components/SmoothScroll.tsx -> lenis":{"id":9096,"files":["static/chunks/96.cf07194af942a3d3.js"]}}';
