@@ -84,10 +84,12 @@
 
 "use client";
 
-import { useEffect, useReducer, useRef, useState } from "react";
+import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import { initialState, reducer } from "@/lib/console/state";
+import { daySnapshot } from "@/lib/console/dayInLife";
 import { Login, Mfa } from "./Gate";
 import Shell from "./Shell";
+import DayInLife, { type DayRun } from "./DayInLife";
 import { menuItem, type MenuKey } from "./menu";
 import { Card, Planned, WhatIsThis } from "./ui";
 
@@ -120,6 +122,35 @@ export default function ClientConsole() {
   const [side, setSide] = useState<Side>("admin");
 
   /**
+   * 「1日、運営してみる」の進行。
+   *
+   * ★始めた時点の数を、必ず控えておくこと。
+   *   デモの見本データには、最初から発送も問い合わせも入っています。
+   *   控えずに「1件でもあれば済み」と判定すると、
+   *   始めた瞬間に全部終わったことになります。
+   * ★null は「やっていない」。ここを空の配列などで表さないこと。
+   */
+  const [run, setRun] = useState<DayRun | null>(null);
+
+  const startDay = useCallback(() => {
+    setRun({ base: daySnapshot(s), seen: new Set() });
+    setSide("admin");
+    setPage("dashboard");
+  }, [s]);
+
+  /** データごと最初に戻し、1日もやり直す */
+  const resetDay = useCallback(() => {
+    dispatch({ type: "RESET" });
+    setRun({ base: daySnapshot(initialState()), seen: new Set() });
+    setSide("admin");
+    setPage("dashboard");
+  }, []);
+
+  const markSeen = useCallback((id: string) => {
+    setRun((r) => (r ? { ...r, seen: new Set(r.seen).add(id) } : r));
+  }, []);
+
+  /**
    * 切り替え帯の高さを測って、下の画面に伝える。
    *
    * ★決め打ちの数値を書かないこと。
@@ -142,7 +173,13 @@ export default function ClientConsole() {
 
   return (
     <div style={{ "--switch-h": `${switchH}px` } as React.CSSProperties}>
-      <SideSwitch ref={switchRef} side={side} onChange={setSide} />
+      <SideSwitch
+        ref={switchRef}
+        side={side}
+        onChange={setSide}
+        dayRunning={run !== null}
+        onStartDay={startDay}
+      />
       {side === "customer" ? (
         /* ★お客様側。
            ここから先（残高・当たった商品・発送・交換・お届け先）は
@@ -160,6 +197,27 @@ export default function ClientConsole() {
           setPage={setPage}
         />
       )}
+
+      {/* ★案内は、いちばん上に重ねること。
+          下に置くと、スマホでは画面の外へ流れて見えなくなります */}
+      {run && (
+        <DayInLife
+          s={s}
+          run={run}
+          side={side}
+          page={page}
+          onGo={(nextSide, nextPage) => {
+            setSide(nextSide);
+            if (nextPage) setPage(nextPage);
+          }}
+          onSeen={markSeen}
+          onFinish={() => setRun(null)}
+          onReset={resetDay}
+        />
+      )}
+
+      {/* 案内が下に居座るぶん、いちばん下の中身が隠れないようにする */}
+      {run && <div className="h-52" aria-hidden />}
     </div>
   );
 }
@@ -180,10 +238,14 @@ function SideSwitch({
   ref,
   side,
   onChange,
+  dayRunning,
+  onStartDay,
 }: {
   ref: React.Ref<HTMLDivElement>;
   side: Side;
   onChange: (s: Side) => void;
+  dayRunning: boolean;
+  onStartDay: () => void;
 }) {
   const tab = (v: Side, label: string, sub: string) => {
     const on = side === v;
@@ -222,10 +284,23 @@ function SideSwitch({
         {/* ★ここに nb（折り返し禁止）を付けないこと。
             短い見出しなら1行に保てますが、この長さの文に付けると
             画面の右端を突き抜けて、最後まで読めなくなります */}
-        <p className="shrink-0 text-[0.68rem] leading-[1.7] text-white/55 sm:max-w-[19rem] sm:text-right">
+        <p className="shrink-0 text-[0.68rem] leading-[1.7] text-white/55 sm:max-w-[16rem] sm:text-right">
           左右は<span className="nb font-bold text-white/80">同じ1つのデータ</span>
           を見ています。片方で操作すると、もう片方にすぐ反映されます。
         </p>
+
+        {/* ★「機能を1つずつ見る」の隣に、これを置くこと。
+            機能一覧は、すでに使っている人にしか読めません。
+            初めての方が知りたいのは「1日、これで回るのか」だけです */}
+        {!dayRunning && (
+          <button
+            type="button"
+            onClick={onStartDay}
+            className="nb shrink-0 rounded-xl bg-white px-4 py-2.5 text-[0.78rem] font-bold text-[#0F1B33] shadow-sm transition hover:bg-[#E8EDF7]"
+          >
+            1日、運営してみる
+          </button>
+        )}
       </div>
     </div>
   );
