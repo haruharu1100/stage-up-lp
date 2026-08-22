@@ -40,7 +40,7 @@ import { EV, trackOnce } from "@/lib/track";
  * このすぐ下に「ガチャ運営の1日」（OperatingDay）を置いています。
  *
  * ★動画と、触れるデモは、役目が違います。
- * 動画は「31秒で全体を分かってもらう」もの。
+ * 動画は「約40秒で全体を分かってもらう」もの。
  * /demo は「自分の手で確かめてもらう」もの。
  * だから動画のすぐ下のボタンは /demo へ送っています。
  *
@@ -64,18 +64,25 @@ export default function ProductVideo() {
                 に変わりました。書いてあることと映っているものが違うのは、
                 それだけで信用を落とします（景品表示法）。
                 長さは content/site.ts の lengthLabel から出しています。
+
+              ★2026-08-22：AIが人へ渡したあと、運営者が返信して
+                その返信がお客様のスマホに届くところまでを足しました。
+                動画は約40秒になっています。
+                「31秒」という数字を守るために場面を削らないこと。
+                目的は、見るだけで全体が分かることです。
             */}
             <h2 className="h-display mt-5 text-h2 text-balance text-slate">
               <span className="num">{demoVideo.lengthLabel}</span>。
               <br className="sm:hidden" />
               作るところから、
               <br className="sm:hidden" />
-              お客様が遊ぶところまで。
+              お客様への返信まで。
             </h2>
             <p className="mx-auto mt-6 max-w-[34em] text-note text-pretty leading-[1.95] text-slate2">
               資料ではなく、動いている画面です。
               AIに伝えてガチャができ、公開前に赤字になる条件を試し、人が承認し、
-              お客様が引いて、発送を頼み、AIが答え、判断が要るものは人へ回るまで。
+              お客様が引いて、発送を頼み、AIが答え、判断が要る相談は人へ回り、
+              運営者が返信し、その返信がお客様のスマホに届くまで。
               1コマも作らず、この画面をそのまま録画しています。
             </p>
           </div>

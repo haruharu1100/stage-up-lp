@@ -1,5 +1,5 @@
 /**
- * 30秒の製品デモ動画を、実際の画面を操作して録画する。
+ * 約40秒の製品デモ動画を、実際の画面を操作して録画する。
  *
  * ═══════════════════════════════════════════════
  * ★この動画の約束
@@ -19,6 +19,20 @@
  *   3) 文字（テロップ）はブラウザの中で出すこと。
  *      動画に後から焼き込む方法は、日本語フォントの読み込みで環境差が出ます。
  *      画面の中でこのサイト自身の書体で出せば、どこで作っても同じ見た目になります。
+ *
+ *   4) ★人が返すところまで、必ず映すこと（2026-08-22 追加）。
+ *      前は「AIが答え、判断が要るものは人へ」で終わっていました。
+ *      これだと、渡されたあとに誰が何をするのかが見えません。
+ *      買う人がいちばん不安なのは、まさにその先です。
+ *      いまは
+ *        AIが人へ渡す → 運営画面に要確認として残る →
+ *        AIの下書きを人が確認して送る → お客様のスマホに届く
+ *      までを、同じ台の上で続けて映しています。
+ *
+ *   5) ★「31秒」という数字を守ることを目的にしないこと。
+ *      目的は「見るだけで全体が分かる」ことです。
+ *      詰め込んで読めない字幕を作るくらいなら、長いほうがましです。
+ *      いまはおよそ40秒。45秒を超えたら、場面を削って短くします。
  *
  * ═══════════════════════════════════════════════
  * ★使い方
@@ -40,7 +54,7 @@
  * ═══════════════════════════════════════════════
  *
  *   ・尺（BEATS の ms）を伸ばすときは、必ず全体の合計も見ること。
- *     長い動画は最後まで見てもらえません。30秒前後を守ります。
+ *     長い動画は最後まで見てもらえません。40秒前後を守ります。
  *
  *   ・data-play="..." は components/sections/CustomerPlay.tsx の目印です。
  *     あちらの名前を変えたら、ここも変わります。勝手に名前を想像しないこと。
@@ -183,7 +197,7 @@ const INSTALL = `
 `;
 
 /* ────────────────────────────────
-   段取り（合計およそ30秒）
+   段取り（合計およそ40秒）
    ──────────────────────────────── */
 
 /**
@@ -193,19 +207,28 @@ const INSTALL = `
  *   ボタンを押す前に輪を出す時間や、画面が切り替わるのを待つ時間が
  *   この他に積み上がります（場面Cで2秒ほど）。
  *   だから長さは「予想」せず、撮り終わったあとに実測しています（下の t0/t1）。
- *   いまの実測はおよそ30秒です。動かしたら必ず撮り直して確かめること。
+ *   いまの実測はおよそ40秒です。動かしたら必ず撮り直して確かめること。
+ *
+ * ★escalate / ticket / draft / reply の4つが「人が返す」場面です。
+ *   ここを削ると、この動画の一番大事な後半が消えます。短くするなら他から削ること。
  */
 const BEATS = {
-  input: 3000,
-  design: 3000,
-  backtest: 3200,
-  approve: 2200,
-  publish: 2200,
-  draw: 2600,
-  win: 2500,
-  ship: 2300,
-  linked: 3400,
-  card: 2400,
+  input: 2800,
+  design: 2800,
+  backtest: 3000,
+  approve: 2100,
+  publish: 2100,
+  draw: 2500,
+  win: 2200,
+  ship: 2100,
+  /* ここから「人が返す」 */
+  escalate: 2500,
+  ticket: 2900,
+  draft: 2500,
+  reply: 3000,
+  /* 締め */
+  linked: 2800,
+  card: 2200,
 };
 
 const run = (cmd, args) =>
@@ -323,10 +346,17 @@ async function endTake(ctx, page) {
   return await video.path();
 }
 
-/** 押す。押した場所が分かるように、輪を出してから押す */
-async function tap(page, key) {
-  const el = await page.$(`[data-play="${key}"]`);
-  if (!el) throw new Error(`data-play="${key}" が見つかりません`);
+/**
+ * 押す。押した場所が分かるように、輪を出してから押す。
+ *
+ * ★目印は2種類あります。名前を想像しないこと。
+ *     data-play      … お客様のスマホ側のボタン
+ *     data-play-op   … 運営画面（左）のボタン
+ *   どちらも components/sections/CustomerPlay.tsx に書いてあります。
+ */
+async function tapSel(page, selector) {
+  const el = await page.$(selector);
+  if (!el) throw new Error(`${selector} が見つかりません`);
   const box = await el.boundingBox();
   if (box) {
     await page.evaluate(
@@ -347,6 +377,46 @@ async function tap(page, key) {
     await page.waitForTimeout(240);
   }
   await el.click();
+}
+
+/** お客様のスマホ側を押す */
+const tap = (page, key) => tapSel(page, `[data-play="${key}"]`);
+/** 運営画面（左）を押す */
+const tapOp = (page, key) => tapSel(page, `[data-play-op="${key}"]`);
+
+/**
+ * スマホの中身を送って、指定したものを枠のまん中に出す。
+ *
+ * ★これが無いと、運営者の返信がスマホの枠の外に出たままになります。
+ *   実際にそうなりました。左の運営画面では「送信済み」になっているのに、
+ *   右のスマホには何も出ていないように見えて、
+ *   「返信が、そのままお客様のスマホへ」というテロップが嘘になります。
+ *
+ * ★「いちばん下まで送る」にしないこと。これも実際にやって失敗しました。
+ *   返信の吹き出しの下には「よくある質問」の一覧があるので、
+ *   下まで送ると、肝心の返信を通り過ぎて質問リストが映ります。
+ *   見せたいものを名指しして、そこで止めること。
+ *
+ * ★window ではなく、スマホの中の箱だけを動かすこと。
+ *   scrollIntoView を使うとページ全体も動いてしまい、
+ *   せっかく合わせた画の位置がずれます。
+ */
+async function scrollPhoneTo(page, selector) {
+  await page.evaluate((sel) => {
+    const el = document.querySelector(sel);
+    if (!el) return;
+    let pane = el.parentElement;
+    while (pane && pane.scrollHeight - pane.clientHeight <= 8) {
+      pane = pane.parentElement;
+    }
+    if (!pane) return;
+    const top =
+      pane.scrollTop +
+      el.getBoundingClientRect().top -
+      pane.getBoundingClientRect().top -
+      (pane.clientHeight - el.getBoundingClientRect().height) / 2;
+    pane.scrollTo({ top: Math.max(0, top), behavior: "smooth" });
+  }, selector);
 }
 
 /* ────────────────────────────────
@@ -444,20 +514,67 @@ const cuts = [];
       「AIが答えられることはAIが答え、判断が要ることは人に回す」。
       無言で通り過ぎさせないこと。必ずテロップを出すこと。
   */
-  await caption(page, "09", "AIが答え、判断が要るものは人へ");
+  await caption(page, "09", "AIが答え、判断が要るものは人へ回る");
   await tap(page, "toai");
   await page.waitForTimeout(400);
   await tap(page, "ask");
-  await page.waitForTimeout(700);
-  await tap(page, "ask-escalate");
   await page.waitForTimeout(900);
+  await tap(page, "ask-escalate");
+  await page.waitForTimeout(BEATS.escalate);
+
+  /*
+    ══════════════════════════════════════════════
+    ★ここから「人が返す」（2026-08-22 追加）
+    ══════════════════════════════════════════════
+
+      前はこの動画、AIが人へ渡したところで終わっていました。
+      それだと、渡されたあと誰が何をするのかが見えません。
+      買う人がいちばん不安なのは、まさにその先です。
+
+      なので、運営画面の「要確認」を実際に開き、
+      AIの下書きを人が確認して送り、
+      その返信がお客様のスマホに出るところまでを続けて映します。
+
+      ★映す位置について（実測 2026-08-22）
+        問い合わせを開くと、運営画面が縦982pxに伸びます（画面は800px）。
+        だから台ぜんたいを映そうとすると上下が切れます。
+        代わりに「開いた問い合わせ」をまん中に置きます。そうすると
+          左＝問い合わせの中身とAIの下書き
+          右＝お客様のスマホの会話
+        が1枚に収まり、返信が届く瞬間を同じ絵の中で見せられます。
+  */
+  await caption(page, "10", "AIが答えない件は、運営画面に1件残る");
+  await tapOp(page, "ticket");
+  await page.waitForTimeout(700);
+  await frame(page, "[data-play-ticket]", 0);
+  await page.waitForTimeout(BEATS.ticket - 700);
+
+  await caption(page, "11", "AIが下書きを用意し、送るかどうかは人が決める");
+  await page.waitForTimeout(BEATS.draft);
+
+  /*
+    ★SEND を押した瞬間に、右のスマホへ返信が出ます。
+      テロップは押す前に出しておくこと。押したあとに出すと、
+      いちばん見せたい瞬間に文字が間に合いません。
+  */
+  await caption(page, "12", "送った返信が、そのままお客様のスマホへ");
+  await page.waitForTimeout(400);
+  await tapOp(page, "send");
+  await page.waitForTimeout(700);
+  /* 届いた返信をスマホの中に出す。ここを省くと、右側では何も起きていないように見えます */
+  await scrollPhoneTo(page, "[data-play-staff]");
+  await page.waitForTimeout(BEATS.reply - 700);
+
+  /* 問い合わせを閉じて、台をもとの高さに戻す（要確認 0件・対応済み 1件になる） */
+  await tapOp(page, "ticket");
+  await page.waitForTimeout(500);
   await tap(page, "tolinked");
   /*
     ★この台（左＝運営画面／右＝お客様のスマホ）は縦797px、画面は800px。
       ほぼぴったりなので、ずらさないこと。30pxずらすとスマホの下が切れます。
   */
   await frame(page, "[data-play-stage]", 0);
-  await caption(page, "10", "同じ瞬間、運営画面の数字が動いている");
+  await caption(page, "13", "同じ瞬間、運営画面の数字が動いている");
   await page.waitForTimeout(BEATS.linked);
 
   /* ── 最後の一言 ── */
@@ -465,12 +582,12 @@ const cuts = [];
   CUES.push({
     t: Date.now(),
     code: "",
-    text: "作るところから、お客様が遊ぶところまで。AI GACHA OS",
+    text: "作るところから、お客様への返信まで。AI GACHA OS",
   });
   await page.evaluate(() => {
     const c = document.querySelector("#rec-card");
     c.querySelector("p").textContent =
-      "作るところから、お客様が遊ぶところまで。";
+      "作るところから、お客様への返信まで。";
     c.querySelector("small").textContent = "AI GACHA OS";
     c.classList.add("on");
     document.querySelector("#rec-cap")?.classList.remove("on");
@@ -528,12 +645,22 @@ run("ffmpeg", [
   join(OUT, "gacha-os-demo.webm"),
 ]);
 
-/* ★表紙は、いちばん伝えたい「連動している」場面から取ること */
+/*
+  ★表紙は、いちばん伝えたい「連動している」場面から取ること。
+
+  ★秒数を手で書かないこと（2026-08-22）。
+    前は 26.5 と直接書いていました。場面を1つ足しただけで、
+    表紙が別の場面（何も起きていない所）に変わってしまいます。
+    最後の板が始まる少し前＝連動画面が映っている所を、実測から計算します。
+*/
+const totalSec = cuts.reduce((a, c) => a + c.dur, 0);
+const posterAt = Math.max(0, totalSec - BEATS.card / 1000 - 1.4);
 run("ffmpeg", [
-  "-v", "error", "-y", "-ss", "26.5", "-i", mp4,
+  "-v", "error", "-y", "-ss", posterAt.toFixed(2), "-i", mp4,
   "-frames:v", "1", "-q:v", "2",
   join(OUT, "gacha-os-demo.jpg"),
 ]);
+console.log(`表紙は ${posterAt.toFixed(2)} 秒の場面から取りました`);
 
 /* ────────────────────────────────
    字幕（.vtt）を書き出す
