@@ -58,7 +58,7 @@ export const osTiers: OsTier[] = [
   {
     key: "starter",
     name: "STARTER",
-    target: "小規模事業者・これから参入する方向け",
+    target: "これから始めたい方・小〜中規模の運営向け",
     monthlyYen: 49_800,
     points: [
       "ガチャ管理（作成・在庫・口数・公開停止）",
@@ -74,7 +74,7 @@ export const osTiers: OsTier[] = [
   {
     key: "growth",
     name: "GROWTH",
-    target: "本格的にオンラインガチャ事業を運営する会社向け",
+    target: "本格運営・複数ガチャを高度に管理したい方向け",
     monthlyYen: 98_000,
     featured: true,
     note: "本格運営",
@@ -92,7 +92,7 @@ export const osTiers: OsTier[] = [
   {
     key: "enterprise",
     name: "ENTERPRISE",
-    target: "大規模事業者・複数ブランド運営向け",
+    target: "既存の大型サイト・複数ブランド・独自連携・移行支援が必要な方向け",
     monthlyYen: null,
     inherits: "GROWTH の内容すべて",
     points: [

@@ -215,7 +215,13 @@ export default function Pricing() {
         </MoreDetail>
       </Reveal>
 
-      <div className="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+      {/*
+        ★スマホでは必ず1枚ずつ縦に読ませること（横並び禁止）。
+          390px で2枚並べると、金額と対象の文字が1行に収まらず、
+          「49,800円」の途中で折り返す事故が起きます。
+          2列になるのは sm（640px）から。390px・430px は1列のままにすること。
+      */}
+      <div className="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
         {activeTiers.map((t, i) => (
           <Reveal key={t.key} delay={0.08 + i * 0.05}>
             <TierCard tier={t} />
@@ -374,7 +380,7 @@ function GroupHead({
 function TierCard({ tier }: { tier: OsTier }) {
   /** 入口として示すプラン。位置（先頭）とバッジの両方で分かるようにする */
   const isEntry = tier.key === "starter";
-  const badge = isEntry ? "まずここから" : tier.note;
+  const badge = isEntry ? "まずは、ここから" : tier.note;
   const visible = tier.points.slice(0, VISIBLE_POINTS);
   const rest = tier.points.slice(VISIBLE_POINTS);
 
