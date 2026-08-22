@@ -27,6 +27,8 @@ import Security from "@/components/sections/Security";
 import Scope from "@/components/sections/Scope";
 import Flow from "@/components/sections/Flow";
 import Pricing from "@/components/sections/Pricing";
+import OsSummary from "@/components/sections/OsSummary";
+import Onboarding from "@/components/sections/Onboarding";
 import Faq from "@/components/sections/Faq";
 import ClosingMessage from "@/components/sections/ClosingMessage";
 import Cta from "@/components/sections/Cta";
@@ -34,7 +36,7 @@ import Cta from "@/components/sections/Cta";
 import { jp } from "@/lib/jp";
 
 /*
-  ★このページの決まり（2026-08-21 に作り直しました）
+  ★このページの決まり（2026-08-21 に作り直し／2026-08-22 に並びを入れ替え）
 
   1) メインの流れは 10章 だけ。章を増やさないこと。
      01 いちばん最初の一言
@@ -42,17 +44,30 @@ import { jp } from "@/lib/jp";
      03 公開する前に、赤字になる条件を試す
      04 承認した瞬間、お客様の画面に出る
      05 お客様から見た、実際の売り場
-     06 販売中は、システムが見張る
-     07 発送と、問い合わせ
-     08 すでに運営している方の、移行
-     09 いくら得か、いくらかかるか
+     06 すでに運営している方の、移行
+     07 いくら得か、いくらかかるか、どう始めるか
+     08 販売中は、システムが見張る
+     09 発送と、問い合わせ
      10 よくある質問と、相談
 
-  2) 機能は減らさない。でも、全部を常時見せない。
+  2) ★2026-08-22：料金を前へ出しました。理由を残します。
+     前は「料金」が9章目で、そこへ行き着く前に
+     監視・発送・問い合わせの説明を全部読ませていました。
+     ページが長く、いちばん知りたい金額に届く前に離脱します。
+
+     いまは 05 のデモで、引く・当たる・発送を頼む・AIに聞く・
+     人へ引き継がれる・運営画面の数字が動く、までを実際に見せています。
+     つまり「何を買うのか」は 05 で見終わっています。
+     だから 06 で移行の不安を外し、07 で金額と始め方を出します。
+
+     08 以降は「もっと知りたい人が読む深い話」です。
+     消してはいません。順番を後ろにしただけです。
+
+  3) 機能は減らさない。でも、全部を常時見せない。
      「どこまでやってくれるのか」「安全なのか」といった検討材料は
      MORE DETAIL（DetailBlock）の中へ入れる。消すのではなく、畳む。
 
-  3) セクションを足したくなったら、まず
+  4) セクションを足したくなったら、まず
      「これは10章のどれかの中に入らないか」を考えること。
      入らないなら、それは本当に新しい章なのか、
      それとも同じことを2回言っているだけなのかを疑う。
@@ -105,7 +120,46 @@ export default function Home() {
         <CustomerSide />
         <CustomerPlay />
 
-        {/* ── 06 販売中は、システムが見張る ── */}
+        {/* ── 06 すでに運営している方の、移行 ──
+            ここまでは「これから始める人」に向けて書いてあるので、
+            既存事業者の「全部作り直しになるのでは」という不安を、
+            料金の話に入る前に外しておく。順番を後ろへ動かさないこと。 */}
+        <Migration />
+
+        {/* ── 07 いくら得か、いくらかかるか、どう始めるか ──
+            ★この章の並びには理由があります。入れ替えないこと。
+
+              Diagnose      … 自分の場合はどうなのか
+              RoiCalculator … いくら得になりそうか
+              OsSummary     … で、何を買うのか（05までに見せた6つを1枚に畳む）
+              Pricing       … いくらか
+              Onboarding    … 申し込んだあと、何が起きるのか
+
+            OsSummary を Pricing の直前に置いているのは、
+            金額の前に「何を買うのか」を一度だけ言い切るためです。
+            人は、バラバラに見たものを自分で足し算してくれません。 */}
+        <Diagnose />
+        <RoiCalculator />
+        <OsSummary />
+        <Pricing />
+        {/* 金額の直後に「自分にできそうか」を外す。ここが無いと金額で止まります */}
+        <Onboarding />
+        <DetailBlock
+          label="任せられる範囲・安全対策を見る"
+          note="任せられる範囲・データの守り方まで。社内で通すときに必要な話をまとめています。"
+          ids={["problems", "scope", "flow", "ops", "security", "infra"]}
+        >
+          <Problems />
+          <Scope />
+          <Flow />
+          <BuiltFromOps />
+          <Security />
+        </DetailBlock>
+
+        {/* ── 08 販売中は、システムが見張る ──
+            ★2026-08-22 に料金より後ろへ移しました。
+              ここから先は「もっと知りたい人が読む深い話」です。
+              05 のデモで、数字が動くところは既に見せています。 */}
         <RtpMonitor />
         <PriceShock />
         {/* 緑・黄・赤・UNKNOWN。分からないものを「安全」とは表示しない */}
@@ -120,7 +174,7 @@ export default function Home() {
           <Rush />
         </DetailBlock>
 
-        {/* ── 07 発送と、問い合わせ ── */}
+        {/* ── 09 発送と、問い合わせ ── */}
         <Shipping />
         <AiSupport />
         <DetailBlock
@@ -129,28 +183,6 @@ export default function Home() {
           ids={["admin"]}
         >
           <AdminConsole />
-        </DetailBlock>
-
-        {/* ── 08 すでに運営している方の、移行 ──
-            ここまでは「これから始める人」に向けて書いてあるので、
-            既存事業者の「全部作り直しになるのでは」という不安を、
-            料金の話に入る前に外しておく。順番を後ろへ動かさないこと。 */}
-        <Migration />
-
-        {/* ── 09 いくら得か、いくらかかるか ── */}
-        <Diagnose />
-        <RoiCalculator />
-        <Pricing />
-        <DetailBlock
-          label="導入の進め方・任せられる範囲・安全対策を見る"
-          note="任せられる範囲・開始までの流れ・データの守り方まで。社内で通すときに必要な話をまとめています。"
-          ids={["problems", "scope", "flow", "ops", "security", "infra"]}
-        >
-          <Problems />
-          <Scope />
-          <Flow />
-          <BuiltFromOps />
-          <Security />
         </DetailBlock>
 
         {/* ── 10 よくある質問と、相談 ── */}
