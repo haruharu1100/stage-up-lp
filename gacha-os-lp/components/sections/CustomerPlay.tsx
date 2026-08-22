@@ -50,10 +50,14 @@ import {
   makeRng,
   operatorView,
   pt,
+  makeTicket,
+  replyTicket,
+  ticketCounts,
   type ArtKey,
   type DrawResult,
   type Gacha,
   type Owned,
+  type Ticket,
 } from "@/lib/customerDemo";
 
 type Screen =
@@ -118,6 +122,10 @@ type Faq = {
   tag?: (c: AskCtx) => string;
   /** true なら AI は答えず、運営者へ引き継ぐ */
   escalate?: boolean;
+  /** 引き継ぐとき、AIが「なぜ自分では答えないのか」を運営者に伝える理由 */
+  reason?: string;
+  /** 運営者の返信欄に最初から入れておく文面。人が読んで直してから送る */
+  draft?: string;
 };
 
 const FAQ: Faq[] = [
@@ -171,6 +179,16 @@ const FAQ: Faq[] = [
       "この内容は個別確認が必要です。運営スタッフへ引き継ぎます。担当者から、ご登録のメールアドレスへご連絡します。",
     tag: () => "受付番号 CS-0001（デモ）",
     escalate: true,
+    reason: "個別の商品状態確認が必要",
+    /*
+      ★下書きを入れておく理由
+        人へ渡すだけなら、渡された側は白紙から書くことになります。
+        それでは「AIが仕事を投げただけ」です。
+        AIは答えを決めない代わりに、定型の部分まで用意しておきます。
+        最終的に何を送るかを決めるのは、必ず人です。
+    */
+    draft:
+      "商品の状態を確認いたします。お手数ですが、傷のある箇所の写真を添付のうえ、発送コードをお知らせください。",
   },
 ];
 
@@ -182,6 +200,10 @@ type Turn = {
   a: string;
   tag: string;
   mode: "auto" | "escalate";
+  /** 人へ渡した件だけ付く受付番号。運営画面のチケットと同じもの */
+  ticket?: string;
+  /** 運営スタッフが送った返信。届くまでは空 */
+  staff?: string;
 };
 
 /**
@@ -244,7 +266,15 @@ export default function CustomerPlay() {
 
   /* ── 運営側の状態（お客様の操作でのみ動く） ── */
   const [unshipped, setUnshipped] = useState(START_UNSHIPPED);
-  const [needCheck, setNeedCheck] = useState(0);
+  /*
+    ★「要確認 1件」を、ただの数え札にしないこと。
+      中身（誰が、何を聞いて、AIがなぜ答えなかったか）を持たせておくと、
+      運営者はその場で読んで、その場で返信できます。
+      数だけ持っていた頃は、押しても何も出ない飾りでした。
+  */
+  const [tickets, setTickets] = useState<Ticket[]>([]);
+  const counts = ticketCounts(tickets);
+  const needCheck = counts.open;
   /** 数字が動いた瞬間だけ光らせるための印 */
   const [pulse, setPulse] = useState(0);
 
@@ -358,9 +388,21 @@ export default function CustomerPlay() {
     };
     const id = `${f.key}-${chat.length}`;
 
+    /* 人へ渡す件は、この場で受付番号を決める。お客様と運営者に同じ番号を出す */
+    const ticket = f.escalate
+      ? makeTicket(tickets.length + 1, f.q, f.reason ?? "", f.draft ?? "")
+      : null;
+
     setChat((c) => [
       ...c,
-      { id, q: f.q, a: "", tag: "", mode: f.escalate ? "escalate" : "auto" },
+      {
+        id,
+        q: f.q,
+        a: "",
+        tag: "",
+        mode: f.escalate ? "escalate" : "auto",
+        ticket: ticket?.id,
+      },
     ]);
     setThinking(true);
     clear();
@@ -370,7 +412,16 @@ export default function CustomerPlay() {
         () => {
           setChat((c) =>
             c.map((t) =>
-              t.id === id ? { ...t, a: f.a(ctx), tag: f.tag?.(ctx) ?? "" } : t,
+              t.id === id
+                ? {
+                    ...t,
+                    a: f.a(ctx),
+                    /* 受付番号は本文に書かず、実際に採番したものを出す */
+                    tag: ticket
+                      ? `受付番号 ${ticket.id}（デモ）`
+                      : (f.tag?.(ctx) ?? ""),
+                  }
+                : t,
             ),
           );
           setThinking(false);
@@ -379,8 +430,8 @@ export default function CustomerPlay() {
               運営者側の「要確認」を実際に1件増やします。
               言葉だけなら、あとから何とでも書けます。
           */
-          if (f.escalate) {
-            setNeedCheck((n) => n + 1);
+          if (ticket) {
+            setTickets((ts) => [...ts, ticket]);
             setPulse((n) => n + 1);
           }
           track(EV.playAsk, { q: f.key, mode: f.escalate ? "escalate" : "auto" });
@@ -388,6 +439,30 @@ export default function CustomerPlay() {
         reduce ? 200 : 850,
       ),
     );
+  };
+
+  /* ═════ 運営者が返信する ═════
+
+     ★ここが、このデモのいちばん最後のひと押しです。
+       「AIが人へ渡しました」で画面を終わらせると、
+       見ている人の頭には「で、そのあと誰がやるの？」が残ります。
+       渡された運営者がその場で読んで、書いて、送る。
+       送った瞬間にお客様のスマホへ出て、要確認が1件減る。
+       ここまで見せて、はじめて一周です。
+
+     ★数の増減は lib/customerDemo.ts の replyTicket に任せています。
+       画面の中で数を足し引きすると、表示と実体がずれます。 */
+  const sendReply = (id: string, body: string) => {
+    const text = body.trim();
+    if (!text) return;
+
+    setTickets((ts) => replyTicket(ts, id, text));
+    /* 同じ返信を、お客様側のやり取りにも差し込む */
+    setChat((c) =>
+      c.map((t) => (t.ticket === id && !t.staff ? { ...t, staff: text } : t)),
+    );
+    setPulse((n) => n + 1);
+    track(EV.playAsk, { q: "operator_reply", mode: "reply" });
   };
 
   /** いまAIがどちらに振り分けたか。データの流れ図を光らせるのに使う */
@@ -411,7 +486,7 @@ export default function CustomerPlay() {
     setChat([]);
     setThinking(false);
     setUnshipped(START_UNSHIPPED);
-    setNeedCheck(0);
+    setTickets([]);
     setPulse(0);
   };
 
@@ -503,9 +578,10 @@ export default function CustomerPlay() {
             <OperatorMirror
               title={gacha.title}
               view={op}
-              needCheck={needCheck}
+              tickets={tickets}
               pulse={pulse}
               reduce={reduce}
+              onReply={sendReply}
             />
           </div>
 
@@ -526,6 +602,7 @@ export default function CustomerPlay() {
               thinking={thinking}
               unshipped={unshipped}
               needCheck={needCheck}
+              answered={counts.answered}
               view={op}
               onOpen={(id) => {
                 setGachaId(id);
@@ -559,7 +636,12 @@ export default function CustomerPlay() {
 
         {/* ───────── AIと人の分かれ道 ───────── */}
         <Reveal delay={0.05} className="mt-5 sm:mt-8">
-          <CoreRoute route={route} needCheck={needCheck} reduce={reduce} />
+          <CoreRoute
+            route={route}
+            needCheck={needCheck}
+            answered={counts.answered}
+            reduce={reduce}
+          />
         </Reveal>
 
         {/* ───────── 説明 ───────── */}
@@ -579,9 +661,9 @@ export default function CustomerPlay() {
                 ),
               },
               {
-                t: "問い合わせは、まずAIが答える",
+                t: "AIが答え、人が返し、お客様へ戻る",
                 b: jp(
-                  "発送状況のような、答えが決まっている質問はAIが即答します。返金や例外の相談だけが、要確認として運営者に残ります。",
+                  "発送状況のような質問はAIが即答します。返金や破損だけが要確認として残り、運営者がその場で返信すると、お客様のスマホにそのまま届きます。",
                 ),
               },
             ].map((c) => (
@@ -710,17 +792,24 @@ export default function CustomerPlay() {
 function OperatorMirror({
   title,
   view,
-  needCheck,
+  tickets,
   pulse,
   reduce,
+  onReply,
 }: {
   title: string;
   view: ReturnType<typeof operatorView>;
-  needCheck: number;
+  tickets: Ticket[];
   pulse: number;
   reduce: boolean;
+  onReply: (id: string, body: string) => void;
 }) {
   const rtpBad = view.realRtp >= 105;
+  const { open, answered } = ticketCounts(tickets);
+
+  /** いま開いている件。押すまでは閉じておく（本物の管理画面と同じ） */
+  const [openId, setOpenId] = useState<string | null>(null);
+  const current = tickets.find((t) => t.id === openId) ?? null;
   return (
     /* data-play-mirror … スクリーンショットの目印。消さないこと */
     <div
@@ -786,20 +875,68 @@ function OperatorMirror({
           />
         </dl>
 
+        {/*
+          ★「要確認 1件」を、押せない札にしないこと。
+            押しても何も出ない数字は、見ている人にとって
+            「1件あるらしい、で、そのあとは？」で終わります。
+            ここを押すと中身が開き、その場で返信できるところまで見せます。
+        */}
         <div className="mt-3 flex flex-wrap items-center gap-2">
-          <span
-            className={`num whitespace-nowrap rounded-full border px-3 py-1.5 text-[11px] tracking-[0.14em] transition-colors duration-500 ${
-              needCheck > 0
+          <button
+            type="button"
+            data-play-op="ticket"
+            disabled={tickets.length === 0}
+            onClick={() =>
+              setOpenId((v) =>
+                v ? null : (tickets.find((t) => t.status === "open") ?? tickets[0]).id,
+              )
+            }
+            className={`num inline-flex items-center gap-2 whitespace-nowrap rounded-full border px-3 py-1.5 text-[11px] tracking-[0.14em] transition-colors duration-500 disabled:cursor-default ${
+              open > 0
                 ? "border-warn/45 bg-warn/10 text-warn-ink"
                 : "border-edge bg-paper2 text-slate3"
             }`}
           >
-            要確認 {needCheck} 件
-          </span>
+            要確認 {open} 件
+            {tickets.length > 0 && (
+              <span className="text-[9px] opacity-70">
+                {current ? "閉じる" : "開く"}
+              </span>
+            )}
+          </button>
+
+          {answered > 0 && (
+            <motion.span
+              initial={reduce ? false : { scale: 1.1, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              data-play-op="done"
+              className="num whitespace-nowrap rounded-full border border-ok-ink/30 bg-ok/10 px-3 py-1.5 text-[11px] tracking-[0.14em] text-ok-ink"
+            >
+              対応済み {answered} 件
+            </motion.span>
+          )}
+
           <span className="text-note text-slate3">
-            AIが答えられない相談だけが、ここに残ります。
+            {tickets.length === 0
+              ? jp("AIが答えられない相談だけが、ここに残ります。")
+              : open > 0
+                ? jp("押すと中身が開きます。この画面から返信できます。")
+                : jp("返信が済んだ件は、要確認から外れます。")}
           </span>
         </div>
+
+        {/* ── 問い合わせの中身と、運営者の返信欄 ── */}
+        <AnimatePresence initial={false}>
+          {current && (
+            <TicketPanel
+              key={current.id}
+              t={current}
+              reduce={reduce}
+              onSend={(body) => onReply(current.id, body)}
+              onClose={() => setOpenId(null)}
+            />
+          )}
+        </AnimatePresence>
 
         <p className="mt-5 border-t border-edge2 pt-4 text-note leading-[1.9] text-slate3">
           {jp(
@@ -808,6 +945,146 @@ function OperatorMirror({
         </p>
       </div>
     </div>
+  );
+}
+
+/* ══════════════════════════════════════════════
+   運営画面：問い合わせの中身と返信欄
+
+   ★AIが人へ渡したあとを、必ず見せること。
+     ここが無かったとき、デモは
+       お客様が相談する → AIが「人が確認します」と言う → 要確認 +1
+     で止まっていました。買う人が本当に知りたいのはその先です。
+       ・渡された運営者は、何を見て判断するのか
+       ・返信は、どこに書いて、どこへ届くのか
+       ・返したあと、その件は画面からどう消えるのか
+
+   ★AIの下書きを入れておくこと。ただし送信は必ず人の操作にすること。
+     文面まで自動で送ってしまうと、この製品の売りである
+     「判断が要ることは人が決める」が崩れます。
+   ══════════════════════════════════════════════ */
+
+function TicketPanel({
+  t,
+  reduce,
+  onSend,
+  onClose,
+}: {
+  t: Ticket;
+  reduce: boolean;
+  onSend: (body: string) => void;
+  onClose: () => void;
+}) {
+  const [body, setBody] = useState(t.draft);
+  const done = t.status === "answered";
+
+  return (
+    <motion.div
+      initial={reduce ? false : { opacity: 0, height: 0 }}
+      animate={{ opacity: 1, height: "auto" }}
+      exit={reduce ? undefined : { opacity: 0, height: 0 }}
+      transition={{ duration: 0.32 }}
+      data-play-ticket=""
+      className="overflow-hidden"
+    >
+      <div
+        className={`mt-3 rounded-2xl border p-4 ${
+          done ? "border-ok-ink/25 bg-ok/[0.05]" : "border-warn/40 bg-warn/[0.05]"
+        }`}
+      >
+        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+          <span className="num whitespace-nowrap text-[11px] tracking-[0.16em] text-slate3">
+            INQUIRY <b className="font-bold text-slate">{t.id}</b>
+          </span>
+          <div className="flex items-center gap-2">
+            <span
+              className={`num whitespace-nowrap rounded-full border px-2.5 py-1 text-[10px] tracking-[0.12em] ${
+                done
+                  ? "border-ok-ink/30 bg-ok/10 text-ok-ink"
+                  : "border-warn/45 bg-warn/12 text-warn-ink"
+              }`}
+            >
+              {done ? "ANSWERED" : "OPEN"}
+            </span>
+            <button
+              type="button"
+              onClick={onClose}
+              className="num whitespace-nowrap rounded-full border border-edge bg-white px-2.5 py-1 text-[10px] tracking-[0.1em] text-slate3"
+            >
+              閉じる
+            </button>
+          </div>
+        </div>
+
+        {/* ① お客様が書いた内容 */}
+        <div className="mt-3.5 rounded-xl border border-edge2 bg-white px-3.5 py-3">
+          <p className="num text-[10px] tracking-[0.14em] text-slate3">
+            ユーザー
+          </p>
+          <p className="mt-1.5 text-note leading-[1.85] text-pretty text-slate">
+            {jp(t.q)}
+          </p>
+        </div>
+
+        {/* ② AIの判定と、その理由 */}
+        <div className="mt-2 rounded-xl border border-edge2 bg-white px-3.5 py-3">
+          <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
+            <p className="num text-[10px] tracking-[0.14em] text-slate3">
+              AI判定
+            </p>
+            <span className="num nb whitespace-nowrap rounded-full border border-warn/45 bg-warn/10 px-2.5 py-1 text-[10px] font-bold tracking-[0.1em] text-warn-ink">
+              {t.verdict}
+            </span>
+          </div>
+          <p className="mt-2 text-note leading-[1.85] text-pretty text-slate2">
+            理由：{jp(t.reason)}
+          </p>
+        </div>
+
+        {/* ③ 運営者の返信 */}
+        {done ? (
+          <div className="mt-2 rounded-xl border border-ok-ink/25 bg-white px-3.5 py-3">
+            <p className="num text-[10px] tracking-[0.14em] text-ok-ink">
+              運営スタッフの返信 — 送信済み
+            </p>
+            <p className="mt-1.5 text-note leading-[1.85] text-pretty text-slate">
+              {jp(t.reply)}
+            </p>
+            <p className="mt-2.5 text-note leading-[1.85] text-pretty text-slate3">
+              {jp(
+                "この返信は、お客様のスマホの問い合わせ画面にそのまま出ています。要確認からは外れ、対応済みへ移りました。",
+              )}
+            </p>
+          </div>
+        ) : (
+          <div className="mt-2">
+            <label className="num block text-[10px] tracking-[0.14em] text-slate3">
+              返信内容
+              <textarea
+                value={body}
+                onChange={(e) => setBody(e.target.value)}
+                rows={3}
+                className="mt-1.5 w-full resize-none rounded-xl border border-edge bg-white px-3.5 py-3 text-note leading-[1.85] tracking-normal text-slate outline-none focus:border-blue-ink/45"
+              />
+            </label>
+            <div className="mt-2 flex flex-wrap items-center gap-2.5">
+              <button
+                type="button"
+                data-play-op="send"
+                disabled={!body.trim()}
+                onClick={() => onSend(body)}
+                className="num whitespace-nowrap rounded-xl bg-blue-ink px-5 py-2.5 text-[12px] font-bold tracking-[0.1em] text-white shadow-blue-lift disabled:opacity-45"
+              >
+                SEND
+              </button>
+              <span className="text-note text-pretty text-slate3">
+                {jp("AIが下書きまで用意し、送るかどうかは人が決めます。")}
+              </span>
+            </div>
+          </div>
+        )}
+      </div>
+    </motion.div>
   );
 }
 
@@ -869,10 +1146,12 @@ function Metric({
 function CoreRoute({
   route,
   needCheck,
+  answered,
   reduce,
 }: {
   route: "idle" | "thinking" | "auto" | "escalate";
   needCheck: number;
+  answered: number;
   reduce: boolean;
 }) {
   const auto = route === "auto";
@@ -887,14 +1166,30 @@ function CoreRoute({
       <div className="flex flex-wrap items-center gap-x-3.5 gap-y-2">
         <span className="eyebrow-lite">AI ROUTING</span>
         <span className="hidden h-px w-8 bg-edge sm:block" />
-        <span className="num whitespace-nowrap text-label text-slate3">
-          CUSTOMER → CORE → OPERATOR
+        {/*
+          ★ここを whitespace-nowrap の1本にしないこと。
+            390px では「→ CUSTOMER」が枠の外へ出て、
+            戻ってくるところだけが見えなくなります（実際にそうなりました）。
+            折れてよい場所を作り、語の途中では折れないようにします。
+        */}
+        <span className="num text-label text-slate3">
+          <span className="nb">CUSTOMER → CORE → OPERATOR</span>{" "}
+          <span className="nb">→ CUSTOMER</span>
         </span>
       </div>
 
       <h3 className="h-display mt-4 text-h3 text-balance text-slate">
         <span className="inline-block">AIが答えられることはAIへ。</span>
         <span className="inline-block">判断が必要なことは、人へ。</span>
+        <br />
+        {/*
+          ★この一文を消さないこと。
+            「人へ渡します」までで止めた図は、渡されたあとが見えません。
+            買う人が心配しているのは、渡されたあとに誰が何をするかです。
+        */}
+        <span className="text-gradient-royal inline-block">
+          そして、人の回答も同じ画面からお客様へ。
+        </span>
       </h3>
 
       <div className="mt-7 grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)_minmax(0,1fr)] lg:items-stretch">
@@ -986,15 +1281,58 @@ function CoreRoute({
           </motion.p>
           <p className="mt-3.5 text-note leading-[1.9] text-pretty text-slate2">
             {jp(
-              "AIが答えた分は、ここに残りません。運営者が読むのは、判断が要るものだけになります。",
+              "AIが答えた分は、ここに残りません。運営者が読むのは、判断が要るものだけになります。件名を押すと中身が開き、その場で返信できます。",
             )}
           </p>
         </div>
       </div>
 
+      {/* ── ④ 人の回答が、お客様へ戻る ──
+          ★図をここで終わらせないこと。
+            01→02→03 だけだと「人へ渡した」で話が切れます。
+            渡された人が返信し、それがお客様の画面に出て、
+            運営画面の要確認が減る。ここまでで、ようやく一周です。 */}
+      <div
+        className={`mt-3 rounded-2xl border p-5 transition-colors duration-500 ${
+          answered > 0 ? "border-ok-ink/30 bg-ok/[0.06]" : "border-edge bg-paper2"
+        }`}
+      >
+        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2.5">
+          <p className="num text-[11px] tracking-[0.16em] text-slate3">
+            04<span className="nb ml-2">BACK TO CUSTOMER</span>
+          </p>
+          <motion.span
+            key={answered}
+            initial={reduce || answered === 0 ? false : { scale: 1.12 }}
+            animate={{ scale: 1 }}
+            transition={{ duration: 0.45 }}
+            className={`num inline-flex items-baseline gap-1.5 whitespace-nowrap rounded-full border px-3.5 py-1.5 text-[13px] font-bold tracking-[0.08em] ${
+              answered > 0
+                ? "border-ok-ink/35 bg-ok/12 text-ok-ink"
+                : "border-edge bg-white text-slate3"
+            }`}
+          >
+            対応済み
+            <b className="text-[19px] font-extrabold">{answered}</b>件
+          </motion.span>
+        </div>
+        <p className="mt-2.5 text-note font-bold text-pretty text-slate">
+          運営者が書いた返信が、そのままお客様のスマホへ
+        </p>
+        <p className="mt-2.5 text-note leading-[1.9] text-pretty text-slate2">
+          {answered > 0
+            ? jp(
+                "返信はお客様の問い合わせ画面に「運営スタッフ」として表示されました。要確認からは外れ、対応済みへ移っています。メールに書き写す作業はありません。",
+              )
+            : jp(
+                "左の運営画面で「要確認」を押すと、問い合わせの中身とAIの判定理由が開きます。返信を書いてSENDを押すと、お客様のスマホにその場で届きます。",
+              )}
+        </p>
+      </div>
+
       <p className="mt-6 border-t border-edge2 pt-4 text-note leading-[1.9] text-pretty text-slate3">
         {jp(
-          "AIに任せる範囲は、運営者が決められます。ここではデモとして、発送状況・ポイント・確率・住所・獲得履歴をAIの担当にし、返金と破損は必ず人へ渡す設定にしています。",
+          "AIに任せる範囲は、運営者が決められます。ここではデモとして、発送状況・ポイント・確率・住所・獲得履歴をAIの担当にし、返金と破損は必ず人へ渡す設定にしています。返信の文面はAIが下書きしますが、送るかどうかを決めるのは必ず人です。",
         )}
       </p>
     </div>
@@ -1087,6 +1425,8 @@ function Phone(p: {
   unshipped: number;
   /** 運営側の要確認件数。引き継いだあとの画面で見せる */
   needCheck: number;
+  /** 運営者が返信を済ませた件数。最後の一覧で「要確認から移った」ことを見せる */
+  answered: number;
   /** 運営側の集計。最後の「連動しています」画面で、同じ数字を並べる */
   view: ReturnType<typeof operatorView>;
   onOpen: (id: string) => void;
@@ -1218,6 +1558,7 @@ function Phone(p: {
                     key="linked"
                     view={p.view}
                     needCheck={p.needCheck}
+                    answered={p.answered}
                     onRestart={p.onRestart}
                   />
                 )}
@@ -2271,6 +2612,8 @@ function Ai({
 }) {
   const used = new Set(chat.map((t) => t.id.split("-")[0]));
   const escalated = chat.some((t) => t.mode === "escalate" && t.a);
+  /* まだ運営スタッフの返信を待っている件があるか。届いたら上の帯を「回答済み」に変える */
+  const waiting = chat.some((t) => t.mode === "escalate" && t.a && !t.staff);
 
   return (
     <Pane>
@@ -2289,22 +2632,46 @@ function Ai({
           initial={{ opacity: 0, y: -6 }}
           animate={{ opacity: 1, y: 0 }}
           data-play-escalated=""
-          className="mb-2 rounded-xl border border-warn/45 bg-warn/10 px-3 py-2.5"
+          className={`mb-2 rounded-xl border px-3 py-2.5 ${
+            waiting
+              ? "border-warn/45 bg-warn/10"
+              : "border-ok-ink/30 bg-ok/[0.08]"
+          }`}
         >
           <div className="flex items-center gap-2">
             <span className="relative flex h-2 w-2 shrink-0">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-warn/70" />
-              <span className="relative inline-flex h-2 w-2 rounded-full bg-warn" />
+              {waiting && (
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-warn/70" />
+              )}
+              <span
+                className={`relative inline-flex h-2 w-2 rounded-full ${
+                  waiting ? "bg-warn" : "bg-ok-ink"
+                }`}
+              />
             </span>
-            <p className="text-[12px] font-bold text-warn-ink">担当者確認中</p>
-            <span className="num ml-auto whitespace-nowrap text-[9px] tracking-[0.1em] text-warn-ink/80">
-              CS-0001
+            <p
+              className={`text-[12px] font-bold ${
+                waiting ? "text-warn-ink" : "text-ok-ink"
+              }`}
+            >
+              {waiting ? "担当者確認中" : "運営スタッフが回答しました"}
+            </p>
+            <span
+              className={`num ml-auto whitespace-nowrap text-[9px] tracking-[0.1em] ${
+                waiting ? "text-warn-ink/80" : "text-ok-ink/80"
+              }`}
+            >
+              {chat.find((t) => t.ticket)?.ticket ?? "CS-0001"}
             </span>
           </div>
           <p className="mt-1.5 text-[10px] leading-[1.75] text-pretty text-slate2">
-            {jp(
-              "この件はAIでは判断せず、運営スタッフが確認しています。運営者側の「要確認」に1件として残っています。",
-            )}
+            {waiting
+              ? jp(
+                  "この件はAIでは判断せず、運営スタッフが確認しています。運営者側の「要確認」に1件として残っています。",
+                )
+              : jp(
+                  "運営スタッフが内容を確認し、返信しました。運営者側の「要確認」は0件になり、対応済みへ移っています。",
+                )}
           </p>
         </motion.div>
       )}
@@ -2359,6 +2726,29 @@ function Ai({
                   {t.mode === "escalate"
                     ? "ESCALATE — 運営スタッフへ引き継ぎ"
                     : "AUTO ANSWER — AIが回答"}
+                </span>
+              </Bubble>
+            </motion.div>
+          )}
+
+          {/* ── 運営スタッフからの返信 ──
+              ★AIの吹き出しと同じ見た目にしないこと。
+                誰が答えたのかが分からなくなります。
+                名前（運営スタッフ）と色を変えて、人が書いたことを明示します。 */}
+          {t.staff && (
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              data-play-staff=""
+            >
+              <p className="mb-1.5 flex items-center gap-1.5 px-0.5 text-[10px] font-bold text-ok-ink">
+                <span className="inline-block h-1.5 w-1.5 rounded-full bg-ok-ink" />
+                運営スタッフから返信が届きました
+              </p>
+              <Bubble side="ai" mark="運営" tone="staff">
+                <span className="block">{jp(t.staff)}</span>
+                <span className="num mt-2 block whitespace-nowrap text-[9px] tracking-[0.12em] text-ok-ink">
+                  HUMAN REPLY — 運営スタッフが回答
                 </span>
               </Bubble>
             </motion.div>
@@ -2454,7 +2844,8 @@ function Bubble({
 }: {
   side: "me" | "ai";
   mark: string;
-  tone?: "auto" | "escalate";
+  /** staff … 人（運営スタッフ）が書いたもの。AIと同じ色にしないこと */
+  tone?: "auto" | "escalate" | "staff";
   muted?: boolean;
   children: React.ReactNode;
 }) {
@@ -2473,17 +2864,23 @@ function Bubble({
   return (
     <div className="flex items-start gap-2">
       <span
-        className={`num mt-1 shrink-0 rounded-full border px-2 py-[3px] text-[9px] font-bold tracking-[0.12em] ${
+        className={`num nb mt-1 shrink-0 rounded-full border px-2 py-[3px] text-[9px] font-bold tracking-[0.12em] ${
           tone === "escalate"
             ? "border-warn/45 bg-warn/12 text-warn-ink"
-            : "border-blue-ink/18 bg-blue-pale text-blue-ink"
+            : tone === "staff"
+              ? "border-ok-ink/30 bg-ok/12 text-ok-ink"
+              : "border-blue-ink/18 bg-blue-pale text-blue-ink"
         }`}
       >
         {mark}
       </span>
       <div
         className={`min-w-0 flex-1 rounded-2xl rounded-tl-md border bg-white px-3 py-2 text-[12px] leading-[1.8] text-pretty shadow-lift ${
-          tone === "escalate" ? "border-warn/35" : "border-edge"
+          tone === "escalate"
+            ? "border-warn/35"
+            : tone === "staff"
+              ? "border-ok-ink/30"
+              : "border-edge"
         } ${muted ? "text-slate3" : "text-slate"}`}
       >
         {children}
@@ -2506,10 +2903,12 @@ function Bubble({
 function Linked({
   view,
   needCheck,
+  answered,
   onRestart,
 }: {
   view: ReturnType<typeof operatorView>;
   needCheck: number;
+  answered: number;
   onRestart: () => void;
 }) {
   const rows = [
@@ -2517,6 +2916,12 @@ function Linked({
     { k: "売上", v: view.revenue.toLocaleString("ja-JP"), u: "pt", why: "引かれた瞬間に増える" },
     { k: "未発送", v: String(view.unshipped), u: "件", why: "発送を依頼した分だけ増える" },
     { k: "要確認", v: String(needCheck), u: "件", why: "AIが答えなかった相談だけ残る" },
+    /*
+      ★この行を消さないこと。
+        「要確認 0」だけを見せると、相談が消えてなくなったように見えます。
+        人が返信したから0になった、という移り先を必ず並べます。
+    */
+    { k: "対応済み", v: String(answered), u: "件", why: "運営者が返信を送ると、要確認からここへ移る" },
   ];
 
   return (
@@ -2562,7 +2967,7 @@ function Linked({
 
       <p className="mt-2.5 rounded-xl border border-edge bg-paper2 px-3 py-2.5 text-[10px] leading-[1.8] text-pretty text-slate3">
         {jp(
-          "この4つは、左の運営者画面に出ている数字と同じものです。日次で集計しているのではなく、お客様が操作したその場で動いています。",
+          "この5つは、左の運営者画面に出ている数字と同じものです。日次で集計しているのではなく、お客様が操作したその場で動いています。",
         )}
       </p>
 

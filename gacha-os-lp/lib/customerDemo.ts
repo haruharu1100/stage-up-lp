@@ -357,3 +357,95 @@ export function operatorView(
 
 /** 表示用。1,000 のように3桁で区切る */
 export const pt = (n: number) => `${n.toLocaleString("ja-JP")} pt`;
+
+/* ══════════════════════════════════════════════
+   問い合わせチケット（AI → 人 → お客様 の一周）
+
+   ★ここを画面の中だけで持たないこと。
+     「AIが人へ渡しました」で終わる画面は、いくらでも書けます。
+     渡したあと、人が読んで、書いて、お客様に届いて、
+     運営側の「要確認」が減る。そこまでが1つの仕事です。
+
+     だから、件数の増減と状態の変化は、この場所（ただの計算）に置いて
+     テストで検算できるようにしています。画面はこれを表示するだけです。
+
+   ★状態は2つだけにしています。
+       open     … 人がまだ返していない（＝運営画面の「要確認」に残る）
+       answered … 人が返した（＝「対応済み」へ移り、お客様の画面に返信が出る）
+     途中の状態を増やすと、デモを見る人が数え方を追えなくなります。
+   ══════════════════════════════════════════════ */
+
+export type TicketStatus = "open" | "answered";
+
+export type Ticket = {
+  /** 受付番号。お客様の画面と運営画面の両方に、同じものを出す */
+  id: string;
+  /** お客様が書いた内容 */
+  q: string;
+  /** AIの判定結果（人へ渡した理由の見出し） */
+  verdict: string;
+  /** なぜAIが答えなかったのか */
+  reason: string;
+  /** 返信欄にあらかじめ入れておく文面。人が直してから送る */
+  draft: string;
+  /** 実際に送った文面。まだ送っていなければ空 */
+  reply: string;
+  status: TicketStatus;
+};
+
+/**
+ * 受付番号は CS-0001 のように、連番で作ります。
+ * ★乱数にしないこと。デモ中に採番がばらつくと、
+ *   お客様側の画面と運営画面で同じ番号を指しているのかが分からなくなります。
+ */
+export function ticketId(seq: number): string {
+  return `CS-${String(seq).padStart(4, "0")}`;
+}
+
+export function makeTicket(
+  seq: number,
+  q: string,
+  reason: string,
+  draft: string,
+): Ticket {
+  return {
+    id: ticketId(seq),
+    q,
+    verdict: "HUMAN REVIEW REQUIRED",
+    reason,
+    draft,
+    reply: "",
+    status: "open",
+  };
+}
+
+/**
+ * 運営者が返信する。
+ * ★空文字では送れません。
+ *   空のまま送れてしまうと、「要確認」だけが減って、
+ *   お客様には何も届いていない、という嘘の画面になります。
+ */
+export function replyTicket(
+  list: Ticket[],
+  id: string,
+  reply: string,
+): Ticket[] {
+  const body = reply.trim();
+  if (!body) return list;
+  return list.map((t) =>
+    t.id === id && t.status === "open"
+      ? { ...t, reply: body, status: "answered" as const }
+      : t,
+  );
+}
+
+/** 運営画面に出す2つの数字。合計は必ず受け付けた件数と一致します */
+export function ticketCounts(list: Ticket[]): {
+  open: number;
+  answered: number;
+  total: number;
+} {
+  const open = list.filter((t) => t.status === "open").length;
+  const answered = list.filter((t) => t.status === "answered").length;
+  return { open, answered, total: list.length };
+}

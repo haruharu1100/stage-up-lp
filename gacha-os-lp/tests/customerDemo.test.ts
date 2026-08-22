@@ -27,6 +27,10 @@ import {
   makeRng,
   operatorView,
   realRtp,
+  makeTicket,
+  replyTicket,
+  ticketCounts,
+  ticketId,
   type Gacha,
 } from "../lib/customerDemo";
 
@@ -274,4 +278,73 @@ test("どのガチャにもラストワン賞が1本だけある", () => {
     assert.equal(l.length, 1, `${g.title}：ラストワン賞の数が1本ではありません`);
     assert.equal(l[0].left, 1);
   }
+});
+
+/* ══════════════════════════════════════════════
+   問い合わせチケット（AI → 人 → お客様）
+
+   ★ここで見張りたいのは「数え方」です。
+     デモの主張は「AIが答えられない相談だけが人に残り、
+     人が返した瞬間に運営画面から消える」ことです。
+     この数が合わなくなったら、デモの主張そのものが嘘になります。
+   ══════════════════════════════════════════════ */
+
+const t0 = () =>
+  makeTicket(1, "届いた商品に傷があります。交換できますか？", "個別の商品状態確認が必要", "下書き");
+
+test("受付番号は CS-0001 のように4桁の連番になる", () => {
+  assert.equal(ticketId(1), "CS-0001");
+  assert.equal(ticketId(12), "CS-0012");
+  assert.equal(ticketId(1234), "CS-1234");
+});
+
+test("受け付けた直後は open。AI判定は HUMAN REVIEW REQUIRED", () => {
+  const t = t0();
+  assert.equal(t.status, "open");
+  assert.equal(t.verdict, "HUMAN REVIEW REQUIRED");
+  assert.equal(t.reply, "");
+  assert.equal(ticketCounts([t]).open, 1);
+  assert.equal(ticketCounts([t]).answered, 0);
+});
+
+test("運営者が返信すると、要確認が減って対応済みが増える", () => {
+  const before = [t0()];
+  const after = replyTicket(before, "CS-0001", "商品の状態を確認いたします。");
+
+  assert.equal(ticketCounts(before).open, 1, "元の配列を書き換えていないこと");
+  assert.equal(ticketCounts(after).open, 0);
+  assert.equal(ticketCounts(after).answered, 1);
+  assert.equal(after[0].status, "answered");
+  assert.equal(after[0].reply, "商品の状態を確認いたします。");
+});
+
+test("空の返信では送れない（要確認だけ減る、という嘘の画面を作らない）", () => {
+  const before = [t0()];
+  for (const empty of ["", "   ", "\n\t "]) {
+    const after = replyTicket(before, "CS-0001", empty);
+    assert.equal(ticketCounts(after).open, 1, `「${empty}」で送れてしまいました`);
+    assert.equal(after[0].status, "open");
+  }
+});
+
+test("同じ件に2回返信しても、対応済みは1件のまま", () => {
+  let list = [t0()];
+  list = replyTicket(list, "CS-0001", "1回目");
+  list = replyTicket(list, "CS-0001", "2回目");
+  assert.equal(ticketCounts(list).answered, 1);
+  assert.equal(list[0].reply, "1回目", "返信済みの内容が上書きされないこと");
+});
+
+test("要確認と対応済みの合計は、受け付けた件数と必ず一致する", () => {
+  const list = [
+    makeTicket(1, "傷があった", "個別確認が必要", "下書き"),
+    makeTicket(2, "返金したい", "個別確認が必要", "下書き"),
+    makeTicket(3, "住所を間違えた", "個別確認が必要", "下書き"),
+  ];
+  const after = replyTicket(list, "CS-0002", "確認いたします");
+  const c = ticketCounts(after);
+  assert.equal(c.open + c.answered, c.total);
+  assert.equal(c.total, 3);
+  assert.equal(c.open, 2);
+  assert.equal(c.answered, 1);
 });
