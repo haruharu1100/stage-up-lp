@@ -1,7 +1,14 @@
 import { all, nowIso, run } from '../db/client';
+import { config } from '../env';
 import { readManualChecks } from '../japan';
 import type { Idea, JapanStage } from '../types';
-import { japaneseKeywords } from './keywords-ja';
+import { MAX_QUERIES, japaneseKeywords } from './keywords-ja';
+import {
+  googleSearchJa,
+  judgeFromSearches,
+  type GoogleSearchRecord,
+  type SearchJudgement,
+} from './google-search';
 import {
   checkCorp,
   checkGithubJa,
@@ -49,6 +56,19 @@ function stageFromCompetitors(domestic: number): JapanStage {
   return 'MATURE';
 }
 
+/**
+ * これ以上の確度が既にあるなら、無料枠を使ってまで調べ直さない。
+ * （検索の無料枠は1日100回しかなく、まだ一度も調べていない案件に回したほうが得るものが大きい）
+ */
+export const ENOUGH_CONFIDENCE = 0.6;
+
+/** 既に十分な根拠があるか。人が確認済み、または実測で確度0.6以上 */
+export function hasEnoughEvidence(prior: JapanResearch | null): boolean {
+  if (!prior) return false;
+  if (prior.humanCorrected) return true;
+  return prior.stage !== 'UNKNOWN' && prior.confidence >= ENOUGH_CONFIDENCE;
+}
+
 const ORDER: JapanStage[] = ['NOT_FOUND', 'EARLY', 'EMERGING', 'COMPETITIVE', 'MATURE'];
 
 function shift(stage: JapanStage, by: number): JapanStage {
@@ -57,12 +77,61 @@ function shift(stage: JapanStage, by: number): JapanStage {
   return ORDER[Math.min(ORDER.length - 1, Math.max(0, i + by))];
 }
 
-export async function researchJapan(idea: Idea): Promise<JapanResearch> {
+/** 複数検索の判定結果を、既存のチャネル表示にそのまま載せられる形へ変換する */
+export function channelFromSearch(search: SearchJudgement): ChannelResult {
+  const failed = search.records.find((r) => r.status !== 'DATA_AVAILABLE');
+  const ok = search.records.some((r) => r.status === 'DATA_AVAILABLE');
+  return {
+    key: 'google_search_ja',
+    label: '日本語一般検索（複数語）',
+    query: search.queries.join(' / '),
+    // 件数は参考値。判定には使っていないことを reason 側で明記している
+    hits: ok ? search.totalResultsMax : null,
+    status: ok ? 'DATA_AVAILABLE' : failed ? failed.status : 'UNAVAILABLE',
+    competitors: search.domesticCompetitors.map((c) => ({
+      serviceName: c.competitorName,
+      url: c.url,
+      origin: 'DOMESTIC' as const,
+      similarity: c.similarityScore,
+      snippet: c.snippet,
+    })),
+    strength: 'STRONG',
+    note: ok
+      ? `${search.records.filter((r) => r.status === 'DATA_AVAILABLE').length}本の検索語で実測。国内の類似サービス${search.domesticCompetitors.length}社`
+      : (failed?.note ?? '検索未実行'),
+    checkedAt: new Date().toISOString(),
+  };
+}
+
+export type ResearchOptions = {
+  /** 既に十分な根拠があっても調べ直す */
+  force?: boolean;
+};
+
+export async function researchJapan(idea: Idea, opts: ResearchOptions = {}): Promise<JapanResearch> {
+  const prior = await getJapanResearch(idea.id);
+  if (!opts.force && hasEnoughEvidence(prior) && prior) {
+    // 無料枠を、まだ一度も調べていない案件に回すため再検索しない
+    return prior;
+  }
+
   const kw = japaneseKeywords(idea);
   const primary = kw.queries[0] ?? idea.title;
 
+  // --- 日本語一般検索（複数の言い換えで引く） ---
+  // 1本の検索語だけだと「その言い方をしていない競合」を丸ごと見落とすため、
+  // 業種違い・言い換え・「SaaS 日本」などを混ぜて最大 GOOGLE_SEARCH_PER_IDEA 本まで引く。
+  const perIdea = Math.max(1, Math.min(MAX_QUERIES, config.googleSearchPerIdea));
+  const searchRecords: GoogleSearchRecord[] = [];
+  for (const q of kw.queries.slice(0, perIdea)) {
+    searchRecords.push(await googleSearchJa(q));
+  }
+  const search = judgeFromSearches(searchRecords);
+  const searchChannel = channelFromSearch(search);
+
   // 課金と時間を抑えるため、各チャネルへ投げるのは代表クエリ1本だけにする
   const channels: ChannelResult[] = [
+    searchChannel,
     await checkGoogleJa(primary),
     await checkGoogleJa(primary, 'site:boxil.jp OR site:it-trend.jp'),
     await checkWikipediaJa(primary),
@@ -104,6 +173,11 @@ export async function researchJapan(idea: Idea): Promise<JapanResearch> {
     stage = total === 0 ? 'NOT_FOUND' : total < 10 ? 'EARLY' : total < 100 ? 'EMERGING' : total < 1000 ? 'COMPETITIVE' : 'MATURE';
     confidence = 0.95;
     reason = `人が調査した${manual.length}チャネルの合計${total}件による判定（自動調査より優先）`;
+  } else if (search.stage !== 'UNKNOWN') {
+    // 日本語一般検索の実測が最も強い根拠。件数ではなく「実在する国内サービスの社数」で決める
+    stage = search.stage;
+    confidence = search.confidence;
+    reason = search.reason;
   } else if (withData.length === 0) {
     stage = 'UNKNOWN';
     confidence = 0;
@@ -131,16 +205,21 @@ export async function researchJapan(idea: Idea): Promise<JapanResearch> {
     stage = domestic.length > 0 ? stageFromCompetitors(domestic.length) : weakHits === 0 ? 'NOT_FOUND' : 'EARLY';
     confidence = 0.35;
     reason =
-      `Google検索の鍵が無いため、Wikipedia・GitHub等の間接的な指標のみで推定（合計${weakHits}件、国内らしき競合${domestic.length}件）。` +
-      ' 確度が低いので人の確認が要る。';
+      `日本語一般検索を実行できなかったため（${searchChannel.note}）、Wikipedia・GitHub等の間接的な指標のみで推定` +
+      `（合計${weakHits}件、国内らしき競合${domestic.length}件）。確度が低いので人の確認が要る。`;
   }
+
+  // 国内競合の数え方は、検索の実測があるときは会社（ドメイン）単位の社数を使う。
+  // 同じ会社の別ページを2社と数えないため。
+  const domesticCount =
+    !humanCorrected && search.stage !== 'UNKNOWN' ? search.domesticCompetitors.length : domestic.length;
 
   const result: JapanResearch = {
     ideaId: idea.id,
     queries: kw.queries,
     channels,
     competitors,
-    domesticCount: domestic.length,
+    domesticCount,
     stage,
     confidence: Math.round(confidence * 100) / 100,
     humanCorrected,
@@ -158,7 +237,7 @@ export async function researchJapan(idea: Idea): Promise<JapanResearch> {
       idea.id,
       JSON.stringify(kw.queries),
       JSON.stringify(channels),
-      domestic.length,
+      domesticCount,
       stage,
       result.confidence,
       humanCorrected ? 1 : 0,

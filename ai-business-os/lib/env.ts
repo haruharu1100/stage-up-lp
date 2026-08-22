@@ -72,9 +72,16 @@ export const config = {
   productHuntToken: process.env.PRODUCT_HUNT_TOKEN || '',
 
   // 日本語市場調査用。鍵が無いチャネルは 0件ではなく UNAVAILABLE として記録する
-  googleCseKey: process.env.GOOGLE_CSE_KEY || process.env.GOOGLE_API_KEY || '',
-  googleCseCx: process.env.GOOGLE_CSE_CX || process.env.GOOGLE_CSE_ID || '',
+  // 鍵そのものはコードにもGitにも置かない。.env から読むだけ
+  googleCseKey:
+    process.env.GOOGLE_SEARCH_API_KEY || process.env.GOOGLE_CSE_KEY || process.env.GOOGLE_API_KEY || '',
+  googleCseCx:
+    process.env.GOOGLE_SEARCH_ENGINE_ID || process.env.GOOGLE_CSE_CX || process.env.GOOGLE_CSE_ID || '',
   youtubeApiKey: process.env.YOUTUBE_API_KEY || process.env.YT_API_KEY || '',
+
+  // 無料枠を浪費しないための上限。1日あたりの検索回数と、1案件あたりの検索語数
+  googleSearchDailyLimit: num(process.env.GOOGLE_SEARCH_DAILY_LIMIT, 100),
+  googleSearchPerIdea: num(process.env.GOOGLE_SEARCH_PER_IDEA, 4),
 
   // 判定しきい値（コードで計算する。AIに決めさせない）
   minLtvCacRatio: num(process.env.MIN_LTV_CAC_RATIO, 3),

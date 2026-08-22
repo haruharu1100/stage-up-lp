@@ -5,7 +5,8 @@ import { getMarketBacktest, marketQueryFor, runMarketBacktest } from '../lib/bac
 import { DEFAULT_ASSUMPTION, getSalesBacktest, runSalesBacktest } from '../lib/backtest/montecarlo';
 import { FUNNEL_STAGES, savePreScores, topPreScored } from '../lib/prescore';
 import { rateIdea } from '../lib/rating';
-import { getJapanResearch, researchJapan } from '../lib/research/japan-researcher';
+import { getJapanResearch, hasEnoughEvidence, researchJapan } from '../lib/research/japan-researcher';
+import { googleSearchConfigured, searchBudgetStatus } from '../lib/research/google-search';
 import { getScore, GRADE_LABEL, scoreIdea } from '../lib/score';
 import { computeViability, saveViability } from '../lib/viability';
 import { saveIdeaNote } from '../lib/obsidian';
@@ -42,16 +43,32 @@ async function main() {
 
   // --- 段2: 上位だけ日本市場を自動調査 ---
   const researchIds = await topPreScored(nResearch);
+  const before = await searchBudgetStatus();
   console.log(`\n【段2】上位${researchIds.length}件の日本市場を自動調査します`);
+  console.log(
+    googleSearchConfigured()
+      ? `  日本語検索の本日の残り: ${before.left} / ${before.limit} 回（使い切ったら翌日に続きを実行します）`
+      : '  日本語検索は鍵が未設定のため実行しません（0件ではなく「未取得」として記録します）'
+  );
   const byId = new Map(ideas.map((i) => [i.id, i]));
+  let skipped = 0;
   for (const id of researchIds) {
     const idea = byId.get(id);
     if (!idea) continue;
+    const prior = await getJapanResearch(idea.id);
+    if (hasEnoughEvidence(prior)) {
+      skipped += 1;
+      continue;
+    }
     const r = await researchJapan(idea);
     console.log(
       `  ${r.stage.padEnd(11)} 国内競合${String(r.domesticCount).padStart(2)}件 確度${r.confidence}  ${idea.title.slice(0, 44)}`
     );
   }
+  const after = await searchBudgetStatus();
+  console.log(
+    `  既に十分な根拠があり再検索しなかった案件: ${skipped}件 ／ 本日の検索使用: ${after.used} / ${after.limit} 回`
+  );
 
   // --- 段3: 採点（AI補助レーティングを含む） ---
   console.log(`\n【段3】${ideas.length}件を採点します（AI推奨値＋人の入力＋実測値）`);

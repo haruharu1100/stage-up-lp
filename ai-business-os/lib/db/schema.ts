@@ -213,6 +213,24 @@ export const SCHEMA: string[] = [
     ran_at TEXT NOT NULL
   )`,
 
+  // 検索APIの無料枠を浪費しないためのキャッシュ。同じ検索語は再課金しない
+  `CREATE TABLE IF NOT EXISTS search_cache (
+    provider TEXT NOT NULL,
+    query TEXT NOT NULL,
+    total_results INTEGER,
+    response_json TEXT NOT NULL,
+    fetched_at TEXT NOT NULL,
+    PRIMARY KEY (provider, query)
+  )`,
+
+  // 1日あたりの検索回数の上限管理。使い切ったら止める（勝手に課金しない）
+  `CREATE TABLE IF NOT EXISTS search_budget (
+    provider TEXT NOT NULL,
+    day TEXT NOT NULL,
+    used INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (provider, day)
+  )`,
+
   `CREATE INDEX IF NOT EXISTS idx_events_type ON conversion_events(event_type)`,
   `CREATE INDEX IF NOT EXISTS idx_events_idea ON conversion_events(idea_id)`,
   `CREATE INDEX IF NOT EXISTS idx_evidence_idea ON evidences(idea_id)`,

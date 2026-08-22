@@ -1,10 +1,12 @@
 import { all } from './db/client';
 import { getSalesBacktest } from './backtest/montecarlo';
+import { bestPriceView, type PriceView } from './economics/price-view';
+import type { MoneyScore } from './economics/money-score';
 import { STAGE_LABEL } from './japan';
 import { getJapanResearch } from './research/japan-researcher';
 import { getViability, SALES_FIT_LABEL, regulatoryNote, type SalesFitKey } from './viability';
 import { getScore } from './score';
-import type { Grade, Idea, JapanStage } from './types';
+import type { Grade, Idea, JapanStage, ProfitVerdict } from './types';
 
 // dashboard.ts から import すると循環参照になるため、ここで直接引く
 async function fetchIdea(id: string): Promise<Idea | null> {
@@ -44,11 +46,18 @@ export type Opportunity = {
   grade: Grade | null;
   viability100: number | null;
   money100: number | null;
+  /** Money Score の内訳。合計だけ見せると「なぜ低いか」が分からず直す場所を決められない */
+  moneyBreakdown: MoneyScore | null;
   confidence: number | null;
-  priceCandidateYen: number | null;
-  ltvCac: number | null;
-  netProfitYear1Median: number | null;
-  lossProbability: number | null;
+  /**
+   * 採算数値は必ずこの1件から表示する。価格候補だけ別の場所から取ると
+   * 「98,000円と書いてあるのに利益は49,800円のときの数字」というズレが起きる。
+   */
+  economics: PriceView | null;
+  profitVerdict: ProfitVerdict | null;
+  whatMustChange: string[];
+  breakEvenSummary: string | null;
+  bestChannelCase: string | null;
   recommendedChannel: string;
   paidNoteFit: number | null;
   saasFit: number | null;
@@ -72,6 +81,7 @@ function buildWhyJapanNow(parts: {
   bestPrice: number | null;
   ltvCac: number | null;
   lossProb: number | null;
+  cac: number | null;
   channel: SalesFitKey | null;
 }): string {
   const s: string[] = [];
@@ -95,8 +105,10 @@ function buildWhyJapanNow(parts: {
   }
 
   if (parts.bestPrice !== null && parts.ltvCac !== null && parts.lossProb !== null) {
+    const cacText =
+      parts.cac !== null ? `成約1件あたりの獲得費は${Math.round(parts.cac).toLocaleString()}円、` : '';
     s.push(
-      `販売シミュレーション（2000回試行）では月額${parts.bestPrice.toLocaleString()}円が最もバランスが良く、LTV÷CACの中央値は${parts.ltvCac}、12ヶ月で赤字になる確率は${pctText(parts.lossProb)}だった。`
+      `販売シミュレーション（2000回試行）では月額${parts.bestPrice.toLocaleString()}円が最もバランスが良く、${cacText}LTV÷CACの中央値は${parts.ltvCac}、12ヶ月で赤字になる確率は${pctText(parts.lossProb)}だった（数字はすべて月額${parts.bestPrice.toLocaleString()}円の前提で計算）。`
     );
   } else {
     s.push('販売シミュレーションが未実施のため、採算については何も断定しない。');
@@ -145,7 +157,7 @@ export async function topOpportunities(limit = 10): Promise<Opportunity[]> {
     );
     const market = marketRows[0] ?? null;
 
-    const best = sales?.scenarios.find((s) => s.label === sales.bestScenario) ?? null;
+    const economics = bestPriceView(sales);
     const trend = market?.trend ?? null;
     const growth = market?.growth_ratio ?? null;
 
@@ -177,11 +189,14 @@ export async function topOpportunities(limit = 10): Promise<Opportunity[]> {
       grade: score?.grade ?? null,
       viability100: via?.viability100 ?? null,
       money100: via?.money100 ?? null,
+      moneyBreakdown: via?.moneyBreakdown ?? null,
       confidence: via?.confidence ?? null,
-      priceCandidateYen: best?.monthlyPrice ?? null,
-      ltvCac: sales?.ltvCac.median ?? null,
-      netProfitYear1Median: sales?.netProfitYear1.median ?? null,
-      lossProbability: sales?.probabilities.lossYear1 ?? null,
+      economics,
+      profitVerdict: sales?.verdictClass ?? null,
+      whatMustChange: sales?.whatMustChange ?? [],
+      breakEvenSummary: sales?.breakEven?.summary ?? null,
+      bestChannelCase:
+        sales?.channelCases.find((c) => c.key === sales.bestChannelCase)?.label ?? null,
       recommendedChannel: via ? SALES_FIT_LABEL[via.recommendedChannel] : '—',
       paidNoteFit: via?.fit.paidNote ?? null,
       saasFit: via?.fit.saas ?? null,
@@ -193,9 +208,10 @@ export async function topOpportunities(limit = 10): Promise<Opportunity[]> {
         researchConfidence: japan?.confidence ?? null,
         trend,
         growthRatio: growth,
-        bestPrice: best?.monthlyPrice ?? null,
-        ltvCac: sales?.ltvCac.median ?? null,
-        lossProb: sales?.probabilities.lossYear1 ?? null,
+        bestPrice: economics?.priceCandidateYen ?? null,
+        ltvCac: economics?.ltvCacMedian ?? null,
+        lossProb: economics?.lossProbability ?? null,
+        cac: economics?.cacMedian ?? null,
         channel: via?.recommendedChannel ?? null,
       }),
       regulatory: regulatoryNote(idea),

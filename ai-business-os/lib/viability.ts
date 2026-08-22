@@ -1,4 +1,5 @@
 import { all, nowIso, run } from './db/client';
+import { computeMoneyScore, type MoneyScore } from './economics/money-score';
 import type { JapanResearch } from './research/japan-researcher';
 import type { Idea, MarketBacktest, SalesBacktest } from './types';
 
@@ -92,6 +93,8 @@ export type ViabilityResult = {
   items: ViabilityItem[];
   viability100: number;
   money100: number;
+  /** Money Score がなぜその点になったかの内訳 */
+  moneyBreakdown: MoneyScore;
   confidence: number; // 0〜1。実測に基づく配点の割合
   fit: Record<SalesFitKey, number>;
   recommendedChannel: SalesFitKey;
@@ -228,31 +231,20 @@ export function computeViability(
   const confidence =
     Math.round(filled * (0.4 + 0.2 * evidence + 0.2 * japanKnown + 0.2 * salesKnown) * 100) / 100;
 
-  // --- MONEY SCORE ---
-  // 「実際に金になるか」だけを見る。バックテスト結果があるときは、そちらを主にする。
-  const moneyKeys: ViabilityKey[] = ['willingnessToPay', 'subscribable', 'dealSize', 'grossMargin', 'stickiness', 'prospectFindability'];
-  let mEarned = 0;
-  let mAvail = 0;
-  for (const it of items) {
-    if (!moneyKeys.includes(it.key) || it.ratio === null) continue;
-    mEarned += VIABILITY_WEIGHTS[it.key] * it.ratio;
-    mAvail += VIABILITY_WEIGHTS[it.key];
-  }
-  const structure100 = mAvail === 0 ? 0 : (mEarned / mAvail) * 100;
+  const g = (k: ViabilityKey) => items.find((i) => i.key === k)?.ratio ?? 0.5;
 
-  let money100: number;
-  if (ctx.sales && ctx.sales.verdict !== 'INSUFFICIENT_DATA') {
-    const ltvPart = Math.min(1, ctx.sales.ltvCac.median / 5) * 100;
-    const safePart = (1 - ctx.sales.probabilities.lossYear1) * 100;
-    // 構造40% + LTV/CAC 35% + 赤字にならない確率 25%
-    money100 = structure100 * 0.4 + ltvPart * 0.35 + safePart * 0.25;
-  } else {
-    // バックテストが無い間は構造だけで語る。断定しないよう上限を70点に抑える
-    money100 = Math.min(70, structure100);
-  }
+  // --- MONEY SCORE ---
+  // 「実際に金になるか」だけを見る。なぜその点なのかを8項目の内訳で残す。
+  const moneyScore = computeMoneyScore({
+    sales: ctx.sales,
+    japan: ctx.japan ? { domesticCount: ctx.japan.domesticCount, confidence: ctx.japan.confidence } : null,
+    prospectFindability: items.find((i) => i.key === 'prospectFindability')?.ratio ?? null,
+    willingnessToPay: items.find((i) => i.key === 'willingnessToPay')?.ratio ?? null,
+    regulated: reg !== null,
+  });
+  const money100 = moneyScore.total;
 
   // --- 販売形態の向き不向き ---
-  const g = (k: ViabilityKey) => items.find((i) => i.key === k)?.ratio ?? 0.5;
   const pct = (n: number) => Math.max(0, Math.min(100, Math.round(n)));
   const fit: Record<SalesFitKey, number> = {
     x: pct(50 + g('roiExplainable') * 30 + (idea.category === 'AI_SIDE_BUSINESS' ? 20 : 10)),
@@ -272,6 +264,7 @@ export function computeViability(
     items,
     viability100,
     money100: Math.round(money100 * 10) / 10,
+    moneyBreakdown: moneyScore,
     confidence,
     fit,
     recommendedChannel,
@@ -292,7 +285,7 @@ export async function saveViability(v: ViabilityResult, scenarioJson: unknown = 
       v.viability100,
       v.money100,
       v.confidence,
-      JSON.stringify({ fit: v.fit, recommendedChannel: v.recommendedChannel }),
+      JSON.stringify({ fit: v.fit, recommendedChannel: v.recommendedChannel, moneyBreakdown: v.moneyBreakdown }),
       JSON.stringify(scenarioJson),
       v.scoredAt,
     ]
@@ -311,12 +304,24 @@ export async function getViability(ideaId: string): Promise<ViabilityResult | nu
   }>('SELECT * FROM viability_scores WHERE idea_id = ?', [ideaId]);
   const r = rows[0];
   if (!r) return null;
-  const f = JSON.parse(r.fit_json) as { fit: Record<SalesFitKey, number>; recommendedChannel: SalesFitKey };
+  const f = JSON.parse(r.fit_json) as {
+    fit: Record<SalesFitKey, number>;
+    recommendedChannel: SalesFitKey;
+    moneyBreakdown?: MoneyScore;
+  };
+  // 内訳を持たない古い行は、内訳なしとして返す（0点として扱わない）
+  const moneyBreakdown: MoneyScore = f.moneyBreakdown ?? {
+    total: r.money100,
+    availableWeight: 0,
+    items: [],
+    capped: true,
+  };
   return {
     ideaId: r.idea_id,
     items: JSON.parse(r.items_json),
     viability100: r.viability100,
     money100: r.money100,
+    moneyBreakdown,
     confidence: r.confidence,
     fit: f.fit,
     recommendedChannel: f.recommendedChannel,

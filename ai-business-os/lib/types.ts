@@ -146,16 +146,99 @@ export type MarketBacktest = {
   ranAt: string;
 };
 
+/** 実績が何件たまっているか。少ない実績で仮定を書き換えないためのラベル */
+export type DataVolume = 'NO_DATA' | 'LOW_DATA' | 'MEDIUM_DATA' | 'HIGH_DATA';
+
+/** その数字が「仮定」か「実測」か。画面では必ずどちらかを表示する */
+export type ValueSource = 'ASSUMPTION' | 'MEASURED';
+
+export const DATA_VOLUME_LABEL: Record<DataVolume, string> = {
+  NO_DATA: '実績なし',
+  LOW_DATA: '実績わずか',
+  MEDIUM_DATA: '実績そこそこ',
+  HIGH_DATA: '実績十分',
+};
+
+/** 実績件数からデータ量ラベルを決める。しきい値はコードで固定する */
+export function dataVolumeOf(sampleSize: number): DataVolume {
+  if (sampleSize <= 0) return 'NO_DATA';
+  if (sampleSize < 30) return 'LOW_DATA';
+  if (sampleSize < 100) return 'MEDIUM_DATA';
+  return 'HIGH_DATA';
+}
+
+/** 見込み客の集め方。チャネルによって獲得コストは桁が変わるため必ず分けて扱う */
+export type AcquisitionChannelKey =
+  | 'OUTBOUND_CALL'
+  | 'OUTBOUND_EMAIL'
+  | 'FORM_OUTREACH'
+  | 'X_ORGANIC'
+  | 'NOTE_ORGANIC'
+  | 'SEO'
+  | 'PAID_ADS'
+  | 'REFERRAL';
+
+export const ACQUISITION_CHANNEL_LABEL: Record<AcquisitionChannelKey, string> = {
+  OUTBOUND_CALL: '電話営業',
+  OUTBOUND_EMAIL: 'メール営業',
+  FORM_OUTREACH: '問い合わせフォーム',
+  X_ORGANIC: 'X自然流入',
+  NOTE_ORGANIC: 'note',
+  SEO: 'SEO',
+  PAID_ADS: '広告',
+  REFERRAL: '紹介',
+};
+
+/**
+ * 「1件300円」を1種類の意味で使わないための分解。
+ * リード1件の単価と、成約1件の獲得総額（CAC）はまったく別の数字。
+ * 例: 1リード300円でも成約率1%ならCACは30,000円になる。
+ */
+export type CostBreakdown = {
+  /** リード1件を集めるのにかかる費用 */
+  leadAcquisitionCost: number;
+  /** 返信1件に対応する人件費 */
+  salesCost: number;
+  /** デモ1件を実施する費用 */
+  demoCost: number;
+  /** 成約1件を締めるまでの費用（見積・稟議対応など） */
+  closingCost: number;
+};
+
+/** 獲得コストの内訳。単価とCACの取り違えを画面上でも防ぐ */
+export type UnitCosts = {
+  costPerLead: number;
+  costPerReply: number;
+  costPerDemo: number;
+  cac: number;
+  breakdown: CostBreakdown;
+};
+
 export type FunnelAssumption = {
+  /** どの集め方を前提にした数字か。CACはチャネルで桁が変わるため必須 */
+  channel: AcquisitionChannelKey;
   leads: number;
   replyRate: [number, number];
   demoRate: [number, number];
   closeRate: [number, number];
   churnRate: [number, number];
   monthlyPrice: number;
-  grossMarginRate: number;
-  costPerLead: number;
+  /** 実際の請求額は定価どおりにならない。定価に対する倍率の幅 */
+  arpuFactor: [number, number];
+  /** 1顧客あたり月のAPI原価 */
+  apiCostMonthly: [number, number];
+  /** 1顧客あたり月のサポート人件費 */
+  supportCostMonthly: [number, number];
+  /** 以下4つは「1件あたり」の費用。合計してからCACを出す */
+  costPerLead: [number, number];
+  salesCostPerReply: [number, number];
+  demoCostPerDemo: [number, number];
+  closingCostPerWin: [number, number];
   fixedMonthlyCost: number;
+  /** この仮定が実測に基づくか。実績CSVが入ると MEASURED になる */
+  source: ValueSource;
+  sampleSize: number;
+  dataVolume: DataVolume;
 };
 
 export type Percentiles = {
@@ -176,14 +259,26 @@ export type OutcomeProbabilities = {
   mrr1m: number; // MRR 100万円に到達する確率
 };
 
-/** 価格を変えたときの比較。販売数×利益×継続率のバランスで選ぶ */
+/**
+ * 価格を変えたときの比較。
+ * 価格ラベルと採算数値が食い違うと判断を誤るため、表示に必要な数字は
+ * すべて「その価格で回したシミュレーション」から取った値をここに持たせる。
+ * 画面はこの1件だけを見る。他の場所の数字と混ぜない。
+ */
 export type PriceScenario = {
   label: 'LOW_PRICE' | 'STANDARD' | 'PREMIUM';
   monthlyPrice: number;
   contractsMedian: number;
   mrrMedian: number;
+  /** 12ヶ月の売上（解約を反映した累計） */
+  revenueYear1Median: number;
+  /** 12ヶ月の粗利益（売上 − API原価 − サポート費） */
+  grossProfitYear1Median: number;
   netProfitYear1Median: number;
+  cacMedian: number;
+  ltvMedian: number;
   ltvCacMedian: number;
+  paybackMonthsMedian: number;
   probabilities: OutcomeProbabilities;
   balanceScore: number; // 0〜100。利益中央値・LTV/CAC・赤字確率の3点から機械的に算出
 };
@@ -194,6 +289,62 @@ export const PRICE_SCENARIOS: { label: PriceScenario['label']; monthlyPrice: num
   { label: 'PREMIUM', monthlyPrice: 98000, note: '単価を取る価格。成約率は下がるが1件の重みが増す' },
 ];
 
+/**
+ * 「赤字だから捨てる」で終わらせないための分類。
+ * 同じ赤字でも、事業そのものが成立しないのか、売り方だけが悪いのかで打ち手が違う。
+ */
+export type ProfitVerdict =
+  | 'PASS'
+  | 'CONDITIONAL_PASS'
+  | 'CHANNEL_PROBLEM'
+  | 'PRICING_PROBLEM'
+  | 'UNIT_ECONOMICS_PROBLEM'
+  | 'INSUFFICIENT_DATA'
+  | 'FAIL';
+
+export const PROFIT_VERDICT_LABEL: Record<ProfitVerdict, string> = {
+  PASS: '黒字',
+  CONDITIONAL_PASS: '条件つき黒字',
+  CHANNEL_PROBLEM: '売り方の問題',
+  PRICING_PROBLEM: '価格の問題',
+  UNIT_ECONOMICS_PROBLEM: '採算構造の問題',
+  INSUFFICIENT_DATA: '判定不能',
+  FAIL: '黒字化の道筋なし',
+};
+
+/** 黒字化に必要な水準。到達できない項目は null（0にしない） */
+export type BreakEven = {
+  currentCac: number;
+  currentCloseRate: number;
+  currentChurnRate: number;
+  currentArpu: number;
+  currentGrossMarginRate: number;
+  currentLeads: number;
+  /** 12ヶ月利益の中央値が0以上になる境界 */
+  maxCac: number | null;
+  minCloseRate: number | null;
+  minArpu: number | null;
+  maxChurnRate: number | null;
+  minGrossMarginRate: number | null;
+  minLeads: number | null;
+  /** 人が読む1行 */
+  summary: string;
+};
+
+/** 集め方を変えたらどうなるかの比較（CASE A〜E） */
+export type ChannelCase = {
+  key: string;
+  label: string;
+  mix: { channel: AcquisitionChannelKey; share: number }[];
+  costs: UnitCosts;
+  contractsMedian: number;
+  netProfitYear1Median: number;
+  ltvCacMedian: number;
+  lossProbability: number;
+  source: ValueSource;
+  dataVolume: DataVolume;
+};
+
 export type SalesBacktest = {
   ideaId: string;
   runs: number;
@@ -201,12 +352,19 @@ export type SalesBacktest = {
   contracts: Percentiles;
   mrr: Percentiles;
   ltvCac: Percentiles;
+  cac: Percentiles;
   paybackMonths: Percentiles;
   netProfitYear1: Percentiles;
   probabilities: OutcomeProbabilities;
   scenarios: PriceScenario[];
   bestScenario: PriceScenario['label'] | null;
+  channelCases: ChannelCase[];
+  bestChannelCase: string | null;
+  breakEven: BreakEven | null;
   verdict: 'PASS' | 'FAIL' | 'INSUFFICIENT_DATA';
+  /** 赤字の原因まで踏み込んだ分類 */
+  verdictClass: ProfitVerdict;
+  whatMustChange: string[];
   reason: string;
   ranAt: string;
 };

@@ -41,6 +41,7 @@ const FUNCTION_JA: { words: string[]; ja: string }[] = [
 const INDUSTRY_JA: { words: string[]; ja: string }[] = [
   { words: ['real estate', 'realtor', 'property'], ja: '不動産' },
   { words: ['dentist', 'dental'], ja: '歯科医院' },
+  { words: ['veterinar', 'animal hospital', 'pet clinic'], ja: '動物病院' },
   { words: ['clinic', 'medical', 'healthcare', 'patient'], ja: 'クリニック' },
   { words: ['law firm', 'lawyer', 'attorney', 'accountant', 'cpa'], ja: '士業' },
   { words: ['restaurant', 'cafe', 'food service'], ja: '飲食店' },
@@ -67,8 +68,14 @@ const CATEGORY_JA: Record<Category, string> = {
   UNKNOWN: 'AIツール',
 };
 
+/**
+ * 1案件あたりの検索語の上限。無料枠を浪費しないため5本まで。
+ * 1本だけだと「その言い方をしない競合」を丸ごと見落とすので、言い換えを必ず複数持つ。
+ */
+export const MAX_QUERIES = 5;
+
 export type JaKeywords = {
-  /** 実際に各チャネルへ投げる検索語（多くても3本。API課金と時間を抑えるため） */
+  /** 実際に検索へ投げる検索語（多くても5本。API課金と時間を抑えるため） */
   queries: string[];
   /** 見つけた機能語・業種語（根拠として保存する） */
   functionJa: string | null;
@@ -91,21 +98,32 @@ export function japaneseKeywords(idea: Pick<Idea, 'title' | 'summary' | 'categor
     if (t && !queries.includes(t)) queries.push(t);
   };
 
+  // 検索語は「業種を変える」「言い方を変える」「売り物の名前で引く」の3方向へ散らす。
+  // 同じ言い回しを繰り返しても同じ会社しか出ず、競合の見落としが減らないため。
   if (industryJa && functionJa) {
     push(`${industryJa} AI ${functionJa}`);
     push(`AI ${functionJa} ${industryJa} 導入`);
     push(`${industryJa} ${functionJa} 自動化`);
+    push(`AI ${functionJa} SaaS 日本`);
+    push(`${functionJa} 自動化 サービス 料金`);
   } else if (functionJa) {
     push(`AI ${functionJa}`);
     push(`${functionJa} 自動化 AI`);
     push(`AI ${functionJa} サービス`);
+    push(`AI ${functionJa} SaaS 日本`);
+    push(`${functionJa} 代行 料金`);
   } else if (industryJa) {
     push(`${industryJa} AI 導入`);
     push(`${industryJa} 向け AI ツール`);
+    push(`${industryJa} 業務 自動化 AI`);
+    push(`${industryJa} AI SaaS 日本`);
+    push(`${industryJa} DX 支援 料金`);
   } else {
     push(categoryJa);
     push(`${categoryJa} サービス`);
+    push(`${categoryJa} SaaS 日本`);
+    push(`${categoryJa} 導入 料金`);
   }
 
-  return { queries: queries.slice(0, 3), functionJa, industryJa, categoryJa };
+  return { queries: queries.slice(0, MAX_QUERIES), functionJa, industryJa, categoryJa };
 }

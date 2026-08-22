@@ -3,18 +3,47 @@ import path from 'node:path';
 import { MONEY_AND_OUTBOUND_ACTIONS_IMPLEMENTED, OUTBOUND_FLAGS, config } from '../lib/env';
 import { gradeFromScore } from '../lib/score';
 import { stageFromHits, stageRatio } from '../lib/japan';
-import { comparePrices, DEFAULT_ASSUMPTION, simulate } from '../lib/backtest/montecarlo';
+import {
+  compareChannels,
+  comparePrices,
+  DEFAULT_ASSUMPTION,
+  priceScenarioOf,
+  simulate,
+  solveBreakEven,
+} from '../lib/backtest/montecarlo';
+import { aggregateActuals, applyActuals, rateRange } from '../lib/economics/actuals';
+import { unitCosts } from '../lib/economics/channels';
+import { bestPriceView, priceViewMismatches } from '../lib/economics/price-view';
 import { rate } from '../lib/funnel';
 import { checkCompliance, isPublishable } from '../lib/compliance';
 import { buildUtm, parseUtm, withUtm } from '../lib/utm';
 import { LADDER } from '../lib/products';
-import { AI_CONFIDENCE_MIN, EVENT_TYPES, SCORE_WEIGHTS, type Idea } from '../lib/types';
+import {
+  AI_CONFIDENCE_MIN,
+  EVENT_TYPES,
+  PROFIT_VERDICT_LABEL,
+  SCORE_WEIGHTS,
+  dataVolumeOf,
+  type Idea,
+  type SalesBacktest,
+} from '../lib/types';
 import { suggestRatings } from '../lib/rating';
 import { preScoreOf, FUNNEL_STAGES } from '../lib/prescore';
 import { computeViability, regulatoryNote, VIABILITY_WEIGHTS } from '../lib/viability';
-import { japaneseKeywords } from '../lib/research/keywords-ja';
+import { MAX_QUERIES, japaneseKeywords } from '../lib/research/keywords-ja';
+import {
+  canonicalDomain,
+  googleSearchConfigured,
+  judgeFromSearches,
+  judgeItem,
+} from '../lib/research/google-search';
+import { channelFromSearch, hasEnoughEvidence } from '../lib/research/japan-researcher';
 import { classify, looksAiBusiness } from '../lib/sources/common';
 import { SOURCES } from '../lib/sources/registry';
+import { clusterOf, japanGapFactor } from '../lib/cluster';
+import { computeMoneyScore, MONEY_WEIGHTS } from '../lib/economics/money-score';
+import { DEFAULT_CONTENT_ASSUMPTION, NOTE_PRICES, runContentFunnel } from '../lib/economics/content-funnel';
+import { buildRankingsFrom, RANKING_FORMULA, type Material } from '../lib/ranking';
 
 type Check = { name: string; ok: boolean; detail?: string };
 const checks: Check[] = [];
@@ -80,7 +109,7 @@ add('同じ条件なら同じ結果になる（再現性）', JSON.stringify(mc)
 add('単一の固定値ではなく幅が出る', mc.contracts.p10 < mc.contracts.p90);
 add('MRRが円単位で妥当な桁', mc.mrr.median > 0 && mc.mrr.median < 1_000_000_000);
 
-const badMc = simulate({ ...DEFAULT_ASSUMPTION, costPerLead: 100000 }, 500);
+const badMc = simulate({ ...DEFAULT_ASSUMPTION, costPerLead: [100000, 100000] }, 500);
 add('獲得コストを上げるとLTV÷CACが下がる', badMc.ltvCac.median < mc.ltvCac.median);
 
 // --- 最低サンプル数 ---
@@ -134,6 +163,144 @@ add('価格シナリオが3本（29,800/49,800/98,000）出る',
 add('価格を上げると成約数の中央値が減る',
   priced.scenarios[2].contractsMedian < priced.scenarios[0].contractsMedian);
 add('最もバランスの良い価格が1つ選ばれる', priced.best !== null);
+
+// --- 価格ラベルと採算数値の一致（回帰テスト） ---
+// 以前「価格候補 98,000円」と表示しながら、利益・LTV・赤字確率は49,800円前提の
+// 全体シミュレーションの数字を出していた。同じ取り違えが再発したらここで落とす。
+const salesLike: SalesBacktest = {
+  ...simulate(DEFAULT_ASSUMPTION, 500),
+  ideaId: 'test_1',
+  runs: 500,
+  assumption: DEFAULT_ASSUMPTION,
+  scenarios: priced.scenarios,
+  bestScenario: priced.best,
+  channelCases: [],
+  bestChannelCase: null,
+  breakEven: null,
+  verdict: 'FAIL',
+  verdictClass: 'FAIL',
+  whatMustChange: [],
+  reason: '',
+  ranAt: '2026-08-22T00:00:00.000Z',
+};
+const view = bestPriceView(salesLike);
+add('推奨価格の表示用データが取り出せる', view !== null);
+add('正常な試算では価格ラベルと採算数値がズレない', priceViewMismatches(salesLike).length === 0,
+  priceViewMismatches(salesLike).join(','));
+add('価格ラベルに対応するシナリオが無ければ検知する',
+  priceViewMismatches({ ...salesLike, bestScenario: 'PREMIUM',
+    scenarios: priced.scenarios.filter((s) => s.label === 'LOW_PRICE') }).length > 0);
+const fresh = view
+  ? priceScenarioOf(DEFAULT_ASSUMPTION, { label: view.label, monthlyPrice: view.priceCandidateYen }, 500)
+  : null;
+add('価格候補の採算数値は「その価格で回した試算」と一致する',
+  view !== null && fresh !== null &&
+  view.netProfitYear1Median === fresh.netProfitYear1Median &&
+  view.ltvCacMedian === fresh.ltvCacMedian &&
+  view.cacMedian === fresh.cacMedian &&
+  view.mrrMedian === fresh.mrrMedian &&
+  view.lossProbability === fresh.probabilities.lossYear1);
+add('価格候補が標準価格でないなら、全体試算の数字とは別の値になる（取り違えの検知）',
+  view !== null &&
+  (view.priceCandidateYen === DEFAULT_ASSUMPTION.monthlyPrice ||
+    view.ltvCacMedian !== salesLike.ltvCac.median),
+  `価格候補${view?.priceCandidateYen} / シナリオLTV÷CAC ${view?.ltvCacMedian} / 全体LTV÷CAC ${salesLike.ltvCac.median}`);
+add('価格ごとに11項目すべてが揃っている',
+  priced.scenarios.every((s) =>
+    [s.contractsMedian, s.mrrMedian, s.revenueYear1Median, s.grossProfitYear1Median,
+     s.netProfitYear1Median, s.cacMedian, s.ltvMedian, s.ltvCacMedian, s.paybackMonthsMedian,
+     s.probabilities.lossYear1, s.probabilities.payback6m].every((v) => typeof v === 'number' && Number.isFinite(v))));
+
+// --- 獲得コストの分解（単価とCACを混同しない） ---
+const uc = unitCosts({
+  leads: 1000, replyRate: 1, demoRate: 1, closeRate: 0.01,
+  breakdown: { leadAcquisitionCost: 300, salesCost: 0, demoCost: 0, closingCost: 0 },
+});
+add('1リード300円でも成約率1%ならCACは30,000円（単価とCACを同じ数字にしない）',
+  uc.costPerLead === 300 && uc.cac === 30000, `単価${uc.costPerLead} / CAC${uc.cac}`);
+add('リード単価・返信単価・デモ単価・CACが別々に出る',
+  uc.costPerLead <= uc.costPerReply && uc.costPerReply <= uc.costPerDemo && uc.costPerDemo <= uc.cac);
+add('成約が0件ならCACは0ではなく到達不能として扱う',
+  !Number.isFinite(unitCosts({ leads: 1000, replyRate: 0, demoRate: 0, closeRate: 0,
+    breakdown: { leadAcquisitionCost: 300, salesCost: 0, demoCost: 0, closingCost: 0 } }).cac));
+add('粗利益率を固定値で持たない（売上−原価で計算する）', !/grossMarginRate/.test(sourceText));
+add('既定の前提は実測ではなく仮定と明示される',
+  DEFAULT_ASSUMPTION.source === 'ASSUMPTION' && DEFAULT_ASSUMPTION.dataVolume === 'NO_DATA');
+add('実績0件は NO_DATA', dataVolumeOf(0) === 'NO_DATA');
+add('実績29件は LOW_DATA（1件の成約で仮定を書き換えない）', dataVolumeOf(29) === 'LOW_DATA');
+add('実績100件以上で HIGH_DATA', dataVolumeOf(100) === 'HIGH_DATA');
+
+// --- 実績CSVの反映（少ない実績で仮定を書き換えない） ---
+const midOf = (r: [number, number]) => (r[0] + r[1]) / 2;
+const noActual = applyActuals(DEFAULT_ASSUMPTION, 'OUTBOUND_CALL', {});
+add('実績が1件も無ければ「仮定」のまま（実測を名乗らない）',
+  noActual.source === 'ASSUMPTION' && noActual.sampleSize === 0);
+const tinyRows = [{ date: '2026-08-01', channel: 'OUTBOUND_CALL' as const, campaign: 'c1',
+  leads: 3, cost: 900, calls: 3, emails: null, replies: 3, demos: 3, meetings: null,
+  contracts: 1, revenue: 49800 }];
+const tiny = aggregateActuals(tinyRows);
+const tinyA = applyActuals(DEFAULT_ASSUMPTION, 'OUTBOUND_CALL', tiny);
+add('実績が入れば「実測」と表示される', tinyA.source === 'MEASURED' && tinyA.dataVolume === 'LOW_DATA');
+add('実績3件・成約1件で成約率を33%まで引き上げない（1件の成約で書き換えない）',
+  midOf(tinyA.closeRate) < 0.25, `成約率の中央 ${midOf(tinyA.closeRate).toFixed(3)}`);
+const bigRows = Array.from({ length: 10 }, (_, i) => ({
+  date: `2026-08-0${i}`, channel: 'OUTBOUND_CALL' as const, campaign: 'c2',
+  leads: 100, cost: 30000, calls: 100, emails: null, replies: 50, demos: 30,
+  meetings: null, contracts: 6, revenue: 298800 }));
+const big = aggregateActuals(bigRows);
+const bigA = applyActuals(DEFAULT_ASSUMPTION, 'OUTBOUND_CALL', big);
+add('実績が積み上がれば実測値に近づく',
+  Math.abs(midOf(bigA.closeRate) - 0.2) < Math.abs(midOf(tinyA.closeRate) - 0.3333));
+add('実績が多いほど幅（信頼区間）は狭くなる',
+  (rateRange(60, 300, [0, 1])[1] - rateRange(60, 300, [0, 1])[0]) <
+  (rateRange(1, 3, [0, 1])[1] - rateRange(1, 3, [0, 1])[0]));
+add('実績1000件は HIGH_DATA になる', bigA.dataVolume === 'HIGH_DATA' && bigA.sampleSize === 1000);
+add('成約0件のときCACは0円ではなくnull',
+  aggregateActuals([{ ...tinyRows[0], contracts: 0, revenue: 0 }]).OUTBOUND_CALL?.cac === null);
+add('実測のリード単価と成約単価(CAC)は別の数字として出る',
+  (big.OUTBOUND_CALL?.costPerLead ?? 0) === 300 && (big.OUTBOUND_CALL?.cac ?? 0) === 5000,
+  `単価${big.OUTBOUND_CALL?.costPerLead} / CAC${big.OUTBOUND_CALL?.cac}`);
+
+// --- 集め方（チャネル）別の比較 ---
+const chans = compareChannels(DEFAULT_ASSUMPTION, 300);
+add('集め方の比較が5通り（CASE A〜E）出る', chans.cases.length === 5);
+add('最も利益の出る集め方が1つ選ばれる', chans.best !== null);
+add('集め方によって成約1件あたりの獲得費が変わる',
+  new Set(chans.cases.map((c) => Math.round(c.costs.cac))).size >= 4);
+add('広告中心はテレアポ中心よりリード1件が高い',
+  (chans.cases.find((c) => c.key === 'CASE_A')?.costs.breakdown.leadAcquisitionCost ?? 0) >
+  (chans.cases.find((c) => c.key === 'CASE_B')?.costs.breakdown.leadAcquisitionCost ?? 0));
+add('チャネル比較も実測か仮定かを持つ', chans.cases.every((c) => c.source === 'ASSUMPTION'));
+
+// --- 黒字化の逆算 ---
+const be = solveBreakEven(DEFAULT_ASSUMPTION, 300);
+add('採算判定は7分類ある', Object.keys(PROFIT_VERDICT_LABEL).length === 7);
+add('現在の獲得費・成約率・単価が数字で出る',
+  be.currentCac > 0 && be.currentCloseRate > 0 && be.currentArpu > 0);
+add('黒字化に必要な水準が1行で説明される', be.summary.length > 0, be.summary);
+add('下げるべき項目は現状以下の値になる',
+  (be.maxCac === null || be.maxCac <= be.currentCac) &&
+  (be.maxChurnRate === null || be.maxChurnRate <= be.currentChurnRate));
+add('上げるべき項目は現状以上の値になる',
+  (be.minArpu === null || be.minArpu >= be.currentArpu) &&
+  (be.minCloseRate === null || be.minCloseRate >= be.currentCloseRate) &&
+  (be.minLeads === null || be.minLeads >= be.currentLeads));
+add('到達できない条件は0ではなくnullで返す',
+  Object.entries(be).every(([, v]) => v !== undefined));
+add('黒字化できる項目が1つ以上見つかる（赤字判定で終わらせない）',
+  [be.maxCac, be.minCloseRate, be.minArpu, be.maxChurnRate, be.minGrossMarginRate, be.minLeads]
+    .some((v) => v !== null), be.summary);
+// 獲得費だけが赤字の原因になっている案件では、「いくらまで下げれば黒字か」を出せること。
+// これが出せると、事業そのものではなく販売チャネルを変えれば良いと分かる。
+const beCac = solveBreakEven(
+  { ...DEFAULT_ASSUMPTION, fixedMonthlyCost: 0, costPerLead: [3000, 3000] },
+  300
+);
+add('獲得費だけが原因の案件は「いくらまで下げれば黒字か」を逆算できる',
+  beCac.maxCac !== null && beCac.maxCac < beCac.currentCac,
+  `現在${beCac.currentCac}円 → 必要${beCac.maxCac}円`);
+add('獲得費を下げても黒字にならない案件では、獲得費の上限をnullにする（下げれば直ると誤解させない）',
+  be.maxCac === null || be.maxCac > 0);
 
 // --- AI補助レーティング ---
 const demoIdea: Idea = {
@@ -207,6 +374,8 @@ const viaAll = computeViability(demoIdea, {
   japan: strongJapan, market: null,
   sales: { ...simulate(DEFAULT_ASSUMPTION, 200), ideaId: 'test_1', runs: 200,
     assumption: DEFAULT_ASSUMPTION, scenarios: [], bestScenario: null,
+    channelCases: [], bestChannelCase: null, breakEven: null,
+    verdictClass: 'FAIL', whatMustChange: [],
     verdict: 'FAIL', reason: '', ranAt: '2026-08-22T00:00:00.000Z' },
 });
 add('日本市場を調べた案件のほうが確度が高くなる', viaJapan.confidence > via.confidence);
@@ -224,9 +393,104 @@ add('一般業務は要専門家確認にならない',
 // --- 日本語キーワード生成 ---
 const kw = japaneseKeywords(demoIdea);
 add('日本語の検索語が生成される', kw.queries.length > 0 && kw.queries.every((q) => q.length > 0));
-add('検索語は最大3本まで（API課金を抑える）', kw.queries.length <= 3);
+add('検索語は最大5本まで（無料枠を浪費しない）', kw.queries.length <= MAX_QUERIES, `${kw.queries.length}本`);
+add('検索語を1案件1パターンにしない（3本以上の言い換えを持つ）', kw.queries.length >= 3, `${kw.queries.length}本`);
+add('同じ検索語を重複して投げない', new Set(kw.queries).size === kw.queries.length);
 add('同じ案件なら同じ検索語になる（比較可能にする）',
   JSON.stringify(kw.queries) === JSON.stringify(japaneseKeywords(demoIdea).queries));
+
+// --- 日本語一般検索（Google Custom Search） ---
+const gsSource = fs.readFileSync('lib/research/google-search.ts', 'utf8');
+add('鍵が未設定なら検索を実行せず止まる（推測で埋めない）',
+  gsSource.indexOf('googleSearchConfigured()') < gsSource.indexOf('customsearch/v1'));
+add('鍵はコードに書かず環境変数から読む',
+  !/AIza[0-9A-Za-z_-]{20,}/.test(gsSource) && !/AIza[0-9A-Za-z_-]{20,}/.test(fs.readFileSync('lib/env.ts', 'utf8')));
+add('接続状態を機械的に判定できる',
+  googleSearchConfigured() === Boolean(config.googleCseKey && config.googleCseCx),
+  googleSearchConfigured() ? '設定済み' : '未設定のため安全停止中');
+add('1案件あたりの検索本数に上限がある',
+  config.googleSearchPerIdea >= 1 && config.googleSearchPerIdea <= MAX_QUERIES, `${config.googleSearchPerIdea}本`);
+add('1日あたりの検索回数に上限がある', config.googleSearchDailyLimit > 0, `${config.googleSearchDailyLimit}回`);
+add('同じ検索語は再課金せずキャッシュから返す', gsSource.includes('search_cache'));
+
+add('同じ会社の別ページを1社として数える（ドメイン正規化）',
+  canonicalDomain('https://www.example.co.jp/price') === 'example.co.jp' &&
+  canonicalDomain('https://sub.example.co.jp/a') === 'example.co.jp' &&
+  canonicalDomain('https://example.com/x') === 'example.com');
+
+const serviceItem = judgeItem('AI 電話受付', {
+  title: 'AI電話受付システム｜株式会社サンプル',
+  url: 'https://sample.co.jp/aidenwa',
+  snippet: 'AI電話受付を月額制で提供。料金プランと無料トライアル、導入事例はこちら。',
+});
+const articleItem = judgeItem('AI 電話受付', {
+  title: 'AI電話受付とは？おすすめ10選を徹底比較',
+  url: 'https://boxil.jp/mag/a1234/',
+  snippet: 'AI電話受付とは何かを解説。おすすめサービスの比較ランキングとまとめ。',
+});
+add('売り物のページは類似サービスとして数える', serviceItem.isSimilarService && serviceItem.isDomestic);
+add('比較まとめ記事は競合として数えない', !articleItem.isSimilarService);
+add('競合名をタイトルから機械的に取り出す', serviceItem.competitorName.length > 0, serviceItem.competitorName);
+
+const searchRecord = (query: string, total: number, items: { title: string; url: string; snippet: string }[]) => ({
+  query,
+  timestamp: '2026-08-22T00:00:00.000Z',
+  totalResults: total,
+  topResults: items.map((i) => judgeItem(query, i)),
+  status: 'DATA_AVAILABLE' as const,
+  note: 'テスト',
+  fromCache: false,
+});
+
+const bigButArticles = judgeFromSearches([
+  searchRecord('AI 電話受付', 120_000, [
+    { title: 'AI電話受付とは？おすすめ10選を徹底比較', url: 'https://boxil.jp/mag/a1/', snippet: 'とは。比較ランキングまとめ。' },
+    { title: 'AI電話受付の最新ニュース', url: 'https://itmedia.co.jp/news/1', snippet: 'ニュースを解説。' },
+    { title: 'AI電話受付を使ってみた', url: 'https://note.com/user/n/1', snippet: '個人の感想まとめ。' },
+  ]),
+]);
+add('検索結果12万件でも記事ばかりなら競合0社と判定する',
+  bigButArticles.domesticCompetitors.length === 0 && bigButArticles.stage === 'NOT_FOUND',
+  `${bigButArticles.domesticCompetitors.length}社 / ${bigButArticles.stage}`);
+add('件数ではなく実サービス社数で判定したと根拠に残る',
+  bigButArticles.reason.includes('件数には記事やまとめが大量に含まれる'));
+
+const twoCompanies = judgeFromSearches([
+  searchRecord('AI 電話受付', 5000, [
+    { title: 'AI電話受付｜株式会社アルファ', url: 'https://alpha.co.jp/', snippet: 'AI電話受付の料金プラン。導入事例あり。' },
+    { title: 'AI電話受付 導入事例｜株式会社アルファ', url: 'https://alpha.co.jp/case/', snippet: 'AI電話受付のサービス導入事例と料金。' },
+  ]),
+  searchRecord('AI 電話受付 SaaS 日本', 4000, [
+    { title: 'AI電話受付 SaaS｜株式会社ベータ', url: 'https://beta.co.jp/', snippet: 'AI電話受付 SaaS の料金プラン。無料トライアルあり。' },
+  ]),
+]);
+add('同じ会社の2ページを1社に統合する', twoCompanies.domesticCompetitors.length === 2,
+  `${twoCompanies.domesticCompetitors.length}社`);
+add('国内競合2社なら EARLY と判定する', twoCompanies.stage === 'EARLY', twoCompanies.stage);
+add('検索本数が多いほど確度が上がる', twoCompanies.confidence > bigButArticles.confidence,
+  `${bigButArticles.confidence} → ${twoCompanies.confidence}`);
+
+const blockedSearch = judgeFromSearches([
+  { query: 'AI 電話受付', timestamp: '2026-08-22T00:00:00.000Z', totalResults: null, topResults: [],
+    status: 'UNAVAILABLE', note: 'GOOGLE_SEARCH_API_KEY が未設定', fromCache: false },
+]);
+add('検索できなかった案件は0社ではなく UNKNOWN にする',
+  blockedSearch.stage === 'UNKNOWN' && blockedSearch.confidence === 0 && blockedSearch.domesticCompetitors.length === 0);
+add('検索できなかった理由を根拠に残す', blockedSearch.reason.includes('0件ではない'));
+
+const priorResearch = {
+  ideaId: 'x', queries: [], channels: [], competitors: [], domesticCount: 2,
+  stage: 'EARLY' as const, confidence: 0.8, humanCorrected: false, reason: '', researchedAt: '',
+};
+add('十分な根拠がある案件は再検索しない（無料枠を未調査へ回す）', hasEnoughEvidence(priorResearch));
+add('確度が低い案件は調べ直す', !hasEnoughEvidence({ ...priorResearch, confidence: 0.35 }));
+add('判定不能の案件は確度が高くても調べ直す', !hasEnoughEvidence({ ...priorResearch, stage: 'UNKNOWN' }));
+add('一度も調べていない案件は必ず調べる', !hasEnoughEvidence(null));
+
+add('検索結果は画面のチャネル一覧にそのまま載る',
+  channelFromSearch(twoCompanies).status === 'DATA_AVAILABLE' &&
+  channelFromSearch(twoCompanies).competitors.length === 2);
+add('検索できなかったチャネルの件数は0ではなく未取得', channelFromSearch(blockedSearch).hits === null);
 
 // --- 計測イベント ---
 add('計測イベントは16種', EVENT_TYPES.length === 16, `${EVENT_TYPES.length}種`);
@@ -234,6 +498,125 @@ add('公開前の3段階（作成→承認→公開）が分かれている',
   EVENT_TYPES.includes('CONTENT_CREATED') && EVENT_TYPES.includes('CONTENT_APPROVED') && EVENT_TYPES.includes('CONTENT_PUBLISHED'));
 add('契約・継続・解約・入金が分かれている',
   EVENT_TYPES.includes('CONTRACT') && EVENT_TYPES.includes('RENEWAL') && EVENT_TYPES.includes('CHURN') && EVENT_TYPES.includes('REVENUE'));
+
+// --- 同じ商売をまとめる（CLUSTER） ---
+add('名前が違うだけの案件を同じ塊にまとめる',
+  clusterOf({ title: 'Sandra AI – AI receptionist for car dealerships', summary: '' }) ===
+    clusterOf({ title: 'Show HN: Slot.ai – Goal-Driven AI Phone Call Agent', summary: '' }));
+add('AI電話受付とAI営業は別の塊にする',
+  clusterOf({ title: 'AI receptionist', summary: 'answers real phone calls' }) !==
+    clusterOf({ title: 'AI SDR', summary: 'cold email outbound prospecting' }));
+add('どの塊にも入らない案件は無理に分類しない',
+  clusterOf({ title: 'A new programming language', summary: 'compiler research' }) === 'OTHER');
+add('日本市場が未調査なら空き度は0ではなく判定不能', japanGapFactor('UNKNOWN') === null);
+add('国内競合が見つからない方が空き度が高い',
+  (japanGapFactor('NOT_FOUND') as number) > (japanGapFactor('MATURE') as number));
+
+// --- Money Score の内訳 ---
+const emptyMoney = computeMoneyScore({
+  sales: null, japan: null, prospectFindability: null, willingnessToPay: null, regulated: false,
+});
+add('Money Score は8項目に分かれている', emptyMoney.items.length === 8);
+add('Money Score の配点は合計100点',
+  Object.values(MONEY_WEIGHTS).reduce((a, b) => a + b, 0) === 100);
+add('実測が無い項目は0点ではなく採点対象外',
+  emptyMoney.items.every((i) => i.earned === null) && emptyMoney.availableWeight === 0);
+add('全項目が採点対象外なら合計は0点で、満点にはならない', emptyMoney.total === 0);
+add('内訳には必ず「なぜその点か」の説明が付く',
+  emptyMoney.items.every((i) => i.reason.length > 0));
+add('内訳には根拠が実測か仮定かが必ず付く',
+  emptyMoney.items.every((i) => ['MEASURED', 'BACKTEST', 'ASSUMPTION', 'NONE'].includes(i.basis)));
+// 画面には推奨価格（例 98,000円）を出しながら、内訳だけ標準価格（49,800円）の
+// 数字で採点していたことがある。同じ取り違えが再発したらここで落とす。
+const pricedMoney = computeMoneyScore({
+  sales: salesLike, japan: null, prospectFindability: null, willingnessToPay: null, regulated: false,
+});
+const bestScenario = salesLike.scenarios.find((x) => x.label === salesLike.bestScenario);
+add('Money Scoreの内訳は画面に出す推奨価格と同じ金額で採点する',
+  pricedMoney.items.find((i) => i.key === 'arpu')?.reason.includes(
+    (bestScenario?.monthlyPrice ?? 0).toLocaleString()) === true);
+add('Money Scoreの赤字確率は推奨価格のシナリオから取る',
+  pricedMoney.items.find((i) => i.key === 'risk')?.reason.includes(
+    `${Math.round((bestScenario?.probabilities.lossYear1 ?? 0) * 100)}%`) === true);
+add('Money ScoreのLTV÷CACは推奨価格のシナリオから取る',
+  pricedMoney.items.find((i) => i.key === 'ltvCac')?.reason.includes(
+    String(bestScenario?.ltvCacMedian)) === true);
+
+// 採点は推奨価格シナリオの数字で行うので、テストもそのシナリオ側を書き換える
+const withPayback = (months: number): SalesBacktest => ({
+  ...salesLike,
+  scenarios: salesLike.scenarios.map((s) =>
+    s.label === salesLike.bestScenario ? { ...s, paybackMonthsMedian: months } : s),
+});
+const slowPayback = computeMoneyScore({
+  sales: withPayback(11),
+  japan: null, prospectFindability: null, willingnessToPay: null, regulated: false,
+});
+const fastPayback = computeMoneyScore({
+  sales: withPayback(2),
+  japan: null, prospectFindability: null, willingnessToPay: null, regulated: false,
+});
+add('獲得費は金額ではなく「粗利で何ヶ月かかって回収できるか」で採点する',
+  (slowPayback.items.find((i) => i.key === 'cac')?.earned ?? 99) <
+    (fastPayback.items.find((i) => i.key === 'cac')?.earned ?? 0));
+add('1年かけても回収できない獲得費は0点',
+  computeMoneyScore({
+    sales: withPayback(14),
+    japan: null, prospectFindability: null, willingnessToPay: null, regulated: false,
+  }).items.find((i) => i.key === 'cac')?.earned === 0);
+const lowConfidenceJapan = computeMoneyScore({
+  sales: null, japan: { domesticCount: 0, confidence: 0.35 },
+  prospectFindability: null, willingnessToPay: null, regulated: false,
+});
+add('日本市場の確度が低いときは「空きが大きい」と加点しない',
+  lowConfidenceJapan.items.find((i) => i.key === 'marketGap')?.earned === null);
+
+// --- note → SaaS ファネル ---
+const funnel = runContentFunnel(DEFAULT_CONTENT_ASSUMPTION, 300);
+add('note価格は980 / 2,980 / 9,800円の3本を比べる',
+  funnel.prices.length === NOTE_PRICES.length);
+add('note試算は仮定であると明示している', funnel.source === 'ASSUMPTION');
+add('高い価格ほど売れる本数は減る',
+  (funnel.prices.find((p) => p.priceYen === 980)?.notesSold30d.median ?? 0) >
+    (funnel.prices.find((p) => p.priceYen === 9800)?.notesSold30d.median ?? 0));
+add('制作にかかる自分の時間も費用に入れている',
+  funnel.prices.every((p) => p.acquisitionCost30d.median > 0));
+add('note手取りが集客費を上回らないなら「自腹が要る」と判定する',
+  funnel.prices.every((p) =>
+    p.selfFundingRatio >= 0.9 || p.acquisitionType === 'PAID_ACQUISITION'));
+
+// --- 4種ランキング ---
+const materials: Material[] = [
+  { ideaId: 'a', title: '調べ切った案件', growthRatio: 1.5, stage: 'NOT_FOUND', japanConfidence: 0.8,
+    money100: 60, moneyAvailableWeight: 85, opportunity100: 70, ltvCac: 4 },
+  { ideaId: 'b', title: '海外だけ伸びている未調査案件', growthRatio: 3, stage: null, japanConfidence: null,
+    money100: null, moneyAvailableWeight: 0, opportunity100: null, ltvCac: null },
+  { ideaId: 'c', title: '1項目だけ採点できた案件', growthRatio: null, stage: 'NOT_FOUND', japanConfidence: 0.8,
+    money100: 70, moneyAvailableWeight: 10, opportunity100: 90, ltvCac: null },
+];
+const rankings = buildRankingsFrom(materials, 10);
+add('順位表は4種類', rankings.length === 4);
+add('全ての順位表に計算式が付いている',
+  rankings.every((r) => r.formula.length > 0) && Object.keys(RANKING_FORMULA).length === 4);
+const trending = rankings.find((r) => r.key === 'TRENDING');
+add('海外で伸びている順は倍率が取れた案件だけを載せる', trending?.rows.length === 2);
+const money = rankings.find((r) => r.key === 'MONEY');
+add('ほとんど採点できていない案件はMoney順位に載せない（点が高いのではなく未調査）',
+  money?.rows.length === 1 && money?.rows[0]?.ideaId === 'a');
+add('未調査の案件が採点済みの案件より上に来ない',
+  (money?.rows ?? []).every((r) => r.ideaId !== 'c'));
+const bestBiz = rankings.find((r) => r.key === 'BEST_BUSINESS');
+add('総合順位は材料が欠けた案件を0点で載せず除外する',
+  bestBiz?.rows.length === 1 && bestBiz?.excluded === 2);
+add('除外された件数を必ず表示できる', rankings.every((r) => typeof r.excluded === 'number'));
+add('総合順位は掛け算のため1つでも低いと上位に来ない',
+  (bestBiz?.rows[0]?.score ?? 0) < 70);
+add('順位の根拠が1件ずつ文章で残る',
+  (bestBiz?.rows[0]?.basis.length ?? 0) > 0);
+const rankingDoc = fs.readFileSync('docs/RANKING.md', 'utf8');
+add('順位の計算式がドキュメントに書かれている',
+  rankingDoc.includes('BEST BUSINESS') && rankingDoc.includes('JAPAN GAP') &&
+  rankingDoc.includes('TRENDING') && rankingDoc.includes('MONEY'));
 
 // --- 出力 ---
 let failed = 0;

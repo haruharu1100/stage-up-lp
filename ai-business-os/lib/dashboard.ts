@@ -2,6 +2,9 @@ import { all } from './db/client';
 import { config, OUTBOUND_FLAGS } from './env';
 import { attributionByIdea, funnelSnapshot, saasKpi, type FunnelSnapshot, type SaasKpi } from './funnel';
 import { topOpportunities, type Opportunity } from './opportunities';
+import { buildClusters, type ClusterSummary } from './cluster';
+import { buildRankings, type Ranking } from './ranking';
+import { runContentFunnel, type ContentFunnelResult } from './economics/content-funnel';
 import type { Attribution, Grade, Idea } from './types';
 
 /** 「今日なにをすれば売上が伸びるか」を根拠つきで出す */
@@ -87,19 +90,26 @@ export type DashboardData = {
   scoredCount: number;
   opportunities: Opportunity[];
   attribution: Attribution[];
+  clusters: ClusterSummary[];
+  contentFunnel: ContentFunnelResult;
+  rankings: Ranking[];
 };
 
 export async function buildDashboard(): Promise<DashboardData> {
-  const [today, last7, last30, allTime, saas, ideas, opportunities, attribution] = await Promise.all([
-    funnelSnapshot(1),
-    funnelSnapshot(7),
-    funnelSnapshot(30),
-    funnelSnapshot(null),
-    saasKpi(),
-    listIdeaRows(200),
-    topOpportunities(10),
-    attributionByIdea(),
-  ]);
+  const [today, last7, last30, allTime, saas, ideas, opportunities, attribution, clusters, rankings] =
+    await Promise.all([
+      funnelSnapshot(1),
+      funnelSnapshot(7),
+      funnelSnapshot(30),
+      funnelSnapshot(null),
+      saasKpi(),
+      listIdeaRows(200),
+      topOpportunities(10),
+      attributionByIdea(),
+      buildClusters(),
+      buildRankings(),
+    ]);
+  const contentFunnel = runContentFunnel();
 
   const scored = ideas.filter((i) => i.grade !== null);
   const recommendations = recommend({ ideas, scored, last30, saas });
@@ -117,6 +127,9 @@ export async function buildDashboard(): Promise<DashboardData> {
     scoredCount: scored.length,
     opportunities,
     attribution: attribution.slice(0, 10),
+    clusters,
+    contentFunnel,
+    rankings,
   };
 }
 

@@ -1,11 +1,17 @@
 import { all, nowIso, run } from '../db/client';
+import { applyActuals } from '../economics/actuals';
+import { CHANNEL_CASES, CHANNEL_MODELS, blendedModel, unitCosts } from '../economics/channels';
 import { config } from '../env';
 import {
   PRICE_SCENARIOS,
+  dataVolumeOf,
+  type BreakEven,
+  type ChannelCase,
   type FunnelAssumption,
   type OutcomeProbabilities,
   type Percentiles,
   type PriceScenario,
+  type ProfitVerdict,
   type SalesBacktest,
 } from '../types';
 
@@ -18,8 +24,22 @@ function makeRng(seed: number) {
   };
 }
 
+const SEED = 20260822;
+
+/** 到達不能を Infinity のまま持つと集計が壊れるので、明らかに外れとわかる大きな値に置く */
+const UNREACHABLE_CAC = 9_999_999;
+const UNREACHABLE_PAYBACK = 999;
+
 function uniform(rng: () => number, range: [number, number]): number {
   return range[0] + (range[1] - range[0]) * rng();
+}
+
+function mid(r: [number, number]): number {
+  return (r[0] + r[1]) / 2;
+}
+
+function scaleRange(r: [number, number], f: number, cap = Number.POSITIVE_INFINITY): [number, number] {
+  return [Math.min(cap, r[0] * f), Math.min(cap, r[1] * f)];
 }
 
 function percentiles(values: number[]): Percentiles {
@@ -46,24 +66,44 @@ function round(n: number): number {
   return Math.round(n * 100) / 100;
 }
 
-/** ご指定のデフォルト分布。固定値にせず必ず幅を持たせる。 */
+/**
+ * 既定の前提。すべて仮定（ASSUMPTION）であり実測ではない。
+ * 費用は「電話営業」チャネルの人件費換算をそのまま使う。
+ * 以前は獲得費を「1件300円」の1つの数字で持っていたが、
+ * 1リード300円と成約1件あたり300円はまったく違う金額なので分解した。
+ */
+const CALL = CHANNEL_MODELS.OUTBOUND_CALL;
+
 export const DEFAULT_ASSUMPTION: FunnelAssumption = {
+  channel: 'OUTBOUND_CALL',
   leads: 1000,
   replyRate: [0.01, 0.05],
   demoRate: [0.1, 0.4],
   closeRate: [0.05, 0.3],
   churnRate: [0.01, 0.1],
   monthlyPrice: 49800,
-  grossMarginRate: 0.8,
-  costPerLead: 300,
+  arpuFactor: [0.85, 1.0],
+  apiCostMonthly: [2000, 8000],
+  supportCostMonthly: [3000, 12000],
+  costPerLead: CALL.costPerLead,
+  salesCostPerReply: CALL.salesCostPerReply,
+  demoCostPerDemo: CALL.demoCostPerDemo,
+  closingCostPerWin: CALL.closingCostPerWin,
   fixedMonthlyCost: 50000,
+  source: 'ASSUMPTION',
+  sampleSize: 0,
+  dataVolume: 'NO_DATA',
 };
 
 export type MonteCarloOutput = {
   contracts: Percentiles;
   mrr: Percentiles;
+  cac: Percentiles;
+  ltv: Percentiles;
   ltvCac: Percentiles;
   paybackMonths: Percentiles;
+  revenueYear1: Percentiles;
+  grossProfitYear1: Percentiles;
   netProfitYear1: Percentiles;
   probabilities: OutcomeProbabilities;
 };
@@ -71,13 +111,17 @@ export type MonteCarloOutput = {
 export function simulate(
   a: FunnelAssumption,
   runs = config.monteCarloRuns,
-  seed = 20260822
+  seed = SEED
 ): MonteCarloOutput {
   const rng = makeRng(seed);
   const contracts: number[] = [];
   const mrrs: number[] = [];
+  const cacs: number[] = [];
+  const ltvs: number[] = [];
   const ltvCacs: number[] = [];
   const paybacks: number[] = [];
+  const revenues: number[] = [];
+  const grossProfits: number[] = [];
   const profits: number[] = [];
 
   for (let i = 0; i < runs; i++) {
@@ -86,26 +130,51 @@ export function simulate(
     const close = uniform(rng, a.closeRate);
     const churn = Math.max(0.001, uniform(rng, a.churnRate));
 
+    const arpu = a.monthlyPrice * uniform(rng, a.arpuFactor);
+    const apiCost = uniform(rng, a.apiCostMonthly);
+    const supportCost = uniform(rng, a.supportCostMonthly);
+
+    const breakdown = {
+      leadAcquisitionCost: uniform(rng, a.costPerLead),
+      salesCost: uniform(rng, a.salesCostPerReply),
+      demoCost: uniform(rng, a.demoCostPerDemo),
+      closingCost: uniform(rng, a.closingCostPerWin),
+    };
+
     const replies = a.leads * reply;
     const demos = replies * demo;
     const wins = demos * close;
 
-    const mrr = wins * a.monthlyPrice;
-    const grossPerMonth = a.monthlyPrice * a.grossMarginRate;
+    const uc = unitCosts({
+      leads: a.leads,
+      replyRate: reply,
+      demoRate: demo,
+      closeRate: close,
+      breakdown,
+    });
+    const acquisitionCost =
+      a.leads * breakdown.leadAcquisitionCost +
+      replies * breakdown.salesCost +
+      demos * breakdown.demoCost +
+      wins * breakdown.closingCost;
 
-    // CAC = リスト獲得コスト全体 ÷ 成約数
-    const acquisitionCost = a.leads * a.costPerLead;
-    const cac = wins > 0 ? acquisitionCost / wins : Number.POSITIVE_INFINITY;
+    const mrr = wins * arpu;
+    // 粗利は「率」ではなく計算値。売上から1顧客あたりのAPI原価とサポート費を引いた残り
+    const grossPerMonth = arpu - apiCost - supportCost;
 
     // LTV = 月次粗利 ÷ 解約率（継続月数の期待値 = 1/churn）
     const ltv = grossPerMonth / churn;
-    const ltvCac = Number.isFinite(cac) && cac > 0 ? ltv / cac : 0;
-    const payback = Number.isFinite(cac) && grossPerMonth > 0 ? cac / grossPerMonth : Number.POSITIVE_INFINITY;
+    const cacFinite = Number.isFinite(uc.cac);
+    const ltvCac = cacFinite && uc.cac > 0 ? ltv / uc.cac : 0;
+    const payback =
+      cacFinite && grossPerMonth > 0 ? uc.cac / grossPerMonth : UNREACHABLE_PAYBACK;
 
-    // 1年目の純利益：解約を月次で反映した粗利の累計 − 獲得コスト − 固定費
+    // 12ヶ月：解約を月次で反映した売上と粗利の累計
     let active = wins;
+    let revenue = 0;
     let gross = 0;
     for (let m = 0; m < 12; m++) {
+      revenue += active * arpu;
       gross += active * grossPerMonth;
       active = active * (1 - churn);
     }
@@ -113,16 +182,24 @@ export function simulate(
 
     contracts.push(wins);
     mrrs.push(mrr);
+    cacs.push(cacFinite ? uc.cac : UNREACHABLE_CAC);
+    ltvs.push(ltv);
     ltvCacs.push(ltvCac);
-    paybacks.push(Number.isFinite(payback) ? payback : 999);
+    paybacks.push(Math.min(UNREACHABLE_PAYBACK, payback));
+    revenues.push(revenue);
+    grossProfits.push(gross);
     profits.push(net);
   }
 
   return {
     contracts: percentiles(contracts),
     mrr: percentiles(mrrs),
+    cac: percentiles(cacs),
+    ltv: percentiles(ltvs),
     ltvCac: percentiles(ltvCacs),
     paybackMonths: percentiles(paybacks),
+    revenueYear1: percentiles(revenues),
+    grossProfitYear1: percentiles(grossProfits),
     netProfitYear1: percentiles(profits),
     probabilities: {
       lossYear1: shareOf(profits, (v) => v < 0),
@@ -151,27 +228,43 @@ function adjustForPrice(a: FunnelAssumption, monthlyPrice: number): FunnelAssump
   };
 }
 
+/**
+ * 価格ごとに、その価格で回したシミュレーションだけを使って表示用の数字を作る。
+ * 「価格候補は98,000円なのに利益は49,800円のときの数字」という食い違いを
+ * 構造的に起こせないようにするため、1シナリオ＝1シミュレーションで閉じる。
+ */
+export function priceScenarioOf(
+  a: FunnelAssumption,
+  p: { label: PriceScenario['label']; monthlyPrice: number },
+  runs = config.monteCarloRuns
+): PriceScenario {
+  const out = simulate(adjustForPrice(a, p.monthlyPrice), runs);
+  // バランス点：利益中央値(50点) ＋ LTV/CAC(30点) ＋ 赤字にならない確率(20点)
+  const profitPart = Math.min(1, Math.max(0, out.netProfitYear1.median / 6_000_000)) * 50;
+  const ltvPart = Math.min(1, Math.max(0, out.ltvCac.median / 5)) * 30;
+  const safePart = (1 - out.probabilities.lossYear1) * 20;
+  return {
+    label: p.label,
+    monthlyPrice: p.monthlyPrice,
+    contractsMedian: out.contracts.median,
+    mrrMedian: out.mrr.median,
+    revenueYear1Median: out.revenueYear1.median,
+    grossProfitYear1Median: out.grossProfitYear1.median,
+    netProfitYear1Median: out.netProfitYear1.median,
+    cacMedian: out.cac.median,
+    ltvMedian: out.ltv.median,
+    ltvCacMedian: out.ltvCac.median,
+    paybackMonthsMedian: out.paybackMonths.median,
+    probabilities: out.probabilities,
+    balanceScore: Math.round((profitPart + ltvPart + safePart) * 10) / 10,
+  };
+}
+
 export function comparePrices(
   a: FunnelAssumption,
   runs = config.monteCarloRuns
 ): { scenarios: PriceScenario[]; best: PriceScenario['label'] | null } {
-  const scenarios: PriceScenario[] = PRICE_SCENARIOS.map((p) => {
-    const out = simulate(adjustForPrice(a, p.monthlyPrice), runs);
-    // バランス点：利益中央値(50点) × LTV/CAC(30点) × 赤字にならない確率(20点)
-    const profitPart = Math.min(1, Math.max(0, out.netProfitYear1.median / 6_000_000)) * 50;
-    const ltvPart = Math.min(1, out.ltvCac.median / 5) * 30;
-    const safePart = (1 - out.probabilities.lossYear1) * 20;
-    return {
-      label: p.label,
-      monthlyPrice: p.monthlyPrice,
-      contractsMedian: out.contracts.median,
-      mrrMedian: out.mrr.median,
-      netProfitYear1Median: out.netProfitYear1.median,
-      ltvCacMedian: out.ltvCac.median,
-      probabilities: out.probabilities,
-      balanceScore: Math.round((profitPart + ltvPart + safePart) * 10) / 10,
-    };
-  });
+  const scenarios: PriceScenario[] = PRICE_SCENARIOS.map((p) => priceScenarioOf(a, p, runs));
   const best = scenarios.reduce<PriceScenario | null>(
     (acc, s) => (acc === null || s.balanceScore > acc.balanceScore ? s : acc),
     null
@@ -179,15 +272,318 @@ export function comparePrices(
   return { scenarios, best: best ? best.label : null };
 }
 
+/** 集め方を CASE A〜E に差し替えた前提を作る */
+function withChannelCase(a: FunnelAssumption, mix: ChannelCase['mix']): FunnelAssumption {
+  const bm = blendedModel(mix);
+  return {
+    ...a,
+    channel: mix[0].channel,
+    // 現実的に触れる件数の上限を超えないようにする。無限にリードは増やせない
+    leads: Math.max(1, Math.min(a.leads, Math.round(bm.monthlyLeadCeiling))),
+    replyRate: bm.replyRate,
+    demoRate: bm.demoRate,
+    closeRate: bm.closeRate,
+    costPerLead: bm.costPerLead,
+    salesCostPerReply: bm.salesCostPerReply,
+    demoCostPerDemo: bm.demoCostPerDemo,
+    closingCostPerWin: bm.closingCostPerWin,
+  };
+}
+
+export function compareChannels(
+  a: FunnelAssumption,
+  runs = config.monteCarloRuns
+): { cases: ChannelCase[]; best: string | null } {
+  const cases: ChannelCase[] = CHANNEL_CASES.map((c) => {
+    const ca = withChannelCase(a, c.mix);
+    const out = simulate(ca, runs);
+    const costs = unitCosts({
+      leads: ca.leads,
+      replyRate: mid(ca.replyRate),
+      demoRate: mid(ca.demoRate),
+      closeRate: mid(ca.closeRate),
+      breakdown: {
+        leadAcquisitionCost: mid(ca.costPerLead),
+        salesCost: mid(ca.salesCostPerReply),
+        demoCost: mid(ca.demoCostPerDemo),
+        closingCost: mid(ca.closingCostPerWin),
+      },
+    });
+    return {
+      key: c.key,
+      label: c.label,
+      mix: c.mix,
+      costs,
+      contractsMedian: out.contracts.median,
+      netProfitYear1Median: out.netProfitYear1.median,
+      ltvCacMedian: out.ltvCac.median,
+      lossProbability: out.probabilities.lossYear1,
+      source: a.source,
+      dataVolume: a.dataVolume,
+    };
+  });
+  const best = cases.reduce<ChannelCase | null>(
+    (acc, c) => (acc === null || c.netProfitYear1Median > acc.netProfitYear1Median ? c : acc),
+    null
+  );
+  return { cases, best: best ? best.key : null };
+}
+
+/**
+ * 黒字化の境界を二分探索で求める。
+ * 「赤字」で終わらせず「何をどこまで変えれば黒字か」を数字で出すための逆算。
+ * 到達できない項目は 0 ではなく null にする（0にすると達成済みに見えてしまう）。
+ */
+function bisect(
+  net: (f: number) => number,
+  lo: number,
+  hi: number,
+  betterAtHigh: boolean
+): number | null {
+  const okLo = net(lo) >= 0;
+  const okHi = net(hi) >= 0;
+  if (betterAtHigh) {
+    if (!okHi) return null;
+    if (okLo) return lo;
+    let a = lo;
+    let b = hi;
+    for (let i = 0; i < 14; i++) {
+      const m = (a + b) / 2;
+      if (net(m) >= 0) b = m;
+      else a = m;
+    }
+    return b;
+  }
+  if (!okLo) return null;
+  if (okHi) return hi;
+  let a = lo;
+  let b = hi;
+  for (let i = 0; i < 14; i++) {
+    const m = (a + b) / 2;
+    if (net(m) >= 0) a = m;
+    else b = m;
+  }
+  return a;
+}
+
+export function solveBreakEven(a: FunnelAssumption, runs = 400): BreakEven {
+  const solverRuns = Math.max(200, Math.min(runs, 400));
+  const netOf = (x: FunnelAssumption) => simulate(x, solverRuns).netProfitYear1.median;
+
+  const baseCosts = unitCosts({
+    leads: a.leads,
+    replyRate: mid(a.replyRate),
+    demoRate: mid(a.demoRate),
+    closeRate: mid(a.closeRate),
+    breakdown: {
+      leadAcquisitionCost: mid(a.costPerLead),
+      salesCost: mid(a.salesCostPerReply),
+      demoCost: mid(a.demoCostPerDemo),
+      closingCost: mid(a.closingCostPerWin),
+    },
+  });
+  const currentCac = Number.isFinite(baseCosts.cac) ? Math.round(baseCosts.cac) : UNREACHABLE_CAC;
+  const currentArpu = Math.round(a.monthlyPrice * mid(a.arpuFactor));
+  const currentGross = currentArpu - mid(a.apiCostMonthly) - mid(a.supportCostMonthly);
+  const currentGrossMarginRate = currentArpu > 0 ? round(currentGross / currentArpu) : 0;
+
+  // 獲得費だけを下げたら黒字になるか（＝売り方の問題かどうか）
+  const cacFactor = bisect(
+    (f) =>
+      netOf({
+        ...a,
+        costPerLead: scaleRange(a.costPerLead, f),
+        salesCostPerReply: scaleRange(a.salesCostPerReply, f),
+        demoCostPerDemo: scaleRange(a.demoCostPerDemo, f),
+        closingCostPerWin: scaleRange(a.closingCostPerWin, f),
+      }),
+    0.02,
+    1,
+    false
+  );
+
+  // 成約率だけを上げたら黒字になるか
+  const closeFactor = bisect(
+    (f) => netOf({ ...a, closeRate: scaleRange(a.closeRate, f, 0.95) }),
+    1,
+    12,
+    true
+  );
+
+  // 単価だけを上げたら黒字になるか（＝価格の問題かどうか）
+  const arpuFactor = bisect(
+    (f) => netOf({ ...a, monthlyPrice: a.monthlyPrice * f }),
+    1,
+    8,
+    true
+  );
+
+  // 解約率だけを下げたら黒字になるか
+  const churnFactor = bisect(
+    (f) => netOf({ ...a, churnRate: scaleRange(a.churnRate, f, 0.95) }),
+    0.05,
+    1,
+    false
+  );
+
+  // 原価（API＋サポート）だけを下げたら黒字になるか
+  const costFactor = bisect(
+    (f) =>
+      netOf({
+        ...a,
+        apiCostMonthly: scaleRange(a.apiCostMonthly, f),
+        supportCostMonthly: scaleRange(a.supportCostMonthly, f),
+      }),
+    0,
+    1,
+    false
+  );
+
+  // リード数だけを増やしたら黒字になるか
+  const leadFactor = bisect(
+    (f) => netOf({ ...a, leads: Math.round(a.leads * f) }),
+    1,
+    20,
+    true
+  );
+
+  const maxCac = cacFactor === null ? null : Math.round(currentCac * cacFactor);
+  const minCloseRate =
+    closeFactor === null ? null : round(Math.min(0.95, mid(a.closeRate) * closeFactor));
+  const minArpu = arpuFactor === null ? null : Math.round(currentArpu * arpuFactor);
+  const maxChurnRate =
+    churnFactor === null ? null : round(Math.min(0.95, mid(a.churnRate) * churnFactor));
+  const minGrossMarginRate =
+    costFactor === null || currentArpu <= 0
+      ? null
+      : round(
+          (currentArpu - (mid(a.apiCostMonthly) + mid(a.supportCostMonthly)) * costFactor) /
+            currentArpu
+        );
+  const minLeads = leadFactor === null ? null : Math.round(a.leads * leadFactor);
+
+  const parts: string[] = [];
+  if (maxCac !== null && maxCac < currentCac)
+    parts.push(`獲得費を1件${currentCac.toLocaleString()}円→${maxCac.toLocaleString()}円`);
+  if (minCloseRate !== null && minCloseRate > mid(a.closeRate))
+    parts.push(
+      `成約率を${Math.round(mid(a.closeRate) * 100)}%→${Math.round(minCloseRate * 100)}%`
+    );
+  if (minArpu !== null && minArpu > currentArpu)
+    parts.push(`単価を${currentArpu.toLocaleString()}円→${minArpu.toLocaleString()}円`);
+
+  const summary =
+    parts.length > 0
+      ? `${parts.join(' か ')} のいずれかで12ヶ月利益が黒字に届く`
+      : maxCac !== null || minCloseRate !== null || minArpu !== null
+        ? '現在の前提のままでも12ヶ月利益の中央値は黒字'
+        : '1項目だけを動かしても黒字にならない。採算構造そのものを変える必要がある';
+
+  return {
+    currentCac,
+    currentCloseRate: round(mid(a.closeRate)),
+    currentChurnRate: round(mid(a.churnRate)),
+    currentArpu,
+    currentGrossMarginRate,
+    currentLeads: a.leads,
+    maxCac,
+    minCloseRate,
+    minArpu,
+    maxChurnRate,
+    minGrossMarginRate,
+    minLeads,
+    summary,
+  };
+}
+
+/** 赤字の原因を分類する。同じ赤字でも打ち手が違うため、FAILの一言で終わらせない */
+function classify(
+  a: FunnelAssumption,
+  out: MonteCarloOutput,
+  be: BreakEven | null,
+  verdict: SalesBacktest['verdict']
+): { verdictClass: ProfitVerdict; whatMustChange: string[] } {
+  if (verdict === 'INSUFFICIENT_DATA') {
+    return {
+      verdictClass: 'INSUFFICIENT_DATA',
+      whatMustChange: ['リード件数が少なすぎる。100件以上の母数を用意しないと確率の議論ができない'],
+    };
+  }
+  if (verdict === 'PASS') {
+    return { verdictClass: 'PASS', whatMustChange: [] };
+  }
+  if (!be) {
+    return { verdictClass: 'FAIL', whatMustChange: ['逆算に必要な前提が揃っていない'] };
+  }
+
+  const must: string[] = [];
+  if (be.maxCac !== null && be.maxCac < be.currentCac) {
+    must.push(
+      `成約1件あたりの獲得費を ${be.currentCac.toLocaleString()}円 → ${be.maxCac.toLocaleString()}円 以下へ下げる`
+    );
+  }
+  if (be.minCloseRate !== null && be.minCloseRate > be.currentCloseRate) {
+    must.push(
+      `成約率を ${Math.round(be.currentCloseRate * 100)}% → ${Math.round(be.minCloseRate * 100)}% へ上げる`
+    );
+  }
+  if (be.minArpu !== null && be.minArpu > be.currentArpu) {
+    must.push(
+      `1顧客あたり月額を ${be.currentArpu.toLocaleString()}円 → ${be.minArpu.toLocaleString()}円 へ上げる`
+    );
+  }
+  if (be.maxChurnRate !== null && be.maxChurnRate < be.currentChurnRate) {
+    must.push(
+      `月次解約率を ${Math.round(be.currentChurnRate * 100)}% → ${Math.round(be.maxChurnRate * 100)}% 以下へ下げる`
+    );
+  }
+  if (be.minGrossMarginRate !== null && be.minGrossMarginRate > be.currentGrossMarginRate) {
+    must.push(
+      `粗利益率を ${Math.round(be.currentGrossMarginRate * 100)}% → ${Math.round(be.minGrossMarginRate * 100)}% へ上げる`
+    );
+  }
+  if (be.minLeads !== null && be.minLeads > be.currentLeads) {
+    must.push(`月あたりのリード件数を ${be.currentLeads}件 → ${be.minLeads}件 へ増やす`);
+  }
+
+  // 利益は出ているのに合格線に届いていないだけなら、条件つき黒字として残す
+  if (out.netProfitYear1.median >= 0) {
+    return { verdictClass: 'CONDITIONAL_PASS', whatMustChange: must };
+  }
+
+  const cacFixable = be.maxCac !== null;
+  const priceFixable = be.minArpu !== null;
+
+  if (must.length === 0) {
+    return { verdictClass: 'FAIL', whatMustChange: ['1項目だけを動かしても黒字にならない'] };
+  }
+  // 獲得費を下げるだけで黒字になるなら、事業ではなく売り方（チャネル）の問題
+  if (cacFixable) {
+    return { verdictClass: 'CHANNEL_PROBLEM', whatMustChange: must };
+  }
+  if (priceFixable) {
+    return { verdictClass: 'PRICING_PROBLEM', whatMustChange: must };
+  }
+  return { verdictClass: 'UNIT_ECONOMICS_PROBLEM', whatMustChange: must };
+}
+
+/** 実績CSVがあればそれを反映した前提を返す。無ければ仮定のまま */
+export function currentAssumption(
+  channel: FunnelAssumption['channel'] = DEFAULT_ASSUMPTION.channel
+): FunnelAssumption {
+  return applyActuals(DEFAULT_ASSUMPTION, channel);
+}
+
 export async function runSalesBacktest(
   ideaId: string,
-  assumption: FunnelAssumption = DEFAULT_ASSUMPTION,
+  assumption: FunnelAssumption = currentAssumption(),
   runs = config.monteCarloRuns
 ): Promise<SalesBacktest> {
   const out = simulate(assumption, runs);
   const priced = comparePrices(assumption, runs);
+  const channels = compareChannels(assumption, runs);
 
-  // 合格条件：LTV/CAC の中央値がしきい値超 かつ 悲観側(P10)でも赤字が許容範囲
+  // 合格条件：LTV/CAC の中央値がしきい値超 かつ 悲観側(P10)でも契約が立つ
   let verdict: SalesBacktest['verdict'] = 'FAIL';
   let reason: string;
 
@@ -200,10 +596,13 @@ export async function runSalesBacktest(
       `LTV/CAC 中央値 ${out.ltvCac.median}（合格線 ${config.minLtvCacRatio}）。` +
       `悲観側(P10)でも契約 ${out.contracts.p10}件・MRR ${Math.round(out.mrr.p10).toLocaleString()}円。`;
   } else if (out.ltvCac.median < config.minLtvCacRatio) {
-    reason = `LTV/CAC 中央値 ${out.ltvCac.median} が合格線 ${config.minLtvCacRatio} 未満。獲得コストに対して回収が薄い。`;
+    reason = `LTV/CAC 中央値 ${out.ltvCac.median} が合格線 ${config.minLtvCacRatio} 未満。成約1件あたりの獲得費 ${Math.round(out.cac.median).toLocaleString()}円 に対して回収が薄い。`;
   } else {
     reason = `悲観側(P10)の契約数が ${out.contracts.p10}件で、外れた時に事業が成立しない。`;
   }
+
+  const breakEven = verdict === 'INSUFFICIENT_DATA' ? null : solveBreakEven(assumption, runs);
+  const { verdictClass, whatMustChange } = classify(assumption, out, breakEven, verdict);
 
   const result: SalesBacktest = {
     ideaId,
@@ -212,12 +611,18 @@ export async function runSalesBacktest(
     contracts: out.contracts,
     mrr: out.mrr,
     ltvCac: out.ltvCac,
+    cac: out.cac,
     paybackMonths: out.paybackMonths,
     netProfitYear1: out.netProfitYear1,
     probabilities: out.probabilities,
     scenarios: priced.scenarios,
     bestScenario: priced.best,
+    channelCases: channels.cases,
+    bestChannelCase: channels.best,
+    breakEven,
     verdict,
+    verdictClass,
+    whatMustChange,
     reason,
     ranAt: nowIso(),
   };
@@ -231,7 +636,16 @@ export async function runSalesBacktest(
       ideaId,
       runs,
       JSON.stringify(assumption),
-      JSON.stringify({ ...out, scenarios: priced.scenarios, bestScenario: priced.best }),
+      JSON.stringify({
+        ...out,
+        scenarios: priced.scenarios,
+        bestScenario: priced.best,
+        channelCases: channels.cases,
+        bestChannelCase: channels.best,
+        breakEven,
+        verdictClass,
+        whatMustChange,
+      }),
       verdict,
       reason,
       result.ranAt,
@@ -253,25 +667,44 @@ export async function getSalesBacktest(ideaId: string): Promise<SalesBacktest | 
   }>('SELECT * FROM sales_backtests WHERE idea_id = ?', [ideaId]);
   const r = rows[0];
   if (!r) return null;
-  const out = JSON.parse(r.result_json) as MonteCarloOutput & {
+  const out = JSON.parse(r.result_json) as Partial<MonteCarloOutput> & {
     scenarios?: PriceScenario[];
     bestScenario?: PriceScenario['label'] | null;
+    channelCases?: ChannelCase[];
+    bestChannelCase?: string | null;
+    breakEven?: BreakEven | null;
+    verdictClass?: ProfitVerdict;
+    whatMustChange?: string[];
   };
-  // 確率や価格シナリオを持たない古い保存形式は、欠けた項目を0で埋めず「未実施」として扱う
-  if (!out.probabilities) return null;
+  const assumption = JSON.parse(r.assumption_json) as Partial<FunnelAssumption>;
+
+  // 古い保存形式（獲得費が1つの数字だった頃・CAC分解を持たない頃）は
+  // 欠けた項目を0で埋めず「未実施」として扱う。0で埋めると黒字に見えてしまう。
+  if (!out.probabilities || !out.cac || !out.netProfitYear1) return null;
+  if (!assumption.channel || !Array.isArray(assumption.costPerLead)) return null;
+
   return {
     ideaId: r.idea_id,
     runs: r.runs,
-    assumption: JSON.parse(r.assumption_json),
-    contracts: out.contracts,
-    mrr: out.mrr,
-    ltvCac: out.ltvCac,
-    paybackMonths: out.paybackMonths,
+    assumption: {
+      ...(assumption as FunnelAssumption),
+      dataVolume: assumption.dataVolume ?? dataVolumeOf(assumption.sampleSize ?? 0),
+    },
+    contracts: out.contracts!,
+    mrr: out.mrr!,
+    ltvCac: out.ltvCac!,
+    cac: out.cac,
+    paybackMonths: out.paybackMonths!,
     netProfitYear1: out.netProfitYear1,
     probabilities: out.probabilities,
     scenarios: out.scenarios ?? [],
     bestScenario: out.bestScenario ?? null,
+    channelCases: out.channelCases ?? [],
+    bestChannelCase: out.bestChannelCase ?? null,
+    breakEven: out.breakEven ?? null,
     verdict: r.verdict,
+    verdictClass: out.verdictClass ?? (r.verdict === 'PASS' ? 'PASS' : 'FAIL'),
+    whatMustChange: out.whatMustChange ?? [],
     reason: r.reason,
     ranAt: r.ran_at,
   };
