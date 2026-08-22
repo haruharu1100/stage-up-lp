@@ -160,11 +160,68 @@ function walk(dir, out = []) {
   return out;
 }
 
+/**
+ * コメントを取り除いてから見る。
+ *
+ * ★なぜ必要か（2026-08-22）
+ *
+ *   このリポジトリでは、危ない書き方をコメントで戒めています。
+ *     「★『必ず儲かる』『絶対』のような断定は書かないこと（景品表示法）」
+ *
+ *   ところが、以前はコメントも中身も区別せず1行ずつ見ていたため、
+ *   この「書かないこと」という注意書き自体が違反として検出され、
+ *   公開が止まりました。
+ *
+ *   これを放っておくと、直し方は2つしかありません。
+ *     ① 注意書きのほうを消す
+ *     ② チェックのほうを消す
+ *   どちらも、この仕組みを弱くします。だから、
+ *   「画面に出ない文字は見ない」と決めます。
+ *
+ *   コメントは画面に出ません。出るのは中身だけです。
+ */
+function stripComments(source) {
+  const out = [];
+  let inBlock = false;
+  for (const raw of source.split("\n")) {
+    let line = raw;
+    let kept = "";
+    let i = 0;
+    while (i < line.length) {
+      if (inBlock) {
+        const end = line.indexOf("*/", i);
+        if (end === -1) {
+          i = line.length;
+        } else {
+          inBlock = false;
+          i = end + 2;
+        }
+        continue;
+      }
+      if (line.startsWith("/*", i)) {
+        inBlock = true;
+        i += 2;
+        continue;
+      }
+      /*
+        「//」は行コメント。
+        ただし「https://」のような場所で切らないよう、直前が「:」なら無視する。
+      */
+      if (line.startsWith("//", i) && line[i - 1] !== ":") break;
+      kept += line[i];
+      i += 1;
+    }
+    out.push(kept);
+  }
+  return out;
+}
+
 function checkPhrases() {
   const hits = [];
   for (const d of COPY_DIRS) {
     for (const file of walk(join(root, d))) {
-      const lines = readFileSync(file, "utf8").split("\n");
+      /* コメントを外してから見る。行番号を保つため、行数は変えない */
+      const lines = stripComments(readFileSync(file, "utf8"));
       lines.forEach((line, i) => {
         for (const b of BANNED_PHRASES) {
           if (line.includes(b.word)) {

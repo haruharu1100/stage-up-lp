@@ -124,7 +124,9 @@ test("ナレーションの文言が、字幕にそのまま写されていな�
     join(ROOT, "scripts", "make-demo-narration.mjs"),
     "utf8",
   );
-  const lines = [...narration.matchAll(/text:\s*"([^"]+)"/g)].map((m) => m[1]);
+  const lines = (narration.match(/text:\s*"[^"]+"/g) ?? []).map((m) =>
+    m.replace(/^text:\s*"/, "").replace(/"$/, ""),
+  );
   assert.ok(lines.length >= 10, "ナレーションの行が読み取れませんでした。");
 
   const vtt = readFileSync(
