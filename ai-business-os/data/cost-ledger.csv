@@ -1,0 +1,7 @@
+date,idea_id,kind,amount_yen,minutes,note
+# 実際に払った費用と、かけた時間を1行ずつ書く。分からない列は空欄（0と書かない）。
+# kind: CONTENT_PRODUCTION / AD / DEVELOPMENT / API / SUPPORT / SALES / TOOL / OTHER
+# amount_yen = 実際に払った金額（円）。minutes = かけた分数（時給2,500円で費用に換算する）
+# 開発費・API利用料・サポート費はAIシステム側（SAAS P&L）に乗る
+# コンテンツ制作費・広告費はコンテンツ側（CONTENT P&L）に乗る
+# 個人情報・APIキー・取引先の口座情報はこのファイルに書かない

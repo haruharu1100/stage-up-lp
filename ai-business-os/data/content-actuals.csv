@@ -1,0 +1,11 @@
+date,idea_id,vertical,channel,campaign_id,note_purpose,impressions,clicks,free_note_views,free_note_cta_clicks,paid_note_views,paid_note_purchases,paid_note_revenue,demo_starts,demo_completes,leads,meetings,contracts,buyer_demo_starts,buyer_contracts,saas_revenue,direct_cost,content_time_minutes
+# X → note → デモ の実測を1行ずつ書く。分からない列は空欄（0と書かない）。
+# channel: X_CONTENT / NOTE_CONTENT / SEO / PAID_ADS
+# note_purpose: DIRECT_REVENUE / LEAD_GENERATION / AUTHORITY_BUILDING（複数ある場合は縦棒で区切る 例 LEAD_GENERATION|AUTHORITY_BUILDING）
+# impressions/clicks = 上流の表示回数とクリック数（X投稿・検索結果・広告のいずれも同じ列に書く）
+# free_note_views = 無料noteを読んだ人数（表示回数ではない）
+# paid_note_* = 有料note。無料noteとは別イベントとして必ず分けて書く
+# buyer_demo_starts / buyer_contracts = 有料noteを買った人だけのデモ開始・契約（購入者の確度を別に測るため）
+# saas_revenue = AIシステムの売上。paid_note_revenue とは混ぜない
+# content_time_minutes = 制作にかけた分数（時給2,500円で費用に換算する）
+# 個人情報（会社名・担当者名・電話番号・メールアドレス）はこのファイルに書かない

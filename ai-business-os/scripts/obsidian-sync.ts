@@ -34,6 +34,29 @@ async function main() {
     `- 実際に売ってみている: ${v.counts.TESTING}件 / 有料顧客あり: ${v.counts.PAID_CUSTOMER}件 / 拡大候補: ${v.counts.SCALE}件`,
     `- 実績CSV: ${v.hasMeasuredData ? '読み込み済み' : '未記入（したがって数字は全て仮定であり、売れる根拠ではない）'}`,
     `- 合否・撤退・拡大の条件は ${v.criteriaFixedAt} に凍結（結果を見てから緩めない）`,
+    v.criteriaOverride
+      ? `- 条件の変更: ${v.criteriaOverride.changedAt}／理由 ${v.criteriaOverride.reason}`
+      : '- 条件の変更: なし',
+    '',
+    `## ${v.rankingLabel}`,
+    `- ${v.provisionalReason}`,
+    `- 順位を付けられず母集団から外した案件: ${v.excludedUnresearched}件`,
+    ...v.provisionalTop.map(
+      (r) => `- ${r.rank}. ${r.title}（${r.clusterLabel}／点数 ${r.rankScore ?? '—'}）`
+    ),
+    '',
+    `## 最初に検証する3件（同じ種類が重ならないよう選び直したもの）`,
+    ...v.portfolio.picks.map(
+      (p) => `- ${p.rank}. ${p.item.title}（${p.clusterLabel}／点数 ${p.item.score ?? '—'}）`
+    ),
+    `- 同じ種類のため見送り: ${v.portfolio.skippedByCluster.length}件 / 点数が離れているため見送り: ${v.portfolio.skippedByScore.length}件`,
+    v.portfolio.note ? `- ${v.portfolio.note}` : '',
+    '',
+    `## P&L（記入済みの費用だけで計算。未記入は0円にしない）`,
+    `- CONTENT: 収益 ${v.pnl.content.revenueYen.toLocaleString()}円 / 費用 ${v.pnl.content.costYen.toLocaleString()}円 / 利益 ${v.pnl.content.profitYen.toLocaleString()}円`,
+    `- SAAS: 収益 ${v.pnl.saas.revenueYen.toLocaleString()}円 / 費用 ${v.pnl.saas.costYen.toLocaleString()}円 / 利益 ${v.pnl.saas.profitYen.toLocaleString()}円`,
+    `- TOTAL: 収益 ${v.pnl.revenueYen.toLocaleString()}円 / 費用 ${v.pnl.costYen.toLocaleString()}円 / 利益 ${v.pnl.profitYen.toLocaleString()}円`,
+    `- 未記入の費目: ${v.pnl.missingCostKinds.length === 0 ? 'なし' : v.pnl.missingCostKinds.join('・')}`,
     '',
     `## 案件`,
     `- 登録済み: ${d.ideaCount}件（採点済み ${d.scoredCount}件）`,

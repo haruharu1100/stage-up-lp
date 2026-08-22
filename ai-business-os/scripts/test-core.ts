@@ -64,7 +64,38 @@ import {
   VALIDATION_CRITERIA,
 } from '../lib/validation/criteria';
 import { sampleGuide, statisticalSample, SEQUENTIAL_STEPS } from '../lib/validation/sample-size';
-import { buildValidationPipeline, testPlanText } from '../lib/validation/pipeline';
+import { buildValidationPipeline, testPlanText, RANKING_REQUIREMENTS } from '../lib/validation/pipeline';
+import {
+  MAX_TEST_LOSS_OPTIONS,
+  VALIDATION_CHANNELS,
+  VALIDATION_CHANNEL_KEYS,
+  channelFromSalesFit,
+  firstCheckpointOf,
+  sampleLabel,
+} from '../lib/validation/channels';
+import {
+  diagnoseContent,
+  diagnoseOutbound,
+  wilson,
+  CONTENT_STEP_TARGETS,
+} from '../lib/validation/failure';
+import { evaluateContent, contentCriteriaText } from '../lib/validation/content-criteria';
+import { selectPortfolio, PORTFOLIO_RULES } from '../lib/validation/portfolio';
+import { checkBudget, startGate } from '../lib/validation/approval';
+import {
+  contentPnl,
+  saasPnl,
+  testRoi,
+  COST_LEDGER_TEMPLATE,
+  COST_LEDGER_COLUMNS,
+} from '../lib/economics/pnl';
+import {
+  CONTENT_ACTUALS_TEMPLATE,
+  CONTENT_ACTUALS_COLUMNS,
+  aggregateContent,
+  contentTotal,
+  parseContentActuals,
+} from '../lib/economics/content-actuals';
 
 type Check = { name: string; ok: boolean; detail?: string };
 const checks: Check[] = [];
@@ -827,9 +858,155 @@ add('note粗利が制作費に届かなければ実質CACはプラス（自腹�
 add('契約0件のとき実質CACは0円ではなく計算しない',
   effectiveCac({ contentCostYen: 50000, noteRevenueYen: 30000, contracts: 0 }).cacYen === null);
 
+// --- 検証チャネル（売り方ごとに合否の物差しを変える） ---
+add('検証チャネルは9種類そろっている', VALIDATION_CHANNEL_KEYS.length === 9);
+add('アウトバウンドの指標をコンテンツの合否に流用しない',
+  VALIDATION_CHANNELS.NOTE_CONTENT.funnelKind === 'CONTENT' &&
+  VALIDATION_CHANNELS.OUTBOUND_CALL.funnelKind === 'OUTBOUND');
+add('無料noteが推奨のときは前向き返信率ではなくCTA率で合否を付ける',
+  contentCriteriaText('NOTE_CONTENT').pass.join('').includes('CTA') &&
+  !contentCriteriaText('NOTE_CONTENT').pass.join('').includes('前向き返信'));
+add('件数は「100件」ではなくテスト単位つきで表示する',
+  sampleLabel('NOTE_CONTENT', 100) === '100 NOTE VISITORS' &&
+  sampleLabel('OUTBOUND_CALL', 100) === '100 OUTBOUND LEADS');
+add('デモ用チャネルの単位はDEMO VISITORSになる',
+  sampleLabel('SEO', 100).endsWith('VISITORS'));
+add('無料note適性からはコンテンツ型の検証チャネルを選ぶ',
+  channelFromSalesFit('freeNote') === 'NOTE_CONTENT' &&
+  VALIDATION_CHANNELS[channelFromSalesFit('freeNote')].funnelKind === 'CONTENT');
+add('1件あたりの想定損失上限は1万・3万・5万から選ぶ',
+  MAX_TEST_LOSS_OPTIONS.length === 3 && MAX_TEST_LOSS_OPTIONS[0] === 10000);
+add('上限を超える予算のテストは承認できない',
+  checkBudget('NOTE_CONTENT', 80000, 80000).ok === false);
+add('上限内のテストは承認できる', checkBudget('NOTE_CONTENT', 8000, 8000).ok === true);
+add('承認されても実行はできない（送信処理が存在しない）',
+  startGate(null).canExecute === false);
+
+// --- どこで失敗したかの判定 ---
+add('母数0件のときは0%ではなく判定不能にする',
+  wilson(0, 0) === null);
+add('成功0件でも幅が0にならない（0%で確定しない）',
+  (wilson(0, 25)?.high ?? 0) > 0.1);
+function contentMetricsOf(
+  channel: string,
+  v: {
+    impressions?: number; clicks?: number; noteViews?: number; cta?: number;
+    demoStarts?: number; demoCompletes?: number; leads?: number; meetings?: number; contracts?: number;
+  }
+) {
+  const n = (x?: number) => (x === undefined ? '' : String(x));
+  const line = [
+    '2026-08-01', 't1', 'OTHER', channel, '', 'LEAD_GENERATION',
+    n(v.impressions), n(v.clicks), n(v.noteViews), n(v.cta),
+    '', '', '',
+    n(v.demoStarts), n(v.demoCompletes), n(v.leads), n(v.meetings), n(v.contracts),
+    '', '', '', '', '',
+  ].join(',');
+  const rows = parseContentActuals(`${CONTENT_ACTUALS_COLUMNS.join(',')}\n${line}`);
+  return aggregateContent(rows, () => 'k', (r) => ({ ideaId: r.ideaId, channel: r.channel })).get('k')!;
+}
+
+const hookCase = diagnoseContent('X_CONTENT', contentMetricsOf('X_CONTENT', {
+  impressions: 50000, clicks: 30, noteViews: 20, cta: 0,
+  demoStarts: 0, demoCompletes: 0, leads: 0, meetings: 0, contracts: 0,
+}));
+add('表示は多いのにクリックが極端に少なければ入口（HOOK）の問題と判定する',
+  hookCase.verdict === 'HOOK_PROBLEM', hookCase.verdict);
+const salesCase = diagnoseContent('NOTE_CONTENT', contentMetricsOf('NOTE_CONTENT', {
+  noteViews: 1000, cta: 120, demoStarts: 80, demoCompletes: 60,
+  leads: 50, meetings: 25, contracts: 0,
+}));
+add('デモも商談も取れて契約だけ0なら、コンテンツではなく後段（営業）の問題と判定する',
+  salesCase.verdict === 'SALES_PROBLEM', salesCase.verdict);
+const smallCase = diagnoseContent('NOTE_CONTENT', contentMetricsOf('NOTE_CONTENT', {
+  noteViews: 100, cta: 8, demoStarts: 5, demoCompletes: 4,
+  leads: 3, meetings: 2, contracts: 0,
+}));
+add('100人で契約0件でも、デモと商談が出ていればコンテンツを不合格にしない',
+  smallCase.verdict !== 'CONTENT_PROBLEM' && smallCase.verdict !== 'CTA_PROBLEM',
+  smallCase.verdict);
+add('弱い段には改善優先順位が1位から3位まで付く',
+  (hookCase.bottleneck?.priorities.length ?? 0) >= 3);
+add('ボトルネックには実測と目標の両方が載る',
+  (hookCase.bottleneck?.actualText ?? '').length > 0 &&
+  (hookCase.bottleneck?.targetText ?? '').length > 0);
+add('失敗箇所は9種類から選ぶ（原因不明を「売れない」で片付けない）',
+  Object.keys(CONTENT_STEP_TARGETS).length === 8);
+const ctaCase = diagnoseContent('NOTE_CONTENT', contentMetricsOf('NOTE_CONTENT', {
+  noteViews: 1000, cta: 8, demoStarts: 0, demoCompletes: 0, leads: 0, meetings: 0, contracts: 0,
+}));
+add('直す場所は一番上流の弱い段になる（下流は上流を直さないと増えないため）',
+  ctaCase.bottleneck?.stepKey === 'NOTE_TO_CTA', ctaCase.bottleneck?.stepKey ?? 'null');
+add('失敗箇所の判定と、直す場所の判定が食い違わない',
+  ctaCase.verdict === 'CTA_PROBLEM' && ctaCase.bottleneck?.stepKey === 'NOTE_TO_CTA',
+  `${ctaCase.verdict} / ${ctaCase.bottleneck?.stepKey ?? 'null'}`);
+const outboundCase = diagnoseOutbound(
+  'OUTBOUND_CALL',
+  metricsOf(`${head}\n2026-08-10,e,SALES,OUTBOUND_CALL,c,500,450,150,100,70,50,0,0,50000,0`, 'e')
+);
+add('アウトバウンドでも商談まで進んで契約だけ0なら後段（営業）の問題と判定する',
+  outboundCase.verdict === 'SALES_PROBLEM', outboundCase.verdict);
+add('アウトバウンドの件数表示もOUTBOUND LEADS単位になる',
+  outboundCase.sampleLabel === '500 OUTBOUND LEADS', outboundCase.sampleLabel);
+
+// --- コンテンツの合否（100人で契約0でも即殺さない） ---
+const failCase = evaluateContent('NOTE_CONTENT', contentMetricsOf('NOTE_CONTENT', {
+  noteViews: 200, cta: 1, demoStarts: 0, demoCompletes: 0, leads: 0, meetings: 0, contracts: 0,
+}));
+add('CTAが基準を割り、デモも0なら不合格にする', failCase.decision === 'FAIL', failCase.decision);
+const killCase = evaluateContent('NOTE_CONTENT', contentMetricsOf('NOTE_CONTENT', {
+  noteViews: 600, cta: 30, demoStarts: 0, demoCompletes: 0, leads: 0, meetings: 0, contracts: 0,
+}));
+add('500人でデモ0件なら撤退にする', killCase.decision === 'KILL', killCase.decision);
+const earlyCase = evaluateContent('NOTE_CONTENT', contentMetricsOf('NOTE_CONTENT', {
+  noteViews: 20, cta: 0, demoStarts: 0, demoCompletes: 0, leads: 0, meetings: 0, contracts: 0,
+}));
+add('最初の判定件数に届く前は合否を付けずに継続にする',
+  earlyCase.decision === 'CONTINUE', earlyCase.decision);
+add('合否の件数は設定で変えられる（コードに直書きしない）',
+  firstCheckpointOf('NOTE_CONTENT') === VALIDATION_CHANNELS.NOTE_CONTENT.steps[0]);
+
+// --- 同じ種類で枠を埋めない ---
+const port = selectPortfolio([
+  { ideaId: '1', title: 'AI受付A', cluster: 'AI_VOICE_RECEPTIONIST', score: 80 },
+  { ideaId: '2', title: 'AI受付B', cluster: 'AI_VOICE_RECEPTIONIST', score: 79 },
+  { ideaId: '3', title: 'AI営業', cluster: 'AI_SALES_AGENT', score: 78 },
+  { ideaId: '4', title: 'AI経理', cluster: 'AI_BACKOFFICE', score: 77 },
+  { ideaId: '5', title: '弱い案件', cluster: 'AI_CONTENT', score: 10 },
+]);
+add('同じ種類は最初の3件に1件までしか入れない',
+  new Set(port.picks.map((p) => p.cluster)).size === port.picks.length);
+add('点数が離れすぎた案件は枠が空いていても入れない',
+  port.picks.every((p) => (p.item.score ?? 0) >= 80 * PORTFOLIO_RULES.minScoreRatio) &&
+  port.skippedByScore.length + port.skippedByCluster.length > 0);
+add('見送った案件には必ず理由が付く',
+  [...port.skippedByCluster, ...port.skippedByScore].every((s) => s.reason.length > 0));
+
+// --- コンテンツ事業とSaaS事業の損益を分ける ---
+const ledger = [
+  { date: '2026-08-01', ideaId: '', kind: 'CONTENT_PRODUCTION' as const, amountYen: 20000, minutes: null, note: '' },
+  { date: '2026-08-02', ideaId: '', kind: 'DEVELOPMENT' as const, amountYen: 50000, minutes: null, note: '' },
+];
+const emptyContent = contentTotal([]);
+const cp = contentPnl({ ledger, content: emptyContent });
+const sp = saasPnl({ ledger, content: emptyContent, mrrYen: 0 });
+add('コンテンツの費用がSaaS側に混ざらない',
+  cp.costYen === 20000 && sp.costYen === 50000);
+add('記入されていない費目は0円ではなく未記入として残す',
+  cp.missingCostKinds.length > 0 && sp.missingCostKinds.length > 0);
+const roi = testRoi({ ledger, content: emptyContent, pipelineYen: 300000 });
+add('テストの損益は入金済みだけで計算し、見込みは別枠に出す',
+  roi.withPipelineYen !== null && roi.revenueYen === 0);
+add('費用台帳のテンプレに秘密情報を書かない注意が入っている',
+  COST_LEDGER_TEMPLATE.includes('個人情報') &&
+  (COST_LEDGER_COLUMNS as readonly string[]).includes('amount_yen'));
+add('コンテンツ実績のテンプレに秘密情報を書かない注意が入っている',
+  CONTENT_ACTUALS_TEMPLATE.includes('個人情報') &&
+  (CONTENT_ACTUALS_COLUMNS as readonly string[]).includes('free_note_views'));
+
 // --- 検証パイプライン（仮定と実測を混ぜない） ---
 async function pipelineChecks() {
-const pipeline = await buildValidationPipeline([]);
+const pipeline = await buildValidationPipeline([], []);
 add('パイプラインは7段ある', Object.keys(pipeline.counts).length === 7);
 add('実測CSVが空なら「実測あり」と名乗らない', pipeline.hasMeasuredData === false);
 add('実際に売ってみた件数は、発掘した件数と別に数える',
@@ -846,6 +1023,35 @@ add('検証カードには次の一手が必ず書いてある',
 add('販売テスト計画に人間の承認と自動送信しない旨が入る',
   pipeline.cards.length === 0 ||
   testPlanText(pipeline.cards[0]).join('\n').includes('自動送信はしない'));
+add('日本市場の調査が終わるまで確定TOP3と呼ばない',
+  pipeline.provisional === false || pipeline.rankingLabel.includes('PROVISIONAL'));
+add('暫定である理由を必ず書く',
+  pipeline.provisional === false || pipeline.provisionalReason.length > 0);
+add('確定条件には日本市場調査・採算試算・確度の下限が入っている',
+  RANKING_REQUIREMENTS.requireJapanResearch && RANKING_REQUIREMENTS.requireBacktest &&
+  RANKING_REQUIREMENTS.minConfidence > 0 && RANKING_REQUIREMENTS.researchTopN === 50);
+add('分散後の3件は種類が重複しない',
+  new Set(pipeline.portfolio.picks.map((p) => p.cluster)).size ===
+  pipeline.portfolio.picks.length);
+add('カードには検証チャネルとテスト単位が必ず入る',
+  pipeline.cards.every((c) => c.channelLabel.length > 0 && c.sampleLabel.includes(' ')));
+add('件数表示に単位が付いている（Sample Size = 100 とは書かない）',
+  pipeline.cards.every((c) => /^\d+ [A-Z ]+$/.test(c.sampleLabel)));
+add('カードには1件あたりの想定損失上限が入る',
+  pipeline.cards.every((c) => (MAX_TEST_LOSS_OPTIONS as readonly number[]).includes(c.maxTestLossYen)));
+add('カードには失敗箇所の判定が必ず付く',
+  pipeline.cards.every((c) => c.failure.verdict.length > 0));
+add('実測が無いカードは失敗ではなく判定不能にする',
+  pipeline.cards.every((c) => c.failure.sample > 0 || c.failure.verdict === 'INSUFFICIENT_DATA'));
+add('承認していないカードは実行できない状態のまま',
+  pipeline.cards.every((c) => c.gate.canExecute === false));
+add('コンテンツ型のカードはアウトバウンドの合格条件を使わない',
+  pipeline.cards.filter((c) => c.funnelKind === 'CONTENT').every(
+    (c) => c.contentVerdict !== null &&
+      !c.criteria.pass.join('').includes('前向き返信')));
+add('P&Lはコンテンツ事業とSaaS事業に分かれている',
+  pipeline.pnl.content.title !== pipeline.pnl.saas.title &&
+  pipeline.pnl.revenueYen === pipeline.pnl.content.revenueYen + pipeline.pnl.saas.revenueYen);
 const validationDoc = fs.readFileSync('docs/VALIDATION.md', 'utf8');
 add('検証基準の計算式がドキュメントに書かれている',
   validationDoc.includes('Kill') && validationDoc.includes('Scale') &&

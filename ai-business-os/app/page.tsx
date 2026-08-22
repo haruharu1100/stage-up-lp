@@ -13,6 +13,15 @@ import {
   DECISION_LABEL as VALIDATION_DECISION_LABEL,
   type ValidationDecision,
 } from '../lib/validation/criteria';
+import {
+  FAILURE_LOCATION_LABEL,
+  FAILURE_LOCATION_MEANS,
+  type StepStatus,
+} from '../lib/validation/failure';
+import { VALIDATION_CHANNEL_LABEL } from '../lib/validation/channels';
+import { PORTFOLIO_RULES } from '../lib/validation/portfolio';
+import { CONTENT_DECISION_LABEL } from '../lib/validation/content-criteria';
+import { COST_KIND_LABEL, type PnlSection } from '../lib/economics/pnl';
 
 export const dynamic = 'force-dynamic';
 
@@ -62,6 +71,57 @@ function rateText(r: { rate: number | null; status: string; denominator: number 
 
 function pctText(v: number | null) {
   return v === null ? '—' : `${Math.round(v * 1000) / 10}%`;
+}
+
+const STEP_STATUS_LABEL: Record<StepStatus, string> = {
+  OK: '目標を満たす',
+  WEAK: '目標に届かない',
+  INSUFFICIENT_DATA: '母数不足で判定不能',
+  NOT_STARTED: '未実施',
+};
+
+function PnlTable({ s }: { s: PnlSection }) {
+  return (
+    <>
+      <h3>{s.title}</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>区分</th>
+            <th>項目</th>
+            <th>金額</th>
+          </tr>
+        </thead>
+        <tbody>
+          {s.revenueLines.map((r) => (
+            <tr key={`r-${r.label}`}>
+              <td>収益</td>
+              <td>{r.label}</td>
+              <td>{yen(r.amountYen)}</td>
+            </tr>
+          ))}
+          {s.costLines.map((c) => (
+            <tr key={`c-${c.kind}`}>
+              <td>費用</td>
+              <td>{c.label}</td>
+              <td>{c.amountYen === null ? '未記入（0円として扱いません）' : yen(c.amountYen)}</td>
+            </tr>
+          ))}
+          <tr>
+            <td>合計</td>
+            <td>収益 − 費用</td>
+            <td>{yen(s.profitYen)}</td>
+          </tr>
+        </tbody>
+      </table>
+      <p className="sub">
+        {s.note}
+        {s.missingCostKinds.length > 0
+          ? `　未記入の費目：${s.missingCostKinds.map((k) => COST_KIND_LABEL[k]).join('・')}（記入するまで、この利益は「わかっている範囲」の数字です）`
+          : ''}
+      </p>
+    </>
+  );
 }
 
 const DECISION_CLASS: Record<ValidationDecision, string> = {
@@ -138,9 +198,85 @@ export default async function Page() {
       </div>
       <p className="sub">
         {d.validation.hasMeasuredData
-          ? `実績CSV（data/sales-actuals.csv）を読み込んでいます。`
-          : `実績CSV（data/sales-actuals.csv）はまだ空です。したがって下の数字は全て「仮定」であり、売れる根拠ではありません。`}
+          ? `実績CSV（data/sales-actuals.csv・data/content-actuals.csv）を読み込んでいます。`
+          : `実績CSV（data/sales-actuals.csv・data/content-actuals.csv）はまだ空です。したがって下の数字は全て「仮定」であり、売れる根拠ではありません。`}
         {' '}合否・撤退・拡大の条件は {d.validation.criteriaFixedAt} に決めたものを凍結しています（結果を見てから緩めません）。
+        {d.validation.criteriaOverride
+          ? `　条件を変更済み：${d.validation.criteriaOverride.changedAt}／理由 ${d.validation.criteriaOverride.reason}`
+          : ''}
+      </p>
+
+      <h3>{d.validation.rankingLabel}</h3>
+      <p className="sub">
+        {d.validation.provisionalReason}
+        {d.validation.excludedUnresearched > 0
+          ? `　順位を付けられず母集団から外した案件：${d.validation.excludedUnresearched}件（調べていない案件を上位に混ぜないため）`
+          : ''}
+      </p>
+      {d.validation.provisionalTop.length === 0 ? (
+        <p className="empty">順位を付けられる案件がまだありません。</p>
+      ) : (
+        <table>
+          <thead>
+            <tr>
+              <th>順位</th>
+              <th>案件</th>
+              <th>種類（Cluster）</th>
+              <th>並び順の点数</th>
+              <th>検証チャネル</th>
+            </tr>
+          </thead>
+          <tbody>
+            {d.validation.provisionalTop.map((r) => (
+              <tr key={r.ideaId}>
+                <td>{r.rank}</td>
+                <td>{r.title}</td>
+                <td>{r.clusterLabel}</td>
+                <td>{r.rankScore ?? '—'}</td>
+                <td>{VALIDATION_CHANNEL_LABEL[r.channel]}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+
+      <h3>最初に検証する3件（同じ種類が重ならないように選び直したもの）</h3>
+      <p className="sub">
+        上位3件をそのまま採ると、同じ市場・同じ客・同じ売り方の案件が3枠を占め、外れるときは3件同時に外れます。
+        3回試したつもりで実際は1回しか試していないことになるため、種類ごとに
+        最大{PORTFOLIO_RULES.maxPerCluster}件までにしています。
+        ただし1位から離れすぎた案件は、枠が空いていても採りません。
+      </p>
+      {d.validation.portfolio.picks.length === 0 ? (
+        <p className="empty">選べる案件がまだありません。</p>
+      ) : (
+        <table>
+          <thead>
+            <tr>
+              <th>順位</th>
+              <th>案件</th>
+              <th>種類（Cluster）</th>
+              <th>点数</th>
+              <th>選んだ理由</th>
+            </tr>
+          </thead>
+          <tbody>
+            {d.validation.portfolio.picks.map((p) => (
+              <tr key={p.item.ideaId}>
+                <td>{p.rank}</td>
+                <td>{p.item.title}</td>
+                <td>{p.clusterLabel}</td>
+                <td>{p.item.score ?? '—'}</td>
+                <td>{p.reason}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+      <p className="sub">
+        同じ種類のため見送り：{d.validation.portfolio.skippedByCluster.length}件 ／
+        点数が離れているため見送り：{d.validation.portfolio.skippedByScore.length}件
+        {d.validation.portfolio.note ? `　${d.validation.portfolio.note}` : ''}
       </p>
 
       {d.validation.cards.length === 0 ? (
@@ -159,12 +295,29 @@ export default async function Page() {
               <b>{c.hypothesis}</b>
               <span>業種</span>
               <b>{CATEGORY_LABEL[c.vertical as Category] ?? c.vertical}</b>
+              <span>種類（Cluster）</span>
+              <b>{c.clusterLabel}</b>
               <span>日本の空き</span>
               <b>{c.japanGap}</b>
               <span>Money Score</span>
               <b>
                 {c.moneyScore ?? '—'}（調査の確度 {c.researchConfidence ?? '—'}）
               </b>
+              <span>検証チャネル</span>
+              <b>
+                {c.channelLabel}（{c.funnelKind === 'CONTENT' ? '発信して集める型' : '自分から当たる型'}）
+              </b>
+              <span>テスト単位</span>
+              <b>
+                {c.sampleLabel}＝{c.sampleLabelJa}
+              </b>
+              <span>最初に合否を付ける件数</span>
+              <b>
+                {c.firstCheckpointLabel}
+                {c.nextStepLabel ? `／次の到達点 ${c.nextStepLabel}` : ''}
+              </b>
+              <span>1件あたりの想定損失上限</span>
+              <b>{yen(c.maxTestLossYen)}（これを超えるテストは推薦しません）</b>
               <span>次の一手</span>
               <b>{c.nextAction}</b>
             </div>
@@ -198,10 +351,81 @@ export default async function Page() {
               </tbody>
             </table>
 
+            <h4 style={{ marginTop: 16 }}>ファネル（どこで落ちているか）</h4>
+            <table>
+              <thead>
+                <tr>
+                  <th>段</th>
+                  <th>実測（Actual）</th>
+                  <th>目標（Target）</th>
+                  <th>状態</th>
+                  <th>影響（Impact）</th>
+                </tr>
+              </thead>
+              <tbody>
+                {c.failure.steps.map((s) => (
+                  <tr key={s.key}>
+                    <td>{s.label}</td>
+                    <td>
+                      {s.actual === null ? '—' : pctText(s.actual)}（{s.numerator}/{s.denominator}）
+                    </td>
+                    <td>{pctText(s.target)}</td>
+                    <td>{STEP_STATUS_LABEL[s.status]}</td>
+                    <td>{s.status === 'WEAK' ? s.impact : '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            <div className="rec-meta" style={{ marginTop: 12 }}>
+              <span>FAILURE LOCATION</span>
+              <b>
+                {FAILURE_LOCATION_LABEL[c.failure.verdict]}／{c.failure.headline}
+              </b>
+              <span>その意味</span>
+              <b>{FAILURE_LOCATION_MEANS[c.failure.verdict]}</b>
+              <span>判定の根拠</span>
+              <b>{c.failure.reason}</b>
+              {c.failure.bottleneck && (
+                <>
+                  <span>FUNNEL BOTTLENECK</span>
+                  <b>
+                    {c.failure.bottleneck.label}／実測 {c.failure.bottleneck.actualText}（目標{' '}
+                    {c.failure.bottleneck.targetText}）／Impact: {c.failure.bottleneck.impact}
+                  </b>
+                  <span>改善優先順位</span>
+                  <b>
+                    {c.failure.bottleneck.priorities
+                      .map((p, i) => `${i + 1}位 ${p}`)
+                      .join(' / ')}
+                  </b>
+                </>
+              )}
+              {c.contentVerdict && (
+                <>
+                  <span>コンテンツ判定</span>
+                  <b>
+                    {CONTENT_DECISION_LABEL[c.contentVerdict.decision]}／
+                    {c.contentVerdict.reasons.join(' / ')}
+                  </b>
+                </>
+              )}
+            </div>
+
             <div className="rec-meta" style={{ marginTop: 12 }}>
               <span>テスト規模</span>
               <b>
-                {c.testSize}件（現在 {c.currentLeads}件）
+                {c.sampleLabel}（現在 {c.currentLeads}）
+              </b>
+              <span>人間承認</span>
+              <b>{c.gate.message}</b>
+              <span>テストの損益（入金済みのみ）</span>
+              <b>
+                売上 {yen(c.testRoi.revenueYen)}／費用 {yen(c.testRoi.costYen)}／利益{' '}
+                {yen(c.testRoi.profitYen)}
+                {c.testRoi.withPipelineYen === null
+                  ? ''
+                  : `　※契約見込みを含めた参考値 ${yen(c.testRoi.withPipelineYen)}（実績ではありません）`}
               </b>
               <span>次に必要な件数</span>
               <b>
@@ -241,6 +465,35 @@ export default async function Page() {
           </div>
         ))
       )}
+
+      <h2>P&amp;L（コンテンツ事業とSaaS事業を分けて見る）</h2>
+      <p className="sub">
+        コンテンツ（note・X）とSaaSを合算すると、どちらが赤字なのか分からなくなります。
+        そのため別々に出し、最後に合算します。記入されていない費用は0円ではなく「未記入」として扱います。
+      </p>
+      <PnlTable s={d.validation.pnl.content} />
+      <PnlTable s={d.validation.pnl.saas} />
+      <h3>TOTAL BUSINESS P&amp;L（合算）</h3>
+      <div className="kpis">
+        <div className="kpi">
+          <div className="label">収益</div>
+          <div className="value">{yen(d.validation.pnl.revenueYen)}</div>
+        </div>
+        <div className="kpi">
+          <div className="label">費用（記入済みのみ）</div>
+          <div className="value">{yen(d.validation.pnl.costYen)}</div>
+        </div>
+        <div className="kpi">
+          <div className="label">利益</div>
+          <div className="value">{yen(d.validation.pnl.profitYen)}</div>
+        </div>
+      </div>
+      <p className="sub">
+        {d.validation.pnl.note}
+        {d.validation.pnl.missingCostKinds.length > 0
+          ? `　未記入の費目：${d.validation.pnl.missingCostKinds.map((k) => COST_KIND_LABEL[k]).join('・')}`
+          : ''}
+      </p>
 
       <h2>収益</h2>
       <div className="kpis">

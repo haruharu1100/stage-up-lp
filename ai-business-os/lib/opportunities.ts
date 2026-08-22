@@ -1,5 +1,6 @@
 import { all } from './db/client';
 import { getSalesBacktest } from './backtest/montecarlo';
+import { clusterOf, type ClusterKey } from './cluster';
 import { bestPriceView, type PriceView } from './economics/price-view';
 import type { MoneyScore } from './economics/money-score';
 import { STAGE_LABEL } from './japan';
@@ -60,6 +61,16 @@ export type Opportunity = {
   breakEvenSummary: string | null;
   bestChannelCase: string | null;
   recommendedChannel: string;
+  /** 表示用の日本語ではなく、判定に使う適性キー。検証チャネルの決定に必要 */
+  recommendedFit: SalesFitKey | null;
+  /** 同じ種類の案件で枠を埋めないための塊 */
+  cluster: ClusterKey;
+  /** 並び順に使った値（Money Score × 確度）。並びの根拠を画面から追えるようにする */
+  rankScore: number | null;
+  /** 日本市場を調べ終えているか。未調査を順位表の母集団に混ぜないための判定材料 */
+  japanResearched: boolean;
+  /** 採算試算（モンテカルロ）が済んでいるか */
+  backtested: boolean;
   paidNoteFit: number | null;
   saasFit: number | null;
   nextAction: string;
@@ -242,6 +253,14 @@ export async function topOpportunities(limit = 10): Promise<OpportunityList> {
       bestChannelCase:
         sales?.channelCases.find((c) => c.key === sales.bestChannelCase)?.label ?? null,
       recommendedChannel: via ? SALES_FIT_LABEL[via.recommendedChannel] : '—',
+      recommendedFit: via?.recommendedChannel ?? null,
+      cluster: clusterOf(idea),
+      rankScore:
+        via && via.money100 !== null && via.confidence !== null
+          ? Math.round(via.money100 * via.confidence * 10) / 10
+          : null,
+      japanResearched: japan !== null && japan.stage !== 'UNKNOWN',
+      backtested: sales !== null,
       paidNoteFit: via?.fit.paidNote ?? null,
       saasFit: via?.fit.saas ?? null,
       nextAction,

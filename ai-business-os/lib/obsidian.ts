@@ -12,6 +12,7 @@ import { SCORE_LABEL, SCORE_WEIGHTS } from './types';
 import { GRADE_LABEL } from './score';
 import { STAGE_LABEL } from './japan';
 import { DECISION_LABEL, VALIDATION_CRITERIA } from './validation/criteria';
+import { FAILURE_LOCATION_LABEL, FAILURE_LOCATION_MEANS } from './validation/failure';
 import type { ValidationCard } from './validation/pipeline';
 
 /**
@@ -328,7 +329,13 @@ export function saveValidationNote(card: ValidationCard): string | null {
     `idea_id: ${card.ideaId}`,
     `title: "${card.title.replace(/"/g, "'")}"`,
     `vertical: ${card.vertical}`,
+    `cluster: ${card.cluster}`,
+    `validation_channel: ${card.validationChannel}`,
+    `funnel_kind: ${card.funnelKind}`,
+    `test_unit: ${card.testUnitLabel}`,
     `decision: ${card.decision}`,
+    `failure_location: ${card.failure.verdict}`,
+    `approval_status: ${card.approval?.status ?? 'NOT_REQUESTED'}`,
     `criteria_fixed_at: ${VALIDATION_CRITERIA.fixedAt}`,
     `measured_source: ${card.measuredSource}`,
     `measured_sample_size: ${card.measuredSampleSize}`,
@@ -349,6 +356,13 @@ export function saveValidationNote(card: ValidationCard): string | null {
     `- 売り方: ${card.recommendedChannel}`,
     `- 価格: ${card.priceYen === null ? '未定' : yen(card.priceYen)}`,
     '',
+    '## VALIDATION CHANNEL（どうやって検証するか）',
+    `- チャネル: ${card.channelLabel}（${card.funnelKind}）`,
+    `- テスト単位: ${card.sampleLabel}（${card.sampleLabelJa}）`,
+    `- 最初に合否を付ける件数: ${card.firstCheckpointLabel}`,
+    `- 次の到達点: ${card.nextStepLabel ?? '最終段まで到達済み'}`,
+    `- 1件あたりの想定損失上限: ${yen(card.maxTestLossYen)}`,
+    '',
     '## ASSUMPTIONS（仮定：まだ売れる根拠ではない）',
     `- 想定CAC: ${yen(card.assumptionCacYen)}`,
     `- 想定契約率（リード基準）: ${pct(card.assumptionCloseRate)}`,
@@ -368,6 +382,27 @@ export function saveValidationNote(card: ValidationCard): string | null {
     ...card.passChecks.map((c) => `- ${c.label}: ${c.actual}（必要 ${c.required}）`),
     `- 次に必要な件数: ${card.sample.additionalLeads === null ? '自動では増やさない' : `あと${card.sample.additionalLeads}件（累計${card.sample.targetLeads}件）`}`,
     `- ${card.sample.note}`,
+    '',
+    '## FAILURE LOCATION（どこで失敗しているか）',
+    `- 判定: ${FAILURE_LOCATION_LABEL[card.failure.verdict]}`,
+    `- 意味: ${FAILURE_LOCATION_MEANS[card.failure.verdict]}`,
+    `- 根拠: ${card.failure.reason}`,
+    ...card.failure.steps.map(
+      (s) =>
+        `- ${s.label}: 実測 ${s.actual === null ? '—' : pct(s.actual)}（${s.numerator}/${s.denominator}）／目標 ${pct(s.target)}／${s.status}`
+    ),
+    '',
+    '## FUNNEL BOTTLENECK（一番弱い場所）',
+    card.failure.bottleneck
+      ? `- ${card.failure.bottleneck.label}: 実測 ${card.failure.bottleneck.actualText}／目標 ${card.failure.bottleneck.targetText}／Impact ${card.failure.bottleneck.impact}`
+      : '- まだ実測が無いため、弱い場所を特定できない',
+    card.failure.bottleneck
+      ? `- 改善優先順位: ${card.failure.bottleneck.priorities.map((p, i) => `${i + 1}位 ${p}`).join(' / ')}`
+      : '- 改善優先順位: 未定',
+    '',
+    '## APPROVAL（人間承認）',
+    `- ${card.gate.message}`,
+    '- このリポジトリには送信・架電・投稿・課金の処理が存在しないため、承認しても何も送られない',
     '',
     '## DECISION（判定）',
     `- ${DECISION_LABEL[card.decision]}`,

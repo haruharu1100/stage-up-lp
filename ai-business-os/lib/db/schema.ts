@@ -231,6 +231,30 @@ export const SCHEMA: string[] = [
     PRIMARY KEY (provider, day)
   )`,
 
+  // 実販売テストの人間承認。ここに残すのは「承認したという事実」だけ。
+  // 送信・架電・投稿・課金の処理はこのリポジトリに存在しないため、承認しても何も送られない。
+  `CREATE TABLE IF NOT EXISTS test_approvals (
+    id TEXT PRIMARY KEY,
+    idea_id TEXT NOT NULL,
+    idea_title TEXT NOT NULL DEFAULT '',
+    channel TEXT NOT NULL,
+    product_name TEXT NOT NULL DEFAULT '',
+    product_price_yen INTEGER NOT NULL DEFAULT 0,
+    test_unit TEXT NOT NULL,
+    sample_target INTEGER NOT NULL DEFAULT 0,
+    budget_yen INTEGER NOT NULL DEFAULT 0,
+    max_test_loss_yen INTEGER NOT NULL DEFAULT 0,
+    expected_loss_yen INTEGER NOT NULL DEFAULT 0,
+    kill_criteria TEXT NOT NULL DEFAULT '',
+    scale_criteria TEXT NOT NULL DEFAULT '',
+    status TEXT NOT NULL DEFAULT 'PENDING',
+    requested_at TEXT NOT NULL,
+    decided_at TEXT,
+    decided_by TEXT NOT NULL DEFAULT '',
+    note TEXT NOT NULL DEFAULT ''
+  )`,
+
+  `CREATE INDEX IF NOT EXISTS idx_approvals_idea ON test_approvals(idea_id)`,
   `CREATE INDEX IF NOT EXISTS idx_events_type ON conversion_events(event_type)`,
   `CREATE INDEX IF NOT EXISTS idx_events_idea ON conversion_events(idea_id)`,
   `CREATE INDEX IF NOT EXISTS idx_evidence_idea ON evidences(idea_id)`,
