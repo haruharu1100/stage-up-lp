@@ -12,7 +12,7 @@ import {
  *
  * ここに書いてある数字はすべて「仮定（ASSUMPTION）」であり、実測ではない。
  * 実測が1件も無い状態で断定しないため、画面にも必ず ASSUMPTION と表示する。
- * data/channel-actuals.csv に実績を書くと MEASURED に切り替わる（lib/economics/actuals.ts）。
+ * data/sales-actuals.csv に実績を書くと MEASURED に切り替わる（lib/economics/actuals.ts）。
  *
  * なぜチャネルを分けるか：
  *   同じ「1件300円」でも、広告のリード1件300円と、電話営業のリード1件300円では
@@ -40,7 +40,7 @@ export type ChannelModel = {
 };
 
 /** 人件費の目安。時給2,500円（社会保険込みの実質単価）で統一する */
-const HOURLY_YEN = 2500;
+export const HOURLY_YEN = 2500;
 const minutes = (m: number) => Math.round((HOURLY_YEN * m) / 60);
 
 export const CHANNEL_MODELS: Record<AcquisitionChannelKey, ChannelModel> = {

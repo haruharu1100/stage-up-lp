@@ -5,6 +5,7 @@ import { topOpportunities, type Opportunity } from './opportunities';
 import { buildClusters, type ClusterSummary } from './cluster';
 import { buildRankings, type Ranking } from './ranking';
 import { runContentFunnel, type ContentFunnelResult } from './economics/content-funnel';
+import { buildValidationPipeline, type ValidationPipeline } from './validation/pipeline';
 import type { Attribution, Grade, Idea } from './types';
 
 /** 「今日なにをすれば売上が伸びるか」を根拠つきで出す */
@@ -95,6 +96,8 @@ export type DashboardData = {
   clusters: ClusterSummary[];
   contentFunnel: ContentFunnelResult;
   rankings: Ranking[];
+  /** 発掘から実販売テストまでの進み具合。仮定と実測を分けて持つ */
+  validation: ValidationPipeline;
 };
 
 export async function buildDashboard(): Promise<DashboardData> {
@@ -112,6 +115,7 @@ export async function buildDashboard(): Promise<DashboardData> {
       buildRankings(),
     ]);
   const contentFunnel = runContentFunnel();
+  const validation = await buildValidationPipeline();
 
   const scored = ideas.filter((i) => i.grade !== null);
   const recommendations = recommend({ ideas, scored, last30, saas });
@@ -133,6 +137,7 @@ export async function buildDashboard(): Promise<DashboardData> {
     clusters,
     contentFunnel,
     rankings,
+    validation,
   };
 }
 

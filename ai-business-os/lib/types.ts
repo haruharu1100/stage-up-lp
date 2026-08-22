@@ -167,6 +167,15 @@ export function dataVolumeOf(sampleSize: number): DataVolume {
   return 'HIGH_DATA';
 }
 
+/**
+ * 実績件数から確度（0〜1）を出す。件数が増えるほど1に近づくが1にはならない。
+ * 100件で0.5、500件で約0.83。実測が何件あっても「確定」とは書かないための上限0.95。
+ */
+export function confidenceOf(sampleSize: number): number {
+  if (sampleSize <= 0) return 0;
+  return Math.min(0.95, Math.round((sampleSize / (sampleSize + 100)) * 100) / 100);
+}
+
 /** 見込み客の集め方。チャネルによって獲得コストは桁が変わるため必ず分けて扱う */
 export type AcquisitionChannelKey =
   | 'OUTBOUND_CALL'
@@ -239,6 +248,8 @@ export type FunnelAssumption = {
   source: ValueSource;
   sampleSize: number;
   dataVolume: DataVolume;
+  /** 0〜1。実績件数から機械的に決める。仮定のままなら0 */
+  confidence: number;
 };
 
 export type Percentiles = {

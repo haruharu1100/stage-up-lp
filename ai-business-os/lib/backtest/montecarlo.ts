@@ -1,9 +1,10 @@
 import { all, nowIso, run } from '../db/client';
-import { applyActuals } from '../economics/actuals';
+import { aggregateByChannel, applyActuals, readSalesActuals } from '../economics/actuals';
 import { CHANNEL_CASES, CHANNEL_MODELS, blendedModel, unitCosts } from '../economics/channels';
 import { config } from '../env';
 import {
   PRICE_SCENARIOS,
+  confidenceOf,
   dataVolumeOf,
   type BreakEven,
   type ChannelCase,
@@ -93,6 +94,7 @@ export const DEFAULT_ASSUMPTION: FunnelAssumption = {
   source: 'ASSUMPTION',
   sampleSize: 0,
   dataVolume: 'NO_DATA',
+  confidence: 0,
 };
 
 export type MonteCarloOutput = {
@@ -601,11 +603,17 @@ function classify(
   return { verdictClass: 'UNIT_ECONOMICS_PROBLEM', whatMustChange: must };
 }
 
-/** 実績CSVがあればそれを反映した前提を返す。無ければ仮定のまま */
+/**
+ * 実績CSVがあればそれを反映した前提を返す。無ければ仮定のまま。
+ * ideaId を渡すと、その案件の実績だけを使う（他案件の結果を混ぜない）。
+ */
 export function currentAssumption(
-  channel: FunnelAssumption['channel'] = DEFAULT_ASSUMPTION.channel
+  channel: FunnelAssumption['channel'] = DEFAULT_ASSUMPTION.channel,
+  ideaId?: string
 ): FunnelAssumption {
-  return applyActuals(DEFAULT_ASSUMPTION, channel);
+  const rows = readSalesActuals();
+  const scoped = ideaId ? rows.filter((r) => r.ideaId === ideaId) : rows;
+  return applyActuals(DEFAULT_ASSUMPTION, channel, aggregateByChannel(scoped));
 }
 
 export async function runSalesBacktest(
@@ -732,6 +740,7 @@ export async function getSalesBacktest(ideaId: string): Promise<SalesBacktest | 
     assumption: {
       ...(assumption as FunnelAssumption),
       dataVolume: assumption.dataVolume ?? dataVolumeOf(assumption.sampleSize ?? 0),
+      confidence: assumption.confidence ?? confidenceOf(assumption.sampleSize ?? 0),
     },
     contracts: out.contracts!,
     mrr: out.mrr!,

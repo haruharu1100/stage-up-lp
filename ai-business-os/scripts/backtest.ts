@@ -1,7 +1,7 @@
 import { migrate } from '../lib/db/client';
 import { getIdea, listIdeaRows } from '../lib/dashboard';
 import { marketQueryFor, runMarketBacktest } from '../lib/backtest/market';
-import { DEFAULT_ASSUMPTION, runSalesBacktest } from '../lib/backtest/montecarlo';
+import { currentAssumption, DEFAULT_ASSUMPTION, runSalesBacktest } from '../lib/backtest/montecarlo';
 import { getJapanAssessment } from '../lib/japan';
 import { scoreIdea } from '../lib/score';
 import { appendBacktestResult, saveIdeaNote } from '../lib/obsidian';
@@ -37,7 +37,7 @@ async function main() {
       console.log(`  ${w.label}: ${w.mentions === null ? `取得失敗(${w.status})` : `${w.mentions}件`}`);
     }
 
-    const sales = await runSalesBacktest(idea.id, DEFAULT_ASSUMPTION);
+    const sales = await runSalesBacktest(idea.id, currentAssumption(DEFAULT_ASSUMPTION.channel, idea.id));
     console.log(`販売: ${sales.verdict} — ${sales.reason}`);
     console.log(
       `  契約数  最悪${sales.contracts.worst} / P10 ${sales.contracts.p10} / 中央${sales.contracts.median} / P90 ${sales.contracts.p90} / 最良${sales.contracts.best}`

@@ -4,6 +4,7 @@ import {
   appendChangelog,
   appendClaim,
   ensureStructure,
+  saveValidationNote,
   vaultAvailable,
   writeCurrentState,
   writeDailyResult,
@@ -23,7 +24,17 @@ async function main() {
 
   const d = await buildDashboard();
 
+  // 検証カードは案件ごとに1ファイル。売れなかった案件も消さずに残す
+  const savedCards = d.validation.cards.map((c) => saveValidationNote(c)).filter(Boolean);
+
+  const v = d.validation;
   const state = [
+    `## 検証パイプライン（実測ベース）`,
+    `- 発掘 ${v.counts.DISCOVERED}件 → 日本調査 ${v.counts.RESEARCHED}件 → 採算試算 ${v.counts.BACKTESTED}件 → 売ってみる候補 ${v.counts.VALIDATION_READY}件`,
+    `- 実際に売ってみている: ${v.counts.TESTING}件 / 有料顧客あり: ${v.counts.PAID_CUSTOMER}件 / 拡大候補: ${v.counts.SCALE}件`,
+    `- 実績CSV: ${v.hasMeasuredData ? '読み込み済み' : '未記入（したがって数字は全て仮定であり、売れる根拠ではない）'}`,
+    `- 合否・撤退・拡大の条件は ${v.criteriaFixedAt} に凍結（結果を見てから緩めない）`,
+    '',
     `## 案件`,
     `- 登録済み: ${d.ideaCount}件（採点済み ${d.scoredCount}件）`,
     `- S/Aランク: ${d.ideas.filter((i) => i.grade === 'S' || i.grade === 'A').length}件`,
@@ -65,7 +76,8 @@ async function main() {
 
   appendChangelog(
     'AI BUSINESS OS 状態を同期',
-    `案件${d.ideaCount}件 / 採点済み${d.scoredCount}件 / MRR ${d.saas.mrrYen.toLocaleString()}円`
+    `案件${d.ideaCount}件 / 採点済み${d.scoredCount}件 / MRR ${d.saas.mrrYen.toLocaleString()}円\n` +
+      `検証カード${savedCards.length}件を保存（実際に売ってみた案件 ${v.counts.TESTING}件・有料顧客 ${v.counts.PAID_CUSTOMER}件）`
   );
 
   const ok = appendClaim(

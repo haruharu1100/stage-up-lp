@@ -8,6 +8,11 @@ import {
   type JapanStage,
 } from '../lib/types';
 import { STAGE_LABEL } from '../lib/japan';
+import { STAGE_LABEL as VALIDATION_STAGE_LABEL } from '../lib/validation/pipeline';
+import {
+  DECISION_LABEL as VALIDATION_DECISION_LABEL,
+  type ValidationDecision,
+} from '../lib/validation/criteria';
 
 export const dynamic = 'force-dynamic';
 
@@ -55,6 +60,19 @@ function rateText(r: { rate: number | null; status: string; denominator: number 
   return `${Math.round((r.rate ?? 0) * 1000) / 10}%`;
 }
 
+function pctText(v: number | null) {
+  return v === null ? '—' : `${Math.round(v * 1000) / 10}%`;
+}
+
+const DECISION_CLASS: Record<ValidationDecision, string> = {
+  NOT_TESTED: 'none',
+  CONTINUE: 'none',
+  STOP_EARLY: 'bad',
+  REJECT: 'bad',
+  PASS: 's',
+  SCALE_CANDIDATE: 's',
+};
+
 export default async function Page() {
   await migrate();
   const d = await buildDashboard();
@@ -99,6 +117,126 @@ export default async function Page() {
               <b>{r.risk}</b>
               <span>データ量</span>
               <b>{r.dataVolume}</b>
+            </div>
+          </div>
+        ))
+      )}
+
+      <h2>VALIDATION PIPELINE（発掘 → 実際に売ってみる）</h2>
+      <p className="sub">
+        発掘した件数には意味がありません。実際に売ってみた件数が何件あるかだけが本題です。
+        どこで止まっているかを毎回ここに出します。仮定と実測は必ず別の欄に分けて表示します。
+      </p>
+      <div className="kpis">
+        {(Object.keys(d.validation.counts) as (keyof typeof d.validation.counts)[]).map((k) => (
+          <div className="kpi" key={k}>
+            <div className="label">{VALIDATION_STAGE_LABEL[k]}</div>
+            <div className="value">{d.validation.counts[k]}</div>
+            <div className="note">件</div>
+          </div>
+        ))}
+      </div>
+      <p className="sub">
+        {d.validation.hasMeasuredData
+          ? `実績CSV（data/sales-actuals.csv）を読み込んでいます。`
+          : `実績CSV（data/sales-actuals.csv）はまだ空です。したがって下の数字は全て「仮定」であり、売れる根拠ではありません。`}
+        {' '}合否・撤退・拡大の条件は {d.validation.criteriaFixedAt} に決めたものを凍結しています（結果を見てから緩めません）。
+      </p>
+
+      {d.validation.cards.length === 0 ? (
+        <p className="empty">売ってみる候補がまだありません。</p>
+      ) : (
+        d.validation.cards.map((c) => (
+          <div className="card" key={c.ideaId}>
+            <div className="rec-title">
+              {c.rank}. {c.title}{' '}
+              <span className={`badge ${DECISION_CLASS[c.decision]}`}>
+                {VALIDATION_DECISION_LABEL[c.decision]}
+              </span>
+            </div>
+            <div className="rec-meta">
+              <span>仮説</span>
+              <b>{c.hypothesis}</b>
+              <span>業種</span>
+              <b>{CATEGORY_LABEL[c.vertical as Category] ?? c.vertical}</b>
+              <span>日本の空き</span>
+              <b>{c.japanGap}</b>
+              <span>Money Score</span>
+              <b>
+                {c.moneyScore ?? '—'}（調査の確度 {c.researchConfidence ?? '—'}）
+              </b>
+              <span>次の一手</span>
+              <b>{c.nextAction}</b>
+            </div>
+
+            <table style={{ marginTop: 12 }}>
+              <thead>
+                <tr>
+                  <th>項目</th>
+                  <th>仮定（ASSUMPTION）</th>
+                  <th>実測（MEASURED）</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>成約1件あたりの獲得費</td>
+                  <td>{c.assumptionCacYen === null ? '—' : yen(Math.round(c.assumptionCacYen))}</td>
+                  <td>{c.measuredCacYen === null ? '実測なし' : yen(c.measuredCacYen)}</td>
+                </tr>
+                <tr>
+                  <td>契約率（リード基準）</td>
+                  <td>{pctText(c.assumptionCloseRate)}</td>
+                  <td>{c.measuredCloseRate === null ? '実測なし' : pctText(c.measuredCloseRate)}</td>
+                </tr>
+                <tr>
+                  <td>母数 / 確度</td>
+                  <td>仮定のため母数なし</td>
+                  <td>
+                    {c.measuredSampleSize}件 / 確度 {c.measuredConfidence}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+
+            <div className="rec-meta" style={{ marginTop: 12 }}>
+              <span>テスト規模</span>
+              <b>
+                {c.testSize}件（現在 {c.currentLeads}件）
+              </b>
+              <span>次に必要な件数</span>
+              <b>
+                {c.sample.additionalLeads === null
+                  ? '自動では増やさない'
+                  : `あと${c.sample.additionalLeads}件（累計${c.sample.targetLeads}件）`}
+                ／ {c.sample.note}
+              </b>
+              <span>合格条件</span>
+              <b>
+                {c.passChecks
+                  .map((p) => `${p.label} ${p.actual}（必要 ${p.required}）`)
+                  .join(' / ')}
+              </b>
+              <span>撤退条件</span>
+              <b>{c.criteria.kill.join(' / ')}</b>
+              <span>拡大条件</span>
+              <b>
+                {c.scaleChecks
+                  .map((p) => `${p.label} ${p.actual}（必要 ${p.required}）`)
+                  .join(' / ')}
+              </b>
+              <span>判定の理由</span>
+              <b>{c.decisionReasons.join(' / ')}</b>
+              {c.effectiveCac && (
+                <>
+                  <span>note込み実質CAC</span>
+                  <b>
+                    {c.effectiveCac.label}
+                    {c.effectiveCac.type === 'PROFITABLE_ACQUISITION'
+                      ? '（集客しながら先に利益が出ている）'
+                      : ''}
+                  </b>
+                </>
+              )}
             </div>
           </div>
         ))

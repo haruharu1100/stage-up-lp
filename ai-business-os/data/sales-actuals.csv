@@ -1,0 +1,7 @@
+date,idea_id,vertical,channel,campaign_id,leads,reachable_leads,calls,emails,replies,positive_replies,demo_requests,meetings,contracts,revenue,direct_cost,sales_time_minutes
+# 実際にやった営業の結果を1行ずつ書く。分からない列は空欄にする（0と書かない）。
+# channel: OUTBOUND_CALL / OUTBOUND_EMAIL / FORM_OUTREACH / X_ORGANIC / NOTE_ORGANIC / SEO / PAID_ADS / REFERRAL
+# leads=接触を試みた件数 / reachable_leads=実際に相手に届いた件数
+# positive_replies=前向きな返信だけ（断り返信は含めない）
+# revenue と direct_cost は円。sales_time_minutes は自分が使った分数（時給2,500円で費用に換算する）
+# 個人情報（会社名・担当者名・電話番号・メールアドレス）はこのファイルに書かない

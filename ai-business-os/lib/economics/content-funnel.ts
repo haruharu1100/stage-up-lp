@@ -151,6 +151,56 @@ export type ContentFunnelResult = {
   note: string;
 };
 
+/**
+ * note込みの実質CAC（CONTENT CAC）。
+ *   実質CAC =（X制作費 ＋ note制作費 ＋ 運用時間 − noteの手取り）÷ 契約数
+ *
+ * 例：制作・運用に50,000円かけて、noteの手取りが30,000円、契約が2件なら
+ *     (50,000 − 30,000) ÷ 2 = 10,000円。
+ * noteの手取りが制作費を上回ると実質CACはマイナスになるが、これは異常値ではない。
+ * 「集めながら先に利益が出ている」状態なので、0に丸めずマイナスのまま表示する。
+ */
+export type EffectiveCac = {
+  contentCostYen: number;
+  /** noteの手取り（手数料を引いた後） */
+  noteNetYen: number;
+  contracts: number;
+  /** 契約0件のときは計算できないので null。0円にしない */
+  cacYen: number | null;
+  /** 集客費に対するnote手取りの比率 */
+  selfFundingRatio: number | null;
+  type: AcquisitionType;
+  label: string;
+};
+
+export function effectiveCac(input: {
+  contentCostYen: number;
+  noteRevenueYen: number;
+  contracts: number;
+  feeRate?: number;
+}): EffectiveCac {
+  const noteNet = Math.round(input.noteRevenueYen * (1 - (input.feeRate ?? NOTE_FEE_RATE)));
+  const ratio =
+    input.contentCostYen > 0 ? noteNet / input.contentCostYen : noteNet > 0 ? 2 : 0;
+  const type = typeOf(ratio);
+  const cac =
+    input.contracts > 0 ? Math.round((input.contentCostYen - noteNet) / input.contracts) : null;
+  return {
+    contentCostYen: input.contentCostYen,
+    noteNetYen: noteNet,
+    contracts: input.contracts,
+    cacYen: cac,
+    selfFundingRatio: input.contentCostYen > 0 ? Math.round(ratio * 100) / 100 : null,
+    type,
+    label:
+      cac === null
+        ? '契約0件のため実質CACは計算しない'
+        : cac < 0
+          ? `実質CAC ${cac.toLocaleString()}円（マイナス＝集めながら利益が出ている）`
+          : `実質CAC ${cac.toLocaleString()}円`,
+  };
+}
+
 function typeOf(ratio: number): AcquisitionType {
   if (ratio >= 1.1) return 'PROFITABLE_ACQUISITION';
   if (ratio >= 0.9) return 'BREAK_EVEN_ACQUISITION';
@@ -249,6 +299,6 @@ export function runContentFunnel(
     source: 'ASSUMPTION',
     note:
       'X・noteの反応率はまだ実測が1件も無い。ここの数字は仮定であり、' +
-      '実際に投稿してから data/channel-actuals.csv を埋めるまで、売れる根拠としては使わない。',
+      '実際に投稿してから data/sales-actuals.csv を埋めるまで、売れる根拠としては使わない。',
   };
 }

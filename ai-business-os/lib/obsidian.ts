@@ -11,6 +11,8 @@ import type {
 import { SCORE_LABEL, SCORE_WEIGHTS } from './types';
 import { GRADE_LABEL } from './score';
 import { STAGE_LABEL } from './japan';
+import { DECISION_LABEL, VALIDATION_CRITERIA } from './validation/criteria';
+import type { ValidationCard } from './validation/pipeline';
 
 /**
  * セッションが消えても事業の知識が消えないようにする層。
@@ -51,6 +53,7 @@ const FOLDERS = [
   '07_EXPERIMENTS/ACTIVE',
   '07_EXPERIMENTS/COMPLETE',
   '07_EXPERIMENTS/FAILED',
+  '07_EXPERIMENTS/VALIDATION',
   '08_RESULTS/DAILY',
   '08_RESULTS/WEEKLY',
   '08_RESULTS/MONTHLY',
@@ -304,6 +307,78 @@ export function saveIdeaNote(
     lines.push(row('1年目純利益(円)', ctx.sales.netProfitYear1));
   }
   lines.push('');
+
+  writeAlways(rel, lines.join('\n'));
+  return rel;
+}
+
+/**
+ * 検証カードを案件ごとに1ファイルで残す。
+ * 売れなかった案件も消さない。消すと同じ失敗を繰り返し、似た案件が来ても警告を出せなくなる。
+ */
+export function saveValidationNote(card: ValidationCard): string | null {
+  if (!vaultAvailable()) return null;
+  const safe = card.title.replace(/[\\/:*?"<>|]/g, '_').slice(0, 60);
+  const rel = `07_EXPERIMENTS/VALIDATION/${card.ideaId}_${safe}.md`;
+  const pct = (v: number | null) => (v === null ? '—' : `${Math.round(v * 1000) / 10}%`);
+  const yen = (v: number | null) => (v === null ? '—' : `${Math.round(v).toLocaleString()}円`);
+
+  const lines = [
+    '---',
+    `idea_id: ${card.ideaId}`,
+    `title: "${card.title.replace(/"/g, "'")}"`,
+    `vertical: ${card.vertical}`,
+    `decision: ${card.decision}`,
+    `criteria_fixed_at: ${VALIDATION_CRITERIA.fixedAt}`,
+    `measured_source: ${card.measuredSource}`,
+    `measured_sample_size: ${card.measuredSampleSize}`,
+    `confidence: ${card.measuredConfidence}`,
+    `updated: ${today()}`,
+    'tags: [ai_business_os, validation]',
+    '---',
+    '',
+    `# ${card.title}`,
+    '',
+    '## IDEA',
+    `- 業種: ${card.vertical}`,
+    `- 日本の空き: ${card.japanGap}`,
+    `- Money Score: ${card.moneyScore ?? '—'}（調査の確度 ${card.researchConfidence ?? '—'}）`,
+    '',
+    '## HYPOTHESIS（仮説）',
+    `- ${card.hypothesis}`,
+    `- 売り方: ${card.recommendedChannel}`,
+    `- 価格: ${card.priceYen === null ? '未定' : yen(card.priceYen)}`,
+    '',
+    '## ASSUMPTIONS（仮定：まだ売れる根拠ではない）',
+    `- 想定CAC: ${yen(card.assumptionCacYen)}`,
+    `- 想定契約率（リード基準）: ${pct(card.assumptionCloseRate)}`,
+    '',
+    '## BACKTEST（計算上の採算）',
+    ...card.scaleChecks.map((c) => `- ${c.label}: ${c.actual}（必要 ${c.required}）`),
+    '',
+    '## REAL_TEST（実際に売ってみた結果）',
+    card.measuredSampleSize === 0
+      ? '- まだ実測が1件も無い。ここが埋まるまで「売れる」とは書かない'
+      : `- 実測 ${card.measuredSampleSize}件 / 確度 ${card.measuredConfidence}`,
+    `- 実測CAC: ${card.measuredCacYen === null ? '実測なし' : yen(card.measuredCacYen)}`,
+    `- 実測契約率: ${card.measuredCloseRate === null ? '実測なし' : pct(card.measuredCloseRate)}`,
+    card.effectiveCac ? `- note込みの実質CAC: ${card.effectiveCac.label}` : '- note込みの実質CAC: 未算出',
+    '',
+    '## RESULT（合格条件に対する現在地）',
+    ...card.passChecks.map((c) => `- ${c.label}: ${c.actual}（必要 ${c.required}）`),
+    `- 次に必要な件数: ${card.sample.additionalLeads === null ? '自動では増やさない' : `あと${card.sample.additionalLeads}件（累計${card.sample.targetLeads}件）`}`,
+    `- ${card.sample.note}`,
+    '',
+    '## DECISION（判定）',
+    `- ${DECISION_LABEL[card.decision]}`,
+    ...card.decisionReasons.map((r) => `- 理由: ${r}`),
+    `- 撤退条件（${VALIDATION_CRITERIA.fixedAt}に決定・後から緩めない）: ${card.criteria.kill.join(' / ')}`,
+    '',
+    '## LEARNING（次への学び）',
+    `- ${card.nextAction}`,
+    '- この記録は結果が悪くても削除しない（似た案件が来たときの警告材料にする）',
+    '',
+  ];
 
   writeAlways(rel, lines.join('\n'));
   return rel;

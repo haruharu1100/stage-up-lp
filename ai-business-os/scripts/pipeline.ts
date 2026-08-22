@@ -2,7 +2,7 @@ import { migrate, run } from '../lib/db/client';
 import { listIdeas } from '../lib/dashboard';
 import { getJapanAssessment } from '../lib/japan';
 import { getMarketBacktest, marketQueryFor, runMarketBacktest } from '../lib/backtest/market';
-import { DEFAULT_ASSUMPTION, getSalesBacktest, runSalesBacktest } from '../lib/backtest/montecarlo';
+import { currentAssumption, DEFAULT_ASSUMPTION, getSalesBacktest, runSalesBacktest } from '../lib/backtest/montecarlo';
 import { FUNNEL_STAGES, savePreScores, topPreScored } from '../lib/prescore';
 import { rateIdea } from '../lib/rating';
 import { getJapanResearch, hasEnoughEvidence, researchJapan } from '../lib/research/japan-researcher';
@@ -103,7 +103,7 @@ async function main() {
     if (!idea) continue;
     const query = await marketQueryFor(idea);
     await runMarketBacktest(idea.id, query);
-    const sales = await runSalesBacktest(idea.id, DEFAULT_ASSUMPTION);
+    const sales = await runSalesBacktest(idea.id, currentAssumption(DEFAULT_ASSUMPTION.channel, idea.id));
     console.log(
       `  ${sales.verdict.padEnd(18)} LTV/CAC中央${sales.ltvCac.median} 赤字確率${Math.round(sales.probabilities.lossYear1 * 100)}% 推奨価格${sales.bestScenario ?? '—'}  ${idea.title.slice(0, 36)}`
     );

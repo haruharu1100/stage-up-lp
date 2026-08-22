@@ -13,7 +13,17 @@ import {
   simulate,
   solveBreakEven,
 } from '../lib/backtest/montecarlo';
-import { aggregateActuals, applyActuals, rateRange } from '../lib/economics/actuals';
+import {
+  aggregateByChannel,
+  aggregateByIdea,
+  applyActuals,
+  parseSalesActuals,
+  rateRange,
+  widenFor,
+  SALES_ACTUALS_COLUMNS,
+  SALES_ACTUALS_TEMPLATE,
+  type SalesActual,
+} from '../lib/economics/actuals';
 import { unitCosts } from '../lib/economics/channels';
 import { bestPriceView, priceViewMismatches } from '../lib/economics/price-view';
 import { rate } from '../lib/funnel';
@@ -25,6 +35,7 @@ import {
   EVENT_TYPES,
   PROFIT_VERDICT_LABEL,
   SCORE_WEIGHTS,
+  confidenceOf,
   dataVolumeOf,
   type Idea,
   type SalesBacktest,
@@ -47,6 +58,13 @@ import { computeMoneyScore, MONEY_WEIGHTS } from '../lib/economics/money-score';
 import { DEFAULT_CONTENT_ASSUMPTION, NOTE_PRICES, runContentFunnel } from '../lib/economics/content-funnel';
 import { buildRankingsFrom, RANKING_FORMULA, type Material } from '../lib/ranking';
 import { selectRankable } from '../lib/opportunities';
+import { effectiveCac } from '../lib/economics/content-funnel';
+import {
+  evaluateValidation,
+  VALIDATION_CRITERIA,
+} from '../lib/validation/criteria';
+import { sampleGuide, statisticalSample, SEQUENTIAL_STEPS } from '../lib/validation/sample-size';
+import { buildValidationPipeline, testPlanText } from '../lib/validation/pipeline';
 
 type Check = { name: string; ok: boolean; detail?: string };
 const checks: Check[] = [];
@@ -245,19 +263,23 @@ const midOf = (r: [number, number]) => (r[0] + r[1]) / 2;
 const noActual = applyActuals(DEFAULT_ASSUMPTION, 'OUTBOUND_CALL', {});
 add('実績が1件も無ければ「仮定」のまま（実測を名乗らない）',
   noActual.source === 'ASSUMPTION' && noActual.sampleSize === 0);
-const tinyRows = [{ date: '2026-08-01', channel: 'OUTBOUND_CALL' as const, campaign: 'c1',
-  leads: 3, cost: 900, calls: 3, emails: null, replies: 3, demos: 3, meetings: null,
-  contracts: 1, revenue: 49800 }];
-const tiny = aggregateActuals(tinyRows);
+const tinyRows: SalesActual[] = [{ date: '2026-08-01', ideaId: 'idea-1', vertical: 'SALES',
+  channel: 'OUTBOUND_CALL', campaignId: 'c1',
+  leads: 3, reachableLeads: 3, calls: 3, emails: null, replies: 3, positiveReplies: 1,
+  demoRequests: 3, meetings: null, contracts: 1, revenue: 49800, directCost: 900,
+  salesTimeMinutes: null }];
+const tiny = aggregateByChannel(tinyRows);
 const tinyA = applyActuals(DEFAULT_ASSUMPTION, 'OUTBOUND_CALL', tiny);
 add('実績が入れば「実測」と表示される', tinyA.source === 'MEASURED' && tinyA.dataVolume === 'LOW_DATA');
 add('実績3件・成約1件で成約率を33%まで引き上げない（1件の成約で書き換えない）',
   midOf(tinyA.closeRate) < 0.25, `成約率の中央 ${midOf(tinyA.closeRate).toFixed(3)}`);
-const bigRows = Array.from({ length: 10 }, (_, i) => ({
-  date: `2026-08-0${i}`, channel: 'OUTBOUND_CALL' as const, campaign: 'c2',
-  leads: 100, cost: 30000, calls: 100, emails: null, replies: 50, demos: 30,
-  meetings: null, contracts: 6, revenue: 298800 }));
-const big = aggregateActuals(bigRows);
+const bigRows: SalesActual[] = Array.from({ length: 10 }, (_, i) => ({
+  date: `2026-08-0${i}`, ideaId: 'idea-1', vertical: 'SALES',
+  channel: 'OUTBOUND_CALL' as const, campaignId: 'c2',
+  leads: 100, reachableLeads: 100, calls: 100, emails: null, replies: 50, positiveReplies: 20,
+  demoRequests: 30, meetings: null, contracts: 6, revenue: 298800, directCost: 30000,
+  salesTimeMinutes: null }));
+const big = aggregateByChannel(bigRows);
 const bigA = applyActuals(DEFAULT_ASSUMPTION, 'OUTBOUND_CALL', big);
 add('実績が積み上がれば実測値に近づく',
   Math.abs(midOf(bigA.closeRate) - 0.2) < Math.abs(midOf(tinyA.closeRate) - 0.3333));
@@ -266,7 +288,7 @@ add('実績が多いほど幅（信頼区間）は狭くなる',
   (rateRange(1, 3, [0, 1])[1] - rateRange(1, 3, [0, 1])[0]));
 add('実績1000件は HIGH_DATA になる', bigA.dataVolume === 'HIGH_DATA' && bigA.sampleSize === 1000);
 add('成約0件のときCACは0円ではなくnull',
-  aggregateActuals([{ ...tinyRows[0], contracts: 0, revenue: 0 }]).OUTBOUND_CALL?.cac === null);
+  aggregateByChannel([{ ...tinyRows[0], contracts: 0, revenue: 0 }]).OUTBOUND_CALL?.cac === null);
 add('実測のリード単価と成約単価(CAC)は別の数字として出る',
   (big.OUTBOUND_CALL?.costPerLead ?? 0) === 300 && (big.OUTBOUND_CALL?.cac ?? 0) === 5000,
   `単価${big.OUTBOUND_CALL?.costPerLead} / CAC${big.OUTBOUND_CALL?.cac}`);
@@ -689,14 +711,157 @@ add('バックテスト未実施の案件は、赤字と分かった案件より
 add('ほとんど採点できていない案件はTOPの表から外す（0点で載せない）',
   picked.ideaIds.includes('unresearched') === false && picked.excluded === 2);
 
+// --- 実測ベースへの移行（実績CSVの正式化） ---
+add('実績CSVの列が17列で確定している', SALES_ACTUALS_COLUMNS.length === 17,
+  `${SALES_ACTUALS_COLUMNS.length}列`);
+add('実績CSVに必要な列が全部ある',
+  ['date','idea_id','vertical','channel','campaign_id','leads','reachable_leads','calls','emails',
+   'replies','positive_replies','demo_requests','meetings','contracts','revenue','direct_cost',
+   'sales_time_minutes'].every((c) => (SALES_ACTUALS_COLUMNS as readonly string[]).includes(c)));
+add('実績CSVに個人情報を書かない注意が入っている',
+  SALES_ACTUALS_TEMPLATE.includes('個人情報'));
+const csvText = [
+  'channel,date,idea_id,vertical,campaign_id,leads,replies,positive_replies,demo_requests,contracts,revenue,direct_cost,sales_time_minutes',
+  '# コメント行は読み飛ばす',
+  'OUTBOUND_CALL,2026-08-10,idea-x,SALES,cmp1,80,20,6,4,3,149400,24000,600',
+].join('\n');
+const csvRows = parseSalesActuals(csvText);
+add('実績CSVは列の順番ではなく列名で読む（順番が変わっても壊れない）',
+  csvRows.length === 1 && csvRows[0].leads === 80 && csvRows[0].channel === 'OUTBOUND_CALL' &&
+  csvRows[0].ideaId === 'idea-x');
+add('実績CSVの空欄は0ではなく未記入として扱う',
+  csvRows[0].reachableLeads === null && csvRows[0].meetings === null);
+const parsedM = aggregateByIdea(csvRows).get('idea-x')!;
+add('案件ごとに実績を集計できる', parsedM.leads === 80 && parsedM.contracts === 3);
+add('契約率はリード基準で出す（3契約 ÷ 80リード = 3.8%）',
+  parsedM.closeRate !== null && Math.abs(parsedM.closeRate - 0.038) < 0.001,
+  String(parsedM.closeRate));
+add('営業に使った時間も費用に換算してCACへ入れる',
+  (parsedM.totalCost ?? 0) === 24000 + Math.round((600 / 60) * 2500), String(parsedM.totalCost));
+const zeroDenom = aggregateByIdea(
+  parseSalesActuals(['date,idea_id,vertical,channel,campaign_id,leads,replies,demo_requests,contracts,revenue,direct_cost',
+    '2026-08-10,idea-z,SALES,OUTBOUND_EMAIL,cmp2,50,0,0,0,0,15000'].join('\n'))
+).get('idea-z')!;
+add('分母0の指標は0%ではなくnull（実測して悪かった場合と区別する）',
+  zeroDenom.stageDemoRate === null && zeroDenom.cac === null && zeroDenom.closeRate === 0);
+
+// --- 少数データへの過学習を禁止する ---
+add('実測が少ないほど分布を広く取る（LOW < MEDIUM < HIGH の順に狭くなる）',
+  widenFor('NO_DATA') > widenFor('LOW_DATA') && widenFor('LOW_DATA') > widenFor('MEDIUM_DATA') &&
+  widenFor('MEDIUM_DATA') > widenFor('HIGH_DATA') && widenFor('HIGH_DATA') === 1);
+add('実測件数が増えるほど確度が上がる（上限0.95）',
+  confidenceOf(0) === 0 && confidenceOf(50) < confidenceOf(500) && confidenceOf(100000) <= 0.95);
+add('前提そのものが確度を持つ（仮定のままなら0）', DEFAULT_ASSUMPTION.confidence === 0);
+
+// --- 次に何件テストすべきか ---
+add('段階方式は 50 → 100 → 200 → 500 の4段', SEQUENTIAL_STEPS.join(',') === '50,100,200,500');
+const guide80 = sampleGuide(parsedM);
+add('80件やった時点では、次の目標は200件（あと120件）',
+  guide80.targetLeads === 200 && guide80.additionalLeads === 120,
+  `目標${guide80.targetLeads} / 追加${guide80.additionalLeads}`);
+add('80件は HIGH_DATA 扱いにしない（100件未満で結論にしない）',
+  guide80.dataVolume === 'MEDIUM_DATA' && guide80.confidence < 0.5,
+  `${guide80.dataVolume} / 確度${guide80.confidence}`);
+add('率が低いほど統計的に必要な件数は増える',
+  (statisticalSample(0.01) ?? 0) > (statisticalSample(0.1) ?? 0));
+add('統計的な必要件数は参考値で、一度にそこまで増やさない',
+  (guide80.statisticalLeads ?? 0) > (guide80.targetLeads ?? 0));
+add('実測が1件も無ければ、まず50件から始めると出す',
+  sampleGuide(null).targetLeads === 50 && sampleGuide(null).measuredCloseRate === null);
+
+// --- 合否・撤退・拡大の条件（後から緩めない） ---
+add('検証基準は凍結されていて書き換えられない', Object.isFrozen(VALIDATION_CRITERIA) &&
+  Object.isFrozen(VALIDATION_CRITERIA.kill) && Object.isFrozen(VALIDATION_CRITERIA.scale));
+add('基準を決めた日付が残っている', VALIDATION_CRITERIA.fixedAt === '2026-08-22');
+add('1案件は50〜100件・最大3案件に制限している',
+  VALIDATION_CRITERIA.minLeadsPerIdea === 50 && VALIDATION_CRITERIA.maxLeadsPerIdea === 100 &&
+  VALIDATION_CRITERIA.maxIdeas === 3);
+const noScale = { ltvCacMedian: null, profitProbability: null, paidCustomers: 0 };
+const metricsOf = (csv: string, id: string) =>
+  aggregateByIdea(parseSalesActuals(csv)).get(id)!;
+const head = 'date,idea_id,vertical,channel,campaign_id,leads,reachable_leads,replies,positive_replies,demo_requests,meetings,contracts,revenue,direct_cost,sales_time_minutes';
+add('実測が無ければ合否を付けない',
+  evaluateValidation({ metrics: null, scale: noScale }).decision === 'NOT_TESTED');
+add('100件やって前向きな返信が0件なら途中終了',
+  evaluateValidation({
+    metrics: metricsOf(`${head}\n2026-08-10,a,SALES,OUTBOUND_CALL,c,100,100,4,0,1,0,0,0,30000,0`, 'a'),
+    scale: noScale,
+  }).decision === 'STOP_EARLY');
+add('200件・前向き返信2%未満・デモ0件なら撤退',
+  evaluateValidation({
+    metrics: metricsOf(`${head}\n2026-08-10,b,SALES,OUTBOUND_CALL,c,200,200,10,2,0,0,0,0,60000,0`, 'b'),
+    scale: noScale,
+  }).decision === 'REJECT');
+add('合格条件3つを全部満たしたときだけ合格',
+  evaluateValidation({
+    metrics: metricsOf(`${head}\n2026-08-10,c,SALES,OUTBOUND_CALL,c,100,100,30,10,8,5,2,99600,30000,0`, 'c'),
+    scale: noScale,
+  }).decision === 'PASS');
+add('合格条件が1つでも欠けたら合格にしない',
+  evaluateValidation({
+    metrics: metricsOf(`${head}\n2026-08-10,d,SALES,OUTBOUND_CALL,c,100,100,30,10,8,1,1,49800,30000,0`, 'd'),
+    scale: noScale,
+  }).decision === 'CONTINUE');
+add('LTV÷CAC・黒字確率・有料顧客の3つが揃って初めて拡大候補',
+  evaluateValidation({
+    metrics: metricsOf(`${head}\n2026-08-10,e,SALES,OUTBOUND_CALL,c,100,100,30,10,8,5,2,99600,30000,0`, 'e'),
+    scale: { ltvCacMedian: 4, profitProbability: 0.8, paidCustomers: 2 },
+  }).decision === 'SCALE_CANDIDATE');
+add('採算が良くても有料顧客が足りなければ拡大候補にしない',
+  evaluateValidation({
+    metrics: metricsOf(`${head}\n2026-08-10,f,SALES,OUTBOUND_CALL,c,100,100,30,10,8,5,1,49800,30000,0`, 'f'),
+    scale: { ltvCacMedian: 4, profitProbability: 0.8, paidCustomers: 1 },
+  }).decision !== 'SCALE_CANDIDATE');
+add('判定には必ず理由が付く',
+  evaluateValidation({ metrics: null, scale: noScale }).reasons.length > 0);
+
+// --- note込みの実質CAC ---
+const ecProfit = effectiveCac({ contentCostYen: 50000, noteRevenueYen: 100000, contracts: 2 });
+add('note粗利が制作費を上回れば実質CACはマイナスになる', (ecProfit.cacYen ?? 0) < 0,
+  String(ecProfit.cacYen));
+add('実質CACがマイナスでもエラーにせず「集めながら利益が出ている」と表示する',
+  ecProfit.type === 'PROFITABLE_ACQUISITION' && ecProfit.label.includes('マイナス'));
+const ecPaid = effectiveCac({ contentCostYen: 50000, noteRevenueYen: 30000, contracts: 2 });
+add('note粗利が制作費に届かなければ実質CACはプラス（自腹）',
+  (ecPaid.cacYen ?? 0) > 0 && ecPaid.type === 'PAID_ACQUISITION');
+add('契約0件のとき実質CACは0円ではなく計算しない',
+  effectiveCac({ contentCostYen: 50000, noteRevenueYen: 30000, contracts: 0 }).cacYen === null);
+
+// --- 検証パイプライン（仮定と実測を混ぜない） ---
+async function pipelineChecks() {
+const pipeline = await buildValidationPipeline([]);
+add('パイプラインは7段ある', Object.keys(pipeline.counts).length === 7);
+add('実測CSVが空なら「実測あり」と名乗らない', pipeline.hasMeasuredData === false);
+add('実際に売ってみた件数は、発掘した件数と別に数える',
+  pipeline.counts.TESTING === 0 && pipeline.counts.PAID_CUSTOMER === 0);
+add('検証カードは仮定と実測を別の欄で持つ（同じ欄に混ぜない）',
+  pipeline.cards.every((c) =>
+    'assumptionCacYen' in c && 'measuredCacYen' in c &&
+    'assumptionCloseRate' in c && 'measuredCloseRate' in c));
+add('実測が無いカードは実測欄がnullで、0で埋めない',
+  pipeline.cards.every((c) => c.measuredCacYen === null && c.measuredCloseRate === null));
+add('検証カードは3件までに絞る', pipeline.cards.length <= VALIDATION_CRITERIA.maxIdeas);
+add('検証カードには次の一手が必ず書いてある',
+  pipeline.cards.every((c) => c.nextAction.length > 0));
+add('販売テスト計画に人間の承認と自動送信しない旨が入る',
+  pipeline.cards.length === 0 ||
+  testPlanText(pipeline.cards[0]).join('\n').includes('自動送信はしない'));
+const validationDoc = fs.readFileSync('docs/VALIDATION.md', 'utf8');
+add('検証基準の計算式がドキュメントに書かれている',
+  validationDoc.includes('Kill') && validationDoc.includes('Scale') &&
+  validationDoc.includes('50 → 100 → 200 → 500'));
+}
+
 // --- 出力 ---
-let failed = 0;
-for (const c of checks) {
-  if (!c.ok) failed++;
-  console.log(`${c.ok ? '  OK ' : '  NG '} ${c.name}${c.detail && !c.ok ? ` — ${c.detail}` : ''}`);
-}
-console.log(`\n${checks.length - failed} / ${checks.length} 件 合格`);
-if (failed > 0) {
-  console.error(`${failed}件 不合格`);
-  process.exit(1);
-}
+pipelineChecks().then(() => {
+  let failed = 0;
+  for (const c of checks) {
+    if (!c.ok) failed++;
+    console.log(`${c.ok ? '  OK ' : '  NG '} ${c.name}${c.detail && !c.ok ? ` — ${c.detail}` : ''}`);
+  }
+  console.log(`\n${checks.length - failed} / ${checks.length} 件 合格`);
+  if (failed > 0) {
+    console.error(`${failed}件 不合格`);
+    process.exit(1);
+  }
+});
