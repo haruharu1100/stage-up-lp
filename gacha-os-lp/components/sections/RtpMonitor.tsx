@@ -137,7 +137,7 @@ export default function RtpMonitor() {
   return (
     <Act
       id="rtp"
-      no="06"
+      no="08"
       eyebrow="RTP ENGINE / 最大の差別化"
       wide
       title={

@@ -105,10 +105,27 @@ export default function CoreToScreen() {
                 className="relative flex h-[168px] w-[168px] items-center justify-center rounded-full border border-blue-ink/20 bg-gradient-to-b from-blue-pale to-white shadow-lift2"
               >
                 <span className="absolute inset-[14px] rounded-full border border-edge2" />
-                <span className="num relative text-center text-label font-bold leading-[1.9] text-blue-ink">
-                  AI GACHA
-                  <br />
-                  OS
+                {/*
+                  ★ここで <br /> を使って「AI GACHA」「OS」に割らないこと。
+
+                    見た目は2行になって正しいのですが、書き出されるHTMLの中では
+                    製品名が2つに切れてしまい、
+                      ・コピーすると「AI GACHA」と「OS」のあいだに改行が入る
+                      ・ページ内検索（⌘F）で「AI GACHA OS」が見つからない
+                      ・読み上げソフトが、別々の言葉として読む
+                    という、見えない文字を混ぜていたときと同じ実害が出ます。
+
+                    ★2行にするのもやめました。
+                      製品名が目で見て2つに分かれている状態が、そもそも良くないからです。
+                      いまは nb（折り返さない指定）を付けて、必ず1行で出しています。
+                      13px・11文字なので、丸の中（内側の直径 140px）に収まります。
+                      丸を小さくしたいときは字を小さくすること。
+                      <br /> で割って戻さないこと。
+                    （tests/noInvisibleChars.test.ts と
+                      scripts/check-design.mjs が見張っています）
+                */}
+                <span className="nb num relative text-center text-label font-bold leading-[1.9] text-blue-ink">
+                  AI GACHA OS
                 </span>
               </motion.div>
             </div>

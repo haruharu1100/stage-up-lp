@@ -405,10 +405,29 @@ function Core({
           <span className="absolute inset-0 overflow-hidden rounded-full">
             <span className="absolute inset-0 bg-sheen" />
           </span>
-          <span className="num relative text-center text-label font-bold leading-[1.9] text-blue-ink">
-            AI GACHA
-            <br />
-            OS
+          {/*
+            ★ここで <br /> を使って「AI GACHA」「OS」に割らないこと。
+
+              以前は <br /> で2行にしていました。見た目は同じですが、
+              書き出されるHTMLの中で製品名が2つに切れてしまい、
+                ・コピーすると「AI GACHA」と「OS」のあいだに改行が入る
+                ・ページ内検索（⌘F）で「AI GACHA OS」が見つからない
+                ・読み上げソフトが、別々の言葉として読む
+              という、見えない文字を挟んでいたときと同じ実害が出ます。
+
+              ★2行にするのもやめました。
+                最初は幅を狭くして「AI GACHA」／「OS」の2行に折り返しましたが、
+                これも scripts/check-design.mjs に止められました。
+                製品名が目で見て2つに分かれている状態が、そもそも良くないからです。
+                いまは nb（折り返さない指定）を付けて、必ず1行で出しています。
+                13px・11文字なので、丸の中（内側の直径 140px）に収まります。
+
+              ★丸を小さくしたり、字を大きくしたりすると、はみ出します。
+                そのときは字を小さくすること。<br /> で割って戻さないこと。
+                （tests/noInvisibleChars.test.ts と scripts/check-design.mjs が見張っています）
+          */}
+          <span className="nb num relative text-center text-label font-bold leading-[1.9] text-blue-ink">
+            AI GACHA OS
           </span>
         </div>
       </div>

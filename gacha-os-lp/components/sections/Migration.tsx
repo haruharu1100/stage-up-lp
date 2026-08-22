@@ -86,7 +86,7 @@ export default function Migration() {
           <div className="max-w-4xl">
             <div className="flex flex-wrap items-center gap-x-3.5 gap-y-2">
               <span className="num whitespace-nowrap text-label text-slate3">
-                SECTION 08
+                SECTION 06
               </span>
               <span className="hidden h-px w-8 bg-edge sm:block" />
               <span className="num whitespace-nowrap text-label uppercase text-blue-ink">

@@ -154,7 +154,7 @@ export default function Diagnose() {
   return (
     <Section
       id="diagnose"
-      no="09"
+      no="07"
       eyebrow="QUICK DIAGNOSIS"
       title={
         <>

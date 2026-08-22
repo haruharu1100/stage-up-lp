@@ -49,7 +49,13 @@
 
 import { createRequire } from "node:module";
 import { execFileSync } from "node:child_process";
-import { mkdirSync, rmSync, readdirSync, existsSync } from "node:fs";
+import {
+  mkdirSync,
+  rmSync,
+  readdirSync,
+  existsSync,
+  writeFileSync,
+} from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
@@ -243,7 +249,25 @@ async function frameTop(page, selector, offset = 0) {
   );
 }
 
+/*
+  出したテロップを、時刻つきで控えておく箱。
+
+  ★なぜ控えるのか。
+    テロップは画面の中に焼き込まれているので、目で見れば読めます。
+    でも「文字として」は存在しません。つまり、
+      ・音を出せない場所（電車の中、会社）で見ている人
+      ・耳の聞こえにくい人
+      ・読み上げソフトを使っている人
+      ・検索エンジン
+    には、何ひとつ届いていないのと同じです。
+    そこで、同じ文言を字幕ファイル（.vtt）としても書き出し、
+    動画プレーヤーの「字幕」から出せるようにします。
+    ここで控えた時刻が、そのまま字幕の出るタイミングになります。
+*/
+const CUES = [];
+
 async function caption(page, code, text) {
+  CUES.push({ t: Date.now(), code, text });
   await page.evaluate(
     ([c, t]) => {
       const el = document.querySelector("#rec-cap");
@@ -354,7 +378,7 @@ const cuts = [];
 
   const t1 = Date.now();
   const path = await endTake(ctx, page);
-  cuts.push({ path, ss: (t0 - born) / 1000, dur: (t1 - t0) / 1000 });
+  cuts.push({ path, ss: (t0 - born) / 1000, dur: (t1 - t0) / 1000, t0, t1 });
   console.log("場面A 撮影完了");
 }
 
@@ -374,7 +398,7 @@ const cuts = [];
 
   const t1 = Date.now();
   const path = await endTake(ctx, page);
-  cuts.push({ path, ss: (t0 - born) / 1000, dur: (t1 - t0) / 1000 });
+  cuts.push({ path, ss: (t0 - born) / 1000, dur: (t1 - t0) / 1000, t0, t1 });
   console.log("場面B 撮影完了");
 }
 
@@ -437,6 +461,12 @@ const cuts = [];
   await page.waitForTimeout(BEATS.linked);
 
   /* ── 最後の一言 ── */
+  /* 最後の板も字幕に入れる。ここだけ抜けると、字幕が途中で終わったように見える */
+  CUES.push({
+    t: Date.now(),
+    code: "",
+    text: "作るところから、お客様が遊ぶところまで。AI GACHA OS",
+  });
   await page.evaluate(() => {
     const c = document.querySelector("#rec-card");
     c.querySelector("p").textContent =
@@ -449,7 +479,7 @@ const cuts = [];
 
   const t1 = Date.now();
   const path = await endTake(ctx, page);
-  cuts.push({ path, ss: (t0 - born) / 1000, dur: (t1 - t0) / 1000 });
+  cuts.push({ path, ss: (t0 - born) / 1000, dur: (t1 - t0) / 1000, t0, t1 });
   console.log("場面C 撮影完了");
 }
 
@@ -481,7 +511,6 @@ cuts.forEach((c, i) => {
 });
 
 const listFile = join(WORK, "parts.txt");
-const { writeFileSync } = await import("node:fs");
 writeFileSync(listFile, parts.map((p) => `file '${p}'`).join("\n"));
 
 const mp4 = join(OUT, "gacha-os-demo.mp4");
@@ -505,6 +534,54 @@ run("ffmpeg", [
   "-frames:v", "1", "-q:v", "2",
   join(OUT, "gacha-os-demo.jpg"),
 ]);
+
+/* ────────────────────────────────
+   字幕（.vtt）を書き出す
+   ────────────────────────────────
+
+   ★ここを消さないこと。
+     画面に焼き込んだテロップは「絵」なので、
+     音を出せない場所で見ている人や、読み上げソフトには届きません。
+     同じ文言を字幕としても出すことで、はじめて全員に届きます。
+
+   ★時刻は「撮ったときの実時刻」から出しています。
+     場面ごとに切り出した長さ（dur）を積み上げたものが、つないだ後の位置です。
+     テロップは 0.18 秒おくれて出す作りなので、その分だけ足しています。
+*/
+{
+  const pad = (n, w = 2) => String(Math.floor(n)).padStart(w, "0");
+  const stamp = (sec) => {
+    const s = Math.max(0, sec);
+    return `${pad(s / 3600)}:${pad((s % 3600) / 60)}:${pad(s % 60)}.${pad(
+      Math.round((s % 1) * 1000),
+      3,
+    )}`;
+  };
+
+  const lines = [];
+  let base = 0;
+  for (const c of cuts) {
+    const mine = CUES.filter((q) => q.t >= c.t0 && q.t <= c.t1).sort(
+      (a, b) => a.t - b.t,
+    );
+    mine.forEach((q, i) => {
+      const start = base + (q.t - c.t0) / 1000 + 0.18;
+      const next = mine[i + 1];
+      const end = next ? base + (next.t - c.t0) / 1000 + 0.18 : base + c.dur;
+      if (end - start < 0.3) return;
+      lines.push({ start, end, text: q.code ? `${q.code}　${q.text}` : q.text });
+    });
+    base += c.dur;
+  }
+
+  const vtt =
+    "WEBVTT\n\n" +
+    lines
+      .map((l, i) => `${i + 1}\n${stamp(l.start)} --> ${stamp(l.end)}\n${l.text}\n`)
+      .join("\n");
+  writeFileSync(join(OUT, "gacha-os-demo.ja.vtt"), vtt);
+  console.log(`字幕 ${lines.length}行 を書き出しました`);
+}
 
 const dur = run("ffprobe", [
   "-v", "error",

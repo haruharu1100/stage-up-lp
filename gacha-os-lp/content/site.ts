@@ -151,6 +151,15 @@ export const demoVideo: {
   src: string | null;
   srcWebm: string | null;
   poster: string | null;
+  /*
+    字幕ファイル（.vtt）。
+    ★画面に焼き込んだテロップは「絵」です。
+      音を出せない場所で見ている人、耳の聞こえにくい人、読み上げソフトには
+      何ひとつ届いていないのと同じです。同じ文言を字幕としても出すために持ちます。
+      中身は scripts/record-demo-video.mjs が録画と同時に書き出します。
+      手で書き換えないこと（動画とズレます）。
+  */
+  captions: string | null;
   caption: string;
   lengthLabel: string;
 } = {
@@ -167,6 +176,7 @@ export const demoVideo: {
   src: "/video/gacha-os-demo.mp4",
   srcWebm: "/video/gacha-os-demo.webm",
   poster: "/video/gacha-os-demo.jpg",
+  captions: "/video/gacha-os-demo.ja.vtt",
   caption:
     "AIに条件を伝える → AIが賞の構成と当選確率を組む → 公開前バックテスト → 人が承認する → お客様のスマホに出る → 1回引く → 当たる → 発送を依頼する → AIが答え、判断が要るものは人へ → 同じ瞬間、運営画面の数字が動く。実際の画面をそのまま録画しています。画面の数値はすべて運営例です。",
   lengthLabel: "31秒",

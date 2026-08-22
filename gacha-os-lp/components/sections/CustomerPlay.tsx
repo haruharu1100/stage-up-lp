@@ -428,11 +428,19 @@ export default function CustomerPlay() {
         {/* ───────── 見出し ───────── */}
         <Reveal>
           <div className="mx-auto max-w-4xl text-center">
+            {/*
+              ★ここに「SECTION 06」と出さないこと（2026-08-22 に外しました）。
+
+                このセクションは、直前の CUSTOMER SIDE（SECTION 05）と
+                2つで1章です。承認した瞬間にお客様の画面へ出るところ（05）と、
+                そのお客様が実際に引いて発送を頼むところ（ここ）は、
+                同じ「お客様から見た売り場」の話だからです。
+
+                番号を振ると、読む人には章が1つ増えたように見えます。
+                実際そのせいで後ろの番号が全部ずれ、06 と 07 が
+                ページの中で2回ずつ出ていました。番号は増やさず、名前で分けます。
+            */}
             <div className="flex flex-wrap items-center justify-center gap-x-3.5 gap-y-2">
-              <span className="num whitespace-nowrap text-label text-slate3">
-                SECTION 06
-              </span>
-              <span className="hidden h-px w-8 bg-edge sm:block" />
               <span className="eyebrow-lite">CUSTOMER PLAY DEMO</span>
             </div>
             {/*

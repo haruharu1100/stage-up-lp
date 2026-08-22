@@ -45,6 +45,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
+import { NO_BREAK_TERMS } from "../lib/jp";
 
 /** このリポジトリの gacha-os-lp 直下 */
 const ROOT = join(import.meta.dirname, "..");
@@ -75,6 +76,12 @@ function walk(dir: string, out: string[] = []): string[] {
   }
   return out;
 }
+
+/**
+ * <br> があった場所に置く目印。
+ * ★本文には絶対に出てこない文字を選ぶこと。ここでは制御文字の U+0001 を使っています。
+ */
+const MARK = "\u0001";
 
 const files = DIRS.flatMap((d) => walk(join(ROOT, d)));
 
@@ -122,6 +129,67 @@ test("HTMLの実体参照（&nbsp; など）で折り返しを止めていない
     0,
     `&nbsp; などで折り返しを止めています。\n${hits.join("\n")}\n` +
       '→ 空白は普通の半角スペースに戻し、その言葉を <span className="nb"> で包んでください。',
+  );
+});
+
+test("守るべき言葉を <br> で2つに割っていない", () => {
+  /*
+    ★見えない文字を全部消したあとに、実際に起きた事故です。
+
+      components/sections/OperatingDay.tsx で、丸い図の中の製品名を
+        AI GACHA<br />OS
+      と書いていました。見た目は2行になって正しいのですが、
+      書き出されるHTMLの中では製品名が2つに切れています。つまり
+        ・コピーすると「AI GACHA」と「OS」のあいだに改行が入る
+        ・ページ内検索（⌘F）で「AI GACHA OS」が見つからない
+        ・読み上げソフトが、別々の言葉として読む
+      という、見えない文字を混ぜていたときとまったく同じ実害が出ます。
+
+      直し方は「<br /> を消して、入る幅を指定する」です。
+      例：w-[5.6em] を付けて、単語のあいだの半角スペースで自然に折らせる。
+      文字は1文字も足しません。
+  */
+  const terms = NO_BREAK_TERMS.map((t) => t.replace(/\s+/g, ""));
+  const hits: string[] = [];
+
+  for (const file of files) {
+    if (!/\.tsx$/.test(file)) continue;
+    const rel = file.slice(ROOT.length + 1);
+
+    /* まずコメントを外す。注意書きの中の例文まで拾ってしまうため */
+    const src = readFileSync(file, "utf8")
+      .replace(/\/\*[\s\S]*?\*\//g, " ")
+      .replace(/\/\/[^\n]*/g, " ");
+
+    /*
+      <br /> があった場所に目印を置き、それ以外の空白と改行を全部落とす。
+      そのうえで「言葉の1文字ずつのあいだに目印が入っていてもよい」形で探すと、
+      <br /> をまたいで書かれた言葉だけが見つかります。
+    */
+    const flat = src.replace(/<br\b[^>]*>/g, MARK).replace(/\s+/g, "");
+
+    for (const term of terms) {
+      const re = new RegExp(
+        term
+          .split("")
+          .map((c) => c.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
+          .join(MARK + "*"),
+        "g",
+      );
+      let m: RegExpExecArray | null;
+      while ((m = re.exec(flat)) !== null) {
+        if (m[0].indexOf(MARK) >= 0) {
+          hits.push(`${rel}  「${term}」が <br> で割れています`);
+        }
+      }
+    }
+  }
+
+  assert.equal(
+    hits.length,
+    0,
+    `守るべき言葉を <br> で割っています。\n${Array.from(new Set(hits)).join("\n")}\n` +
+      "→ <br /> を消して、入る幅（w-[…]）で自然に折り返させてください。",
   );
 });
 
