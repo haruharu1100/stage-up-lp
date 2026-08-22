@@ -17,6 +17,8 @@ import { useRef, useState } from "react";
 import { useIsNarrow, useQuality } from "@/lib/quality";
 import { BEATS } from "../three/PublishWorld";
 import StaticCore from "../hero/StaticCore";
+/* ★日本語の本文は jp() を通すこと。「実還元／率」のような途中改行を止めます */
+import { jp } from "@/lib/jp";
 
 const PublishWorld = dynamic(() => import("../three/PublishWorld"), {
   ssr: false,
@@ -73,9 +75,9 @@ export default function PublishStory() {
                       {w.label}
                     </span>
                   </div>
-                  <p className="h-display mt-3 text-h3 text-slate">{b.title}</p>
+                  <p className="h-display mt-3 text-h3 text-slate">{jp(b.title)}</p>
                   <p className="mt-2.5 text-note text-pretty text-slate2">
-                    {b.body}
+                    {jp(b.body)}
                   </p>
                 </li>
               );
@@ -134,7 +136,7 @@ export default function PublishStory() {
               {cur.title}
             </p>
             <p className="mt-2 max-w-[42em] text-note text-pretty text-slate2">
-              {cur.body}
+              {jp(cur.body)}
             </p>
 
             {/* 進み具合 */}

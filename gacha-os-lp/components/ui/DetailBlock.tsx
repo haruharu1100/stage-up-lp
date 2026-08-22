@@ -28,8 +28,11 @@ export default function DetailBlock({
 }: {
   /** 閉じているときに出る一行。何が入っているかが分かる言葉にすること */
   label: string;
-  /** その下に出る補足。無くてもよい */
-  note?: string;
+  /**
+   * その下に出る補足。無くてもよい。
+   * ★jp() を通した表示物（<span class="nb"> 入り）も渡せるよう ReactNode にしている。
+   */
+  note?: ReactNode;
   /** この中に入っているセクションの id（リンクで飛んできたとき用） */
   ids?: string[];
   children: ReactNode;

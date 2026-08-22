@@ -1,10 +1,14 @@
 import Section from "../ui/Section";
 import Reveal from "../ui/Reveal";
 import { problems as raw_problems } from "@/content/site";
-/* ★画面に出す文字は jpDeep() を通す。日本語が語の途中で割れるのを止める */
-import { jpDeep } from "@/lib/jp";
+/*
+  ★このデータは「ただの日本語」で持つこと。
+    折り返しを止めるための見えない文字（U+2060 など）を混ぜないこと。
+    画面に出すときに lib/jp.tsx の jp() を通せば、
+    守るべき言葉だけが <span class="nb"> で包まれます。
+*/
 
-const problems = jpDeep(raw_problems);
+const problems = raw_problems;
 
 export default function Problems() {
   return (
@@ -46,9 +50,9 @@ export default function Problems() {
           <p className="text-body text-pretty text-slate2">
             <span className="font-bold text-blue-ink">仕入れは、人にしかできません。</span>
             <br className="hidden sm:block" />
-            {/* 製品名の中の空白は &nbsp;。ふつうの空白だと「AI GACHA／OS」と割れます */}
+            {/* 製品名は <span class="nb"> で包む。裸のままだと「AI GACHA／OS」と割れます */}
             それ以外の「計算・監視・転記・返信」を、システムとAIに寄せる。これが
-            AI&nbsp;GACHA&nbsp;OS の考え方です。
+            <span className="nb">AI GACHA OS</span> の考え方です。
           </p>
         </div>
       </Reveal>

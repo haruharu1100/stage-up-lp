@@ -80,6 +80,11 @@ export default function LpText({
 /**
  * ボタンの文字のように「タグを増やしたくない」場所で使う。
  * 改行は入れられません（ボタンの中で改行させないため）。
+ *
+ * ★ここは文字列を返す場所なので、守りの <span> を入れられません。
+ *   以前は見えない文字（U+2060）を混ぜて守っていましたが、
+ *   HTMLの本文が普通の日本語でなくなるため、やめました。
+ *   ボタンの文字は短いので、ボタン側の whitespace-nowrap で守ります。
  */
 export function lpLabel(
   id: string,
@@ -87,7 +92,7 @@ export function lpLabel(
   values?: Record<string, LpValue>,
 ): { text: string; hidden: boolean } {
   const t = lpText(id, fallback, values);
-  return { text: jp(t.pc.replace(/\n/g, " ")), hidden: t.hidden };
+  return { text: t.pc.replace(/\n/g, " "), hidden: t.hidden };
 }
 
 /** スマホ用の短いボタン文字。無ければ PC 用と同じ */
@@ -97,5 +102,5 @@ export function lpLabelSp(
   values?: Record<string, LpValue>,
 ): { text: string; hidden: boolean } {
   const t = lpText(id, fallback, values);
-  return { text: jp(t.sp.replace(/\n/g, " ")), hidden: t.hidden };
+  return { text: t.sp.replace(/\n/g, " "), hidden: t.hidden };
 }

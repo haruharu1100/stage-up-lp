@@ -5,8 +5,12 @@ import Reveal from "../ui/Reveal";
 import { MoreDetail } from "../ui/Act";
 /* ★製品名は必ず OS を使うこと。"AI GACHA OS" と直接書くと狭い画面で割れます */
 import { OS } from "@/lib/text";
-/* ★画面に出す文字は jpDeep() を通す。日本語が語の途中で割れるのを止める */
-import { jpDeep } from "@/lib/jp";
+/*
+  ★このデータは「ただの日本語」で持つこと。
+    折り返しを止めるための見えない文字（U+2060 など）を混ぜないこと。
+    画面に出すときに lib/jp.tsx の jp() を通せば、
+    守るべき言葉だけが <span class="nb"> で包まれます。
+*/
 
 /**
  * 「6つ全部を、あなたがやるわけではない」を見せるセクション。
@@ -38,7 +42,7 @@ type Role = {
   quote?: string;
 };
 
-const roles: Role[] = jpDeep([
+const roles: Role[] = [
   {
     no: "01",
     side: "human",
@@ -119,7 +123,7 @@ const roles: Role[] = jpDeep([
       "返金・例外対応・重大な申し出は管理者へエスカレーション",
     ],
   },
-]);
+];
 
 const SIDE_META: Record<
   Side,
@@ -193,7 +197,7 @@ export default function RoleFlow() {
           <div className="text-center">
             <span className="num text-label text-blue-ink/70">右のレーン</span>
             <p className="mt-2 text-body font-bold text-blue-ink">
-              AI&nbsp;GACHA&nbsp;OS がすること
+              <span className="nb">AI GACHA OS</span> がすること
             </p>
           </div>
         </div>
@@ -478,7 +482,7 @@ function Roadmap() {
 
       <p className="mt-5 border-t border-edge2 pt-5 text-note text-pretty leading-[1.9] text-slate3">
         この自動学習は、現時点では実装していません。
-        今のAI&nbsp;GACHA&nbsp;OSは、登録済みのデータと入力条件をもとにガチャ案を作ります。
+        今の<span className="nb">AI GACHA OS</span>は、登録済みのデータと入力条件をもとにガチャ案を作ります。
         いつ提供できるかが決まっていない機能を、すでに使えるものとしては書きません。
       </p>
 

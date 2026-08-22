@@ -5,10 +5,15 @@ import dynamic from "next/dynamic";
 import { useEffect } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { activeHero as raw_activeHero, activeHeroVariant, site } from "@/content/site";
-/* ★画面に出す文字は jpDeep() を通す。日本語が語の途中で割れるのを止める */
-import { jpDeep } from "@/lib/jp";
+import { jp } from "@/lib/jp";
+/*
+  ★このデータは「ただの日本語」で持つこと。
+    折り返しを止めるための見えない文字（U+2060 など）を混ぜないこと。
+    画面に出すときに lib/jp.tsx の jp() を通せば、
+    守るべき言葉だけが <span class="nb"> で包まれます。
+*/
 
-const activeHero = jpDeep(raw_activeHero);
+const activeHero = raw_activeHero;
 /* ★編集画面（/admin/lp-content）で直した文章があれば、そちらを優先する */
 import { lpText } from "@/lib/lpText";
 import LpText from "./ui/LpText";
@@ -100,7 +105,7 @@ export default function Hero() {
                     key={`sp-${i}`}
                     className={`block ${i >= headSp.length - 1 ? "text-gradient-royal" : ""}`}
                   >
-                    {jpDeep(line)}
+                    {jp(line)}
                   </span>
                 ))}
               </span>
@@ -110,7 +115,7 @@ export default function Hero() {
                     key={`pc-${i}`}
                     className={`block ${i >= headPc.length - 1 ? "text-gradient-royal" : ""}`}
                   >
-                    {jpDeep(line)}
+                    {jp(line)}
                   </span>
                 ))}
               </span>

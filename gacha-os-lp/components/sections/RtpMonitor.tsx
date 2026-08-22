@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import Act, { MoreDetail } from "../ui/Act";
 import BeforeAfter from "../ui/BeforeAfter";
 import { buildGacha, jpy, recalcRtp } from "@/lib/simulate";
@@ -55,7 +55,8 @@ function Gauge({
   max = 130,
   emphasize = false,
 }: {
-  label: string;
+  /** ★jp() を通した表示物（<span class="nb"> 入り）も渡せるようにしている */
+  label: ReactNode;
   sub: string;
   value: number;
   max?: number;

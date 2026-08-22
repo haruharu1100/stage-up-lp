@@ -2,11 +2,15 @@ import Section from "../ui/Section";
 import Reveal from "../ui/Reveal";
 import { MoreDetail } from "../ui/Act";
 import { security as raw_security, awsStack as raw_awsStack } from "@/content/site";
-/* ★画面に出す文字は jpDeep() を通す。日本語が語の途中で割れるのを止める */
-import { jpDeep } from "@/lib/jp";
+/*
+  ★このデータは「ただの日本語」で持つこと。
+    折り返しを止めるための見えない文字（U+2060 など）を混ぜないこと。
+    画面に出すときに lib/jp.tsx の jp() を通せば、
+    守るべき言葉だけが <span class="nb"> で包まれます。
+*/
 
-const security = jpDeep(raw_security);
-const awsStack = jpDeep(raw_awsStack);
+const security = raw_security;
+const awsStack = raw_awsStack;
 import { BACKTEST_ENGINE_VERSION, RUNS } from "@/lib/backtest";
 import { STALE_AFTER_HOURS } from "@/lib/priceFreshness";
 

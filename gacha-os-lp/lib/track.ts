@@ -76,6 +76,12 @@ export const EV = {
   /** お客様側のデモを、発送依頼まで進めた */
   playComplete: "customer_play_complete",
   /**
+   * お客様側のデモで問い合わせを送った。
+   * params は q（質問の種類）と mode（"auto" = AIが即答 / "escalate" = 人へ引き継ぎ）。
+   * ★どの質問が押されるかを見ておくと、実際の運用でAIに任せる範囲を決める材料になります。
+   */
+  playAsk: "customer_play_ask",
+  /**
    * 料金プランのボタンを押した（params に plan: "starter" 等を付ける）。
    * 「プラン別の成約率」を出すための入口。
    * 実際の成約はサイト側では分からないので、受け取り側の台帳と突き合わせます。

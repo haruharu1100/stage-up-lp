@@ -5,14 +5,18 @@ import { AnimatePresence, motion } from "framer-motion";
 import Section from "../ui/Section";
 import Reveal from "../ui/Reveal";
 import { faqs as raw_faqs } from "@/content/site";
-/* ★画面に出す文字は jpDeep() を通す。日本語が語の途中で割れるのを止める */
-import { jpDeep } from "@/lib/jp";
+/*
+  ★このデータは「ただの日本語」で持つこと。
+    折り返しを止めるための見えない文字（U+2060 など）を混ぜないこと。
+    画面に出すときに lib/jp.tsx の jp() を通せば、
+    守るべき言葉だけが <span class="nb"> で包まれます。
+*/
 
 /* ★編集画面（/admin/lp-content）で直した文章があれば、そちらを優先する */
 import { lpText } from "@/lib/lpText";
 import LpText from "../ui/LpText";
 
-const faqs = jpDeep(raw_faqs);
+const faqs = raw_faqs;
 
 export default function Faq() {
   const [open, setOpen] = useState<number | null>(0);

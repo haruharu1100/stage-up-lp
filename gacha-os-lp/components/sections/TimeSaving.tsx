@@ -1,11 +1,15 @@
 import Reveal from "../ui/Reveal";
 import { MoreDetail } from "../ui/Act";
 import { timeModel as raw_timeModel, timeModelNote as raw_timeModelNote } from "@/content/site";
-/* ★画面に出す文字は jpDeep() を通す。日本語が語の途中で割れるのを止める */
-import { jpDeep } from "@/lib/jp";
+/*
+  ★このデータは「ただの日本語」で持つこと。
+    折り返しを止めるための見えない文字（U+2060 など）を混ぜないこと。
+    画面に出すときに lib/jp.tsx の jp() を通せば、
+    守るべき言葉だけが <span class="nb"> で包まれます。
+*/
 
-const timeModel = jpDeep(raw_timeModel);
-const timeModelNote = jpDeep(raw_timeModelNote);
+const timeModel = raw_timeModel;
+const timeModelNote = raw_timeModelNote;
 
 const beforeTotal = timeModel.reduce((a, r) => a + r.before, 0);
 const afterTotal = timeModel.reduce((a, r) => a + r.after, 0);
@@ -34,8 +38,8 @@ export default function TimeSaving() {
           ガチャ運営に使っていた時間を、仕入れと企画へ。
         </h3>
         <p className="mt-4 max-w-[36em] text-body text-pretty text-slate2 sm:mt-5">
-          {/* 製品名の中の空白は必ず &nbsp;。半角スペースだとそこで行が折れます */}
-          AI&nbsp;GACHA&nbsp;OS
+          {/* 製品名は <span class="nb"> で包む。裸のままだと半角スペースで行が折れます */}
+          <span className="nb">AI GACHA OS</span>
           が消すのは「作業」であって、「判断」ではありません。数字を集める・計算する・転記する・同じ返信を書く。この4つがなくなると、1日の中身はここまで変わります。
         </p>
       </div>
@@ -93,7 +97,7 @@ export default function TimeSaving() {
           <div className="rounded-3xl border border-blue-ink/20 bg-white p-6 shadow-lift2 sm:p-9">
             <span className="num inline-flex items-center gap-2.5 text-label text-blue-ink">
               <span className="h-1.5 w-1.5 rounded-full bg-blue-ink" />
-              AI&nbsp;GACHA&nbsp;OS
+              <span className="nb">AI GACHA OS</span>
             </span>
             <p className="num-lead mt-4 text-h1 font-semibold leading-none text-slate">
               1〜2

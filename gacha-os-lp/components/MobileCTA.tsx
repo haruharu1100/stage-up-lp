@@ -7,13 +7,17 @@ import {
   activeMobileCta as raw_cta,
   activeMobileCtaVariant,
 } from "@/content/site";
-/* ★画面に出す文字は jpDeep() を通す。日本語が語の途中で割れるのを止める */
-import { jpDeep } from "@/lib/jp";
+/*
+  ★このデータは「ただの日本語」で持つこと。
+    折り返しを止めるための見えない文字（U+2060 など）を混ぜないこと。
+    画面に出すときに lib/jp.tsx の jp() を通せば、
+    守るべき言葉だけが <span class="nb"> で包まれます。
+*/
 
 /* ★編集画面（/admin/lp-content）で直した文章があれば、そちらを優先する */
 import { lpLabelSp } from "./ui/LpText";
 
-const cta = jpDeep(raw_cta);
+const cta = raw_cta;
 
 /**
  * スマホの下に出しっぱなしにする問い合わせ導線。

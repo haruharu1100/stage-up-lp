@@ -2,10 +2,14 @@ import Link from "next/link";
 import Section from "../ui/Section";
 import Reveal from "../ui/Reveal";
 import { scopeOptions as raw_scopeOptions } from "@/content/site";
-/* ★画面に出す文字は jpDeep() を通す。日本語が語の途中で割れるのを止める */
-import { jpDeep } from "@/lib/jp";
+/*
+  ★このデータは「ただの日本語」で持つこと。
+    折り返しを止めるための見えない文字（U+2060 など）を混ぜないこと。
+    画面に出すときに lib/jp.tsx の jp() を通せば、
+    守るべき言葉だけが <span class="nb"> で包まれます。
+*/
 
-const scopeOptions = jpDeep(raw_scopeOptions);
+const scopeOptions = raw_scopeOptions;
 import { OS } from "@/lib/text";
 
 export default function Scope() {

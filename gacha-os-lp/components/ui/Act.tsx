@@ -162,7 +162,8 @@ export function MoreDetail({
   dark = false,
   children,
 }: {
-  label?: string;
+  /** ★jp() を通した表示物（<span class="nb"> 入り）も渡せるようにしている */
+  label?: ReactNode;
   dark?: boolean;
   children: ReactNode;
 }) {

@@ -1,9 +1,13 @@
 import Reveal from "../ui/Reveal";
 import { timeModel as raw_timeModel } from "@/content/site";
-/* ★画面に出す文字は jpDeep() を通す。日本語が語の途中で割れるのを止める */
-import { jpDeep } from "@/lib/jp";
+/*
+  ★このデータは「ただの日本語」で持つこと。
+    折り返しを止めるための見えない文字（U+2060 など）を混ぜないこと。
+    画面に出すときに lib/jp.tsx の jp() を通せば、
+    守るべき言葉だけが <span class="nb"> で包まれます。
+*/
 
-const timeModel = jpDeep(raw_timeModel);
+const timeModel = raw_timeModel;
 import { activeTiers, tierPriceLabel } from "@/config/pricing";
 
 /**
@@ -112,7 +116,7 @@ export default function LaborCompare() {
           {/* AFTER */}
           <div className="rounded-3xl border border-blue-ink/20 bg-white p-6 shadow-lift2 sm:p-8">
             <span className="num text-label text-blue-ink">
-              AFTER ／ AI&nbsp;GACHA&nbsp;OS
+              AFTER ／ <span className="nb">AI GACHA OS</span>
             </span>
 
             <div className="mt-6 flex flex-wrap gap-x-10 gap-y-5">

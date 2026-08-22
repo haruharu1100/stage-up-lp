@@ -4,13 +4,17 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Reveal from "../ui/Reveal";
 import { ctaTrio as raw_ctaTrio } from "@/content/site";
-/* ★画面に出す文字は jpDeep() を通す。日本語が語の途中で割れるのを止める */
-import { jpDeep } from "@/lib/jp";
+/*
+  ★このデータは「ただの日本語」で持つこと。
+    折り返しを止めるための見えない文字（U+2060 など）を混ぜないこと。
+    画面に出すときに lib/jp.tsx の jp() を通せば、
+    守るべき言葉だけが <span class="nb"> で包まれます。
+*/
 
 /* ★編集画面（/admin/lp-content）で直した文章があれば、そちらを優先する */
 import LpText, { lpLabel } from "../ui/LpText";
 
-const ctaTrio = jpDeep(raw_ctaTrio);
+const ctaTrio = raw_ctaTrio;
 import {
   captureLeadSource,
   readDiagnosis,
@@ -663,12 +667,13 @@ export default function Cta() {
                 </p>
                 <p className="mt-3.5 text-note text-slate2">
                   {/*
-                    ★製品名の中の空白は、必ず &nbsp;（改行しないスペース）にすること。
-                      ふつうの半角スペースだと、ブラウザはそこで行を折ります。
+                    ★製品名は、必ず <span class="nb"> で包むこと。
+                      裸のまま置くと、ブラウザは半角スペースのところで行を折ります。
+                      文字そのものは「AI OPERATOR」のまま。見えない文字は混ぜません。
                       実測で 375px〜1440px の全ての幅で「AI／OPERATOR」と割れていました。
                   */}
                   登録不要です。本番を模したサンプルの運用ダッシュボードと
-                  AI&nbsp;OPERATOR を、その場でご覧いただけます。
+                  <span className="nb">AI OPERATOR</span> を、その場でご覧いただけます。
                 </p>
               </Link>
             </div>

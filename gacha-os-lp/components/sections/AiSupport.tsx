@@ -7,16 +7,21 @@ import Reveal from "../ui/Reveal";
 import BeforeAfter from "../ui/BeforeAfter";
 import { MoreDetail } from "../ui/Act";
 /* ★製品名は必ず OPERATOR を使うこと。"AI OPERATOR" と直接書くと狭い画面で割れます */
-import { OPERATOR, nowrap } from "@/lib/text";
-/* ★画面に出す文字は jpDeep() を通す。日本語が語の途中で割れるのを止める */
-import { jpDeep } from "@/lib/jp";
+import { OPERATOR } from "@/lib/text";
+import { jp } from "@/lib/jp";
+/*
+  ★このデータは「ただの日本語」で持つこと。
+    折り返しを止めるための見えない文字（U+2060 など）を混ぜないこと。
+    画面に出すときに lib/jp.tsx の jp() を通せば、
+    守るべき言葉だけが <span class="nb"> で包まれます。
+*/
 
 type Msg =
   | { role: "user"; text: string }
   | { role: "ai"; text: string }
   | { role: "trace"; text: string };
 
-const script: Msg[] = jpDeep([
+const script: Msg[] = [
   { role: "user", text: "発送はいつですか？" },
   { role: "trace", text: "ログイン中の会員を特定（user_2841）" },
   { role: "trace", text: "発送依頼を照合：2件（8/16 21:04 / 8/17 09:22）" },
@@ -31,25 +36,26 @@ const script: Msg[] = jpDeep([
     role: "ai",
     text: "返金に関するご相談は、担当者からご案内いたします。内容を引き継ぎましたので、順番にご連絡します。お手数ですが少々お待ちください。",
   },
-]);
+];
 
 /**
  * AI OPERATOR の「持ち場」。
  * いま何を見ているかを先に出す。チャット窓に見せないための土台。
  */
-const watching: { l: string; v: string; u: string; tone: string }[] = jpDeep([
+const watching: { l: string; v: string; u: string; tone: string }[] = [
   { l: "販売中のガチャ", v: "18", u: "本", tone: "text-slate" },
   { l: "価格警告", v: "3", u: "件", tone: "text-danger-ink" },
   { l: "未発送", v: "26", u: "件", tone: "text-blue-ink" },
   /*
     「問い合わせ」は途中で割らせない。
-    囲まないと 768px で「問い合／わせ」と切れていた。
+    ★文字そのものはただの日本語のまま。画面に出すときに jp() を通すと
+      <span class="nb"> で包まれて、768px でも「問い合／わせ」と切れない。
   */
-  { l: `人へ回った${nowrap("問い合わせ")}`, v: "4", u: "件", tone: "text-warn-ink" },
-]);
+  { l: "人へ回った問い合わせ", v: "4", u: "件", tone: "text-warn-ink" },
+];
 
 /** 上から順に片付ければいい形にした、その日の指示 */
-const briefing = jpDeep([
+const briefing = [
   {
     no: "01",
     t: "価格が上昇したガチャを確認",
@@ -68,16 +74,16 @@ const briefing = jpDeep([
     d: "本日 37 件のうち 33 件はAIが一次回答済み。返金・補償にあたる 4 件だけが担当者に回っています。",
     cost: "10分",
   },
-]);
+];
 
-const escalations = jpDeep([
+const escalations = [
   "返金・キャンセル",
   "法的トラブル",
   "アカウント停止",
   "高額補償",
   "不正利用の疑い",
   "個人情報の訂正・削除請求",
-]);
+];
 
 export default function AiSupport() {
   const ref = useRef<HTMLDivElement>(null);
@@ -116,7 +122,7 @@ export default function AiSupport() {
                 AI
               </span>
               <span className="text-note font-semibold text-slate">
-                AI&nbsp;OPERATOR
+                <span className="nb">AI OPERATOR</span>
               </span>
             </div>
             <span className="flex items-center gap-2">
@@ -131,7 +137,7 @@ export default function AiSupport() {
                 key={w.l}
                 className="rounded-2xl border border-edge2 bg-paper2 px-3.5 py-3 sm:px-5 sm:py-4"
               >
-                <span className="num text-label text-slate3">{w.l}</span>
+                <span className="num text-label text-slate3">{jp(w.l)}</span>
                 <p className={`num mt-1 text-h3 font-semibold sm:mt-2.5 ${w.tone}`}>
                   {w.v}
                   <span className="ml-1 text-note font-normal text-slate3">{w.u}</span>
@@ -186,7 +192,7 @@ export default function AiSupport() {
             </div>
 
             <p className="mt-4 border-t border-edge2 pt-4 text-note text-slate3 sm:mt-5 sm:pt-5">
-              AI&nbsp;OPERATOR は状況を整理して優先順位を提案します。実行するかどうかは運営者が判断します。
+              <span className="nb">AI OPERATOR</span> は状況を整理して優先順位を提案します。実行するかどうかは運営者が判断します。
             </p>
           </div>
         </div>
@@ -204,7 +210,7 @@ export default function AiSupport() {
                   AI
                 </span>
                 <span className="text-[12px] font-semibold text-slate">
-                  AI&nbsp;OPERATOR ／ お客様対応
+                  <span className="nb">AI OPERATOR</span> ／ お客様対応
                 </span>
               </div>
               <span className="num text-[10px] text-slate3">user_2841 でログイン中</span>

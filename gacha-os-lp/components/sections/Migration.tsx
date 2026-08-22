@@ -23,8 +23,12 @@ import Reveal from "../ui/Reveal";
 import { MoreDetail } from "../ui/Act";
 /* ★製品名は必ず OS を使うこと。"AI GACHA OS" と直接書くと狭い画面で割れます */
 import { OS } from "@/lib/text";
-/* ★画面に出す文字は jpDeep() を通す。日本語が語の途中で割れるのを止める */
-import { jpDeep } from "@/lib/jp";
+/*
+  ★このデータは「ただの日本語」で持つこと。
+    折り返しを止めるための見えない文字（U+2060 など）を混ぜないこと。
+    画面に出すときに lib/jp.tsx の jp() を通せば、
+    守るべき言葉だけが <span class="nb"> で包まれます。
+*/
 
 const MigrationWorld = dynamic(() => import("../three/MigrationWorld"), {
   ssr: false,
@@ -32,14 +36,14 @@ const MigrationWorld = dynamic(() => import("../three/MigrationWorld"), {
 });
 
 /** 移行前に必ず確認するもの（項目23）。IPアドレスだけではない、が言いたいこと */
-const CHECKLIST = jpDeep([
+const CHECKLIST = [
   { g: "つながり", items: ["ドメイン", "DNS", "サーバー", "SSL"] },
   { g: "お客様のデータ", items: ["会員", "ポイント", "購入履歴", "配送先"] },
   { g: "つないでいる先", items: ["決済", "Webhook", "配送", "メール", "外部API"] },
-]);
+];
 
 /** できるだけ残すもの（項目27） */
-const KEEP = jpDeep([
+const KEEP = [
   "ブランド",
   "ドメイン",
   "会員",
@@ -47,10 +51,10 @@ const KEEP = jpDeep([
   "ガチャ",
   "発送待ち",
   "顧客データ",
-]);
+];
 
 /** 3つの進め方（項目30） */
-const WAYS = jpDeep([
+const WAYS = [
   {
     code: "FULL MIGRATION",
     ja: "全面移行",
@@ -69,7 +73,7 @@ const WAYS = jpDeep([
     d: "既存システムを残し、AIガチャ設計・実還元率・発送管理など、必要な部分だけを使います。",
     url: "既存サイト ＋ 管理機能",
   },
-]);
+];
 
 export default function Migration() {
   return (
@@ -95,7 +99,7 @@ export default function Migration() {
               運営している方へ。
             </h2>
             <p className="mt-5 max-w-[36em] text-body text-pretty text-slate2 sm:mt-7">
-              今のお客様体験を大きく変えず、裏側の運営をAI&nbsp;GACHA&nbsp;OSへ。
+              今のお客様体験を大きく変えず、裏側の運営を<span className="nb">AI GACHA OS</span>へ。
             </p>
           </div>
         </Reveal>
@@ -157,7 +161,7 @@ export default function Migration() {
         <Reveal delay={0.1}>
           <div className="mt-4 rounded-3xl border border-edge bg-white p-7 shadow-lift sm:p-10">
             <p className="text-body text-pretty leading-[1.95] text-slate">
-              現在お使いのドメインを維持したまま、AI&nbsp;GACHA&nbsp;OSへ移行できる構成があります。
+              現在お使いのドメインを維持したまま、<span className="nb">AI GACHA OS</span>へ移行できる構成があります。
               {/* 機能名は途中で割らせない。1024/768/375px で「問い合／わせ」と切れていました */}
               お客様はこれまでと同じURLからアクセスし、運営側では、AIガチャ設計・実還元率・価格監視・発送管理・
               <span className="whitespace-nowrap">AI問い合わせ対応</span>

@@ -7,8 +7,12 @@ import { saveDiagnosis } from "@/lib/lead";
 import { EV, track, trackOnce } from "@/lib/track";
 /* ★製品名は必ず OPERATOR を使うこと。"AI OPERATOR" と直接書くと狭い画面で割れます */
 import { OPERATOR } from "@/lib/text";
-/* ★画面に出す文字は jpDeep() を通す。日本語が語の途中で割れるのを止める */
-import { jpDeep } from "@/lib/jp";
+/*
+  ★このデータは「ただの日本語」で持つこと。
+    折り返しを止めるための見えない文字（U+2060 など）を混ぜないこと。
+    画面に出すときに lib/jp.tsx の jp() を通せば、
+    守るべき言葉だけが <span class="nb"> で包まれます。
+*/
 
 /**
  * 「いま何に困っていますか？」の簡易診断。
@@ -27,12 +31,12 @@ type Trouble =
   | "growth"
   | "all";
 
-const RUNNING = jpDeep([
+const RUNNING = [
   { key: "yes", label: "運営している" },
   { key: "no", label: "これから始める / 検討中" },
-] as const);
+] as const;
 
-const TROUBLES: { key: Trouble; label: string }[] = jpDeep([
+const TROUBLES: { key: Trouble; label: string }[] = [
   { key: "build", label: "ガチャの作成・構成づくり" },
   { key: "rtp", label: "還元率の管理" },
   { key: "price", label: "商品価格・相場の追跡" },
@@ -40,13 +44,13 @@ const TROUBLES: { key: Trouble; label: string }[] = jpDeep([
   { key: "support", label: "問い合わせ対応" },
   { key: "growth", label: "集客" },
   { key: "all", label: "すべて" },
-]);
+];
 
 const GACHA_VOL = ["〜5本", "6〜15本", "16〜30本", "31本以上"] as const;
 const SHIP_VOL = ["〜50件", "51〜200件", "201〜500件", "501件以上"] as const;
 
 /** 困りごと → 提案する構成 */
-const MAP: Record<Trouble, { name: string; why: string; modules: string[] }> = jpDeep({
+const MAP: Record<Trouble, { name: string; why: string; modules: string[] }> = {
   build: {
     name: "AIガチャ設計＋実還元率管理",
     why: "ガチャ1本あたりの設計時間が長いほど、公開できる本数が体制の上限で決まってしまいます。設計を「条件を決めて承認するだけ」にすると、本数を増やしても作業時間が比例しにくくなります。",
@@ -88,7 +92,7 @@ const MAP: Record<Trouble, { name: string; why: string; modules: string[] }> = j
       OPERATOR,
     ],
   },
-});
+};
 
 export default function Diagnose() {
   const [step, setStep] = useState(0);

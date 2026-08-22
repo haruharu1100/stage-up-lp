@@ -3,10 +3,14 @@
 import Link from "next/link";
 import Reveal from "../ui/Reveal";
 import { demoVideo as raw_demoVideo } from "@/content/site";
-/* ★画面に出す文字は jpDeep() を通す。日本語が語の途中で割れるのを止める */
-import { jpDeep } from "@/lib/jp";
+/*
+  ★このデータは「ただの日本語」で持つこと。
+    折り返しを止めるための見えない文字（U+2060 など）を混ぜないこと。
+    画面に出すときに lib/jp.tsx の jp() を通せば、
+    守るべき言葉だけが <span class="nb"> で包まれます。
+*/
 
-const demoVideo = jpDeep(raw_demoVideo);
+const demoVideo = raw_demoVideo;
 import { EV, trackOnce } from "@/lib/track";
 
 /**
@@ -37,7 +41,7 @@ export default function ProductVideo() {
             <h2 className="h-display mt-5 text-h2 text-balance text-slate">
               <span className="num">30秒</span>で分かる、
               <br className="sm:hidden" />
-              AI&nbsp;GACHA&nbsp;OS。
+              <span className="nb">AI GACHA OS</span>。
             </h2>
             <p className="mx-auto mt-6 max-w-[34em] text-note text-pretty leading-[1.95] text-slate2">
               資料ではなく、動いている画面です。

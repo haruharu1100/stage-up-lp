@@ -177,7 +177,7 @@ export default function OperatingDay() {
             </div>
 
             <p className="mt-4 text-note text-pretty leading-[1.95] text-slate2">
-              白＝あなた、青＝AI&nbsp;GACHA&nbsp;OS、緑＝お客様の画面です。
+              白＝あなた、青＝<span className="nb">AI GACHA OS</span>、緑＝お客様の画面です。
               このうち白は2か所。残りはこの下から順番に、実際の画面で見ていきます。
             </p>
           </div>
@@ -214,9 +214,9 @@ export default function OperatingDay() {
               </span>
             </p>
             <p className="mx-auto mt-5 max-w-[38em] text-note text-pretty leading-[1.95] text-slate2">
-              {/* 製品名の中の空白は必ず &nbsp;。375px で「AI GACHA／OS」と割れていました */}
+              {/* 製品名は <span class="nb"> で包む。375px で「AI GACHA／OS」と割れていました */}
               {jp("賞の構成も、確率も、還元率の計算も、")}
-              AI&nbsp;GACHA&nbsp;OS
+              <span className="nb">AI GACHA OS</span>
               {jp("側で組み上がります。承認しないかぎり、公開されません。")}
             </p>
           </div>

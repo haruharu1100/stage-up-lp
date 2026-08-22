@@ -43,6 +43,27 @@
     word-break: normal;
   }
 
+  /*
+   * ここでは折り返さない、という印。
+   *
+   * ★これが「日本語の途中改行」を止める本体です。
+   *   以前は文字と文字のあいだに見えない特殊文字（U+2060）を
+   *   はさんでいましたが、書き出されるHTMLの本文が
+   *   普通の日本語でなくなるため、やめました。
+   *   （検索エンジン・コピー・⌘F・読み上げ・将来の編集画面に影響します）
+   *
+   *   いまは lib/jp.tsx が、守りたい言葉だけを
+   *   <span class="nb"> で包みます。文字そのものには手を触れません。
+   *
+   * ★word-break を打ち消しているのを消さないこと。
+   *   body に word-break: auto-phrase が付いているため、
+   *   white-space だけでは Chrome で語の途中に切れ目が残ります。
+   */
+  .nb {
+    white-space: nowrap;
+    word-break: keep-all;
+  }
+
   ::selection {
     background: rgba(27, 75, 216, 0.16);
     color: #0b1220;

@@ -7,10 +7,14 @@ import { MoreDetail } from "../ui/Act";
 import BeforeAfter from "../ui/BeforeAfter";
 /* ★製品名は必ず OPERATOR を使うこと。"AI OPERATOR" と直接書くと狭い画面で割れます */
 import { OPERATOR } from "@/lib/text";
-/* ★画面に出す文字は jpDeep() を通す。日本語が語の途中で割れるのを止める */
-import { jpDeep } from "@/lib/jp";
+/*
+  ★このデータは「ただの日本語」で持つこと。
+    折り返しを止めるための見えない文字（U+2060 など）を混ぜないこと。
+    画面に出すときに lib/jp.tsx の jp() を通せば、
+    守るべき言葉だけが <span class="nb"> で包まれます。
+*/
 
-const qa = jpDeep([
+const qa = [
   {
     q: "今、危険なガチャある？",
     a: "1本あります。#128 スニーカーBOX が市場価格ベース実還元率 108.7%（しきい値 105% 超過）です。残り 128 / 500 口。原因は AJ1 Retro High OG の相場が +23.3% 上昇したためです。販売停止・景品差し替え・口数調整のいずれかをおすすめします。",
@@ -23,13 +27,13 @@ const qa = jpDeep([
     q: "今月ここまでの利益は？",
     a: "月間売上 ¥28,410,900、景品原価 ¥26,932,100、決済手数料 ¥1,022,792。粗利は ¥456,008（粗利率 1.6%）です。先月同日比では売上 +6.8%、粗利率は −0.9pt です。",
   },
-]);
+];
 
 /**
  * 毎朝の「今日やること」。
  * 通知を並べるのではなく、粗利への影響が大きい順に並べ替えて渡す。
  */
-const morningBrief = jpDeep([
+const morningBrief = [
   {
     level: "最優先",
     tone: "danger",
@@ -70,14 +74,14 @@ const morningBrief = jpDeep([
       "#134 は広告経由の売上に対して広告費の比率が高い状態です。配信停止か訴求の作り直しかを判断してください。",
     cost: "10分",
   },
-]);
+];
 
-const auditLog = jpDeep([
+const auditLog = [
   { t: "21:04:11", u: "user_2841", g: "#128", n: "10連", before: "138", res: "A賞 ×1 / C賞 ×9", pt: "5,000", after: "128" },
   { t: "21:04:09", u: "user_1190", g: "#131", n: "1回", before: "403", res: "C賞 ×1", pt: "500", after: "402" },
   { t: "21:03:58", u: "user_3372", g: "#128", n: "5連", before: "143", res: "B賞 ×1 / C賞 ×4", pt: "2,500", after: "138" },
   { t: "21:03:41", u: "user_0917", g: "#134", n: "1回", before: "612", res: "C賞 ×1", pt: "500", after: "611" },
-]);
+];
 
 const toneMap: Record<string, string> = {
   danger: "border-danger/30 bg-danger/[0.08] text-danger-ink",
@@ -120,7 +124,7 @@ export default function AdminConsole() {
                   AI
                 </span>
                 <span className="text-[12px] font-semibold text-slate">
-                  AI&nbsp;OPERATOR
+                  <span className="nb">AI OPERATOR</span>
                 </span>
               </div>
               <span className="num text-[10px] text-slate3">管理画面 右上に常駐</span>
@@ -143,7 +147,7 @@ export default function AdminConsole() {
               ))}
               {asked === 0 && (
                 <p className="py-4 text-center text-[12px] text-slate3 sm:py-8">
-                  下のボタンを押すと、AI&nbsp;OPERATOR の回答が表示されます
+                  下のボタンを押すと、<span className="nb">AI OPERATOR</span> の回答が表示されます
                 </p>
               )}
             </div>

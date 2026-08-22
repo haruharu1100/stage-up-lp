@@ -91,7 +91,7 @@ export default function StaticCore({ className = "" }: { className?: string }) {
         {/* 中心のラベル */}
         <div className="absolute left-1/2 top-1/2 -translate-x-1/2 translate-y-[14%] text-center">
           <span className="num block text-[10px] font-bold tracking-[0.2em] text-blue-ink">
-            AI&nbsp;GACHA&nbsp;OS
+            <span className="nb">AI GACHA OS</span>
           </span>
           <span className="mt-0.5 block text-[11px] font-medium text-slate3">
             運営の中心

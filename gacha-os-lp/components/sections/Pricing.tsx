@@ -3,11 +3,16 @@ import Reveal from "../ui/Reveal";
 import ViewTracker from "../ui/ViewTracker";
 import TrackedLink from "../ui/TrackedLink";
 import { baseFeatures as raw_baseFeatures, pricingStructure as raw_pricingStructure } from "@/content/site";
-/* ★画面に出す文字は jpDeep() を通す。日本語が語の途中で割れるのを止める */
-import { jp, jpDeep } from "@/lib/jp";
+/*
+  ★このデータは「ただの日本語」で持つこと。
+    折り返しを止めるための見えない文字（U+2060 など）を混ぜないこと。
+    画面に出すときに lib/jp.tsx の jp() を通せば、
+    守るべき言葉だけが <span class="nb"> で包まれます。
+*/
+import { jp } from "@/lib/jp";
 
-const baseFeatures = jpDeep(raw_baseFeatures);
-const pricingStructure = jpDeep(raw_pricingStructure);
+const baseFeatures = raw_baseFeatures;
+const pricingStructure = raw_pricingStructure;
 import {
   activeTiers,
   initialSetup,
@@ -103,7 +108,7 @@ export default function Pricing() {
           {/* AI GACHA OS = SYSTEM + AI + AUTOMATION + SUPPORT */}
           <div className="flex flex-wrap items-center gap-x-4 gap-y-5">
             <span className="num text-h3 font-semibold tracking-[0.04em] text-gradient-royal">
-              AI&nbsp;GACHA&nbsp;OS
+              <span className="nb">AI GACHA OS</span>
             </span>
             <span className="num text-h3 font-light text-slate3/60">=</span>
             {EQUATION.map((e, i) => (

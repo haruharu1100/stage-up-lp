@@ -7,10 +7,14 @@ import Reveal from "../ui/Reveal";
 import { MoreDetail } from "../ui/Act";
 import TimeSaving from "./TimeSaving";
 import { roiDefaults, roiNote as raw_roiNote } from "@/content/site";
-/* ★画面に出す文字は jpDeep() を通す。日本語が語の途中で割れるのを止める */
-import { jpDeep } from "@/lib/jp";
+/*
+  ★このデータは「ただの日本語」で持つこと。
+    折り返しを止めるための見えない文字（U+2060 など）を混ぜないこと。
+    画面に出すときに lib/jp.tsx の jp() を通せば、
+    守るべき言葉だけが <span class="nb"> で包まれます。
+*/
 
-const roiNote = jpDeep(raw_roiNote);
+const roiNote = raw_roiNote;
 import { activeTiers, type OsTier } from "@/config/pricing";
 import { EV, track, trackOnce } from "@/lib/track";
 /* ★製品名は必ず OS を使うこと。"AI GACHA OS" と直接書くと狭い画面で割れます */

@@ -102,7 +102,7 @@ export default function Footer() {
 
         <div className="flex flex-col gap-4 text-note text-slate3 sm:flex-row sm:items-center sm:justify-between">
           <p>
-            © {new Date().getFullYear()} AI&nbsp;GACHA&nbsp;OS. All rights
+            © {new Date().getFullYear()} <span className="nb">AI GACHA OS</span>. All rights
             reserved.
           </p>
           <p className="text-pretty sm:text-right">

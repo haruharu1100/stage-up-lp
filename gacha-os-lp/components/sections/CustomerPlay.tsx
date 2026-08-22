@@ -56,7 +56,15 @@ import {
   type Owned,
 } from "@/lib/customerDemo";
 
-type Screen = "home" | "detail" | "play" | "result" | "mypage" | "ship" | "ai";
+type Screen =
+  | "home"
+  | "detail"
+  | "play"
+  | "result"
+  | "mypage"
+  | "ship"
+  | "ai"
+  | "linked";
 
 /** 演出の段階。0 暗転 → 1 光 → 2 出現 → 3 レアリティ → 結果へ */
 const STAGE_MS = [420, 520, 620, 620];
@@ -73,7 +81,108 @@ const JOURNEY: { key: string; label: string; on: Screen[] }[] = [
   { key: "05", label: "マイページ", on: ["mypage"] },
   { key: "06", label: "発送依頼", on: ["ship"] },
   { key: "07", label: "問い合わせ", on: ["ai"] },
+  { key: "08", label: "運営と連動", on: ["linked"] },
 ];
+
+/* ══════════════════════════════════════════════
+   問い合わせで使う質問
+
+   ★「AIが全部答えます」で終わらせないこと。
+     全部AIが答える画面を見せると、頼もしいどころか不安になります。
+     返金・破損・例外は、AIに決めさせてはいけない話です。
+     ここでは「AIが即答する質問」と「人へ引き継ぐ質問」を
+     同じ画面に並べ、どちらに転ぶかを実際に押して確かめられるようにします。
+   ══════════════════════════════════════════════ */
+
+/** 答えを作るときに参照する、いまのデモの状態 */
+type AskCtx = {
+  /** 保有中の点数 */
+  held: number;
+  /** 発送準備中の点数 */
+  preparing: number;
+  /** 獲得済みの合計点数 */
+  total: number;
+  /** 残っているポイント */
+  points: number;
+};
+
+type Faq = {
+  key: string;
+  /** ボタンとチャットに出る質問文 */
+  q: string;
+  /** ボタンに出す短い名前（質問文が長いので、押す前は短く見せる） */
+  chip: string;
+  /** AIの答え */
+  a: (c: AskCtx) => string;
+  /** 答えの下に出す小さな帯（状態や根拠） */
+  tag?: (c: AskCtx) => string;
+  /** true なら AI は答えず、運営者へ引き継ぐ */
+  escalate?: boolean;
+};
+
+const FAQ: Faq[] = [
+  {
+    key: "when",
+    chip: "発送はいつですか？",
+    q: "さっき当たった商品、いつ届きますか？",
+    a: (c) =>
+      c.preparing > 0
+        ? "発送依頼を受け付けています。現在のステータスは「発送準備中」です。発送手配が完了しだい、追跡番号をマイページとメールでお知らせします。"
+        : "まだ発送のご依頼がありません。マイページの「発送を依頼する」から、届けてほしい商品を選んでください。",
+    tag: (c) => `STATUS：発送準備中 ${c.preparing} 点`,
+  },
+  {
+    key: "point",
+    chip: "ポイントの有効期限は？",
+    q: "ポイントの有効期限を教えてください。",
+    a: () =>
+      "最後にポイントを獲得または利用した日から1年間ご利用いただけます。期限が近づいた場合は、マイページとメールでお知らせします。",
+    tag: (c) => `保有ポイント ${c.points.toLocaleString("ja-JP")} pt`,
+  },
+  {
+    key: "odds",
+    chip: "ガチャの確率は？",
+    q: "ガチャの確率はどこで確認できますか？",
+    a: () =>
+      "各賞の残り本数と確率は、ガチャ詳細ページに常時掲載しています。表示している本数は在庫の実数で、引かれるたびに更新されます。",
+    tag: () => "確率表：ガチャ詳細ページに掲載",
+  },
+  {
+    key: "address",
+    chip: "発送先を確認したい",
+    q: "登録している発送先を確認したいです。",
+    a: () =>
+      "ご登録の住所は「東京都◯◯区◯◯ 1-2-3 ◯◯マンション 101（デモ）」です。変更はマイページの住所設定から行えます。",
+    tag: () => "会員ID GD-0001（デモ）",
+  },
+  {
+    key: "owned",
+    chip: "当選商品を確認したい",
+    q: "これまでに当たった商品を確認したいです。",
+    a: (c) =>
+      `現在 ${c.total} 点を獲得済みです。うち ${c.held} 点が保有中、${c.preparing} 点が発送準備中です。明細はマイページの獲得商品からご確認いただけます。`,
+    tag: (c) => `獲得 ${c.total} 点 / 発送準備中 ${c.preparing} 点`,
+  },
+  {
+    key: "refund",
+    chip: "商品に傷があった",
+    q: "届いた商品に傷があったので、返金できますか？",
+    a: () =>
+      "この内容は個別確認が必要です。運営スタッフへ引き継ぎます。担当者から、ご登録のメールアドレスへご連絡します。",
+    tag: () => "受付番号 CS-0001（デモ）",
+    escalate: true,
+  },
+];
+
+/** チャットの1往復 */
+type Turn = {
+  id: string;
+  q: string;
+  /** 答えが決まる前は空。決まったら入る */
+  a: string;
+  tag: string;
+  mode: "auto" | "escalate";
+};
 
 /**
  * マイページの「これまでに獲得した商品」。
@@ -128,7 +237,10 @@ export default function CustomerPlay() {
   const [stage, setStage] = useState(0);
   const [picked, setPicked] = useState<string[]>([]);
   const [shipStep, setShipStep] = useState<"list" | "address" | "done">("list");
-  const [aiStep, setAiStep] = useState(0);
+  /** 問い合わせのやり取り。押した順に下へ積む */
+  const [chat, setChat] = useState<Turn[]>([]);
+  /** AIが考えている最中かどうか。連打で会話が壊れないようにする */
+  const [thinking, setThinking] = useState(false);
 
   /* ── 運営側の状態（お客様の操作でのみ動く） ── */
   const [unshipped, setUnshipped] = useState(START_UNSHIPPED);
@@ -229,12 +341,61 @@ export default function CustomerPlay() {
     track(EV.playComplete, { items: picked.length });
   };
 
-  /* ═════ AIに聞く ═════ */
-  const ask = () => {
-    setAiStep(1);
+  /* ═════ AIに聞く ═════
+
+     ★ここは「AIがどこまでやるか」を見せる場所です。
+       答えが決まっている質問はAIが即答し、
+       返金のように判断が要る質問は、AIが答えずに人へ渡す。
+       この2つが同じ画面で起きることが、いちばん大事です。 */
+  const ask = (f: Faq) => {
+    if (thinking) return;
+
+    const ctx: AskCtx = {
+      held: owned.filter((o) => o.status === "held").length,
+      preparing: owned.filter((o) => o.status !== "held").length,
+      total: owned.length,
+      points,
+    };
+    const id = `${f.key}-${chat.length}`;
+
+    setChat((c) => [
+      ...c,
+      { id, q: f.q, a: "", tag: "", mode: f.escalate ? "escalate" : "auto" },
+    ]);
+    setThinking(true);
     clear();
-    timers.current.push(setTimeout(() => setAiStep(2), reduce ? 200 : 900));
+
+    timers.current.push(
+      setTimeout(
+        () => {
+          setChat((c) =>
+            c.map((t) =>
+              t.id === id ? { ...t, a: f.a(ctx), tag: f.tag?.(ctx) ?? "" } : t,
+            ),
+          );
+          setThinking(false);
+          /*
+            ★引き継ぎは、画面の言葉だけで終わらせないこと。
+              運営者側の「要確認」を実際に1件増やします。
+              言葉だけなら、あとから何とでも書けます。
+          */
+          if (f.escalate) {
+            setNeedCheck((n) => n + 1);
+            setPulse((n) => n + 1);
+          }
+          track(EV.playAsk, { q: f.key, mode: f.escalate ? "escalate" : "auto" });
+        },
+        reduce ? 200 : 850,
+      ),
+    );
   };
+
+  /** いまAIがどちらに振り分けたか。データの流れ図を光らせるのに使う */
+  const route: "idle" | "thinking" | "auto" | "escalate" = thinking
+    ? "thinking"
+    : chat.length === 0
+      ? "idle"
+      : chat[chat.length - 1].mode;
 
   /* ═════ 最初から ═════ */
   const restart = () => {
@@ -247,7 +408,8 @@ export default function CustomerPlay() {
     setResults([]);
     setPicked([]);
     setShipStep("list");
-    setAiStep(0);
+    setChat([]);
+    setThinking(false);
     setUnshipped(START_UNSHIPPED);
     setNeedCheck(0);
     setPulse(0);
@@ -281,9 +443,14 @@ export default function CustomerPlay() {
               <span className="inline-block">お客様には、</span>
               <span className="inline-block">こう見えます。</span>
             </h2>
+            {/*
+              ★「こう見えます」の次に、いちばん強い一文を置くこと。
+                この製品の値打ちは、管理画面の出来ではなく、
+                管理画面とお客様の画面が1つにつながっていることです。
+            */}
             <p className="mx-auto mt-5 max-w-[36em] text-body text-pretty text-slate2 sm:mt-7">
               {jp(
-                "管理画面で承認したガチャが、実際のお客様のスマートフォンではこのように販売されます。下のスマホは画像ではありません。そのまま引いて、当選して、発送依頼まで進められます。",
+                "管理画面だけではありません。実際にお客様が遊ぶ画面まで、1つにつながっています。下のスマホは画像ではありません。そのまま引いて、当選して、発送依頼と問い合わせまで進められます。",
               )}
             </p>
           </div>
@@ -347,8 +514,11 @@ export default function CustomerPlay() {
               owned={owned}
               picked={picked}
               shipStep={shipStep}
-              aiStep={aiStep}
+              chat={chat}
+              thinking={thinking}
               unshipped={unshipped}
+              needCheck={needCheck}
+              view={op}
               onOpen={(id) => {
                 setGachaId(id);
                 setScreen("detail");
@@ -373,11 +543,16 @@ export default function CustomerPlay() {
               onRequestShip={requestShip}
               onAi={() => setScreen("ai")}
               onAsk={ask}
-              onEscalate={() => setNeedCheck((n) => n + 1)}
+              onLinked={() => setScreen("linked")}
               onRestart={restart}
             />
           </div>
         </div>
+
+        {/* ───────── AIと人の分かれ道 ───────── */}
+        <Reveal delay={0.05} className="mt-5 sm:mt-8">
+          <CoreRoute route={route} needCheck={needCheck} reduce={reduce} />
+        </Reveal>
 
         {/* ───────── 説明 ───────── */}
         <Reveal delay={0.06} className="mt-6 sm:mt-10">
@@ -670,6 +845,219 @@ function Metric({
 }
 
 /* ══════════════════════════════════════════════
+   AIと人の分かれ道（データの流れ）
+
+   ★このLPで、いちばん誤解されやすいところを打ち消す場所です。
+     「AIが全部やります」と言うと、便利そうに聞こえる一方で、
+     「返金の判断までAIがするのか」という不安が必ず残ります。
+     だから、流れの真ん中に判定を置いて、
+     AUTO ANSWER と ESCALATE の2本に分かれるところを見せます。
+
+   ★飾りの図にしないこと。
+     右側の「要確認」は、実際にスマホで返金の相談を押したときだけ増えます。
+     押していないのに 1 と書いてある図は、ただの絵です。
+   ══════════════════════════════════════════════ */
+
+function CoreRoute({
+  route,
+  needCheck,
+  reduce,
+}: {
+  route: "idle" | "thinking" | "auto" | "escalate";
+  needCheck: number;
+  reduce: boolean;
+}) {
+  const auto = route === "auto";
+  const esc = route === "escalate";
+  const busy = route === "thinking";
+
+  return (
+    <div
+      data-play-route=""
+      className="overflow-hidden rounded-3xl border border-edge bg-white p-6 shadow-lift sm:p-9"
+    >
+      <div className="flex flex-wrap items-center gap-x-3.5 gap-y-2">
+        <span className="eyebrow-lite">AI ROUTING</span>
+        <span className="hidden h-px w-8 bg-edge sm:block" />
+        <span className="num whitespace-nowrap text-label text-slate3">
+          CUSTOMER → CORE → OPERATOR
+        </span>
+      </div>
+
+      <h3 className="h-display mt-4 text-h3 text-balance text-slate">
+        <span className="inline-block">AIが答えられることはAIへ。</span>
+        <span className="inline-block">判断が必要なことは、人へ。</span>
+      </h3>
+
+      <div className="mt-7 grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)_minmax(0,1fr)] lg:items-stretch">
+        {/* ① お客様のスマホ */}
+        <RouteBox
+          code="01"
+          head="CUSTOMER PHONE"
+          title="お客様が問い合わせる"
+          body="発送のこと、ポイントのこと、返金のこと。入口は1つです。"
+          on={route !== "idle"}
+        />
+
+        {/* ② CORE ── 判定 */}
+        <div
+          className={`relative rounded-2xl border p-5 transition-colors duration-500 ${
+            route === "idle"
+              ? "border-edge bg-paper2"
+              : "border-blue-ink/25 bg-blue-pale"
+          }`}
+        >
+          <p className="num text-[11px] tracking-[0.16em] text-slate3">
+            02<span className="nb ml-2">AI GACHA OS CORE</span>
+          </p>
+          <p className="mt-2.5 text-note font-bold text-pretty text-slate">
+            AIが、答えられるかどうかを判定する
+          </p>
+
+          <div className="mt-4 grid grid-cols-2 gap-2">
+            <RouteVerdict
+              label="AUTO ANSWER"
+              jaLabel="AIが即答"
+              tone="ok"
+              on={auto}
+              reduce={reduce}
+            />
+            <RouteVerdict
+              label="ESCALATE"
+              jaLabel="人へ引き継ぎ"
+              tone="warn"
+              on={esc}
+              reduce={reduce}
+            />
+          </div>
+
+          <p className="mt-3.5 text-note leading-[1.9] text-pretty text-slate2">
+            {busy
+              ? jp("判定しています…")
+              : auto
+                ? jp(
+                    "答えが決まっている質問でした。AIがその場で答え、運営者の手は動きません。",
+                  )
+                : esc
+                  ? jp(
+                      "返金・破損のような、判断が必要な相談でした。AIは答えを出さずに運営者へ渡します。",
+                    )
+                  : jp(
+                      "スマホの問い合わせ画面で質問を押すと、ここでどちらに振り分けられたかが分かります。",
+                    )}
+          </p>
+        </div>
+
+        {/* ③ 運営者のPC */}
+        <div
+          className={`rounded-2xl border p-5 transition-colors duration-500 ${
+            needCheck > 0
+              ? "border-warn/45 bg-warn/[0.06]"
+              : "border-edge bg-paper2"
+          }`}
+        >
+          <p className="num text-[11px] tracking-[0.16em] text-slate3">
+            03<span className="nb ml-2">OPERATOR PC</span>
+          </p>
+          <p className="mt-2.5 text-note font-bold text-pretty text-slate">
+            人が見るのは、残ったものだけ
+          </p>
+          <motion.p
+            key={needCheck}
+            initial={reduce || needCheck === 0 ? false : { scale: 1.12 }}
+            animate={{ scale: 1 }}
+            transition={{ duration: 0.45 }}
+            className={`num mt-4 inline-flex items-baseline gap-1.5 whitespace-nowrap rounded-full border px-3.5 py-1.5 text-[13px] font-bold tracking-[0.08em] ${
+              needCheck > 0
+                ? "border-warn/50 bg-warn/12 text-warn-ink"
+                : "border-edge bg-white text-slate3"
+            }`}
+          >
+            要確認
+            <b className="text-[19px] font-extrabold">{needCheck}</b>件
+          </motion.p>
+          <p className="mt-3.5 text-note leading-[1.9] text-pretty text-slate2">
+            {jp(
+              "AIが答えた分は、ここに残りません。運営者が読むのは、判断が要るものだけになります。",
+            )}
+          </p>
+        </div>
+      </div>
+
+      <p className="mt-6 border-t border-edge2 pt-4 text-note leading-[1.9] text-pretty text-slate3">
+        {jp(
+          "AIに任せる範囲は、運営者が決められます。ここではデモとして、発送状況・ポイント・確率・住所・獲得履歴をAIの担当にし、返金と破損は必ず人へ渡す設定にしています。",
+        )}
+      </p>
+    </div>
+  );
+}
+
+function RouteBox({
+  code,
+  head,
+  title,
+  body,
+  on,
+}: {
+  code: string;
+  head: string;
+  title: string;
+  body: string;
+  on: boolean;
+}) {
+  return (
+    <div
+      className={`rounded-2xl border p-5 transition-colors duration-500 ${
+        on ? "border-blue-ink/25 bg-blue-pale/60" : "border-edge bg-paper2"
+      }`}
+    >
+      <p className="num text-[11px] tracking-[0.16em] text-slate3">
+        {code}
+        <span className="nb ml-2">{head}</span>
+      </p>
+      <p className="mt-2.5 text-note font-bold text-pretty text-slate">{title}</p>
+      <p className="mt-3.5 text-note leading-[1.9] text-pretty text-slate2">
+        {jp(body)}
+      </p>
+    </div>
+  );
+}
+
+function RouteVerdict({
+  label,
+  jaLabel,
+  tone,
+  on,
+  reduce,
+}: {
+  label: string;
+  jaLabel: string;
+  tone: "ok" | "warn";
+  on: boolean;
+  reduce: boolean;
+}) {
+  const active =
+    tone === "ok"
+      ? "border-ok-ink/40 bg-ok/12 text-ok-ink"
+      : "border-warn/50 bg-warn/12 text-warn-ink";
+  return (
+    <motion.div
+      animate={reduce ? {} : { opacity: on ? 1 : 0.45 }}
+      transition={{ duration: 0.35 }}
+      className={`rounded-xl border px-3 py-2.5 text-center transition-colors duration-500 ${
+        on ? active : "border-edge bg-white text-slate3"
+      }`}
+    >
+      <p className="num whitespace-nowrap text-[10px] font-bold tracking-[0.1em]">
+        {label}
+      </p>
+      <p className="mt-1 whitespace-nowrap text-[11px] font-bold">{jaLabel}</p>
+    </motion.div>
+  );
+}
+
+/* ══════════════════════════════════════════════
    スマホ本体
    ══════════════════════════════════════════════ */
 
@@ -684,9 +1072,15 @@ function Phone(p: {
   owned: Owned[];
   picked: string[];
   shipStep: "list" | "address" | "done";
-  aiStep: number;
+  /** 問い合わせのやり取り */
+  chat: Turn[];
+  thinking: boolean;
   /** 運営側の未発送件数。発送依頼の完了画面で「運営にも届いた」ことを示すのに使う */
   unshipped: number;
+  /** 運営側の要確認件数。引き継いだあとの画面で見せる */
+  needCheck: number;
+  /** 運営側の集計。最後の「連動しています」画面で、同じ数字を並べる */
+  view: ReturnType<typeof operatorView>;
   onOpen: (id: string) => void;
   onHome: () => void;
   onPlay: (n: number) => void;
@@ -697,8 +1091,8 @@ function Phone(p: {
   onShipStep: (s: "list" | "address" | "done") => void;
   onRequestShip: () => void;
   onAi: () => void;
-  onAsk: () => void;
-  onEscalate: () => void;
+  onAsk: (f: Faq) => void;
+  onLinked: () => void;
   onRestart: () => void;
 }) {
   const dark = p.screen === "play";
@@ -782,6 +1176,7 @@ function Phone(p: {
                   <MyPage
                     key="mypage"
                     owned={p.owned}
+                    asks={p.chat.length}
                     onShip={p.onShip}
                     onHome={p.onHome}
                   />
@@ -803,9 +1198,18 @@ function Phone(p: {
                 {p.screen === "ai" && (
                   <Ai
                     key="ai"
-                    step={p.aiStep}
+                    chat={p.chat}
+                    thinking={p.thinking}
+                    needCheck={p.needCheck}
                     onAsk={p.onAsk}
-                    onEscalate={p.onEscalate}
+                    onLinked={p.onLinked}
+                  />
+                )}
+                {p.screen === "linked" && (
+                  <Linked
+                    key="linked"
+                    view={p.view}
+                    needCheck={p.needCheck}
                     onRestart={p.onRestart}
                   />
                 )}
@@ -828,7 +1232,8 @@ function Phone(p: {
                 const active =
                   t.k === p.screen ||
                   (t.k === "home" && p.screen === "detail") ||
-                  (t.k === "mypage" && p.screen === "ship");
+                  (t.k === "mypage" && p.screen === "ship") ||
+                  (t.k === "ai" && p.screen === "linked");
                 return (
                   <button
                     key={t.k}
@@ -1444,17 +1849,65 @@ const STATUS: Record<Owned["status"], { label: string; cls: string }> = {
 
 function MyPage({
   owned,
+  asks,
   onShip,
   onHome,
 }: {
   owned: Owned[];
+  /** これまでの問い合わせ件数。同じ会員の情報として並べる */
+  asks: number;
   onShip: () => void;
   onHome: () => void;
 }) {
   const held = owned.filter((o) => o.status === "held").length;
+  const moving = owned.filter((o) => o.status !== "held").length;
   return (
     <Pane>
-      <p className="px-0.5 pb-2 text-[13px] font-bold text-slate">獲得商品</p>
+      <p className="px-0.5 pb-2 text-[13px] font-bold text-slate">マイページ</p>
+
+      {/*
+        ★獲得商品・発送状況・問い合わせを、別々の話にしないこと。
+          この3つが同じ会員に紐づいていることが分かると、
+          「1つのシステムで動いている」ことが説明なしで伝わります。
+          逆に、商品一覧だけを出すと、ただの当選履歴に見えます。
+      */}
+      <div className="rounded-2xl border border-edge bg-white p-3 shadow-lift">
+        <div className="flex items-center gap-2.5">
+          <span className="num flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-blue-ink/20 bg-blue-pale text-[11px] font-bold text-blue-ink">
+            GD
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-[12px] font-bold text-slate">
+              デモユーザー 様
+            </p>
+            <p className="num mt-0.5 whitespace-nowrap text-[10px] text-slate3">
+              会員ID GD-0001（デモ）
+            </p>
+          </div>
+        </div>
+        <div className="mt-2.5 grid grid-cols-3 gap-1.5">
+          {[
+            { k: "獲得商品", v: owned.length, u: "点" },
+            { k: "発送手配中", v: moving, u: "点" },
+            { k: "問い合わせ", v: asks, u: "件" },
+          ].map((c) => (
+            <div
+              key={c.k}
+              className="rounded-xl border border-edge2 bg-paper2 px-2 py-2 text-center"
+            >
+              <p className="whitespace-nowrap text-[9px] text-slate3">{c.k}</p>
+              <p className="num mt-0.5 flex items-baseline justify-center gap-0.5 whitespace-nowrap">
+                <b className="text-[15px] font-extrabold text-slate">{c.v}</b>
+                <span className="text-[9px] text-slate3">{c.u}</span>
+              </p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <p className="px-0.5 pb-2 pt-3 text-[13px] font-bold text-slate">
+        獲得商品
+      </p>
 
       {owned.length === 0 ? (
         <div className="rounded-2xl border border-edge bg-white p-5 text-center">
@@ -1781,121 +2234,337 @@ function Ship({
     </Pane>
   );
 }
-
 /* ══════════════════════════════════════════════
-   07 AIへの問い合わせ
+   07 問い合わせ（AIが答える／人へ引き継ぐ）
+
+   ★以前の作りの何が悪かったか
+     用意した質問が1つだけで、2往復して終わりでした。
+     その結果、スマホの下3分の1ほどが白いまま残り、
+     「作りかけの画面」に見えていました。
+     実際の問い合わせ画面は、まず「よくある質問」が並んでいます。
+
+   ★Q と A が、ひと目で分かる形にすること
+     吹き出しだけだと、どちらが質問でどちらが答えか、
+     文字を読まないと分かりません。Q / A の印を付けます。
    ══════════════════════════════════════════════ */
 
 function Ai({
-  step,
+  chat,
+  thinking,
+  needCheck,
   onAsk,
-  onEscalate,
+  onLinked,
+}: {
+  chat: Turn[];
+  thinking: boolean;
+  needCheck: number;
+  onAsk: (f: Faq) => void;
+  onLinked: () => void;
+}) {
+  const used = new Set(chat.map((t) => t.id.split("-")[0]));
+  const escalated = chat.some((t) => t.mode === "escalate" && t.a);
+
+  return (
+    <Pane>
+      <div className="flex items-center justify-between px-0.5 pb-2">
+        <p className="text-[13px] font-bold text-slate">お問い合わせ</p>
+        <span className="num whitespace-nowrap rounded-full border border-blue-ink/18 bg-blue-pale px-2 py-[3px] text-[9px] tracking-[0.12em] text-blue-ink">
+          AI 受付中
+        </span>
+      </div>
+
+      {/* ── 引き継ぎ中の帯。いちばん上に固定で出す ──
+          ★これを会話の下に埋もれさせないこと。
+            お客様が知りたいのは「自分の件がいま誰の手にあるか」です。 */}
+      {escalated && (
+        <motion.div
+          initial={{ opacity: 0, y: -6 }}
+          animate={{ opacity: 1, y: 0 }}
+          data-play-escalated=""
+          className="mb-2 rounded-xl border border-warn/45 bg-warn/10 px-3 py-2.5"
+        >
+          <div className="flex items-center gap-2">
+            <span className="relative flex h-2 w-2 shrink-0">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-warn/70" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-warn" />
+            </span>
+            <p className="text-[12px] font-bold text-warn-ink">担当者確認中</p>
+            <span className="num ml-auto whitespace-nowrap text-[9px] tracking-[0.1em] text-warn-ink/80">
+              CS-0001
+            </span>
+          </div>
+          <p className="mt-1.5 text-[10px] leading-[1.75] text-pretty text-slate2">
+            {jp(
+              "この件はAIでは判断せず、運営スタッフが確認しています。運営者側の「要確認」に1件として残っています。",
+            )}
+          </p>
+        </motion.div>
+      )}
+
+      {/* ── AIの最初のあいさつ ── */}
+      <Bubble side="ai" mark="AI">
+        {jp(
+          "ご注文・発送・ポイントについてお答えします。よくある質問からお選びいただくか、そのままご相談ください。",
+        )}
+      </Bubble>
+
+      {/* ── これまでのやり取り ── */}
+      {chat.map((t) => (
+        <div key={t.id} className="mt-2 space-y-2">
+          <Bubble side="me" mark="Q">
+            {t.q}
+          </Bubble>
+
+          {!t.a ? (
+            <Bubble side="ai" mark="A" muted>
+              <span className="inline-flex items-center gap-1.5">
+                {t.mode === "escalate"
+                  ? "内容を確認しています…"
+                  : "発送・ご注文の状況を確認しています…"}
+                <Dots />
+              </span>
+            </Bubble>
+          ) : (
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+            >
+              <Bubble side="ai" mark="A" tone={t.mode}>
+                <span className="block">{jp(t.a)}</span>
+                {t.tag && (
+                  <span
+                    className={`num mt-2 inline-block whitespace-nowrap rounded-full border px-2.5 py-1 text-[10px] font-bold ${
+                      t.mode === "escalate"
+                        ? "border-warn/45 bg-warn/10 text-warn-ink"
+                        : "border-ok-ink/25 bg-ok/10 text-ok-ink"
+                    }`}
+                  >
+                    {t.tag}
+                  </span>
+                )}
+                {/* AIが自分で答えたのか、人へ渡したのかを必ず明示する */}
+                <span
+                  className={`num mt-2 block whitespace-nowrap text-[9px] tracking-[0.12em] ${
+                    t.mode === "escalate" ? "text-warn-ink" : "text-slate3"
+                  }`}
+                >
+                  {t.mode === "escalate"
+                    ? "ESCALATE — 運営スタッフへ引き継ぎ"
+                    : "AUTO ANSWER — AIが回答"}
+                </span>
+              </Bubble>
+            </motion.div>
+          )}
+        </div>
+      ))}
+
+      {/* ── よくある質問 ──
+          ★ここを空けたままにしないこと。
+            問い合わせ画面の下半分が白いだけの画面は、未完成に見えます。 */}
+      <div className="mt-3 rounded-2xl border border-edge bg-white p-2.5 shadow-lift">
+        <p className="num px-0.5 pb-2 text-[10px] tracking-[0.14em] text-slate3">
+          よくある質問
+        </p>
+        <div className="space-y-1.5">
+          {FAQ.map((f, i) => {
+            const done = used.has(f.key);
+            return (
+              <button
+                key={f.key}
+                type="button"
+                disabled={thinking}
+                /* data-play … スクリーンショットの目印。消さないこと */
+                data-play={i === 0 ? "ask" : f.escalate ? "ask-escalate" : undefined}
+                onClick={() => onAsk(f)}
+                className={`flex w-full items-center gap-2 rounded-xl border px-2.5 py-2 text-left text-[12px] font-bold transition-colors disabled:opacity-55 ${
+                  f.escalate
+                    ? "border-warn/40 bg-warn/[0.07] text-warn-ink"
+                    : done
+                      ? "border-edge2 bg-paper2 text-slate3"
+                      : "border-blue-ink/20 bg-blue-pale/50 text-blue-ink"
+                }`}
+              >
+                <span className="min-w-0 flex-1">{f.chip}</span>
+                <span className="num shrink-0 whitespace-nowrap text-[9px] tracking-[0.1em] opacity-75">
+                  {f.escalate ? "人へ" : done ? "回答済" : "AI"}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+        <p className="mt-2 px-0.5 text-[10px] leading-[1.7] text-pretty text-slate3">
+          {jp(
+            "返金・破損・例外のご相談は、AIが答えずに運営スタッフへお渡しします。",
+          )}
+        </p>
+      </div>
+
+      {/* ── 次へ ── */}
+      {chat.some((t) => t.a) && (
+        <button
+          type="button"
+          data-play="tolinked"
+          onClick={onLinked}
+          className="mt-2.5 w-full whitespace-nowrap rounded-xl bg-blue-ink py-2.5 text-[12px] font-bold text-white shadow-blue-lift"
+        >
+          運営画面との連動を見る
+          {needCheck > 0 ? `（要確認 ${needCheck} 件）` : ""}
+        </button>
+      )}
+    </Pane>
+  );
+}
+
+/** 「…」だけの、考え中の印 */
+function Dots() {
+  return (
+    <span aria-hidden className="inline-flex gap-[3px]">
+      {[0, 1, 2].map((i) => (
+        <motion.span
+          key={i}
+          animate={{ opacity: [0.25, 1, 0.25] }}
+          transition={{ duration: 1.1, repeat: Infinity, delay: i * 0.18 }}
+          className="inline-block h-[3px] w-[3px] rounded-full bg-slate3"
+        />
+      ))}
+    </span>
+  );
+}
+
+/**
+ * 吹き出し。
+ * ★Q と A の印を必ず付けること。
+ *   色と位置だけで区別させると、印刷したときや、
+ *   色が見えにくい方には、どちらの発言か分かりません。
+ */
+function Bubble({
+  side,
+  mark,
+  tone = "auto",
+  muted = false,
+  children,
+}: {
+  side: "me" | "ai";
+  mark: string;
+  tone?: "auto" | "escalate";
+  muted?: boolean;
+  children: React.ReactNode;
+}) {
+  if (side === "me") {
+    return (
+      <div className="flex items-start justify-end gap-2">
+        <p className="max-w-[84%] rounded-2xl rounded-br-md bg-blue-ink px-3 py-2 text-[12px] leading-[1.8] text-pretty text-white">
+          {children}
+        </p>
+        <span className="num mt-1 shrink-0 rounded-full border border-blue-ink/30 bg-blue-ink px-2 py-[3px] text-[9px] font-bold tracking-[0.12em] text-white">
+          {mark}
+        </span>
+      </div>
+    );
+  }
+  return (
+    <div className="flex items-start gap-2">
+      <span
+        className={`num mt-1 shrink-0 rounded-full border px-2 py-[3px] text-[9px] font-bold tracking-[0.12em] ${
+          tone === "escalate"
+            ? "border-warn/45 bg-warn/12 text-warn-ink"
+            : "border-blue-ink/18 bg-blue-pale text-blue-ink"
+        }`}
+      >
+        {mark}
+      </span>
+      <div
+        className={`min-w-0 flex-1 rounded-2xl rounded-tl-md border bg-white px-3 py-2 text-[12px] leading-[1.8] text-pretty shadow-lift ${
+          tone === "escalate" ? "border-warn/35" : "border-edge"
+        } ${muted ? "text-slate3" : "text-slate"}`}
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════
+   08 すべて運営画面につながっています
+
+   ★最後にこの1枚を置く理由
+     ここまでの操作（引く・当選・発送依頼・問い合わせ）は、
+     お客様側から見ると、ただの買い物です。
+     その裏で運営者の数字が動いていたことを、最後に1枚で示します。
+     ここに出す数字は説明用に書いた文字ではなく、
+     運営者側の集計（左の画面）と同じ値をそのまま出しています。
+   ══════════════════════════════════════════════ */
+
+function Linked({
+  view,
+  needCheck,
   onRestart,
 }: {
-  step: number;
-  onAsk: () => void;
-  onEscalate: () => void;
+  view: ReturnType<typeof operatorView>;
+  needCheck: number;
   onRestart: () => void;
 }) {
+  const rows = [
+    { k: "残り口数", v: view.left.toLocaleString("ja-JP"), u: "口", why: "引かれた分だけ減る" },
+    { k: "売上", v: view.revenue.toLocaleString("ja-JP"), u: "pt", why: "引かれた瞬間に増える" },
+    { k: "未発送", v: String(view.unshipped), u: "件", why: "発送を依頼した分だけ増える" },
+    { k: "要確認", v: String(needCheck), u: "件", why: "AIが答えなかった相談だけ残る" },
+  ];
+
   return (
     <Pane>
       <p className="px-0.5 pb-2 text-[13px] font-bold text-slate">
-        お問い合わせ
+        ここまでの操作
       </p>
 
-      <div className="space-y-2">
-        <div className="flex items-start gap-2">
-          <span className="num mt-1 shrink-0 rounded-full border border-blue-ink/18 bg-blue-pale px-2 py-[3px] text-[9px] tracking-[0.12em] text-blue-ink">
-            AI
-          </span>
-          <p className="min-w-0 flex-1 rounded-2xl rounded-tl-md border border-edge bg-white px-3 py-2 text-[12px] leading-[1.8] text-pretty text-slate shadow-lift">
-            ご注文や発送についてお答えします。ご用件をお選びください。
-          </p>
-        </div>
-
-        {step === 0 && (
-          <button
-            type="button"
-            data-play="ask"
-            onClick={onAsk}
-            className="ml-auto block whitespace-nowrap rounded-2xl rounded-br-md border border-blue-ink/25 bg-white px-3 py-2 text-[12px] font-bold text-blue-ink"
-          >
-            さっき当たった商品、いつ届きますか？
-          </button>
-        )}
-
-        {step >= 1 && (
-          <motion.div
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="flex justify-end"
-          >
-            <p className="max-w-[85%] rounded-2xl rounded-br-md bg-blue-ink px-3 py-2 text-[12px] leading-[1.8] text-pretty text-white">
-              さっき当たった商品、いつ届きますか？
-            </p>
-          </motion.div>
-        )}
-
-        {step === 1 && (
-          <div className="flex items-start gap-2">
-            <span className="num mt-1 shrink-0 rounded-full border border-blue-ink/18 bg-blue-pale px-2 py-[3px] text-[9px] tracking-[0.12em] text-blue-ink">
-              AI
-            </span>
-            <p className="min-w-0 flex-1 rounded-2xl rounded-tl-md border border-edge bg-white px-3 py-2 text-[12px] text-slate3 shadow-lift">
-              発送依頼の状況を確認しています…
-            </p>
-          </div>
-        )}
-
-        {step >= 2 && (
-          <motion.div
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="flex items-start gap-2"
-          >
-            <span className="num mt-1 shrink-0 rounded-full border border-blue-ink/18 bg-blue-pale px-2 py-[3px] text-[9px] tracking-[0.12em] text-blue-ink">
-              AI
-            </span>
-            <div className="min-w-0 flex-1 rounded-2xl rounded-tl-md border border-edge bg-white px-3 py-2 shadow-lift">
-              <p className="text-[12px] leading-[1.8] text-pretty text-slate">
-                {jp(
-                  "現在のステータスは「発送準備中」です。準備ができ次第、追跡番号をマイページとメールでお知らせします。",
-                )}
-              </p>
-              <p className="num mt-2 whitespace-nowrap rounded-full border border-ok-ink/25 bg-ok/10 px-2.5 py-1 text-[10px] font-bold text-ok-ink">
-                STATUS：発送準備中
-              </p>
-            </div>
-          </motion.div>
-        )}
+      <div className="rounded-2xl border border-blue-ink/20 bg-blue-pale/55 p-3.5 text-center">
+        <p className="num text-[10px] tracking-[0.16em] text-blue-ink">
+          CUSTOMER → OPERATOR
+        </p>
+        <p className="mt-2 text-[14px] font-bold leading-[1.7] text-pretty text-slate">
+          <span className="inline-block">ガチャを引く・当選・発送依頼・</span>
+          <span className="inline-block">問い合わせ。</span>
+          <span className="inline-block">すべて運営画面に</span>
+          <span className="inline-block">つながっています。</span>
+        </p>
       </div>
 
-      {step >= 2 && (
-        <>
-          <div className="mt-3 rounded-xl border border-edge2 bg-paper2 p-2.5">
-            <p className="text-[10px] leading-[1.75] text-pretty text-slate3">
-              {jp(
-                "返金・例外対応・重大な申し出は、AIが答えずに運営者へ引き継ぎます。下のボタンで、その動きも確かめられます。",
-              )}
-            </p>
-            <button
-              type="button"
-              onClick={onEscalate}
-              className="mt-2 w-full whitespace-nowrap rounded-lg border border-warn/45 bg-warn/10 py-2 text-[11px] font-bold text-warn-ink"
-            >
-              返金について相談する（運営者へ引き継ぐ）
-            </button>
-          </div>
-
-          <button
-            type="button"
-            onClick={onRestart}
-            className="num mt-2.5 w-full whitespace-nowrap rounded-lg border border-edge bg-white py-2 text-[11px] font-bold tracking-[0.1em] text-slate3"
+      {/* いま運営者の画面に出ている数字。左のPC画面と同じ値 */}
+      <div className="mt-2.5 space-y-1.5" data-play-linked="">
+        {rows.map((r) => (
+          <div
+            key={r.k}
+            className="flex items-center gap-2.5 rounded-xl border border-edge bg-white px-3 py-2.5 shadow-lift"
           >
-            最初から見る
-          </button>
-        </>
-      )}
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-[12px] font-bold text-slate">{r.k}</p>
+              <p className="mt-0.5 text-[10px] leading-[1.6] text-pretty text-slate3">
+                {r.why}
+              </p>
+            </div>
+            <p className="num flex shrink-0 items-baseline gap-1 whitespace-nowrap">
+              <b className="text-[19px] font-extrabold text-slate">{r.v}</b>
+              <span className="text-[11px] font-semibold text-slate3">
+                {r.u}
+              </span>
+            </p>
+          </div>
+        ))}
+      </div>
+
+      <p className="mt-2.5 rounded-xl border border-edge bg-paper2 px-3 py-2.5 text-[10px] leading-[1.8] text-pretty text-slate3">
+        {jp(
+          "この4つは、左の運営者画面に出ている数字と同じものです。日次で集計しているのではなく、お客様が操作したその場で動いています。",
+        )}
+      </p>
+
+      <button
+        type="button"
+        onClick={onRestart}
+        className="num mt-2.5 w-full whitespace-nowrap rounded-xl border border-edge bg-white py-2.5 text-[11px] font-bold tracking-[0.1em] text-slate3"
+      >
+        最初から見る
+      </button>
     </Pane>
   );
 }
