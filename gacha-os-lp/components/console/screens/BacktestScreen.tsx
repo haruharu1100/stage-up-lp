@@ -28,8 +28,13 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import type { ConsoleState } from "@/lib/console/state";
-import { buildSpec } from "@/lib/console/spec";
+import {
+  BACKTEST_SEED,
+  can,
+  specOf,
+  type ConsoleAction,
+  type ConsoleState,
+} from "@/lib/console/state";
 import {
   backtestReport,
   riskLabel,
@@ -37,7 +42,8 @@ import {
   type ScenarioResult,
   type Verdict,
 } from "@/lib/backtest";
-import { Badge, Card, KV, RowCard, Rows, Stat, Table, Td, WhatIsThis } from "../ui";
+import type { MenuKey } from "../menu";
+import { Badge, Btn, Card, KV, RowCard, Rows, Stat, Table, Td, WhatIsThis } from "../ui";
 
 const TONE: Record<Verdict, "ok" | "warn" | "danger"> = {
   SAFE: "ok",
@@ -45,16 +51,25 @@ const TONE: Record<Verdict, "ok" | "warn" | "danger"> = {
   DANGER: "danger",
 };
 
-export default function BacktestScreen({ s }: { s: ConsoleState }) {
+export default function BacktestScreen({
+  s,
+  dispatch,
+  onNav,
+}: {
+  s: ConsoleState;
+  dispatch: React.Dispatch<ConsoleAction>;
+  onNav: (k: MenuKey) => void;
+}) {
   const [gachaId, setGachaId] = useState(s.gachas[0]?.id ?? "");
   const g = s.gachas.find((x) => x.id === gachaId) ?? s.gachas[0];
+  const mayEdit = s.me ? can(s.me.role, "gacha.edit") : false;
 
   /* ★同じガチャなら、いつ押しても同じ結果になるように種を固定します */
+  const built = useMemo(() => (g ? specOf(g) : null), [g]);
   const report = useMemo(() => {
-    if (!g) return null;
-    const spec = buildSpec(g.title, g.price, g.total, 1, g.designedRtp || 95);
-    return backtestReport(spec, 20260822, "2026-08-22 12:00");
-  }, [g]);
+    if (!built) return null;
+    return backtestReport(built.spec, BACKTEST_SEED, "2026-08-22 12:00");
+  }, [built]);
 
   if (!g || !report) {
     return (
@@ -69,7 +84,12 @@ export default function BacktestScreen({ s }: { s: ConsoleState }) {
       <WhatIsThis>
         公開する前に、
         <strong className="font-bold text-slate">赤字になる条件を先に試します</strong>
-        。6つの状況を200回ずつ動かし、いちばん悪かった結果に合わせて判定します。
+        。6つの状況を200回ずつ動かします。結果は2つに分けて出します。
+        <br />
+        <strong className="font-bold text-slate">【設計】</strong>
+        ＝この構成のまま公開してよいか。
+        <strong className="font-bold text-slate">【運営】</strong>
+        ＝公開したあと、相場や売れ行きが動いたときに気をつけること。
       </WhatIsThis>
 
       <Card
@@ -87,10 +107,59 @@ export default function BacktestScreen({ s }: { s: ConsoleState }) {
             </option>
           ))}
         </select>
+
+        {built?.approx && (
+          <p className="mt-3 text-note leading-[1.9] text-slate3">
+            ★このガチャには賞の明細が登録されていないため、
+            設計還元率
+            <span className="num">{(g.designedRtp || 95).toFixed(1)}%</span>
+            から組み直した<strong className="font-bold text-slate">近似の構成</strong>
+            で検証しています。実際に運用するときは、景品マスターに登録した明細で検証します。
+          </p>
+        )}
+
+        {/* ── 結果をこのガチャに保存する ── */}
+        <div className="mt-4 border-t border-edge2 pt-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="text-note font-bold text-slate2">
+                いまの検証結果：
+                {g.backtest === null ? (
+                  <span className="text-warn-ink">未実施</span>
+                ) : (
+                  <span className="num">{g.backtest}</span>
+                )}
+              </p>
+              <p className="mt-1 text-note leading-[1.85] text-slate3">
+                ★この画面を開いただけでは、検証したことになりません。
+                下のボタンで実行して、結果をガチャに保存してはじめて公開できます。
+              </p>
+            </div>
+            <Btn
+              kind="primary"
+              disabled={!mayEdit}
+              onClick={() => dispatch({ type: "RUN_BACKTEST", gachaId: g.id })}
+            >
+              検証を実行して結果を保存する
+            </Btn>
+          </div>
+          {!mayEdit && (
+            <p className="mt-2 text-note leading-[1.9] text-warn-ink">
+              いまの権限では検証を実行できません。運営または管理者に切り替えてお試しください。
+            </p>
+          )}
+          {g.backtest !== null && g.backtest !== "DANGER" && g.status === "DRAFT" && (
+            <div className="mt-3">
+              <Btn kind="ghost" onClick={() => onNav("gacha")}>
+                ガチャ管理で公開する
+              </Btn>
+            </div>
+          )}
+        </div>
       </Card>
 
       {/* ── 結論 ── */}
-      <Card title="結論" note="いちばん悪いシナリオに合わせています。">
+      <Card title="結論" note="公開可否は【設計】シナリオだけで決めています。">
         {!report.usable ? (
           <div className="rounded-xl border border-warn/35 bg-warn/10 px-4 py-4">
             <Badge tone="warn">判定できません</Badge>
@@ -107,18 +176,68 @@ export default function BacktestScreen({ s }: { s: ConsoleState }) {
           </div>
         ) : (
           <>
-            <div
-              className={`rounded-xl border px-4 py-4 ${
-                report.overall === "SAFE"
-                  ? "border-ok/30 bg-ok/10"
-                  : report.overall === "CAUTION"
-                    ? "border-warn/35 bg-warn/10"
-                    : "border-danger/30 bg-danger/10"
-              }`}
-            >
-              <Badge tone={TONE[report.overall]}>
-                {report.overall} ／ {verdictLabel[report.overall]}
-              </Badge>
+            <div className="grid gap-3 lg:grid-cols-2">
+              {/* 公開してよいか（設計） */}
+              <div
+                className={`rounded-xl border px-4 py-4 ${
+                  report.overall === "SAFE"
+                    ? "border-ok/30 bg-ok/10"
+                    : report.overall === "CAUTION"
+                      ? "border-warn/35 bg-warn/10"
+                      : "border-danger/30 bg-danger/10"
+                }`}
+              >
+                <p className="text-label font-bold tracking-wide text-slate3">
+                  【設計】このまま公開してよいか
+                </p>
+                <div className="mt-2">
+                  <Badge tone={TONE[report.overall]}>
+                    {report.overall} ／ {verdictLabel[report.overall]}
+                  </Badge>
+                </div>
+                <p className="mt-2 text-note leading-[1.85] text-slate2">
+                  {report.overall === "DANGER"
+                    ? "この構成のままでは公開できません。上位賞の価値を下げるか、口数か料金を見直してください。"
+                    : report.overall === "CAUTION"
+                      ? "公開はできます。当選順によっては還元率が上がるので、実還元率モニタを毎日見てください。"
+                      : "この構成のまま公開できます。"}
+                </p>
+              </div>
+
+              {/* 公開したあと気をつけること（運営） */}
+              <div
+                className={`rounded-xl border px-4 py-4 ${
+                  report.stress === "SAFE"
+                    ? "border-ok/30 bg-ok/10"
+                    : report.stress === "CAUTION"
+                      ? "border-warn/35 bg-warn/10"
+                      : "border-danger/30 bg-danger/10"
+                }`}
+              >
+                <p className="text-label font-bold tracking-wide text-slate3">
+                  【運営】公開したあと、気をつけること
+                </p>
+                <div className="mt-2">
+                  <Badge tone={TONE[report.stress]}>{report.stress}</Badge>
+                </div>
+                <p className="mt-2 text-note leading-[1.85] text-slate2">
+                  {report.stopLineUpPct === null
+                    ? "相場が上がったときの赤字ラインは、この構成では計算できません。"
+                    : (
+                        <>
+                          景品の相場が
+                          <strong className="num font-bold text-slate">
+                            +{report.stopLineUpPct.toFixed(1)}%
+                          </strong>
+                          を超えると、このガチャは赤字に変わります。
+                          <br />
+                          ★これは公開を止める理由ではなく、
+                          <strong className="font-bold text-slate">運営中に見張る線</strong>です。
+                          相場ウォッチが、この線を超えたら知らせます。
+                        </>
+                      )}
+                </p>
+              </div>
             </div>
 
             <div className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -144,44 +263,40 @@ export default function BacktestScreen({ s }: { s: ConsoleState }) {
         </p>
       </Card>
 
-      {/* ── 6つのシナリオ ── */}
-      <Card title="6つの状況で試した結果" note="1つずつ、何を想定しているかを書いています。">
-        <Table head={["状況", "何を想定しているか", "還元率（真ん中）", "還元率（最悪）", "赤字確率", "判定"]}>
-          {report.scenarios.map((sc) => (
-            <tr key={sc.key}>
-              <Td className="font-bold text-slate">{sc.label}</Td>
-              <Td className="max-w-[22rem]">{sc.premise}</Td>
-              <Td className="num">{sc.distribution.rtpMedian.toFixed(1)}%</Td>
-              <Td className="num">
-                <span className={sc.distribution.rtpWorst >= 110 ? "font-bold text-danger-ink" : ""}>
-                  {sc.distribution.rtpWorst.toFixed(1)}%
-                </span>
-              </Td>
-              <Td className="num">{(sc.distribution.lossRate * 100).toFixed(1)}%</Td>
-              <Td>
-                <Badge tone={TONE[sc.verdict]}>{sc.verdict}</Badge>
-              </Td>
-            </tr>
-          ))}
-        </Table>
+      {/* ── 6つのシナリオ（設計／運営に分けて出す） ── */}
+      <Card
+        title="【設計】この構成そのものの良し悪し"
+        note="ここが DANGER のときだけ、公開ボタンを止めます。"
+      >
+        <p className="text-note leading-[1.9] text-slate2">
+          相場も売れ行きも動かない前提で、
+          <strong className="font-bold text-slate">当選の順番だけ</strong>
+          を200通り試しています。順番の運が悪かったときに耐えられるか、を見るところです。
+        </p>
+        <div className="mt-4">
+          <ScenarioTable scenarios={report.scenarios.filter((sc) => sc.kind === "design")} />
+        </div>
+      </Card>
 
-        <Rows>
-          {report.scenarios.map((sc) => (
-            <RowCard key={sc.key}>
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="text-note font-bold text-slate">{sc.label}</span>
-                <Badge tone={TONE[sc.verdict]}>{sc.verdict}</Badge>
-              </div>
-              <p className="mt-2 text-note leading-[1.85] text-slate2">{sc.premise}</p>
-              <div className="mt-2 border-t border-edge pt-2">
-                <KV k="還元率（真ん中）" v={<span className="num">{sc.distribution.rtpMedian.toFixed(1)}%</span>} />
-                <KV k="還元率（最悪）" v={<span className="num">{sc.distribution.rtpWorst.toFixed(1)}%</span>} />
-                <KV k="赤字確率" v={<span className="num">{(sc.distribution.lossRate * 100).toFixed(1)}%</span>} />
-              </div>
-              <p className="mt-2 text-note leading-[1.85] text-slate3">{sc.reason}</p>
-            </RowCard>
-          ))}
-        </Rows>
+      <Card
+        title="【運営】公開したあと、外の条件が動いたとき"
+        note="ここは公開を止める理由にしません。動いたときの構えを決めておくところです。"
+      >
+        <p className="text-note leading-[1.9] text-slate2">
+          相場が上がった・下がった、売れ行きが止まった、上位賞が終盤まで残った――
+          という「外側の事情」です。
+          <br />
+          ★相場が25%上がれば、還元率80%を超えるガチャは計算上どれも赤字になります。
+          これで公開を止めると、まともな構成まで全部止まります。
+          だから止める代わりに、
+          <strong className="font-bold text-slate">
+            どこを超えたら手を打つか（停止ライン）
+          </strong>
+          を上の【運営】欄に出しています。
+        </p>
+        <div className="mt-4">
+          <ScenarioTable scenarios={report.scenarios.filter((sc) => sc.kind === "stress")} />
+        </div>
       </Card>
 
       {/* ── 終盤だけを見る ── */}
@@ -200,6 +315,50 @@ export default function BacktestScreen({ s }: { s: ConsoleState }) {
           ))}
         </ul>
       </Card>
+    </>
+  );
+}
+
+/** シナリオの一覧（PCは表、スマホはカード） */
+function ScenarioTable({ scenarios }: { scenarios: ScenarioResult[] }) {
+  return (
+    <>
+      <Table head={["状況", "何を想定しているか", "還元率（真ん中）", "還元率（最悪）", "赤字確率", "判定"]}>
+        {scenarios.map((sc) => (
+          <tr key={sc.key}>
+            <Td className="font-bold text-slate">{sc.label}</Td>
+            <Td className="max-w-[22rem]">{sc.premise}</Td>
+            <Td className="num">{sc.distribution.rtpMedian.toFixed(1)}%</Td>
+            <Td className="num">
+              <span className={sc.distribution.rtpWorst >= 110 ? "font-bold text-danger-ink" : ""}>
+                {sc.distribution.rtpWorst.toFixed(1)}%
+              </span>
+            </Td>
+            <Td className="num">{(sc.distribution.lossRate * 100).toFixed(1)}%</Td>
+            <Td>
+              <Badge tone={TONE[sc.verdict]}>{sc.verdict}</Badge>
+            </Td>
+          </tr>
+        ))}
+      </Table>
+
+      <Rows>
+        {scenarios.map((sc) => (
+          <RowCard key={sc.key}>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="text-note font-bold text-slate">{sc.label}</span>
+              <Badge tone={TONE[sc.verdict]}>{sc.verdict}</Badge>
+            </div>
+            <p className="mt-2 text-note leading-[1.85] text-slate2">{sc.premise}</p>
+            <div className="mt-2 border-t border-edge pt-2">
+              <KV k="還元率（真ん中）" v={<span className="num">{sc.distribution.rtpMedian.toFixed(1)}%</span>} />
+              <KV k="還元率（最悪）" v={<span className="num">{sc.distribution.rtpWorst.toFixed(1)}%</span>} />
+              <KV k="赤字確率" v={<span className="num">{(sc.distribution.lossRate * 100).toFixed(1)}%</span>} />
+            </div>
+            <p className="mt-2 text-note leading-[1.85] text-slate3">{sc.reason}</p>
+          </RowCard>
+        ))}
+      </Rows>
     </>
   );
 }

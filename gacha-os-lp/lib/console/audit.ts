@@ -65,6 +65,7 @@ export type AuditAction =
   | "LOGIN_FAILED"
   | "MFA_VERIFIED"
   | "GACHA_CREATE"
+  | "BACKTEST_RUN"
   | "GACHA_PUBLISH"
   | "GACHA_PAUSE"
   | "POINT_ADJUST_REQUEST"

@@ -130,9 +130,9 @@ function Screen({
       case "gacha":
         return <GachaList s={s} dispatch={dispatch} onNav={onNav} />;
       case "builder":
-        return <Builder />;
+        return <Builder s={s} dispatch={dispatch} onNav={onNav} />;
       case "backtest":
-        return <BacktestScreen s={s} />;
+        return <BacktestScreen s={s} dispatch={dispatch} onNav={onNav} />;
       case "preview":
         return <PreviewScreen s={s} dispatch={dispatch} onNav={onNav} />;
       case "products":

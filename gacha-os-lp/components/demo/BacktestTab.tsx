@@ -118,14 +118,14 @@ export default function BacktestTab() {
         <div className="mt-5 grid gap-2.5 sm:grid-cols-4">
           <Stat label="設計時の還元率" value={`${report.designedRtp.toFixed(1)}%`} />
           <Stat
-            label="赤字確率（最も高いシナリオ）"
-            value={pct(report.maxLossRate)}
-            tone={report.maxLossRate >= THRESHOLD.lossRateHigh ? "DANGER" : undefined}
-          />
-          <Stat
-            label="通常運営リスク"
+            label="公開可否（設計そのもの）"
             value={overall}
             tone={overall}
+          />
+          <Stat
+            label="相場が上がって赤字に変わる線"
+            value={report.stopLineUpPct === null ? "—" : `+${report.stopLineUpPct.toFixed(1)}%`}
+            tone={report.stress === "DANGER" ? "CAUTION" : undefined}
           />
           <Stat
             label="終盤運営リスク"
@@ -140,6 +140,21 @@ export default function BacktestTab() {
           各シナリオは当選順を {RUNS} 通り変えて回し、中央値だけでなく
           「何回が赤字になったか」まで見て判定しています。
           同じ設定と同じ SEED なら、何度実行しても同じ結果になります。
+        </p>
+
+        <p className="mt-3 text-[11.5px] leading-[1.95] text-white/45">
+          結果は
+          <span className="font-bold text-ink">【設計】</span>
+          （この構成のまま公開してよいか）と
+          <span className="font-bold text-ink">【運営】</span>
+          （公開後に相場や売れ行きが動いたとき）に分けています。
+          公開を止めるかどうかは【設計】だけで決めます。相場の高騰はどんな構成でも
+          還元率を押し上げるため、これで止めると成立する構成まで全部止まってしまうからです。
+          代わりに「相場が
+          {report.stopLineUpPct === null ? "—" : `+${report.stopLineUpPct.toFixed(1)}%`}
+          を超えたら手を打つ」という線を出し、運営中はそこを見張ります。
+          <br />
+          ★これは事前のシミュレーションであり、結果を保証するものではありません。
         </p>
       </div>
 
@@ -254,6 +269,16 @@ function Row({ r }: { r: ScenarioResult }) {
     <div className="px-5 py-4">
       {/* 見出し行 */}
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+        {/* ★このシナリオが公開を止める側か、運営で見張る側か */}
+        <span
+          className={`num nb rounded-full border px-2.5 py-1 text-[10px] tracking-[0.14em] ${
+            r.kind === "design"
+              ? "border-blue-bright/40 bg-blue-bright/[0.10] text-blue-bright"
+              : "border-white/15 bg-white/[0.04] text-white/45"
+          }`}
+        >
+          {r.kind === "design" ? "設計" : "運営"}
+        </span>
         <span className="text-[13px] font-bold text-white/85">{r.label}</span>
         <span className={`num rounded-full border px-2.5 py-1 text-[10px] ${t.chip}`}>
           {r.verdict}

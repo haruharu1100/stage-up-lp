@@ -371,11 +371,48 @@ test("終盤の還元率も 中央値 ≦ 最悪値 の順になる", () => {
    判定ロジックの筋が通っていること
    ──────────────────────────────── */
 
-test("総合判定は、いちばん悪いシナリオと同じかそれ以上に重い", () => {
+test("公開可否は【設計】シナリオの、いちばん悪いものと一致する", () => {
+  /* ★2.0.0 で、シナリオは2つの役割に分かれました。
+       【設計】…構成そのものの良し悪し（公開してよいか）
+       【運営】…相場や売れ行きが動いたとき（運営中に気をつけること）
+     公開可否は【設計】だけで決めます。
+     「相場が25%上がったら」で公開を止めていた1.0.0では、
+     還元率80%を超えるガチャが全部 DANGER になり、
+     公開ボタンが永久に押せませんでした。 */
   const rank = { SAFE: 0, CAUTION: 1, DANGER: 2 } as const;
   for (const { label, report } of REPORTS) {
-    const worst = Math.max(...report.scenarios.map((s) => rank[s.verdict]));
-    assert.equal(rank[report.overall], worst, `${label}: 総合判定が最悪シナリオと一致しません`);
+    const design = report.scenarios.filter((s) => s.kind === "design");
+    assert.ok(design.length > 0, `${label}: 【設計】シナリオが1つもありません`);
+    const worst = Math.max(...design.map((s) => rank[s.verdict]));
+    assert.equal(rank[report.overall], worst, `${label}: 公開可否が【設計】の最悪値と一致しません`);
+  }
+});
+
+test("運営判定は【運営】シナリオの、いちばん悪いものと一致する", () => {
+  const rank = { SAFE: 0, CAUTION: 1, DANGER: 2 } as const;
+  for (const { label, report } of REPORTS) {
+    const stress = report.scenarios.filter((s) => s.kind === "stress");
+    assert.ok(stress.length > 0, `${label}: 【運営】シナリオが1つもありません`);
+    const worst = Math.max(...stress.map((s) => rank[s.verdict]));
+    assert.equal(rank[report.stress], worst, `${label}: 運営判定が【運営】の最悪値と一致しません`);
+  }
+});
+
+test("どのシナリオも【設計】か【運営】のどちらかに必ず属している", () => {
+  for (const { label, report } of REPORTS) {
+    for (const s of report.scenarios) {
+      assert.ok(
+        s.kind === "design" || s.kind === "stress",
+        `${label}/${s.key}: 役割が ${s.kind} になっています`
+      );
+      /* テスト側に写しておいた表と一致すること。
+         本体の役割分担をこっそり変えたら、ここで落ちる */
+      assert.equal(
+        s.kind,
+        SCENARIO_PREMISE[s.key].kind,
+        `${label}/${s.key}: シナリオの役割（設計／運営）が勝手に変わっています`
+      );
+    }
   }
 });
 

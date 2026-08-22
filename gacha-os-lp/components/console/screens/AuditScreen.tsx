@@ -24,6 +24,7 @@ const ACTION_LABEL: Record<AuditAction, string> = {
   LOGIN_FAILED: "ログイン失敗",
   MFA_VERIFIED: "2段階認証",
   GACHA_CREATE: "ガチャ作成",
+  BACKTEST_RUN: "公開前バックテスト",
   GACHA_PUBLISH: "ガチャ公開",
   GACHA_PAUSE: "販売停止",
   POINT_ADJUST_REQUEST: "ポイント変更の申請",

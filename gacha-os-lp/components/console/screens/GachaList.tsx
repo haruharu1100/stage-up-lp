@@ -47,6 +47,7 @@ export default function GachaList({
 }) {
   const me = s.me!;
   const mayPublish = can(me.role, "gacha.publish");
+  const mayEdit = can(me.role, "gacha.edit");
 
   const alerts = s.gachas.filter(
     (g) => g.status === "PUBLISHED" && (g.realRtp >= 105 || g.marketRtp >= 110),
@@ -123,7 +124,17 @@ export default function GachaList({
       )}
 
       {/* ── 一覧 ── */}
-      <Card title="ガチャ一覧" note={`${s.gachas.length}件`}>
+      <Card
+        title="ガチャ一覧"
+        note={`${s.gachas.length}件`}
+        right={
+          mayEdit ? (
+            <Btn kind="ghost" onClick={() => onNav("builder")}>
+              新しく作る
+            </Btn>
+          ) : undefined
+        }
+      >
         <Table head={["ガチャ", "状態", "価格", "残り", "設計還元率", "実還元率", "粗利", ""]}>
           {s.gachas.map((g) => (
             <tr key={g.id}>
@@ -159,7 +170,7 @@ export default function GachaList({
                 </span>
               </Td>
               <Td>
-                <Actions g={g} mayPublish={mayPublish} dispatch={dispatch} />
+                <Actions g={g} mayPublish={mayPublish} mayEdit={mayEdit} dispatch={dispatch} />
               </Td>
             </tr>
           ))}
@@ -186,7 +197,7 @@ export default function GachaList({
                 <KV k="粗利" v={<span className="num">{g.profit.toLocaleString()}円</span>} />
               </div>
               <div className="mt-3">
-                <Actions g={g} mayPublish={mayPublish} dispatch={dispatch} />
+                <Actions g={g} mayPublish={mayPublish} mayEdit={mayEdit} dispatch={dispatch} />
               </div>
             </RowCard>
           ))}
@@ -206,15 +217,18 @@ export default function GachaList({
 function Actions({
   g,
   mayPublish,
+  mayEdit,
   dispatch,
 }: {
   g: ConsoleGacha;
   mayPublish: boolean;
+  mayEdit: boolean;
   dispatch: React.Dispatch<ConsoleAction>;
 }) {
-  if (!mayPublish) return <span className="text-note text-slate3">権限なし</span>;
+  if (!mayPublish && !mayEdit) return <span className="text-note text-slate3">権限なし</span>;
 
   if (g.status === "PUBLISHED") {
+    if (!mayPublish) return <span className="text-note text-slate3">権限なし</span>;
     return (
       <Btn
         kind="danger"
@@ -230,20 +244,33 @@ function Actions({
   const blocked = g.backtest === null || g.backtest === "DANGER";
   return (
     <div className="flex flex-col items-start gap-1">
-      <Btn
-        kind="primary"
-        disabled={blocked}
-        title={
-          g.backtest === null
-            ? "公開前の検証がまだです"
-            : g.backtest === "DANGER"
-              ? "検証の結果が DANGER です"
-              : undefined
-        }
-        onClick={() => dispatch({ type: "PUBLISH_GACHA", gachaId: g.id })}
-      >
-        公開する
-      </Btn>
+      {/* ★検証がまだのものは、この場で実行できるようにします。
+          「先に検証してください」とだけ出して、どこで押すのか分からないのが
+          いちばん飛ばされやすい形です */}
+      {mayEdit && (
+        <Btn
+          kind={g.backtest === null ? "primary" : "ghost"}
+          onClick={() => dispatch({ type: "RUN_BACKTEST", gachaId: g.id })}
+        >
+          {g.backtest === null ? "検証を実行する" : "検証をやり直す"}
+        </Btn>
+      )}
+      {mayPublish && (
+        <Btn
+          kind={blocked ? "ghost" : "primary"}
+          disabled={blocked}
+          title={
+            g.backtest === null
+              ? "公開前の検証がまだです"
+              : g.backtest === "DANGER"
+                ? "検証の結果が DANGER です"
+                : undefined
+          }
+          onClick={() => dispatch({ type: "PUBLISH_GACHA", gachaId: g.id })}
+        >
+          公開する
+        </Btn>
+      )}
       {blocked && (
         <span className="text-note text-slate3">
           {g.backtest === null ? "先に検証してください" : "検証の結果が DANGER です"}

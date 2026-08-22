@@ -14,8 +14,11 @@
  *   出たものに「S賞をもう少し強く」と足すと、全体を組み直します。
  *
  * ★出た案を、そのまま公開できるようにしないこと。
- *   この画面から直接「公開」はできません。
- *   必ずバックテストを通してから、ガチャ管理で公開します。
+ *   この画面からできるのは「下書きとして登録する」ところまでです。
+ *   登録した時点では、検証結果を空のままにします（state.ts の CREATE_GACHA）。
+ *   ここに表示している判定は、あくまで下書き前の下見です。
+ *   ガチャ管理でもう一度「検証を実行」し、その結果を保存してからでないと
+ *   公開ボタンは通りません。
  *   人が考えたものでもAIが出したものでも、検証を飛ばさせません。
  *
  * ★このデモでは、案はブラウザの中の計算で作っています。
@@ -28,6 +31,13 @@
 import { useMemo, useState } from "react";
 import { backtestReport, designedRtp, verdictLabel, type GachaSpec } from "@/lib/backtest";
 import { STRENGTH_LABEL, buildSpec, type Strength } from "@/lib/console/spec";
+import {
+  BACKTEST_SEED,
+  can,
+  type ConsoleAction,
+  type ConsoleState,
+} from "@/lib/console/state";
+import type { MenuKey } from "../menu";
 import { Badge, Btn, Card, DemoNote, Field, KV, RowCard, Rows, Table, Td, WhatIsThis, inputClass } from "../ui";
 
 /** 「500円・1000口で」のような文から、数字を拾う */
@@ -50,7 +60,15 @@ const PRESETS = [
   "300円・2000口で、週末限定。気軽に引ける構成。",
 ];
 
-export default function Builder() {
+export default function Builder({
+  s,
+  dispatch,
+  onNav,
+}: {
+  s: ConsoleState;
+  dispatch: React.Dispatch<ConsoleAction>;
+  onNav: (k: MenuKey) => void;
+}) {
   const [text, setText] = useState(PRESETS[0]);
   const [spec, setSpec] = useState<GachaSpec | null>(null);
   const [price, setPrice] = useState(500);
@@ -58,6 +76,12 @@ export default function Builder() {
   const [strength, setStrength] = useState<Strength>(1);
   const [target, setTarget] = useState(95);
   const [log, setLog] = useState<string[]>([]);
+  const [title, setTitle] = useState("");
+  const [titleTouched, setTitleTouched] = useState(false);
+  /** 登録済みのガチャID。二度押しで同じ案が2本できるのを防ぐ */
+  const [savedId, setSavedId] = useState<string | null>(null);
+
+  const mayEdit = s.me ? can(s.me.role, "gacha.edit") : false;
 
   const generate = (nextStrength = strength, nextTarget = target, note?: string) => {
     const read = readPrompt(text);
@@ -69,6 +93,9 @@ export default function Builder() {
     setStrength(st);
     setTarget(nextTarget);
     setSpec(buildSpec("AIが組んだ案", p, t, st, nextTarget));
+    /* 組み直したら、それは別の案です。登録済みの印を外します */
+    setSavedId(null);
+    if (!titleTouched) setTitle(`${p.toLocaleString()}円 ${t.toLocaleString()}口 ガチャ`);
     setLog((prev) => [
       ...prev,
       note ?? `「${text}」から、${p.toLocaleString()}円 × ${t.toLocaleString()}口 で組みました。`,
@@ -76,7 +103,23 @@ export default function Builder() {
   };
 
   /* 出た案を、その場で検証にかける。判定を見ないまま次へ進ませない */
-  const report = useMemo(() => (spec ? backtestReport(spec, 20260822, "2026-08-22 12:00") : null), [spec]);
+  const report = useMemo(
+    () => (spec ? backtestReport(spec, BACKTEST_SEED, "2026-08-22 12:00") : null),
+    [spec],
+  );
+
+  /** 登録できるか。名前が空・重複・権限なしは、押す前に止める */
+  const nameTaken = s.gachas.some((x) => x.title === title.trim());
+  const canSave = mayEdit && !!spec && title.trim().length > 0 && !nameTaken && !savedId;
+
+  const save = () => {
+    if (!spec || !canSave) return;
+    const before = s.gachas.length;
+    dispatch({ type: "CREATE_GACHA", title: title.trim(), spec });
+    /* 反映は次の描画なので、IDは reducer と同じ規則で組み立てます */
+    setSavedId(`g_${201 + before}`);
+    setLog((prev) => [...prev, `「${title.trim()}」を下書きとして登録しました（検証はこれから）。`]);
+  };
 
   return (
     <>
@@ -216,7 +259,7 @@ export default function Builder() {
           {/* ── その場で検証 ── */}
           <Card
             title="この案の検証結果"
-            note="6つの状況で200回ずつ試し、いちばん悪い結果に合わせて判定しています。"
+            note="6つの状況で200回ずつ試しています。公開可否は【設計】シナリオだけで決めます。"
           >
             {!report.usable ? (
               <div className="rounded-xl border border-warn/35 bg-warn/10 px-4 py-4">
@@ -240,19 +283,51 @@ export default function Builder() {
                         : "border-danger/30 bg-danger/10"
                   }`}
                 >
-                  <Badge
-                    tone={
-                      report.overall === "SAFE" ? "ok" : report.overall === "CAUTION" ? "warn" : "danger"
-                    }
-                  >
-                    {report.overall} ／ {verdictLabel[report.overall]}
-                  </Badge>
+                  <p className="text-label font-bold tracking-wide text-slate3">
+                    【設計】このまま公開してよいか
+                  </p>
+                  <div className="mt-2">
+                    <Badge
+                      tone={
+                        report.overall === "SAFE" ? "ok" : report.overall === "CAUTION" ? "warn" : "danger"
+                      }
+                    >
+                      {report.overall} ／ {verdictLabel[report.overall]}
+                    </Badge>
+                  </div>
                   <p className="mt-2 text-note leading-[1.9] text-slate2">
-                    いちばん悪い状況でも、赤字になる確率は
-                    <span className="num font-bold"> {(report.maxLossRate * 100).toFixed(1)}% </span>
+                    当選の順番だけを200通り試したとき、赤字になった回は
+                    <span className="num font-bold">
+                      {" "}
+                      {(
+                        Math.max(
+                          ...report.scenarios
+                            .filter((sc) => sc.kind === "design")
+                            .map((sc) => sc.distribution.lossRate),
+                        ) * 100
+                      ).toFixed(1)}
+                      %{" "}
+                    </span>
                     でした。
                   </p>
                 </div>
+
+                {/* 公開したあとに見張る線 */}
+                {report.stopLineUpPct !== null && (
+                  <div className="mt-3 rounded-xl border border-edge2 bg-paper2 px-4 py-4">
+                    <p className="text-label font-bold tracking-wide text-slate3">
+                      【運営】公開したあと、見張る線
+                    </p>
+                    <p className="mt-2 text-note leading-[1.9] text-slate2">
+                      景品の相場が
+                      <strong className="num font-bold text-slate">
+                        +{report.stopLineUpPct.toFixed(1)}%
+                      </strong>
+                      を超えると、このガチャは赤字に変わります。
+                      相場ウォッチがこの線を超えたら知らせます。
+                    </p>
+                  </div>
+                )}
 
                 <ul className="mt-4 space-y-2">
                   {report.scenarios.map((sc) => (
@@ -260,7 +335,12 @@ export default function Builder() {
                       key={sc.key}
                       className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-edge2 bg-paper2 px-4 py-3"
                     >
-                      <span className="text-note font-medium text-slate2">{sc.label}</span>
+                      <span className="flex flex-wrap items-center gap-2">
+                        <Badge tone={sc.kind === "design" ? "blue" : "neutral"}>
+                          {sc.kind === "design" ? "設計" : "運営"}
+                        </Badge>
+                        <span className="text-note font-medium text-slate2">{sc.label}</span>
+                      </span>
                       <span className="flex flex-wrap items-center gap-2">
                         <span className="num text-note text-slate3">
                           最悪 {sc.distribution.rtpWorst.toFixed(1)}%
@@ -280,10 +360,66 @@ export default function Builder() {
             )}
 
             <p className="mt-4 text-note leading-[1.9] text-slate3">
-              この案を実際に登録して公開する手順は、ガチャ管理の画面から行います。
+              ★ここに出ている判定は、登録する前の下見です。
+              下書きに登録したあと、ガチャ管理でもう一度
+              「検証を実行」を押して結果を保存しないと、公開ボタンは通りません。
               <br />
               ★AIが出した案でも、検証を飛ばして公開することはできません。
             </p>
+          </Card>
+
+          {/* ── 下書きとして登録する ── */}
+          <Card
+            title="この案を登録する"
+            note="登録しても、まだ公開はされません。検証結果は空のままです。"
+          >
+            {!mayEdit ? (
+              <p className="text-note leading-[1.9] text-warn-ink">
+                いまの権限ではガチャを登録できません。運営または管理者に切り替えてお試しください。
+              </p>
+            ) : savedId ? (
+              <div className="rounded-xl border border-ok/30 bg-ok/10 px-4 py-4">
+                <Badge tone="ok">下書きに登録しました</Badge>
+                <p className="mt-2 text-note leading-[1.9] text-slate2">
+                  「{title.trim()}」を下書きとして登録しました。
+                  検証結果は<strong className="font-bold text-slate">まだ空</strong>です。
+                  次に、ガチャ管理で「検証を実行」を押してください。
+                </p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <Btn kind="primary" onClick={() => onNav("gacha")}>
+                    ガチャ管理へ進む
+                  </Btn>
+                  <Btn kind="ghost" onClick={() => onNav("backtest")}>
+                    公開前バックテストへ進む
+                  </Btn>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <Field label="ガチャの名前" note="お客様の画面に出る名前です。">
+                  <input
+                    className={inputClass}
+                    value={title}
+                    onChange={(e) => {
+                      setTitle(e.target.value);
+                      setTitleTouched(true);
+                    }}
+                  />
+                </Field>
+                {nameTaken && (
+                  <p className="text-note leading-[1.9] text-warn-ink">
+                    同じ名前のガチャがすでにあります。別の名前にしてください。
+                  </p>
+                )}
+                <Btn kind="primary" onClick={save} disabled={!canSave}>
+                  この案を下書きとして登録する
+                </Btn>
+                <p className="text-note leading-[1.9] text-slate3">
+                  ★登録した時点では、検証結果は空のままにしています。
+                  ここで「検証済み」にしてしまうと、公開前の関門がその場で無意味になります。
+                </p>
+              </div>
+            )}
           </Card>
         </>
       )}

@@ -50,14 +50,19 @@ export function findBadNumbers(value: unknown, path = "report"): string[] {
  */
 export const SCENARIO_PREMISE: Record<
   ScenarioKey,
-  { priceScale: number; soldRatio: number }
+  { priceScale: number; soldRatio: number; kind: "design" | "stress" }
 > = {
-  normal: { priceScale: 1, soldRatio: 1 },
-  surge: { priceScale: 1.25, soldRatio: 1 },
-  slump: { priceScale: 0.8, soldRatio: 1 },
-  earlyJackpot: { priceScale: 1, soldRatio: 1 },
-  lateJackpot: { priceScale: 1, soldRatio: 1 },
-  slowSales: { priceScale: 1, soldRatio: 0.45 },
+  /* kind は「公開を止める理由になるか」の区別。
+       design … 構成そのものの良し悪し（公開可否を決める）
+       stress … 相場や売れ行きが動いたとき（運営中に気をつけること）
+     ここを勝手に design 側へ移すと、還元率80%を超えるガチャが
+     すべて「公開しないでください」に戻ります（1.0.0 の不具合）。 */
+  normal: { priceScale: 1, soldRatio: 1, kind: "design" },
+  surge: { priceScale: 1.25, soldRatio: 1, kind: "stress" },
+  slump: { priceScale: 0.8, soldRatio: 1, kind: "stress" },
+  earlyJackpot: { priceScale: 1, soldRatio: 1, kind: "design" },
+  lateJackpot: { priceScale: 1, soldRatio: 1, kind: "stress" },
+  slowSales: { priceScale: 1, soldRatio: 0.45, kind: "stress" },
 };
 
 /**

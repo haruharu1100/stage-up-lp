@@ -84,8 +84,8 @@ const CASES: {
       total: 800,
       prizes: [{ grade: "A賞", name: "A", count: 800, value: 1_800 }],
     }),
-    expectSafe: "must-not",
-    note: "還元率90%。相場が25%上がると確実に赤字になるので、総合では SAFE にならないはず",
+    expectSafe: "ok",
+    note: "還元率90%。構成そのものは赤字にならないので、公開可否としては SAFE で正しい（相場が上がったときの話は【運営】側で出す）",
   },
   {
     label: "価値0円の景品",
@@ -174,6 +174,61 @@ test("儲かる構成では素直に SAFE と言う（過剰に危険側へ倒�
 });
 
 /* ────────────────────────────────
+   ④【設計】で SAFE にした分、【運営】側で必ず言うこと
+   ──────────────────────────────── */
+
+test("設計が SAFE でも、相場が上がれば赤字になる構成は【運営】側で必ず警告する", () => {
+  /* 2.0.0 で「相場の高騰」を公開停止の理由から外しました。
+     外しっぱなしにすると、ただ警告が消えただけになります。
+     そうならないよう、同じ内容を
+       ・stress（運営中に気をつけること）
+       ・stopLineUpPct（あと何％上がったら赤字か）
+     の2つで必ず出していることを、ここで見張ります。 */
+  const flat = spec({
+    total: 800,
+    prizes: [{ grade: "A賞", name: "A", count: 800, value: 1_800 }],
+  });
+  const report = backtestReport(flat);
+
+  assert.equal(report.overall, "SAFE", "還元率90%の構成が公開できなくなっています");
+  assert.equal(report.stress, "DANGER", "相場が上がれば赤字になるのに、運営側の警告が出ていません");
+  assert.ok(
+    report.stopLineUpPct !== null && Math.abs(report.stopLineUpPct - 11.1) < 0.1,
+    `停止ラインが ${report.stopLineUpPct}% と出ています（相場+11.1% のはず）`
+  );
+
+  const surge = report.scenarios.find((s) => s.key === "surge")!;
+  assert.equal(surge.kind, "stress", "相場の高騰が【設計】側に入っています");
+  assert.equal(surge.verdict, "DANGER");
+});
+
+test("公開可否は【設計】シナリオだけで決め、【運営】シナリオでは止めない", () => {
+  const report = backtestReport(
+    spec({
+      total: 800,
+      prizes: [{ grade: "A賞", name: "A", count: 800, value: 1_800 }],
+    })
+  );
+  const design = report.scenarios.filter((s) => s.kind === "design");
+  const stress = report.scenarios.filter((s) => s.kind === "stress");
+
+  assert.equal(design.length, 2, "【設計】シナリオが2件ではありません");
+  assert.equal(stress.length, 4, "【運営】シナリオが4件ではありません");
+
+  const rank = { SAFE: 0, CAUTION: 1, DANGER: 2 } as const;
+  assert.equal(
+    rank[report.overall],
+    Math.max(...design.map((s) => rank[s.verdict])),
+    "公開可否が【設計】シナリオの最悪値と一致しません"
+  );
+  assert.equal(
+    rank[report.stress],
+    Math.max(...stress.map((s) => rank[s.verdict])),
+    "運営判定が【運営】シナリオの最悪値と一致しません"
+  );
+});
+
+/* ────────────────────────────────
    修正済みの問題 ①
    景品が実質ゼロのガチャを「このまま公開できます」と言ってしまう
    → validateSpec で「判定できません」を返すようにした
@@ -258,8 +313,18 @@ test("1口のガチャでも、実還元率が 0.0%（＝とても安全）と�
   );
   // 設計上の還元率も正しく 99.5%
   assert.ok(Math.abs(one.designedRtp - 99.5) < 0.05);
-  // 相場が25%上がる想定では赤字になるので DANGER
-  assert.equal(one.overall, "DANGER");
+
+  /* ★2.0.0 から、判定は【設計】と【運営】に分かれています。
+     還元率99.5%は「1円も余裕が無い」だけで、計算上は赤字ではないので
+     公開可否（overall）は SAFE。危ないのは運営中に相場が動いたときなので、
+     そちらは stress 側と「あと何％上がったら赤字か」で出します。
+     0.5% 上がっただけで赤字に変わる、という数字こそが本当の警告です。 */
+  assert.equal(one.overall, "SAFE");
+  assert.equal(one.stress, "DANGER");
+  assert.ok(
+    one.stopLineUpPct !== null && Math.abs(one.stopLineUpPct - 0.5) < 0.1,
+    `相場があと何％上がったら赤字かが ${one.stopLineUpPct}% と出ています（0.5% のはず）`
+  );
   assert.deepEqual(findBadNumbers(one), []);
 });
 

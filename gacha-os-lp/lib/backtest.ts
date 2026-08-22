@@ -34,7 +34,51 @@
  * 判定ルールを変えたら必ず上げる。
  * 過去の判定が「どのルールで出たものか」を追えるようにするため。
  */
-export const BACKTEST_ENGINE_VERSION = "1.0.0";
+export const BACKTEST_ENGINE_VERSION = "2.0.0";
+
+/**
+ * ═══════════════════════════════════════════════════════════
+ * ★2.0.0 で直したこと（1.0.0 は、どんな構成でも DANGER になっていました）
+ * ═══════════════════════════════════════════════════════════
+ *
+ * 1.0.0 には、判定として成立していない箇所が2つありました。
+ * 実際に、まともな構成（上位賞が予算の3.5%）でも総合 DANGER になり、
+ * 公開ボタンが永久に押せない状態でした。
+ *
+ * ① 判定に使う数字が「実還元率」ではなく「その途中の最大値」だった
+ *
+ *    しきい値（105% / 110%）は「実還元率がこれを超えたら危ない」という意味です。
+ *    ところが判定に入れていたのは、消化0〜70%の間を1口ずつ測って、
+ *    そのうちの いちばん高かった1点 でした。
+ *    700回測れば、たまたま高く出る瞬間は必ずあります。
+ *    つまりこの数字は「構成の危なさ」ではなく「何回測ったか」で上がります。
+ *    口数が多いガチャほど不利になる、という筋の通らない判定でした。
+ *
+ *    → 2.0.0 では、通常運営の いちばん苦しい一点（消化70%の時点）で
+ *      「次に買う人から見た実還元率」を測ります。
+ *      1回の販売につき1つの数字なので、口数が増えても不当に悪化しません。
+ *
+ * ② 「相場が動いたら」「売れ行きが止まったら」で公開を止めていた
+ *
+ *    総合判定を6シナリオの最悪値にしていました。
+ *    ところが「相場の高騰（+25%）」は、設計還元率が80%を超えていれば
+ *    計算上どうやっても赤字になります。95%で組めば 95×1.25＝118.75%。
+ *    つまりこのシナリオは、構成の良し悪しを何も測っていません。
+ *    「還元率が80%より上か」を判定していただけです。
+ *    その結果、全部のガチャが DANGER になっていました。
+ *
+ *    → 2.0.0 では、シナリオを2つの役割に分けます。
+ *
+ *      【設計】通常／序盤で高額賞／終盤まで高額賞
+ *        相場も売れ行きも動かない前提で、当選順だけを変えたもの。
+ *        ここは「構成そのものが健全か」なので、公開可否を決めます。
+ *
+ *      【運営】相場の高騰／相場の下落／販売速度の低下
+ *        外の世界が動いた場合。構成の責任ではありません。
+ *        ここは公開を止めるのではなく、
+ *        「相場が何%上がったら止めるか」という運営条件を出します。
+ *        その停止ラインを見張るのが、相場ウォッチと実還元率モニタです。
+ */
 
 /** 既定の乱数の種。結果を再現するために保存する */
 export const DEFAULT_SEED = 20260820;
@@ -108,6 +152,17 @@ export const THRESHOLD = {
   /** これ以上なら、期待値に関係なく総合 DANGER */
   lossRateForceDanger: 0.3,
 
+  /**
+   * 悪い当選順（悪い方から10%）の実還元率が、これを超えたら DANGER。
+   *
+   * 中央値だけを見ると、上位賞に予算を寄せた構成ほど「良く見えて」しまいます。
+   * 上位賞が早く出た回では残りの価値が一気に減るため、中央値は下がるからです。
+   * 危ないのは残った側で、10回に1回この当選順を引きます。
+   * そのとき次に買うお客様から見た実還元率が130%を超える構成は、
+   * 販売途中で必ず止める判断を迫られます。公開前に止めます。
+   */
+  tailExtreme: 130,
+
   /* 終盤（ENDGAME）は別基準で見る。必ず高くなるため */
   endgameCaution: 130,
   endgameDanger: 200,
@@ -131,11 +186,22 @@ export type Distribution = {
   /** 赤字になった割合（0〜1）。いちばん重要な指標 */
   lossRate: number;
 
-  /** 実還元率（NORMAL PHASE）の中央値・P90・P95・最悪値（％） */
+  /**
+   * 実還元率（％）。
+   * 通常運営のいちばん苦しい一点＝消化70%の時点で、
+   * 「次に買うお客様から見た実還元率」を測り、200通りの当選順で並べたもの。
+   * 判定はこの数字だけを見ます（1.0.0 の「途中の最大値」ではありません）。
+   */
   rtpMedian: number;
   rtpP90: number;
   rtpP95: number;
   rtpWorst: number;
+
+  /**
+   * 参考値：販売中に実還元率がいちばん高くなった時点の値（％）の中央値。
+   * 判定には使いません。「途中でここまで上がる瞬間がある」ことを示す表示用です。
+   */
+  rtpPeakMedian: number;
 
   /** 粗利の中央値・最悪値（円） */
   profitMedian: number;
@@ -180,8 +246,19 @@ export type EndgameAnalysis = {
   actions: string[];
 };
 
+/**
+ * シナリオの役割。
+ *
+ * design … 相場も売れ行きも動かない前提。当選順だけが違う。
+ *          構成そのものの健全さなので、公開可否を決める。
+ * stress … 外の世界が動いた場合。構成の責任ではない。
+ *          公開を止めるのではなく、運営条件（停止ライン）を出す。
+ */
+export type ScenarioKind = "design" | "stress";
+
 export type ScenarioResult = {
   key: ScenarioKey;
+  kind: ScenarioKind;
   label: string;
   /** 何を想定した回し方か */
   premise: string;
@@ -236,8 +313,24 @@ export type BacktestReport = {
   runs: number;
   ranAt: string;
   designedRtp: number;
-  /** 全シナリオのうち、いちばん悪い判定 */
+  /**
+   * 公開可否の判定。
+   * 【設計】グループ（通常／序盤で高額賞／終盤まで高額賞）のうち、いちばん悪いもの。
+   * 相場も売れ行きも動かない前提なので、これは構成そのものの評価です。
+   */
   overall: Verdict;
+  /**
+   * 運営条件の判定。
+   * 【運営】グループ（相場の高騰／相場の下落／販売速度の低下）のうち、いちばん悪いもの。
+   * ここが悪くても公開は止めません。止めるのは「停止ラインを決めていないとき」です。
+   */
+  stress: Verdict;
+  /**
+   * 相場が何％上がったら、この構成が赤字に変わるか（％）。
+   * 相場ウォッチと実還元率モニタで見張る線がこれです。
+   * 設計還元率が100%以上のときは、上がるまでもなく赤字なので null。
+   */
+  stopLineUpPct: number | null;
   /** 全シナリオを通じた最大の赤字確率（0〜1） */
   maxLossRate: number;
   scenarios: ScenarioResult[];
@@ -328,6 +421,7 @@ function worseOf(a: Verdict, b: Verdict): Verdict {
    ──────────────────────────────── */
 const SCENARIOS: {
   key: ScenarioKey;
+  kind: ScenarioKind;
   label: string;
   premise: string;
   /** 市場価格の倍率 */
@@ -338,6 +432,7 @@ const SCENARIOS: {
 }[] = [
   {
     key: "normal",
+    kind: "design",
     label: "通常",
     premise: "相場は動かず、当選順もかたよらず、最後まで売り切れた場合。",
     priceScale: 1,
@@ -345,6 +440,7 @@ const SCENARIOS: {
   },
   {
     key: "surge",
+    kind: "stress",
     label: "相場の高騰",
     premise: "販売中に景品の相場が 25% 上がった場合。",
     priceScale: 1.25,
@@ -352,6 +448,7 @@ const SCENARIOS: {
   },
   {
     key: "slump",
+    kind: "stress",
     label: "相場の下落",
     premise: "販売中に景品の相場が 20% 下がった場合。",
     priceScale: 0.8,
@@ -359,6 +456,7 @@ const SCENARIOS: {
   },
   {
     key: "earlyJackpot",
+    kind: "design",
     label: "序盤で高額賞が当たる",
     premise: "最上位賞が、売り出して最初の10%以内で引かれた場合。",
     priceScale: 1,
@@ -367,6 +465,24 @@ const SCENARIOS: {
   },
   {
     key: "lateJackpot",
+    /*
+     * ★これは【運営】です。【設計】ではありません。
+     *
+     *   「最上位賞が最後の20%まで残り続けた場合」は、起きるかどうかが
+     *   当選順しだいの出来事です。起きる確率そのものは、
+     *   【設計】の「通常」がすでに200通りの当選順で測っています
+     *   （悪い方から5%／10%として出しています）。
+     *
+     *   ここでさらに「起きた場合だけ」を取り出して公開可否に混ぜると、
+     *   同じリスクを二重に数えることになります。
+     *   実際、上位賞が売上の5%程度の健全な構成でも、
+     *   終盤に残ればその先30%の実還元率は必ず110%前後になります。
+     *   これは構成が危ないのではなく、残り口数が減れば割り算がそうなるからです。
+     *
+     *   だからここは公開を止める理由にはせず、
+     *   「そうなったらどうするか」（ラストワン訴求・停止）を出す側に置きます。
+     */
+    kind: "stress",
     label: "終盤まで高額賞が残る",
     premise: "最上位賞が、最後の20%まで残り続けた場合。",
     priceScale: 1,
@@ -375,6 +491,7 @@ const SCENARIOS: {
   },
   {
     key: "slowSales",
+    kind: "stress",
     label: "販売速度の低下",
     premise: "売れ行きが止まり、45%までしか消化できなかった場合。",
     priceScale: 1,
@@ -387,7 +504,19 @@ const SCENARIOS: {
    ──────────────────────────────── */
 
 type Run = {
-  /** 通常運営（消化0〜70%）で到達した実還元率の最大値（％） */
+  /**
+   * 判定に使う実還元率（％）。
+   *
+   * 通常運営（消化0〜70%）の いちばん苦しい一点＝消化70%の時点で、
+   * 「次に買うお客様から見た実還元率」を1つだけ測ったもの。
+   * （途中で販売が止まる想定のときは、止まる直前の値）
+   *
+   * ★1.0.0 はここに「0〜70%の間の最大値」を入れていました。
+   *   700回測れば高い瞬間は必ずあるので、口数が多いほど不利になり、
+   *   判定として成立していませんでした。
+   */
+  normalRtp: number;
+  /** 参考：通常運営の間に実還元率がいちばん高くなった値（％）。判定には使わない */
   normalPeak: number;
   normalPeakAt: number;
   /**
@@ -445,6 +574,8 @@ function simulate(
 
   let normalPeak = 0;
   let normalPeakAt = 0;
+  /** 通常運営の中で最後に測れた実還元率＝消化70%（または販売停止）の時点の値 */
+  let normalRtp = 0;
   let endgamePeak = 0;
   let endgameReached = false;
   let rtpAtTail = -1;
@@ -467,6 +598,8 @@ function simulate(
     rtpSamples++;
 
     if (sold <= judgeUntil) {
+      /* 通常運営の間は上書きし続ける。抜けたときに残るのが「いちばん苦しい一点」 */
+      normalRtp = rtp;
       if (rtp > normalPeak) {
         normalPeak = rtp;
         normalPeakAt = (sold / total) * 100;
@@ -489,10 +622,12 @@ function simulate(
     total > 0 && price > 0 ? (totalValue / (total * price)) * 100 : 0;
   if (rtpSamples === 0) {
     normalPeak = fallbackRtp;
+    normalRtp = fallbackRtp;
     normalPeakAt = 100;
   }
 
   return {
+    normalRtp,
     normalPeak,
     normalPeakAt,
     endgamePeak,
@@ -514,8 +649,8 @@ function simulate(
 /** 1回分の結果を SAFE / CAUTION / DANGER に分類する（分布を取るために使う） */
 function judgeRun(r: Run): Verdict {
   if (r.profit < 0) return "DANGER";
-  if (r.normalPeak >= THRESHOLD.danger) return "DANGER";
-  if (r.normalPeak >= THRESHOLD.caution) return "CAUTION";
+  if (r.normalRtp >= THRESHOLD.danger) return "DANGER";
+  if (r.normalRtp >= THRESHOLD.caution) return "CAUTION";
   if (r.leftoverValue > r.revenue * THRESHOLD.leftoverRatio) return "CAUTION";
   return "SAFE";
 }
@@ -563,8 +698,18 @@ function combine(
   if (tail === "HIGH") verdict = bump(expected);
   // 赤字確率がここまで高いと、中央値が黒字でも危険
   if (d.lossRate >= THRESHOLD.lossRateForceDanger) verdict = "DANGER";
+  /* 悪い当選順（10回に1回）の実還元率が極端なら、中央値がどれだけ良くても危険。
+     上位賞に予算を寄せた構成は中央値が下がって「良く見える」ため、ここで止める */
+  if (d.rtpP90 >= THRESHOLD.tailExtreme) verdict = "DANGER";
 
   const lossPct = (d.lossRate * 100).toFixed(0);
+
+  if (d.rtpP90 >= THRESHOLD.tailExtreme) {
+    return {
+      verdict,
+      reason: `当選順が悪い方から10%に入ると、消化70%の時点で実還元率が ${d.rtpP90.toFixed(1)}% になります。上位賞に予算を寄せすぎているため、上位賞が残ったまま販売が進むと止めざるを得なくなります。上位賞の価値を下げるか、本数を増やして分散してください。`,
+    };
+  }
 
   if (d.profitMedian < 0) {
     return {
@@ -690,7 +835,8 @@ function runScenario(
 
   /* ── 分布を作る ── */
   const verdicts = runs.map(judgeRun);
-  const rtpAsc = runs.map((r) => r.normalPeak).sort((a, b) => a - b);
+  const rtpAsc = runs.map((r) => r.normalRtp).sort((a, b) => a - b);
+  const peakAsc = runs.map((r) => r.normalPeak).sort((a, b) => a - b);
   const profitAsc = runs.map((r) => r.profit).sort((a, b) => a - b);
 
   const count = (v: Verdict) => verdicts.filter((x) => x === v).length / RUNS;
@@ -706,6 +852,7 @@ function runScenario(
     rtpP90: percentile(rtpAsc, 0.9),
     rtpP95: percentile(rtpAsc, 0.95),
     rtpWorst: rtpAsc[rtpAsc.length - 1],
+    rtpPeakMedian: percentile(peakAsc, 0.5),
 
     profitMedian: Math.round(percentile(profitAsc, 0.5)),
     profitWorst: Math.round(profitAsc[0]),
@@ -716,7 +863,7 @@ function runScenario(
   };
 
   /* ── 代表として中央値の回を選ぶ（画面に出す金額の一貫性のため） ── */
-  const byRtp = [...runs].sort((a, b) => a.normalPeak - b.normalPeak);
+  const byRtp = [...runs].sort((a, b) => a.normalRtp - b.normalRtp);
   const mid = byRtp[Math.floor(RUNS / 2)];
 
   /* ── 2軸の判定 ── */
@@ -784,6 +931,7 @@ function runScenario(
 
   return {
     key: s.key,
+    kind: s.kind,
     label: s.label,
     premise: s.premise,
     designedRtp: designedRtp(spec),
@@ -867,13 +1015,16 @@ export function backtestReport(
 ): BacktestReport {
   const issues = validateSpec(spec);
   const scenarios = backtest(spec, seed);
+  const rtp = designedRtp(spec);
   return {
     engineVersion: BACKTEST_ENGINE_VERSION,
     seed,
     runs: RUNS,
     ranAt,
-    designedRtp: designedRtp(spec),
+    designedRtp: rtp,
     overall: overallVerdict(scenarios),
+    stress: stressVerdict(scenarios),
+    stopLineUpPct: stopLineUpPct(rtp),
     maxLossRate: Math.max(...scenarios.map((s) => s.distribution.lossRate)),
     scenarios,
     issues,
@@ -881,11 +1032,51 @@ export function backtestReport(
   };
 }
 
-/** 全体としての判定（いちばん悪いシナリオに合わせる） */
-export function overallVerdict(results: ScenarioResult[]): Verdict {
-  if (results.some((r) => r.verdict === "DANGER")) return "DANGER";
-  if (results.some((r) => r.verdict === "CAUTION")) return "CAUTION";
+/** 指定した役割のシナリオだけを見て、いちばん悪い判定を返す */
+function worstOfKind(results: ScenarioResult[], kind: ScenarioKind): Verdict {
+  const target = results.filter((r) => r.kind === kind);
+  /* 該当が1つも無いときに SAFE を返すと「安全だった」と読まれる。
+     もともと6シナリオ固定なので通常は起きないが、
+     万一空になったときは、いちばん重い判定に倒す */
+  if (target.length === 0) return "DANGER";
+  if (target.some((r) => r.verdict === "DANGER")) return "DANGER";
+  if (target.some((r) => r.verdict === "CAUTION")) return "CAUTION";
   return "SAFE";
+}
+
+/**
+ * 公開可否の判定。
+ *
+ * ★【設計】シナリオだけを見ます。
+ *   相場も売れ行きも動かない前提で、当選順だけを変えたものです。
+ *   「相場が25%上がったら赤字」は、どんな構成でも還元率が80%を超えていれば
+ *   必ず成立します。それで公開を止めると、まともな構成まで全部止まります
+ *   （1.0.0 は実際にそうなっていました）。
+ *   相場の変動は、公開を止める理由ではなく、見張る理由です。
+ */
+export function overallVerdict(results: ScenarioResult[]): Verdict {
+  return worstOfKind(results, "design");
+}
+
+/**
+ * 運営条件の判定。
+ * 【運営】シナリオ（相場の高騰・下落・販売速度の低下）のうち、いちばん悪いもの。
+ * ここが重いガチャは、公開してもよいが、見張る線を決めてから公開します。
+ */
+export function stressVerdict(results: ScenarioResult[]): Verdict {
+  return worstOfKind(results, "stress");
+}
+
+/**
+ * 相場が何％上がったら赤字に変わるか（％）。
+ *
+ * 設計還元率が95%なら、相場が 5.3% 上がった時点で景品の価値が売上と並びます。
+ * ここが、相場ウォッチと実還元率モニタで見張る線です。
+ * 設計還元率が100%以上のときは、上がるまでもなく赤字なので null を返します。
+ */
+export function stopLineUpPct(designed: number): number | null {
+  if (!(designed > 0) || designed >= 100) return null;
+  return Math.round((100 / designed - 1) * 1000) / 10;
 }
 
 /** 終盤だけを見た全体判定 */

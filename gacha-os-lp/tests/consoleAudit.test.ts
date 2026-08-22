@@ -34,6 +34,7 @@ import {
 } from "../lib/console/audit";
 import { SIGNALS, assess, THRESHOLD, type Hit, type SignalKey } from "../lib/console/fraud";
 import {
+  BACKTEST_SEED,
   DEMO_ADMINS,
   FOUR_EYES_THRESHOLD,
   can,
@@ -44,6 +45,8 @@ import {
   type ConsoleState,
   type PointRequest,
 } from "../lib/console/state";
+import { buildSpec } from "../lib/console/spec";
+import { backtestReport, designedRtp } from "../lib/backtest";
 
 /* ══════════════════════════════════════════════
    ① SHA-256 が、本物と同じ値を出すか
@@ -565,4 +568,143 @@ test("デモを初期状態に戻せる（何度でもやり直せる）", () =>
   assert.equal(back.pointRequests.length, 0);
   assert.equal(back.me?.id, "ad_01", "ログインまで切れると使いにくい");
   assert.equal(verifyAudit(back.audit).ok, true);
+});
+
+/* ══════════════════════════════════════════════
+   ⑩ 作る → 検証する → 公開する、が一本につながっているか
+   ══════════════════════════════════════════════
+
+   ここが通らないと、BUILDER は「案を見せるだけの画面」になります。
+   そして何より、検証を飛ばして公開できてしまわないかを見張ります。
+   公開前バックテストは、この商品でいちばん高く売っている部分です。
+   仕組みとして飛ばせるなら、資料に書いていること自体が嘘になります。
+*/
+
+/** 検証用の、まともな構成（500円 × 1,000口 ／ 目標95%） */
+const sampleSpec = () => buildSpec("新しい案", 500, 1000, 1, 95);
+
+test("作成：登録した時点では、検証結果が空である", () => {
+  const s = loggedIn("ad_01");
+  const after = reducer(s, { type: "CREATE_GACHA", title: "テスト用ガチャ", spec: sampleSpec() });
+  const g = after.gachas.find((x) => x.title === "テスト用ガチャ");
+  assert.ok(g, "登録されていない");
+  assert.equal(g!.backtest, null, "登録しただけで検証済みになっている（公開の関門が無意味になる）");
+  assert.equal(g!.status, "DRAFT");
+  assert.equal(g!.left, g!.total, "1本も引いていないのに残数が減っている");
+  assert.equal(after.audit[after.audit.length - 1].action, "GACHA_CREATE");
+});
+
+test("作成：登録した直後は、まだ公開できない", () => {
+  let s = loggedIn("ad_01");
+  s = reducer(s, { type: "CREATE_GACHA", title: "テスト用ガチャ", spec: sampleSpec() });
+  const id = s.gachas.find((x) => x.title === "テスト用ガチャ")!.id;
+  const after = reducer(s, { type: "PUBLISH_GACHA", gachaId: id });
+  assert.equal(after.gachas.find((x) => x.id === id)!.status, "DRAFT");
+  assert.equal(after.flash?.kind, "error");
+});
+
+test("作成：設計還元率は、目標値ではなく組み上がった構成から出す", () => {
+  let s = loggedIn("ad_01");
+  const spec = sampleSpec();
+  s = reducer(s, { type: "CREATE_GACHA", title: "テスト用ガチャ", spec });
+  const g = s.gachas.find((x) => x.title === "テスト用ガチャ")!;
+  assert.equal(g.designedRtp, Math.round(designedRtp(spec) * 10) / 10);
+});
+
+test("作成：同じ名前は登録できない", () => {
+  let s = loggedIn("ad_01");
+  s = reducer(s, { type: "CREATE_GACHA", title: "テスト用ガチャ", spec: sampleSpec() });
+  const n = s.gachas.length;
+  const after = reducer(s, { type: "CREATE_GACHA", title: "テスト用ガチャ", spec: sampleSpec() });
+  assert.equal(after.gachas.length, n, "同じ名前が2本できている");
+  assert.equal(after.flash?.kind, "error");
+});
+
+test("作成：サポート担当は、ガチャを登録できない", () => {
+  const s = loggedIn("ad_04");
+  const after = reducer(s, { type: "CREATE_GACHA", title: "テスト用ガチャ", spec: sampleSpec() });
+  assert.equal(after.gachas.length, s.gachas.length);
+  assert.equal(after.flash?.kind, "error");
+});
+
+test("検証：実行すると、エンジンの判定がそのまま書き戻る", () => {
+  let s = loggedIn("ad_01");
+  s = reducer(s, { type: "CREATE_GACHA", title: "テスト用ガチャ", spec: sampleSpec() });
+  const id = s.gachas.find((x) => x.title === "テスト用ガチャ")!.id;
+
+  const after = reducer(s, { type: "RUN_BACKTEST", gachaId: id });
+  const g = after.gachas.find((x) => x.id === id)!;
+
+  /* ★「検証したことにする」ではなく、実際に回した結果と一致すること */
+  const expected = backtestReport(sampleSpec(), BACKTEST_SEED, "");
+  assert.equal(g.backtest, expected.overall);
+  assert.notEqual(g.backtest, null);
+
+  const last = after.audit[after.audit.length - 1];
+  assert.equal(last.action, "BACKTEST_RUN");
+  assert.equal(last.before, "未実施");
+  assert.ok(last.after && last.after.includes("【設計】"), "何を判定したのかが残っていない");
+});
+
+test("検証：同じ内容なら、何度実行しても同じ判定になる", () => {
+  let s = loggedIn("ad_01");
+  s = reducer(s, { type: "CREATE_GACHA", title: "テスト用ガチャ", spec: sampleSpec() });
+  const id = s.gachas.find((x) => x.title === "テスト用ガチャ")!.id;
+
+  const a = reducer(s, { type: "RUN_BACKTEST", gachaId: id });
+  const b = reducer(a, { type: "RUN_BACKTEST", gachaId: id });
+  assert.equal(
+    a.gachas.find((x) => x.id === id)!.backtest,
+    b.gachas.find((x) => x.id === id)!.backtest,
+    "押すたびに判定が変わると、都合のよい結果が出るまで押される",
+  );
+});
+
+test("検証：入力が足りないときは、判定を書き込まない", () => {
+  let s = loggedIn("ad_01");
+  /* 景品が1本も無い構成。計算上は売上が丸ごと粗利になるので、数字は「安全」に見える */
+  s = reducer(s, {
+    type: "CREATE_GACHA",
+    title: "景品なしガチャ",
+    spec: { name: "景品なしガチャ", price: 500, total: 1000, prizes: [] },
+  });
+  const id = s.gachas.find((x) => x.title === "景品なしガチャ")!.id;
+
+  const after = reducer(s, { type: "RUN_BACKTEST", gachaId: id });
+  assert.equal(
+    after.gachas.find((x) => x.id === id)!.backtest,
+    null,
+    "判定できないものを判定済みにしている（公開の関門をすり抜ける）",
+  );
+  assert.equal(after.flash?.kind, "warn");
+
+  /* そのまま公開しようとしても、当然止まる */
+  const pub = reducer(after, { type: "PUBLISH_GACHA", gachaId: id });
+  assert.equal(pub.gachas.find((x) => x.id === id)!.status, "DRAFT");
+});
+
+test("検証：サポート担当は、検証を実行できない", () => {
+  const s = loggedIn("ad_04");
+  const after = reducer(s, { type: "RUN_BACKTEST", gachaId: "g_105" });
+  assert.equal(after.gachas.find((x) => x.id === "g_105")!.backtest, null);
+  assert.equal(after.flash?.kind, "error");
+});
+
+test("一本通し：作る → 検証する → 公開する、が最後までつながる", () => {
+  let s = loggedIn("ad_01");
+  s = reducer(s, { type: "CREATE_GACHA", title: "通しテスト", spec: sampleSpec() });
+  const id = s.gachas.find((x) => x.title === "通しテスト")!.id;
+
+  s = reducer(s, { type: "RUN_BACKTEST", gachaId: id });
+  const verdict = s.gachas.find((x) => x.id === id)!.backtest;
+  assert.notEqual(verdict, null, "検証が実行できていない");
+  assert.notEqual(verdict, "DANGER", "まともな構成が DANGER になっている（AIが通らない案しか出せない）");
+
+  s = reducer(s, { type: "PUBLISH_GACHA", gachaId: id });
+  assert.equal(s.gachas.find((x) => x.id === id)!.status, "PUBLISHED");
+
+  /* 監査ログは、作成 → 検証 → 公開 の順で3件そろい、改ざん検知も通る */
+  const actions = s.audit.map((e) => e.action);
+  assert.deepEqual(actions.slice(-3), ["GACHA_CREATE", "BACKTEST_RUN", "GACHA_PUBLISH"]);
+  assert.equal(verifyAudit(s.audit).ok, true);
 });

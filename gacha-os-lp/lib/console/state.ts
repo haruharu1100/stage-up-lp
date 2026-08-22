@@ -32,6 +32,8 @@
 import { appendAudit, type AuditEntry, type AuditAction } from "./audit";
 import { assess, SIGNALS, type Assessment, type Hit, type SignalKey } from "./fraud";
 import { drawOnce, seedOf, type DrawRecord } from "./draw";
+import { buildSpec } from "./spec";
+import { backtestReport, designedRtp, type GachaSpec } from "@/lib/backtest";
 
 /* ══════════════════════════════════════════════
    権限（RBAC）
@@ -212,6 +214,15 @@ export type ConsoleGacha = {
   publishedAt?: string;
   /** 公開前バックテストの結果。未実施なら null */
   backtest: "SAFE" | "CAUTION" | "DANGER" | null;
+  /**
+   * 賞の構成そのもの。AI GACHA BUILDER から登録したガチャに入ります。
+   *
+   * ★検証は、この構成をそのまま回すこと。
+   *   ここが無いガチャ（デモの初期データ）は、還元率から組み直した
+   *   近似の構成で検証します。そのことは画面にも書きます。
+   *   「何を検証したか分からない SAFE」を作らないためです。
+   */
+  spec?: GachaSpec;
   /**
    * 等級ごとに、もう何本出たか。
    * 箱から札を抜く方式なので、ここが在庫の残りそのものになります。
@@ -495,6 +506,20 @@ export type ConsoleAction =
   | { type: "MFA_OK" }
   | { type: "LOGOUT" }
   | { type: "SWITCH_ADMIN"; adminId: string }
+  /**
+   * AI GACHA BUILDER で組んだ案を、下書きとして登録する。
+   *
+   * ★登録した時点では backtest を null のままにすること。
+   *   AIが出した案でも、検証を飛ばして公開できてはいけません。
+   */
+  | { type: "CREATE_GACHA"; title: string; spec: GachaSpec }
+  /**
+   * 公開前バックテストを実行し、結果をガチャに書き戻す。
+   *
+   * ★ここを通さないと公開できません（PUBLISH_GACHA が backtest を見ています）。
+   *   「検証したことにする」だけの操作は用意しません。必ずエンジンを回します。
+   */
+  | { type: "RUN_BACKTEST"; gachaId: string }
   | { type: "PUBLISH_GACHA"; gachaId: string }
   | { type: "PAUSE_GACHA"; gachaId: string; reason: string }
   | { type: "POINT_REQUEST"; userId: string; delta: number; reason: string }
@@ -517,6 +542,29 @@ export type ConsoleAction =
 
 /** いまの時刻。デモなので固定文字（サーバーとブラウザで食い違わせない） */
 const NOW = "2026-08-22 12:00";
+
+/**
+ * 検証に使う種（seed）。
+ *
+ * ★固定すること。押すたびに結果が変わる検証は、
+ *   都合のよい判定が出るまで押されます。
+ */
+export const BACKTEST_SEED = 20260822;
+
+/**
+ * そのガチャの賞の構成を取り出す。
+ *
+ * BUILDER から登録したガチャは、組んだ構成をそのまま持っています。
+ * デモの初期データにはそれが無いので、還元率から組み直した近似で代用します。
+ * 近似かどうかは approx で返し、画面に明記します。
+ */
+export function specOf(g: ConsoleGacha): { spec: GachaSpec; approx: boolean } {
+  if (g.spec) return { spec: g.spec, approx: false };
+  return {
+    spec: buildSpec(g.title, g.price, g.total, 1, g.designedRtp || 95),
+    approx: true,
+  };
+}
 
 /** 監査ログを1件足すための短縮 */
 function log(
@@ -578,6 +626,130 @@ export function reducer(s: ConsoleState, a: ConsoleAction): ConsoleState {
         me,
         mfaPassed: true,
         flash: { kind: "ok", text: `${me.name}（${ROLE_LABEL[me.role]}）に切り替えました。` },
+      };
+    }
+
+    /**
+     * BUILDER で組んだ案を、下書きとして登録する。
+     *
+     * ★登録した時点では backtest を null にすること。
+     *   AIが組んだ案でも、検証を飛ばして公開できてはいけません。
+     *   ここで SAFE を入れてしまうと、PUBLISH_GACHA の関門が
+     *   その場で無意味になります。
+     */
+    case "CREATE_GACHA": {
+      if (!s.me || !can(s.me.role, "gacha.edit")) {
+        return deny(s, `${s.me ? ROLE_LABEL[s.me.role] : "この権限"} にはガチャを作る権限がありません。`);
+      }
+      const title = a.title.trim();
+      if (!title) return deny(s, "ガチャの名前を入れてください。");
+      if (a.spec.price <= 0 || a.spec.total <= 0) {
+        return deny(s, "料金と口数を入れてください。");
+      }
+      if (s.gachas.some((x) => x.title === title)) {
+        return deny(s, `「${title}」はすでにあります。別の名前にしてください。`);
+      }
+
+      /* ★還元率は、目標値ではなく「組み上がった構成」から出すこと。
+         100円単位に丸めた時点で、目標とは必ずずれます */
+      const rtp = designedRtp(a.spec);
+      const id = `g_${201 + s.gachas.length}`;
+      const g: ConsoleGacha = {
+        id,
+        title,
+        status: "DRAFT",
+        price: a.spec.price,
+        total: a.spec.total,
+        left: a.spec.total,
+        designedRtp: Math.round(rtp * 10) / 10,
+        realRtp: 0,
+        marketRtp: 0,
+        revenue: 0,
+        profit: 0,
+        backtest: null,
+        spec: { ...a.spec, name: title },
+      };
+      return {
+        ...s,
+        gachas: [...s.gachas, g],
+        audit: log(s, "GACHA_CREATE", id, `ガチャ「${title}」を下書きとして登録`, {
+          after: `${a.spec.price.toLocaleString()}円 × ${a.spec.total.toLocaleString()}口 ／ 設計還元率 ${g.designedRtp.toFixed(1)}%`,
+        }),
+        flash: {
+          kind: "ok",
+          text: `「${title}」を下書きに登録しました。まだ公開できません。先に公開前バックテストを実行してください。`,
+        },
+      };
+    }
+
+    /**
+     * 公開前バックテストを実行し、結果をガチャに書き戻す。
+     *
+     * ★実際にエンジンを回すこと。
+     *   「検証したことにする」だけの操作は用意しません。
+     * ★入力が足りていないとき（usable が false）は、判定を書かないこと。
+     *   景品を1本も登録していないガチャは、計算上は売上が丸ごと粗利になるので
+     *   数字としては SAFE に見えます。それは安全なのではなく、
+     *   入力が終わっていないだけです。
+     */
+    case "RUN_BACKTEST": {
+      if (!s.me || !can(s.me.role, "gacha.edit")) {
+        return deny(s, `${s.me ? ROLE_LABEL[s.me.role] : "この権限"} には検証を実行する権限がありません。`);
+      }
+      const g = s.gachas.find((x) => x.id === a.gachaId);
+      if (!g) return deny(s, "そのガチャは見つかりません。");
+
+      const { spec, approx } = specOf(g);
+      const report = backtestReport(spec, BACKTEST_SEED, NOW);
+
+      if (!report.usable) {
+        /* ★ここで backtest を書き換えないこと。
+           判定できないものを「判定済み」にすると、公開の関門をすり抜けます */
+        return {
+          ...s,
+          audit: log(s, "BACKTEST_RUN", g.id, `ガチャ「${g.title}」を検証（判定できず）`, {
+            before: g.backtest ?? "未実施",
+            after: "判定不能",
+            reason: report.issues.map((i) => i.message).join(" / "),
+          }),
+          flash: {
+            kind: "warn",
+            text: `「${g.title}」は入力が足りないため判定できません。${report.issues[0]?.message ?? ""}`,
+          },
+        };
+      }
+
+      const verdict = report.overall;
+      const rtp = Math.round(report.designedRtp * 10) / 10;
+      const line =
+        report.stopLineUpPct === null
+          ? "停止ラインは計算できません（設計還元率が100%以上）"
+          : `相場が +${report.stopLineUpPct.toFixed(1)}% を超えたら赤字`;
+
+      return {
+        ...s,
+        gachas: s.gachas.map((x) =>
+          x.id === g.id ? { ...x, backtest: verdict, designedRtp: rtp } : x,
+        ),
+        audit: log(s, "BACKTEST_RUN", g.id, `ガチャ「${g.title}」の公開前バックテストを実行`, {
+          before: g.backtest ?? "未実施",
+          after: `【設計】${verdict} ／【運営】${report.stress} ／ 設計還元率 ${rtp.toFixed(1)}% ／ ${line}${approx ? "（近似の構成で検証）" : ""}`,
+        }),
+        flash:
+          verdict === "DANGER"
+            ? {
+                kind: "error",
+                text: `「${g.title}」は【設計】DANGER です。この構成のままでは公開できません。`,
+              }
+            : verdict === "CAUTION"
+              ? {
+                  kind: "warn",
+                  text: `「${g.title}」は【設計】CAUTION です。公開はできますが、実還元率モニタを毎日見てください。`,
+                }
+              : {
+                  kind: "ok",
+                  text: `「${g.title}」は【設計】SAFE です。${line}。`,
+                },
       };
     }
 
