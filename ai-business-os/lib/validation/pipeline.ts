@@ -17,6 +17,10 @@ import { pnlFromFiles, testRoi, type TestRoi, type TotalPnl } from '../economics
 import { topOpportunities, type Opportunity } from '../opportunities';
 import { ACQUISITION_CHANNEL_LABEL, type ValueSource } from '../types';
 import { latestApproval, startGate, type StartGate, type TestApproval } from './approval';
+import { checkReadiness, type Readiness } from './readiness';
+import { getJapanResearch } from '../research/japan-researcher';
+import { searchCosts } from '../research/providers';
+import { EVENT_TYPES } from '../types';
 import {
   TEST_UNITS,
   channelFromSalesFit,
@@ -153,6 +157,8 @@ export type ValidationCard = {
 
   approval: TestApproval | null;
   gate: StartGate;
+  /** 本番テストを始めてよいかの12項目チェック。1つでも欠けたら NOT READY */
+  readiness: Readiness;
 
   effectiveCac: EffectiveCac | null;
   testRoi: TestRoi;
@@ -330,6 +336,14 @@ export async function buildValidationPipeline(
     .map((p) => eligible.find((o) => o.ideaId === p.item.ideaId))
     .filter((o): o is Opportunity => o !== undefined);
 
+  // 検索API費用も事業コストなので、台帳への手書きを待たずにP&Lへ乗せる
+  const providerCosts = await searchCosts();
+  const searchApiYen = providerCosts.reduce(
+    (a, c) => a + (c.actualCostYen ?? c.estimatedCostYen ?? 0),
+    0
+  );
+  const pnl = pnlFromFiles({ contentRows, salesRows, searchApiYen });
+
   const cards: ValidationCard[] = [];
   for (const [i, o] of picked.entries()) {
     const channel = channelOf(o);
@@ -443,6 +457,7 @@ export async function buildValidationPipeline(
         failure,
         approved: gate.approved,
       }),
+      readiness: await readinessOf(o, channel, spec.testUnit, spec.maxTestLossYen, pnl, approval),
     });
   }
 
@@ -485,7 +500,7 @@ export async function buildValidationPipeline(
     excludedUnresearched,
     criteriaFixedAt: VALIDATION_CRITERIA.fixedAt,
     criteriaOverride: override,
-    pnl: pnlFromFiles({ contentRows, salesRows }),
+    pnl,
     hasMeasuredData: salesRows.length > 0 || contentRows.length > 0,
   };
 }
@@ -595,4 +610,48 @@ export function testPlanText(card: ValidationCard): string[] {
     `承認状態: ${card.gate.message}`,
     `次の一手: ${card.nextAction}`,
   ];
+}
+
+
+/**
+ * 本番テストを始めてよいかの12項目チェックを、案件1件ぶん組み立てる。
+ *
+ * 材料が無い項目は「無い」として渡す。ここで適当な既定値を入れると、
+ * 実際には決めていないのに READY と出てしまい、チェックの意味が無くなる。
+ */
+async function readinessOf(
+  o: Opportunity,
+  channel: ValidationChannelKey,
+  testUnit: string,
+  maxTestLossYen: number,
+  pnl: TotalPnl,
+  approval: TestApproval | null
+): Promise<Readiness> {
+  const research = await getJapanResearch(o.ideaId);
+  const unit = TEST_UNITS[testUnit as keyof typeof TEST_UNITS];
+  return checkReadiness({
+    ideaTitle: o.title,
+    japan:
+      research === null
+        ? null
+        : {
+            stage: research.stage,
+            confidence: research.confidence,
+            sources: research.evidence?.sources.length ?? 0,
+          },
+    // 調べていなければ null。0社（＝競合なし）と書かない
+    competitorCount: research === null ? null : research.domesticCount,
+    priceYen: o.economics?.priceCandidateYen ?? null,
+    // 売る相手は人が決める項目。承認申請に書かれるまで未記入として扱う
+    target: approval?.note ?? '',
+    channel,
+    testUnit: unit ? `${unit.ja}（${unit.whatCounts}）` : '',
+    sampleTarget: approval?.sampleTarget ?? firstCheckpointOf(channel),
+    sampleNeeded: firstCheckpointOf(channel),
+    maxTestLossYen,
+    killCriteria: approval?.killCriteria ?? '',
+    scaleCriteria: approval?.scaleCriteria ?? '',
+    pnl,
+    measurement: { utm: true, events: EVENT_TYPES.length },
+  });
 }

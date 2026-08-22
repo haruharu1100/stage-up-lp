@@ -6,7 +6,7 @@ import { currentAssumption, DEFAULT_ASSUMPTION, getSalesBacktest, runSalesBackte
 import { FUNNEL_STAGES, savePreScores, topPreScored } from '../lib/prescore';
 import { rateIdea } from '../lib/rating';
 import { getJapanResearch, hasEnoughEvidence, researchJapan } from '../lib/research/japan-researcher';
-import { googleSearchConfigured, searchBudgetStatus } from '../lib/research/google-search';
+import { PROVIDER_INFO, providerStatuses, resolveProvider, searchBudgetStatus } from '../lib/research/providers';
 import { getScore, GRADE_LABEL, scoreIdea } from '../lib/score';
 import { computeViability, saveViability } from '../lib/viability';
 import { saveIdeaNote } from '../lib/obsidian';
@@ -41,33 +41,53 @@ async function main() {
   const preSorted = [...pre].sort((a, b) => b.preScore - a.preScore);
   console.log(`  上位: ${preSorted.slice(0, 3).map((p) => p.preScore).join(' / ')} 点`);
 
-  // --- 段2: 上位だけ日本市場を自動調査 ---
+  // --- 段2: 上位だけ日本市場を自動調査（安く広く → 上位だけ深く の二段階） ---
+  const nDeep = Number(arg('deep') ?? Math.max(3, Math.round(nResearch / 4)));
   const researchIds = await topPreScored(nResearch);
-  const before = await searchBudgetStatus();
-  console.log(`\n【段2】上位${researchIds.length}件の日本市場を自動調査します`);
-  console.log(
-    googleSearchConfigured()
-      ? `  日本語検索の本日の残り: ${before.left} / ${before.limit} 回（使い切ったら翌日に続きを実行します）`
-      : '  日本語検索は鍵が未設定のため実行しません（0件ではなく「未取得」として記録します）'
-  );
+  const cheapProvider = resolveProvider('CHEAP');
+  const deepProvider = resolveProvider('DEEP');
+  const before = cheapProvider ? await searchBudgetStatus(cheapProvider) : null;
+
+  console.log(`\n【段2】上位${researchIds.length}件の日本市場を自動調査します（うち上位${nDeep}件は深掘り）`);
+  for (const s of providerStatuses()) {
+    console.log(`  ${s.label}: ${s.configured ? '接続済み' : '鍵が未設定のため実行しません'}（${s.note}）`);
+  }
+  if (!cheapProvider) {
+    console.log('  検索の鍵が1つも設定されていないため検索は実行しません（0件ではなく「未取得」として記録します）');
+  } else {
+    console.log(
+      `  安く広く引く検索: ${PROVIDER_INFO[cheapProvider].label} 本日の残り ${before?.left} / ${before?.limit} 回`
+    );
+    console.log(
+      deepProvider
+        ? `  深掘り検索: ${PROVIDER_INFO[deepProvider].label}（上位${nDeep}件のみ。全件に高い調査は掛けません）`
+        : '  深掘り検索は鍵が未設定のため実行しません（安く広く引く検索だけで判定します）'
+    );
+  }
+
   const byId = new Map(ideas.map((i) => [i.id, i]));
   let skipped = 0;
-  for (const id of researchIds) {
+  for (const [i, id] of researchIds.entries()) {
     const idea = byId.get(id);
     if (!idea) continue;
+    const depth = i < nDeep ? 'DEEP' : 'CHEAP';
     const prior = await getJapanResearch(idea.id);
-    if (hasEnoughEvidence(prior)) {
+    // 深掘り対象は、浅い調査で十分でも情報源を増やすために調べ直す
+    if (hasEnoughEvidence(prior) && !(depth === 'DEEP' && prior?.depth !== 'DEEP')) {
       skipped += 1;
       continue;
     }
-    const r = await researchJapan(idea);
+    const r = await researchJapan(idea, { depth });
+    const src = r.evidence ? `情報源${r.evidence.sources.length}種類` : '情報源未取得';
     console.log(
-      `  ${r.stage.padEnd(11)} 国内競合${String(r.domesticCount).padStart(2)}件 確度${r.confidence}  ${idea.title.slice(0, 44)}`
+      `  ${depth.padEnd(5)} ${r.stage.padEnd(11)} 国内競合${String(r.domesticCount).padStart(2)}件 ` +
+        `確度${r.confidence} ${src}  ${idea.title.slice(0, 40)}`
     );
   }
-  const after = await searchBudgetStatus();
+  const after = cheapProvider ? await searchBudgetStatus(cheapProvider) : null;
   console.log(
-    `  既に十分な根拠があり再検索しなかった案件: ${skipped}件 ／ 本日の検索使用: ${after.used} / ${after.limit} 回`
+    `  既に十分な根拠があり再検索しなかった案件: ${skipped}件` +
+      (after ? ` ／ 本日の検索使用: ${after.used} / ${after.limit} 回` : '')
   );
 
   // --- 段3: 採点（AI補助レーティングを含む） ---

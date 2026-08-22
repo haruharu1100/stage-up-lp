@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import { migrate } from '../lib/db/client';
 import path from 'node:path';
 import { MONEY_AND_OUTBOUND_ACTIONS_IMPLEMENTED, OUTBOUND_FLAGS, config } from '../lib/env';
 import { gradeFromScore } from '../lib/score';
@@ -45,19 +46,46 @@ import { preScoreOf, FUNNEL_STAGES } from '../lib/prescore';
 import { computeViability, regulatoryNote, VIABILITY_WEIGHTS } from '../lib/viability';
 import { MAX_QUERIES, japaneseKeywords } from '../lib/research/keywords-ja';
 import {
+  GOOGLE_CSE_SHUTDOWN_DATE,
+  GOOGLE_LEGACY_ONLY,
+  GOOGLE_LEGACY_REASON,
   canonicalDomain,
   googleSearchConfigured,
   judgeFromSearches,
   judgeItem,
 } from '../lib/research/google-search';
+import {
+  CHEAP_ORDER,
+  DEEP_ORDER,
+  PROVIDER_INFO,
+  providerConfigured,
+  providerStatuses,
+  resolveProvider,
+} from '../lib/research/providers';
+import { MIN_SOURCES_TO_CONCLUDE, SEARCH_PROVIDER_KEYS, entityKeyOf } from '../lib/research/judge';
+import {
+  EVIDENCE_KEYS,
+  MIN_SOURCE_KINDS,
+  buildJapanEvidence,
+} from '../lib/research/japan-evidence';
 import { channelFromSearch, hasEnoughEvidence } from '../lib/research/japan-researcher';
 import { classify, looksAiBusiness } from '../lib/sources/common';
 import { SOURCES } from '../lib/sources/registry';
 import { clusterOf, japanGapFactor } from '../lib/cluster';
 import { computeMoneyScore, MONEY_WEIGHTS } from '../lib/economics/money-score';
 import { DEFAULT_CONTENT_ASSUMPTION, NOTE_PRICES, runContentFunnel } from '../lib/economics/content-funnel';
-import { buildRankingsFrom, RANKING_FORMULA, type Material } from '../lib/ranking';
+import { buildRankingsFrom, hybridBonus, RANKING_FORMULA, type Material } from '../lib/ranking';
 import { selectRankable } from '../lib/opportunities';
+import {
+  EXIT_LABEL,
+  EXIT_MIN_WEIGHT,
+  HYBRID_ITEMS,
+  NOTE_ITEMS,
+  computeHybridScore,
+  computeNoteScore,
+  decideExit,
+  type ExitKey,
+} from '../lib/economics/exit-score';
 import { effectiveCac } from '../lib/economics/content-funnel';
 import {
   evaluateValidation,
@@ -86,9 +114,31 @@ import {
   contentPnl,
   saasPnl,
   testRoi,
+  totalPnl,
+  laborCost,
+  parseCostLedger,
+  COST_KINDS,
+  COST_KIND_LABEL,
+  LEGACY_COST_KINDS,
   COST_LEDGER_TEMPLATE,
   COST_LEDGER_COLUMNS,
 } from '../lib/economics/pnl';
+import {
+  calibrationOf,
+  errorsOf,
+  summarize,
+  MIN_PREDICTIONS_TO_REVISE,
+  MIN_SAMPLE_PER_PREDICTION,
+  MIN_PER_BUCKET,
+  RATE_METRICS,
+  type PredictionRow,
+} from '../lib/validation/calibration';
+import {
+  checkReadiness,
+  READINESS_ITEMS,
+  MIN_SOURCES_FOR_READY,
+  type ReadinessInput,
+} from '../lib/validation/readiness';
 import {
   CONTENT_ACTUALS_TEMPLATE,
   CONTENT_ACTUALS_COLUMNS,
@@ -480,19 +530,57 @@ add('同じ検索語を重複して投げない', new Set(kw.queries).size === k
 add('同じ案件なら同じ検索語になる（比較可能にする）',
   JSON.stringify(kw.queries) === JSON.stringify(japaneseKeywords(demoIdea).queries));
 
-// --- 日本語一般検索（Google Custom Search） ---
-const gsSource = fs.readFileSync('lib/research/google-search.ts', 'utf8');
+// --- 日本語一般検索（検索Provider抽象） ---
+const provSource = fs.readFileSync('lib/research/providers.ts', 'utf8');
+const envSource = fs.readFileSync('lib/env.ts', 'utf8');
 add('鍵が未設定なら検索を実行せず止まる（推測で埋めない）',
-  gsSource.indexOf('googleSearchConfigured()') < gsSource.indexOf('customsearch/v1'));
+  provSource.indexOf('providerConfigured(') < provSource.indexOf('api.search.brave.com'));
 add('鍵はコードに書かず環境変数から読む',
-  !/AIza[0-9A-Za-z_-]{20,}/.test(gsSource) && !/AIza[0-9A-Za-z_-]{20,}/.test(fs.readFileSync('lib/env.ts', 'utf8')));
-add('接続状態を機械的に判定できる',
-  googleSearchConfigured() === Boolean(config.googleCseKey && config.googleCseCx),
-  googleSearchConfigured() ? '設定済み' : '未設定のため安全停止中');
+  !/AIza[0-9A-Za-z_-]{20,}/.test(provSource) && !/AIza[0-9A-Za-z_-]{20,}/.test(envSource) &&
+  !/BSA[0-9A-Za-z_-]{20,}/.test(provSource) && !/tvly-[0-9A-Za-z_-]{16,}/.test(provSource));
+add('接続状態を機械的に判定できる（Brave）',
+  providerConfigured('BRAVE') === Boolean(config.braveSearchKey),
+  providerConfigured('BRAVE') ? '設定済み' : '未設定のため安全停止中');
+add('接続状態を機械的に判定できる（Tavily）',
+  providerConfigured('TAVILY') === Boolean(config.tavilyApiKey),
+  providerConfigured('TAVILY') ? '設定済み' : '未設定のため安全停止中');
 add('1案件あたりの検索本数に上限がある',
   config.googleSearchPerIdea >= 1 && config.googleSearchPerIdea <= MAX_QUERIES, `${config.googleSearchPerIdea}本`);
-add('1日あたりの検索回数に上限がある', config.googleSearchDailyLimit > 0, `${config.googleSearchDailyLimit}回`);
-add('同じ検索語は再課金せずキャッシュから返す', gsSource.includes('search_cache'));
+add('1日あたりの検索回数に上限がある（Provider別）',
+  config.braveDailyLimit > 0 && config.tavilyDailyLimit > 0 && config.googleSearchDailyLimit > 0,
+  `Brave ${config.braveDailyLimit} / Tavily ${config.tavilyDailyLimit}`);
+add('同じ検索語は再課金せずキャッシュから返す', provSource.includes('search_cache'));
+
+// --- 検索Providerの交換可能性 ---
+add('検索エンジンは4種類が定義されている',
+  SEARCH_PROVIDER_KEYS.length === 4 && SEARCH_PROVIDER_KEYS.includes('BRAVE') &&
+  SEARCH_PROVIDER_KEYS.includes('TAVILY') && SEARCH_PROVIDER_KEYS.includes('GOOGLE_LEGACY') &&
+  SEARCH_PROVIDER_KEYS.includes('FUTURE_PROVIDER'), SEARCH_PROVIDER_KEYS.join('・'));
+add('全ての検索エンジンに説明があり、単価は未定なら0ではなく未取得にする',
+  SEARCH_PROVIDER_KEYS.every((k) => {
+    const c = PROVIDER_INFO[k].estimatedCostYen;
+    return PROVIDER_INFO[k].label.length > 0 && (c === null || c > 0);
+  }));
+add('第一候補は Brave（広く安く引く）',
+  CHEAP_ORDER[0] === 'BRAVE' && PROVIDER_INFO.BRAVE.status === 'RECOMMENDED', CHEAP_ORDER.join('→'));
+add('深掘りは Tavily（上位候補だけ本文まで見る）',
+  DEEP_ORDER[0] === 'TAVILY' && PROVIDER_INFO.TAVILY.depth === 'DEEP', DEEP_ORDER.join('→'));
+add('Google は LEGACY 扱いで主要基盤にしない',
+  GOOGLE_LEGACY_ONLY === true && PROVIDER_INFO.GOOGLE_LEGACY.status === 'LEGACY' &&
+  CHEAP_ORDER.indexOf('GOOGLE_LEGACY') > CHEAP_ORDER.indexOf('BRAVE'));
+add('Google を主要基盤にしない理由が記録されている',
+  GOOGLE_LEGACY_REASON.includes('2027-01-01') && GOOGLE_CSE_SHUTDOWN_DATE === '2027-01-01');
+add('検索処理は search(query) の共通入口だけを使う（Provider交換で他コードを変えない）',
+  /export async function search\(/.test(provSource) &&
+  fs.readFileSync('lib/research/japan-researcher.ts', 'utf8').includes("from './providers'"));
+add('接続状態の一覧に鍵の値そのものを含めない',
+  providerStatuses().every((s) => !JSON.stringify(s).includes(config.braveSearchKey || ' ')));
+add('鍵が無い検索エンジンは選ばれない（推測で埋めない）',
+  providerConfigured('BRAVE') ? resolveProvider('CHEAP') !== null : resolveProvider('CHEAP') === null,
+  String(resolveProvider('CHEAP')));
+add('旧Google入口は消さずに残す（既存コードを壊さない）',
+  typeof googleSearchConfigured === 'function' &&
+  googleSearchConfigured() === Boolean(config.googleCseKey && config.googleCseCx));
 
 add('同じ会社の別ページを1社として数える（ドメイン正規化）',
   canonicalDomain('https://www.example.co.jp/price') === 'example.co.jp' &&
@@ -513,7 +601,13 @@ add('売り物のページは類似サービスとして数える', serviceItem.
 add('比較まとめ記事は競合として数えない', !articleItem.isSimilarService);
 add('競合名をタイトルから機械的に取り出す', serviceItem.competitorName.length > 0, serviceItem.competitorName);
 
-const searchRecord = (query: string, total: number, items: { title: string; url: string; snippet: string }[]) => ({
+const searchRecord = (
+  query: string,
+  total: number,
+  items: { title: string; url: string; snippet: string }[],
+  provider: 'BRAVE' | 'TAVILY' | 'GOOGLE_LEGACY' = 'BRAVE'
+) => ({
+  provider,
   query,
   timestamp: '2026-08-22T00:00:00.000Z',
   totalResults: total,
@@ -552,8 +646,8 @@ add('検索本数が多いほど確度が上がる', twoCompanies.confidence > b
   `${bigButArticles.confidence} → ${twoCompanies.confidence}`);
 
 const blockedSearch = judgeFromSearches([
-  { query: 'AI 電話受付', timestamp: '2026-08-22T00:00:00.000Z', totalResults: null, topResults: [],
-    status: 'UNAVAILABLE', note: 'GOOGLE_SEARCH_API_KEY が未設定', fromCache: false },
+  { provider: 'BRAVE', query: 'AI 電話受付', timestamp: '2026-08-22T00:00:00.000Z', totalResults: null,
+    topResults: [], status: 'UNAVAILABLE', note: 'BRAVE_SEARCH_API_KEY が未設定', fromCache: false },
 ]);
 add('検索できなかった案件は0社ではなく UNKNOWN にする',
   blockedSearch.stage === 'UNKNOWN' && blockedSearch.confidence === 0 && blockedSearch.domesticCompetitors.length === 0);
@@ -691,19 +785,36 @@ add('note手取りが集客費を上回らないなら「自腹が要る」と�
   funnel.prices.every((p) =>
     p.selfFundingRatio >= 0.9 || p.acquisitionType === 'PAID_ACQUISITION'));
 
-// --- 4種ランキング ---
+// --- 5種ランキング ＋ 総合 ---
 const materials: Material[] = [
   { ideaId: 'a', title: '調べ切った案件', growthRatio: 1.5, stage: 'NOT_FOUND', japanConfidence: 0.8,
-    money100: 60, moneyAvailableWeight: 85, opportunity100: 70, ltvCac: 4 },
+    money100: 60, moneyAvailableWeight: 85, opportunity100: 70, ltvCac: 4,
+    note100: 72, noteAvailableWeight: 80, hybrid100: 75, hybridAvailableWeight: 80, exit: 'HYBRID' },
   { ideaId: 'b', title: '海外だけ伸びている未調査案件', growthRatio: 3, stage: null, japanConfidence: null,
-    money100: null, moneyAvailableWeight: 0, opportunity100: null, ltvCac: null },
+    money100: null, moneyAvailableWeight: 0, opportunity100: null, ltvCac: null,
+    note100: null, noteAvailableWeight: 0, hybrid100: null, hybridAvailableWeight: 0, exit: null },
   { ideaId: 'c', title: '1項目だけ採点できた案件', growthRatio: null, stage: 'NOT_FOUND', japanConfidence: 0.8,
-    money100: 70, moneyAvailableWeight: 10, opportunity100: 90, ltvCac: null },
+    money100: 70, moneyAvailableWeight: 10, opportunity100: 90, ltvCac: null,
+    note100: 95, noteAvailableWeight: 20, hybrid100: 95, hybridAvailableWeight: 20, exit: null },
 ];
 const rankings = buildRankingsFrom(materials, 10);
-add('順位表は4種類', rankings.length === 4);
+add('順位表は5種類＋総合の6表',
+  rankings.length === 6 &&
+  ['TRENDING', 'JAPAN_GAP', 'NOTE', 'MONEY', 'HYBRID', 'BEST_BUSINESS'].every((k) => rankings.some((r) => r.key === k)),
+  rankings.map((r) => r.key).join('・'));
 add('全ての順位表に計算式が付いている',
-  rankings.every((r) => r.formula.length > 0) && Object.keys(RANKING_FORMULA).length === 4);
+  rankings.every((r) => r.formula.length > 0) && Object.keys(RANKING_FORMULA).length === 6);
+const noteRank = rankings.find((r) => r.key === 'NOTE');
+add('ほとんど採点できていない案件はnote順位に載せない（点が高いのではなく未調査）',
+  noteRank?.rows.length === 1 && noteRank?.rows[0]?.ideaId === 'a',
+  `${noteRank?.rows.length}件`);
+const hybridRank = rankings.find((r) => r.key === 'HYBRID');
+add('ほとんど採点できていない案件はHYBRID順位に載せない',
+  hybridRank?.rows.length === 1 && hybridRank?.rows[0]?.ideaId === 'a');
+add('HYBRIDが高い案件は総合順位で優遇される',
+  hybridBonus(100) > 1 && hybridBonus(0) < 1, `${hybridBonus(0)}倍 〜 ${hybridBonus(100)}倍`);
+add('HYBRIDを採点できていない案件は総合順位で減点しない（未調査を不利にしない）',
+  hybridBonus(null) === 1);
 const trending = rankings.find((r) => r.key === 'TRENDING');
 add('海外で伸びている順は倍率が取れた案件だけを載せる', trending?.rows.length === 2);
 const money = rankings.find((r) => r.key === 'MONEY');
@@ -722,7 +833,72 @@ add('順位の根拠が1件ずつ文章で残る',
 const rankingDoc = fs.readFileSync('docs/RANKING.md', 'utf8');
 add('順位の計算式がドキュメントに書かれている',
   rankingDoc.includes('BEST BUSINESS') && rankingDoc.includes('JAPAN GAP') &&
-  rankingDoc.includes('TRENDING') && rankingDoc.includes('MONEY'));
+  rankingDoc.includes('TRENDING') && rankingDoc.includes('MONEY') &&
+  rankingDoc.includes('NOTE BUSINESS SCORE') && rankingDoc.includes('HYBRID SCORE'));
+
+// --- 4つの出口（情報を売る／仕組みを売る／手を動かして売る／組み合わせる） ---
+const fullFit = {
+  x: 80, freeNote: 80, paidNote: 80, pdfCourse: 70, template: 70,
+  consulting: 75, saas: 80, aiStaff: 70, managedService: 75,
+};
+const fullViability = {
+  willingnessToPay: 0.8, subscribable: 0.8, replacesLabor: 0.8, roiExplainable: 0.8,
+  stickiness: 0.8, prospectFindability: 0.8, mvpEase: 0.8, apiCost: 0.8,
+  grossMargin: 0.8, dealSize: 0.8,
+};
+const richCtx = {
+  title: '配管業者向けAI電話受付',
+  fit: fullFit,
+  viability: fullViability,
+  japan: { stage: 'NOT_FOUND' as const, confidence: 0.8 },
+  evidence: null,
+  growthRatio: 2.4,
+  sales: { usable: true, ltvCac: 4, monthlyPrice: 49_800 },
+};
+const emptyCtx = {
+  title: 'AI Voice Agent',
+  fit: null,
+  viability: {},
+  japan: null,
+  evidence: null,
+  growthRatio: null,
+  sales: null,
+};
+
+add('出口は4種類ある',
+  (['INFORMATION_PRODUCT', 'SAAS', 'SERVICE', 'HYBRID'] as ExitKey[]).every((k) => EXIT_LABEL[k].length > 0));
+
+const noteScoreDemo = computeNoteScore(richCtx);
+add('NOTE BUSINESS SCOREは10項目100点',
+  NOTE_ITEMS.length === 10 && NOTE_ITEMS.reduce((a, b) => a + b.weight, 0) === 100);
+add('NOTE BUSINESS SCOREの各項目に根拠が文章で残る',
+  noteScoreDemo.items.every((i) => i.reason.length > 0));
+const hybridScoreDemo = computeHybridScore(richCtx, noteScoreDemo);
+add('HYBRID SCOREは10項目100点',
+  HYBRID_ITEMS.length === 10 && HYBRID_ITEMS.reduce((a, b) => a + b.weight, 0) === 100);
+add('HYBRID SCOREの各項目に根拠が文章で残る',
+  hybridScoreDemo.items.every((i) => i.reason.length > 0));
+
+const emptyNote = computeNoteScore(emptyCtx);
+add('材料が無い項目は0点ではなく採点対象外にする',
+  emptyNote.items.every((i) => i.basis !== 'NONE' || i.earned === null),
+  `採点できた配点 ${emptyNote.availableWeight}点`);
+add('材料が無い案件のnote採点は分母が小さくなる（点が高いのではなく未調査）',
+  emptyNote.availableWeight < EXIT_MIN_WEIGHT, `${emptyNote.availableWeight}点分`);
+
+const richExit = decideExit(richCtx, 75, 85);
+add('情報でも仕組みでも売れる案件はHYBRIDと判定する', richExit.exit === 'HYBRID', String(richExit.exit));
+add('HYBRIDを選んだ理由が文章で残る', richExit.reason.includes('組み合わせて売る'));
+
+// 記事にできる材料が無く、採算だけ良い案件
+const saasOnly = decideExit({ ...richCtx, fit: { ...fullFit, paidNote: 5, freeNote: 5, x: 5 } }, 80, 85);
+add('記事にできない案件を「noteで売る」と判定しない',
+  saasOnly.exit !== 'INFORMATION_PRODUCT' && saasOnly.exit !== 'HYBRID', String(saasOnly.exit));
+
+const noMaterial = decideExit(emptyCtx, null, 0);
+add('材料が足りない案件は出口を決めない（noteで売れると決め打ちしない）',
+  noMaterial.exit === null && noMaterial.reason.includes('材料が揃っていない'));
+add('出口を決めなかった理由が文章で残る', noMaterial.reason.length > 0);
 
 // --- TOP OPPORTUNITIES の並び（未調査案件が上に来ないこと） ---
 const wide = JSON.stringify({ moneyBreakdown: { availableWeight: 85 } });
@@ -984,7 +1160,7 @@ add('見送った案件には必ず理由が付く',
 
 // --- コンテンツ事業とSaaS事業の損益を分ける ---
 const ledger = [
-  { date: '2026-08-01', ideaId: '', kind: 'CONTENT_PRODUCTION' as const, amountYen: 20000, minutes: null, note: '' },
+  { date: '2026-08-01', ideaId: '', kind: 'CONTENT' as const, amountYen: 20000, minutes: null, note: '' },
   { date: '2026-08-02', ideaId: '', kind: 'DEVELOPMENT' as const, amountYen: 50000, minutes: null, note: '' },
 ];
 const emptyContent = contentTotal([]);
@@ -1006,6 +1182,8 @@ add('コンテンツ実績のテンプレに秘密情報を書かない注意が
 
 // --- 検証パイプライン（仮定と実測を混ぜない） ---
 async function pipelineChecks() {
+// 検索費用・予測の答え合わせ用のテーブルを含め、先に全テーブルを作っておく
+await migrate();
 const pipeline = await buildValidationPipeline([], []);
 add('パイプラインは7段ある', Object.keys(pipeline.counts).length === 7);
 add('実測CSVが空なら「実測あり」と名乗らない', pipeline.hasMeasuredData === false);
@@ -1056,6 +1234,182 @@ const validationDoc = fs.readFileSync('docs/VALIDATION.md', 'utf8');
 add('検証基準の計算式がドキュメントに書かれている',
   validationDoc.includes('Kill') && validationDoc.includes('Scale') &&
   validationDoc.includes('50 → 100 → 200 → 500'));
+add('開始前チェックの12項目がドキュメントに書かれている',
+  validationDoc.includes('READY / NOT READY') &&
+  READINESS_ITEMS.every((i) => validationDoc.includes(i.label)));
+add('採点式を書き換えてよい条件がドキュメントに書かれている',
+  validationDoc.includes('SCORE PREDICTION ERROR') && validationDoc.includes('CALIBRATION') &&
+  validationDoc.includes(String(MIN_PREDICTIONS_TO_REVISE)));
+add('費目とLABOR COSTの説明がドキュメントに書かれている',
+  validationDoc.includes('LABOR COST') && validationDoc.includes('search_api') &&
+  validationDoc.includes('LEGACY_COST_KINDS'));
+}
+
+
+// --- 費目・時間コスト（Cost Ledger / LABOR COST） ---
+{
+  add('費目は要求された11種類以上ある', COST_KINDS.length >= 11);
+  const required = ['DEVELOPMENT','AI_API','SEARCH_API','SERVER','DOMAIN','CONTENT','ADVERTISING','SALES','PHONE','EMAIL','OTHER'];
+  add('11費目がすべて費目一覧に入っている',
+    required.every((k) => (COST_KINDS as string[]).includes(k)),
+    required.filter((k) => !(COST_KINDS as string[]).includes(k)).join(','));
+  add('全費目に日本語の名前が付いている',
+    COST_KINDS.every((k) => (COST_KIND_LABEL[k] ?? '').length > 0));
+  add('検索API利用料が独立した費目になっている（AI利用料と混ぜない）',
+    (COST_KINDS as string[]).includes('SEARCH_API') && COST_KIND_LABEL.SEARCH_API !== COST_KIND_LABEL.AI_API);
+
+  const legacyCsv = 'date,idea_id,kind,amount_yen,minutes,note\n2026-08-01,i1,CONTENT_PRODUCTION,1000,,旧名\n2026-08-01,i1,AD,2000,,旧名\n';
+  const legacyRows = parseCostLedger(legacyCsv);
+  add('昔の費目名で書かれた台帳も読み飛ばさない（費用が安く見えるのを防ぐ）',
+    legacyRows.length === 2 && legacyRows[0].kind === 'CONTENT' && legacyRows[1].kind === 'ADVERTISING',
+    JSON.stringify(legacyRows.map((r) => r.kind)));
+  add('読み替え表が費目一覧の中だけを指している',
+    Object.values(LEGACY_COST_KINDS).every((v) => COST_KINDS.includes(v)));
+
+  const ledgerCsv = 'date,idea_id,kind,amount_yen,minutes,note\n2026-08-01,i1,DEVELOPMENT,,120,自分で作業\n2026-08-02,i1,SEARCH_API,300,,検索\n';
+  const ledger = parseCostLedger(ledgerCsv);
+  const labor = laborCost(ledger);
+  add('作業時間を仮の時給で費用に換算する（LABOR COST）',
+    labor.minutes === 120 && labor.amountYen === Math.round((120 / 60) * labor.hourlyYen) && labor.amountYen > 0,
+    `${labor.minutes}分 / ${labor.amountYen}円`);
+  add('換算に使った時給を必ず一緒に出す（金額だけを独り歩きさせない）',
+    labor.hourlyYen > 0 && labor.note.includes('仮'));
+  add('時間の記入が無い時は0時間ではなく未記入として扱う',
+    laborCost([]).minutes === 0 && laborCost([]).note.includes('未記入'));
+  add('作業時間は費目ごとの内訳としても出る',
+    labor.lines.length === 1 && labor.lines[0].kind === 'DEVELOPMENT');
+
+  const pnlWithLabor = totalPnl({ ledger });
+  add('P&Lに作業時間の内訳が付いている',
+    pnlWithLabor.labor.minutes === 120 && pnlWithLabor.labor.amountYen > 0);
+  const saasNoSearch = saasPnl({ ledger: [] });
+  const saasWithSearch = saasPnl({ ledger: [], searchApiYen: 500 });
+  const kindOf = (sec: typeof saasNoSearch, k: string) => sec.costLines.find((l) => l.kind === k);
+  add('検索した回数から出た検索API費用がSAAS側に乗る',
+    (kindOf(saasNoSearch, 'SEARCH_API')?.amountYen ?? null) === null &&
+    (kindOf(saasWithSearch, 'SEARCH_API')?.amountYen ?? 0) === 500);
+  add('検索API費用が未算出なら0円ではなく未記入のまま',
+    saasNoSearch.missingCostKinds.includes('SEARCH_API'));
+}
+
+// --- 採点式の答え合わせ（SCORE PREDICTION ERROR / CALIBRATION） ---
+{
+  const pred = (
+    id: string,
+    predicted: number | null,
+    actual: number | null,
+    conf: number,
+    sampleSize = 100,
+    metric: PredictionRow['metric'] = 'CONTRACT_RATE'
+  ): PredictionRow => ({
+    id, ideaId: 'i1', ideaTitle: 'テスト案件', metric,
+    predicted, predictedConfidence: conf, actual, sampleSize,
+    channel: null, predictedAt: '2026-08-01T00:00:00Z',
+    measuredAt: actual === null ? null : '2026-08-10T00:00:00Z',
+  });
+
+  const mixed = [pred('a', 0.03, 0.007, 0.8), pred('b', 0.03, null, 0.8)];
+  const errs = errorsOf(mixed);
+  add('実測がまだ無い予測を「誤差0」に数えない',
+    errs.length === 1 && errs[0].id === 'a');
+  add('誤差は実測−予測で出る（予測より悪ければマイナス）',
+    Math.abs(errs[0].error - (0.007 - 0.03)) < 1e-9 && errs[0].error < 0);
+  add('誤差の説明に予測値と実測値の両方が書かれている',
+    errs[0].text.includes('予測') && errs[0].text.includes('実測'));
+  add('率の指標は母数が足りないと式の見直しに使わない',
+    errorsOf([pred('c', 0.03, 0.0, 0.8, 5)])[0].usable === false &&
+    errorsOf([pred('d', 0.03, 0.0, 0.8, 100)])[0].usable === true);
+  add('率の指標は最低30件を必要とする（少数の偶然を実力と読まない）',
+    MIN_SAMPLE_PER_PREDICTION >= 30 && RATE_METRICS.length >= 4);
+
+  const few = [pred('e', 0.03, 0.03, 0.8), pred('f', 0.03, 0.05, 0.8)];
+  const calFew = calibrationOf(few);
+  add('数件の結果だけでは採点式を書き換えない',
+    calFew.canRevise === false && calFew.verdict === 'INSUFFICIENT_DATA');
+  add('採点式を見直してよい最低件数が決めてある',
+    MIN_PREDICTIONS_TO_REVISE >= 20 && MIN_PER_BUCKET >= 10 &&
+    calFew.reason.includes(String(MIN_PREDICTIONS_TO_REVISE)));
+  add('区間ごとの件数が足りなければ達成率を0%にせず出さない',
+    calFew.buckets.every((b) => b.count >= MIN_PER_BUCKET || b.actualRate === null));
+
+  // 確度80%と言った案件を25件。実際の達成は5件だけ＝確度を甘く付けている
+  const many: PredictionRow[] = [];
+  for (let i = 0; i < 25; i++) many.push(pred(`g${i}`, 0.03, i < 5 ? 0.04 : 0.001, 0.85));
+  const calMany = calibrationOf(many);
+  add('件数が揃えば確度の付け方のズレを判定する',
+    calMany.canRevise === true && calMany.verdict === 'OVERCONFIDENT',
+    calMany.verdict);
+  add('達成率には件数に応じた幅（信頼区間）が付く',
+    calMany.buckets.some((b) => b.range !== null && b.range[0] < b.range[1]));
+
+  const learn = summarize(many);
+  add('指標ごとの平均誤差がまとめて出る',
+    learn.averageErrorByMetric.length >= 1 && learn.calibration.totalMeasured === 25);
+  add('顧客獲得費だけは小さいほど良いとして達成を判定する',
+    calibrationOf(
+      Array.from({ length: 12 }, (_, i) => pred(`h${i}`, 30000, 20000, 0.85, 100, 'CAC_YEN'))
+    ).buckets.filter((b) => b.count > 0).every((b) => b.hits === b.count));
+}
+
+// --- 本番テスト開始前チェック（READY / NOT READY） ---
+{
+  add('開始前チェックはちょうど12項目', READINESS_ITEMS.length === 12);
+  add('全項目に「なぜ必要か」が書いてある',
+    READINESS_ITEMS.every((i) => i.why.length > 0 && i.label.length > 0));
+
+  const fullPnl = totalPnl({
+    ledger: COST_KINDS.map((kind) => ({
+      date: '2026-08-01', ideaId: 'i1', kind, amountYen: 100, minutes: 30, note: '',
+    })),
+  });
+  const ready: ReadinessInput = {
+    ideaTitle: 'AI電話受付',
+    japan: { stage: 'EARLY', confidence: 0.7, sources: 3 },
+    competitorCount: 2,
+    priceYen: 49800,
+    target: '美容室・整体院の個人オーナー',
+    channel: 'FORM_OUTREACH',
+    testUnit: '問い合わせフォームを送った会社数',
+    sampleTarget: 100,
+    sampleNeeded: 100,
+    maxTestLossYen: 30000,
+    killCriteria: '100件送って前向きな返信0件なら止める',
+    scaleCriteria: '100件で商談3件以上なら200件へ増やす',
+    pnl: fullPnl,
+    measurement: { utm: true, events: 16 },
+  };
+  const r1 = checkReadiness(ready);
+  add('12項目すべて揃えば READY', r1.verdict === 'READY' && r1.missing.length === 0,
+    r1.missing.join(','));
+
+  const missOne = checkReadiness({ ...ready, priceYen: null });
+  add('1項目でも欠けたら NOT READY',
+    missOne.verdict === 'NOT READY' && missOne.missing.length === 1 && missOne.missing[0] === 'PRICE');
+  add('足りない項目名が人に分かる形で出る',
+    missOne.message.includes('NOT READY') && missOne.message.includes('価格'));
+
+  add('日本市場を調べていなければ NOT READY',
+    checkReadiness({ ...ready, japan: null }).missing.includes('JAPAN_RESEARCH'));
+  add('情報源が1種類だけなら日本市場調査を済みと認めない',
+    checkReadiness({ ...ready, japan: { stage: 'EARLY', confidence: 0.7, sources: 1 } })
+      .missing.includes('JAPAN_RESEARCH') && MIN_SOURCES_FOR_READY >= 2);
+  add('競合数が未調査（null）は0社と扱わない',
+    checkReadiness({ ...ready, competitorCount: null }).missing.includes('COMPETITORS') &&
+    checkReadiness({ ...ready, competitorCount: 0 }).missing.includes('COMPETITORS') === false);
+  add('必要な件数に届かない目標は NOT READY',
+    checkReadiness({ ...ready, sampleTarget: 20, sampleNeeded: 100 }).missing.includes('SAMPLE_SIZE'));
+  add('最大損失額が未設定なら NOT READY',
+    checkReadiness({ ...ready, maxTestLossYen: null }).missing.includes('MAX_TEST_LOSS'));
+  add('撤退条件・拡大条件が曖昧なら NOT READY',
+    checkReadiness({ ...ready, killCriteria: 'だめなら' }).missing.includes('KILL_CRITERIA') &&
+    checkReadiness({ ...ready, scaleCriteria: '' }).missing.includes('SCALE_CRITERIA'));
+  add('費目に未記入があれば損益計算は未完成として NOT READY',
+    checkReadiness({ ...ready, pnl: totalPnl({ ledger: [] }) }).missing.includes('PNL'));
+  add('計測の準備が無ければ NOT READY',
+    checkReadiness({ ...ready, measurement: null }).missing.includes('MEASUREMENT') &&
+    checkReadiness({ ...ready, measurement: { utm: false, events: 16 } }).missing.includes('MEASUREMENT'));
+  add('READYでも自動で送信・投稿しないと明記する',
+    r1.message.includes('人が行う'));
 }
 
 // --- 出力 ---

@@ -15,6 +15,7 @@
     "productize": "tsx scripts/productize.ts",
     "report": "tsx scripts/report.ts",
     "obsidian": "tsx scripts/obsidian-sync.ts",
+    "decisions": "tsx scripts/record-decisions.ts",
     "test": "tsx scripts/test-core.ts"
   },
   "dependencies": {

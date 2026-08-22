@@ -22,6 +22,7 @@ import { VALIDATION_CHANNEL_LABEL } from '../lib/validation/channels';
 import { PORTFOLIO_RULES } from '../lib/validation/portfolio';
 import { CONTENT_DECISION_LABEL } from '../lib/validation/content-criteria';
 import { COST_KIND_LABEL, type PnlSection } from '../lib/economics/pnl';
+import { PROVIDER_STATUS_LABEL } from '../lib/research/providers';
 
 export const dynamic = 'force-dynamic';
 
@@ -462,6 +463,55 @@ export default async function Page() {
                 </>
               )}
             </div>
+
+            <h4 style={{ margin: '14px 0 6px' }}>
+              本番テストを始めてよいか：{c.readiness.verdict}
+            </h4>
+            <p className="sub" style={{ margin: '0 0 8px' }}>
+              {c.readiness.message}
+            </p>
+            <table>
+              <thead>
+                <tr>
+                  <th>確認すること</th>
+                  <th>状態</th>
+                  <th>今わかっていること</th>
+                  <th>なぜ必要か</th>
+                </tr>
+              </thead>
+              <tbody>
+                {c.readiness.checks.map((r) => (
+                  <tr key={r.key}>
+                    <td>{r.label}</td>
+                    <td>{r.ok ? '揃っている' : '足りない'}</td>
+                    <td>{r.detail}</td>
+                    <td className="sub">{r.why}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            <h4 style={{ margin: '14px 0 6px' }}>人が承認する時に見る内容</h4>
+            <div className="rec-meta">
+              <span>事業</span>
+              <b>{c.title}</b>
+              <span>なぜこれか</span>
+              <b>{c.hypothesis}</b>
+              <span>販売対象</span>
+              <b>{c.vertical || '未記入（人が決める）'}</b>
+              <span>販売価格</span>
+              <b>{c.priceYen === null ? '未定' : yen(c.priceYen)}</b>
+              <span>チャネル</span>
+              <b>{c.channelLabel}</b>
+              <span>最初のテスト</span>
+              <b>{c.firstCheckpointLabel}（{c.testUnitJa}）</b>
+              <span>最大損失</span>
+              <b>{yen(c.maxTestLossYen)}</b>
+              <span>止める条件</span>
+              <b>{c.criteria.kill.join(' / ')}</b>
+              <span>広げる条件</span>
+              <b>{(c.criteria.scale ?? []).join(' / ') || '未設定'}</b>
+            </div>
           </div>
         ))
       )}
@@ -494,6 +544,162 @@ export default async function Page() {
           ? `　未記入の費目：${d.validation.pnl.missingCostKinds.map((k) => COST_KIND_LABEL[k]).join('・')}`
           : ''}
       </p>
+
+      <h3>自分が動いた時間の費用（LABOR COST）</h3>
+      <p className="sub">
+        現金が出ていかない作業時間を0円のままにすると「手作業なら無料」という結論になり、
+        赤字の事業が黒字に見えます。時給は仮置きの数字です。上の費用にすでに含まれています（内訳）。
+      </p>
+      <div className="rec-meta">
+        <span>合計の作業時間</span>
+        <b>{Math.round((d.validation.pnl.labor.minutes / 60) * 10) / 10} 時間</b>
+        <span>仮の時給</span>
+        <b>{yen(d.validation.pnl.labor.hourlyYen)}</b>
+        <span>費用に換算すると</span>
+        <b>{yen(d.validation.pnl.labor.amountYen)}</b>
+        <span>備考</span>
+        <b>{d.validation.pnl.labor.note}</b>
+      </div>
+      {d.validation.pnl.labor.lines.length > 0 ? (
+        <table style={{ marginTop: 10 }}>
+          <thead>
+            <tr>
+              <th>費目</th>
+              <th>時間</th>
+              <th>換算した費用</th>
+            </tr>
+          </thead>
+          <tbody>
+            {d.validation.pnl.labor.lines.map((l) => (
+              <tr key={l.kind}>
+                <td>{l.label}</td>
+                <td>{Math.round((l.minutes / 60) * 10) / 10} 時間</td>
+                <td>{yen(l.amountYen)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      ) : null}
+
+      <h2>案件を探すための検索（どのエンジンを使うか・いくらかかっているか）</h2>
+      <p className="sub">
+        Google Custom Search JSON API は新規受付が終了し、既存利用も2027年1月1日に終了予定のため、
+        中核には置いていません（LEGACY 扱い・既存コードは残してあります）。
+        普段の検索は Brave、上位候補だけ Tavily で深掘りします。
+        鍵は <code>.env</code> だけに置き、この画面にもログにも出しません。
+      </p>
+      <table>
+        <thead>
+          <tr>
+            <th>検索エンジン</th>
+            <th>位置づけ</th>
+            <th>接続</th>
+            <th>使い方</th>
+          </tr>
+        </thead>
+        <tbody>
+          {d.providers.map((p) => (
+            <tr key={p.key}>
+              <td>{p.label}</td>
+              <td>{PROVIDER_STATUS_LABEL[p.status]}</td>
+              <td>{p.configured ? '接続済み' : '鍵が未設定のため実行しません'}</td>
+              <td className="sub">{p.note}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <p className="sub" style={{ marginTop: 8 }}>
+        日本市場を調べ終えた案件：{d.researched.total}件（うち深掘り {d.researched.deep}件）
+      </p>
+      <h3>検索にかかった費用</h3>
+      {d.searchCosts.length === 0 ? (
+        <p className="empty">まだ検索を実行していません（0円ではなく、未実行です）。</p>
+      ) : (
+        <table>
+          <thead>
+            <tr>
+              <th>検索エンジン</th>
+              <th>検索した回数</th>
+              <th>見積り額（仮の単価×回数）</th>
+              <th>実額（請求書を見て人が入れる）</th>
+              <th>期間</th>
+            </tr>
+          </thead>
+          <tbody>
+            {d.searchCosts.map((c) => (
+              <tr key={c.provider}>
+                <td>{c.label}</td>
+                <td>{c.requestCount.toLocaleString()}回</td>
+                <td>{c.estimatedCostYen === null ? '単価未定のため出さない' : yen(c.estimatedCostYen)}</td>
+                <td>{c.actualCostYen === null ? '未入力（0円ではない）' : yen(c.actualCostYen)}</td>
+                <td>{c.firstDay ?? '—'} 〜 {c.lastDay ?? '—'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+
+      <h2>採点式そのものが当たっているか（答え合わせ）</h2>
+      <p className="sub">
+        この画面の点数の付け方が正しいという証拠は、まだ1件もありません。
+        高い点を付けた案件が売れず、低い点の案件が売れるなら、間違っているのは案件ではなく点数の付け方です。
+        そこで予測した数字と実際に測れた数字を突き合わせています。
+        実績が少ないうちは採点式を変更しません（最低 {d.scoreLearning.calibration.totalMeasured} / 20件）。
+      </p>
+      <div className="rec-meta">
+        <span>確度の付け方の判定</span>
+        <b>{d.scoreLearning.calibration.verdict}</b>
+        <span>理由</span>
+        <b>{d.scoreLearning.calibration.reason}</b>
+      </div>
+      {d.scoreLearning.errors.length === 0 ? (
+        <p className="empty" style={{ marginTop: 10 }}>
+          答え合わせできる実測がまだありません。誤差0ではなく、まだ測っていないという意味です。
+        </p>
+      ) : (
+        <table style={{ marginTop: 10 }}>
+          <thead>
+            <tr>
+              <th>案件</th>
+              <th>予測と実測</th>
+              <th>式の見直しに使えるか</th>
+            </tr>
+          </thead>
+          <tbody>
+            {d.scoreLearning.errors.slice(0, 10).map((e) => (
+              <tr key={e.id}>
+                <td>{e.ideaTitle}</td>
+                <td>{e.text}</td>
+                <td className="sub">{e.reason}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+      <table style={{ marginTop: 10 }}>
+        <thead>
+          <tr>
+            <th>言った確度</th>
+            <th>件数</th>
+            <th>実際に達成した割合</th>
+            <th>ズレ</th>
+          </tr>
+        </thead>
+        <tbody>
+          {d.scoreLearning.calibration.buckets.map((b) => (
+            <tr key={b.label}>
+              <td>{b.label}</td>
+              <td>{b.count}件</td>
+              <td>
+                {b.actualRate === null
+                  ? '件数が足りず出さない'
+                  : `${Math.round(b.actualRate * 100)}%${b.range ? `（${Math.round(b.range[0] * 100)}〜${Math.round(b.range[1] * 100)}%）` : ''}`}
+              </td>
+              <td className="sub">{b.reason}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
 
       <h2>収益</h2>
       <div className="kpis">
@@ -705,7 +911,7 @@ export default async function Page() {
         </div>
       ))}
 
-      <h2>4つの見方で並べ直す</h2>
+      <h2>5つの見方で並べ直す＋総合順位</h2>
       <p className="sub">
         1つの順位表だけだと「何を基準に上なのか」が混ざるので、見たい軸ごとに分けています。
         材料が足りない案件は0点で下に並べるのではなく、その表から外しています（外した件数も出しています）。

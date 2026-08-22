@@ -6,6 +6,14 @@ import { buildClusters, type ClusterSummary } from './cluster';
 import { buildRankings, type Ranking } from './ranking';
 import { runContentFunnel, type ContentFunnelResult } from './economics/content-funnel';
 import { buildValidationPipeline, type ValidationPipeline } from './validation/pipeline';
+import {
+  providerStatuses,
+  searchCosts,
+  type ProviderCost,
+  type ProviderInfo,
+} from './research/providers';
+import { researchedCount } from './research/japan-researcher';
+import { scoreLearning, type ScoreLearning } from './validation/calibration';
 import type { Attribution, Grade, Idea } from './types';
 
 /** 「今日なにをすれば売上が伸びるか」を根拠つきで出す */
@@ -98,11 +106,21 @@ export type DashboardData = {
   rankings: Ranking[];
   /** 発掘から実販売テストまでの進み具合。仮定と実測を分けて持つ */
   validation: ValidationPipeline;
+  /** 検索エンジンの接続状態。鍵の値そのものは含めない（画面にもログにも出さない） */
+  providers: (ProviderInfo & { configured: boolean })[];
+  /** Provider ごとの検索費用。見積り額と実額を分けて持つ */
+  searchCosts: ProviderCost[];
+  /** 日本市場を調べ終えた件数（浅い調査／深掘り） */
+  researched: { cheap: number; deep: number; total: number };
+  /** 採点式そのものの答え合わせ（誤差と確度のズレ） */
+  scoreLearning: ScoreLearning;
 };
 
 export async function buildDashboard(): Promise<DashboardData> {
-  const [today, last7, last30, allTime, saas, ideas, opportunities, attribution, clusters, rankings] =
-    await Promise.all([
+  const [
+    today, last7, last30, allTime, saas, ideas, opportunities, attribution, clusters, rankings,
+    costs, researched, learning,
+  ] = await Promise.all([
       funnelSnapshot(1),
       funnelSnapshot(7),
       funnelSnapshot(30),
@@ -113,6 +131,9 @@ export async function buildDashboard(): Promise<DashboardData> {
       attributionByIdea(),
       buildClusters(),
       buildRankings(),
+      searchCosts(),
+      researchedCount(),
+      scoreLearning(),
     ]);
   const contentFunnel = runContentFunnel();
   const validation = await buildValidationPipeline();
@@ -138,6 +159,10 @@ export async function buildDashboard(): Promise<DashboardData> {
     contentFunnel,
     rankings,
     validation,
+    providers: providerStatuses(),
+    searchCosts: costs,
+    researched,
+    scoreLearning: learning,
   };
 }
 

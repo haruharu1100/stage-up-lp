@@ -3,16 +3,12 @@ import { config } from '../env';
 import { readManualChecks } from '../japan';
 import type { Idea, JapanStage } from '../types';
 import { MAX_QUERIES, japaneseKeywords } from './keywords-ja';
-import {
-  googleSearchJa,
-  judgeFromSearches,
-  type GoogleSearchRecord,
-  type SearchJudgement,
-} from './google-search';
+import { judgeFromSearches, type SearchJudgement, type SearchRecord } from './judge';
+import { resolveProvider, search as providerSearch } from './providers';
+import { buildJapanEvidence, type JapanEvidence } from './japan-evidence';
 import {
   checkCorp,
   checkGithubJa,
-  checkGoogleJa,
   checkNote,
   checkPrTimes,
   checkWikipediaJa,
@@ -43,6 +39,10 @@ export type JapanResearch = {
   humanCorrected: boolean;
   reason: string;
   researchedAt: string;
+  /** 二段階検索のどちらまで済んだか */
+  depth?: 'CHEAP' | 'DEEP';
+  /** 8指標の内訳。取れていない指標は0ではなく未取得 */
+  evidence?: JapanEvidence | null;
 };
 
 /** 競合とみなす類似度の下限。これ未満は「たまたま単語が被っただけ」として数えない */
@@ -106,7 +106,21 @@ export function channelFromSearch(search: SearchJudgement): ChannelResult {
 export type ResearchOptions = {
   /** 既に十分な根拠があっても調べ直す */
   force?: boolean;
+  /**
+   * 二段階検索のどちらを行うか。
+   * CHEAP … 全案件に対して広く安く引く（第一候補 Brave）
+   * DEEP …… 上位候補だけ深掘りする（第二候補 Tavily ＋ 導入事例・料金・PR・note の補助検索）
+   * 158件すべてに高い調査を掛けない。安い検索で候補を絞ってから深掘りする。
+   */
+  depth?: 'CHEAP' | 'DEEP';
 };
+
+/** 補助検索で「何件あったか」を数える。取れなければ null（0件にしない） */
+async function auxCount(query: string, ideaId: string): Promise<number | null> {
+  const rec = await providerSearch(query, { depth: 'CHEAP', ideaId });
+  if (rec.status !== 'DATA_AVAILABLE') return null;
+  return rec.topResults.length;
+}
 
 export async function researchJapan(idea: Idea, opts: ResearchOptions = {}): Promise<JapanResearch> {
   const prior = await getJapanResearch(idea.id);
@@ -115,25 +129,42 @@ export async function researchJapan(idea: Idea, opts: ResearchOptions = {}): Pro
     return prior;
   }
 
+  const depth = opts.depth ?? 'CHEAP';
   const kw = japaneseKeywords(idea);
   const primary = kw.queries[0] ?? idea.title;
 
   // --- 日本語一般検索（複数の言い換えで引く） ---
   // 1本の検索語だけだと「その言い方をしていない競合」を丸ごと見落とすため、
   // 業種違い・言い換え・「SaaS 日本」などを混ぜて最大 GOOGLE_SEARCH_PER_IDEA 本まで引く。
+  // どの検索エンジンを使うかは providers.ts が決める（第一候補 Brave）。
   const perIdea = Math.max(1, Math.min(MAX_QUERIES, config.googleSearchPerIdea));
-  const searchRecords: GoogleSearchRecord[] = [];
+  const searchRecords: SearchRecord[] = [];
   for (const q of kw.queries.slice(0, perIdea)) {
-    searchRecords.push(await googleSearchJa(q));
+    searchRecords.push(await providerSearch(q, { depth: 'CHEAP', ideaId: idea.id }));
   }
+
+  // --- 深掘り（上位候補のみ）。別エンジンで引き直すことで情報源を2種類以上にする ---
+  if (depth === 'DEEP' && resolveProvider('DEEP') !== null) {
+    searchRecords.push(await providerSearch(primary, { depth: 'DEEP', ideaId: idea.id }));
+  }
+
   const search = judgeFromSearches(searchRecords);
   const searchChannel = channelFromSearch(search);
+
+  // 補助検索（導入事例・料金ページ・PR記事・note）は深掘り時だけ。全案件には掛けない
+  const aux =
+    depth === 'DEEP' && resolveProvider('CHEAP') !== null
+      ? {
+          caseStudyHits: await auxCount(`${primary} 導入事例`, idea.id),
+          japaneseLpHits: await auxCount(`${primary} 料金 プラン`, idea.id),
+          prArticleHits: await auxCount(`${primary} site:prtimes.jp`, idea.id),
+          noteHits: await auxCount(`${primary} site:note.com`, idea.id),
+        }
+      : { caseStudyHits: null, japaneseLpHits: null, prArticleHits: null, noteHits: null };
 
   // 課金と時間を抑えるため、各チャネルへ投げるのは代表クエリ1本だけにする
   const channels: ChannelResult[] = [
     searchChannel,
-    await checkGoogleJa(primary),
-    await checkGoogleJa(primary, 'site:boxil.jp OR site:it-trend.jp'),
     await checkWikipediaJa(primary),
     await checkGithubJa(primary),
     await checkYoutubeJa(primary),
@@ -142,6 +173,8 @@ export async function researchJapan(idea: Idea, opts: ResearchOptions = {}): Pro
     checkPrTimes(primary),
     checkCorp(primary),
   ];
+
+  const evidence = buildJapanEvidence({ search, channels, ...aux });
 
   const withData = channels.filter((c) => c.hits !== null);
   const strongWithData = withData.filter((c) => c.strength === 'STRONG');
@@ -174,10 +207,11 @@ export async function researchJapan(idea: Idea, opts: ResearchOptions = {}): Pro
     confidence = 0.95;
     reason = `人が調査した${manual.length}チャネルの合計${total}件による判定（自動調査より優先）`;
   } else if (search.stage !== 'UNKNOWN') {
-    // 日本語一般検索の実測が最も強い根拠。件数ではなく「実在する国内サービスの社数」で決める
+    // 日本語一般検索の実測が最も強い根拠。件数ではなく「実在する国内サービスの社数」で決める。
+    // 確度は検索本数だけでなく、8指標のうち何個を実測できたかで決める（低い方を採る）。
     stage = search.stage;
-    confidence = search.confidence;
-    reason = search.reason;
+    confidence = Math.min(search.confidence, evidence.confidence);
+    reason = `${search.reason} ${evidence.reason}`;
   } else if (withData.length === 0) {
     stage = 'UNKNOWN';
     confidence = 0;
@@ -225,14 +259,17 @@ export async function researchJapan(idea: Idea, opts: ResearchOptions = {}): Pro
     humanCorrected,
     reason,
     researchedAt: nowIso(),
+    depth,
+    evidence,
   };
 
   await run(
-    `INSERT INTO japan_research (idea_id, queries_json, channels_json, domestic_count, stage, confidence, human_corrected, reason, researched_at)
-     VALUES (?,?,?,?,?,?,?,?,?)
+    `INSERT INTO japan_research (idea_id, queries_json, channels_json, domestic_count, stage, confidence, human_corrected, reason, researched_at, depth, evidence_json)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?)
      ON CONFLICT(idea_id) DO UPDATE SET queries_json=excluded.queries_json, channels_json=excluded.channels_json,
        domestic_count=excluded.domestic_count, stage=excluded.stage, confidence=excluded.confidence,
-       human_corrected=excluded.human_corrected, reason=excluded.reason, researched_at=excluded.researched_at`,
+       human_corrected=excluded.human_corrected, reason=excluded.reason, researched_at=excluded.researched_at,
+       depth=excluded.depth, evidence_json=excluded.evidence_json`,
     [
       idea.id,
       JSON.stringify(kw.queries),
@@ -243,6 +280,8 @@ export async function researchJapan(idea: Idea, opts: ResearchOptions = {}): Pro
       humanCorrected ? 1 : 0,
       reason,
       result.researchedAt,
+      depth,
+      JSON.stringify(evidence),
     ]
   );
 
@@ -295,6 +334,8 @@ export async function getJapanResearch(ideaId: string): Promise<JapanResearch | 
     human_corrected: number;
     reason: string;
     researched_at: string;
+    depth?: string | null;
+    evidence_json?: string | null;
   }>('SELECT * FROM japan_research WHERE idea_id = ?', [ideaId]);
   const r = rows[0];
   if (!r) return null;
@@ -310,5 +351,17 @@ export async function getJapanResearch(ideaId: string): Promise<JapanResearch | 
     humanCorrected: r.human_corrected === 1,
     reason: r.reason,
     researchedAt: r.researched_at,
+    depth: r.depth === 'DEEP' ? 'DEEP' : 'CHEAP',
+    evidence: r.evidence_json ? (JSON.parse(r.evidence_json) as JapanEvidence) : null,
   };
+}
+
+/** 日本市場調査が済んでいる件数。50件を超えたら順位を付け直す */
+export async function researchedCount(): Promise<{ cheap: number; deep: number; total: number }> {
+  const rows = await all<{ depth: string | null; n: number }>(
+    "SELECT depth, COUNT(*) AS n FROM japan_research WHERE stage != 'UNKNOWN' GROUP BY depth"
+  );
+  const deep = rows.find((r) => r.depth === 'DEEP')?.n ?? 0;
+  const total = rows.reduce((a, r) => a + r.n, 0);
+  return { cheap: total - deep, deep, total };
 }

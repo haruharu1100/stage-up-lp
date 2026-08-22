@@ -57,6 +57,35 @@ async function main() {
     `- SAAS: 収益 ${v.pnl.saas.revenueYen.toLocaleString()}円 / 費用 ${v.pnl.saas.costYen.toLocaleString()}円 / 利益 ${v.pnl.saas.profitYen.toLocaleString()}円`,
     `- TOTAL: 収益 ${v.pnl.revenueYen.toLocaleString()}円 / 費用 ${v.pnl.costYen.toLocaleString()}円 / 利益 ${v.pnl.profitYen.toLocaleString()}円`,
     `- 未記入の費目: ${v.pnl.missingCostKinds.length === 0 ? 'なし' : v.pnl.missingCostKinds.join('・')}`,
+    `- 自分が動いた時間: ${Math.round((v.pnl.labor.minutes / 60) * 10) / 10}時間（仮の時給${v.pnl.labor.hourlyYen.toLocaleString()}円で ${v.pnl.labor.amountYen.toLocaleString()}円として費用に含む）`,
+    '',
+    `## 検索基盤（案件を探す土台）`,
+    ...d.providers.map(
+      (p) => `- ${p.label}：${p.configured ? '接続済み' : '鍵が未設定のため実行しない'}`
+    ),
+    `- 日本市場を調べ終えた案件: ${d.researched.total}件（うち深掘り ${d.researched.deep}件）`,
+    d.searchCosts.length === 0
+      ? '- 検索費用: まだ検索を実行していない（0円ではなく未実行）'
+      : `- 検索費用: ${d.searchCosts
+          .map(
+            (c) =>
+              `${c.label} ${c.requestCount}回／見積り ${c.estimatedCostYen === null ? '単価未定' : `${c.estimatedCostYen.toLocaleString()}円`}／実額 ${c.actualCostYen === null ? '未入力' : `${c.actualCostYen.toLocaleString()}円`}`
+          )
+          .join(' | ')}`,
+    '- APIキーはこのファイルにも他のどこにも書かない（.env のみ）',
+    '',
+    `## 本番テストを始めてよいか（12項目チェック）`,
+    ...(v.cards.length === 0
+      ? ['- 候補がまだ無い']
+      : v.cards.map(
+          (c) =>
+            `- ${c.title}: ${c.readiness.verdict}${c.readiness.missing.length === 0 ? '' : `（不足 ${c.readiness.missing.length}項目）`}`
+        )),
+    '',
+    `## 採点式そのものの答え合わせ`,
+    `- 判定: ${d.scoreLearning.calibration.verdict}`,
+    `- ${d.scoreLearning.calibration.reason}`,
+    ...d.scoreLearning.averageErrorByMetric.map((m) => `- ${m.text}`),
     '',
     `## 案件`,
     `- 登録済み: ${d.ideaCount}件（採点済み ${d.scoredCount}件）`,

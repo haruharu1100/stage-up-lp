@@ -231,6 +231,41 @@ export const SCHEMA: string[] = [
     PRIMARY KEY (provider, day)
   )`,
 
+  // 検索APIの利用実績と費用。検索も事業コストなのでP&Lに入れる。
+  // estimated_cost_yen は仮定の単価×回数。actual_cost_yen は請求書を見て人が入れる（未入力は0ではなくNULL）
+  `CREATE TABLE IF NOT EXISTS search_usage (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    provider TEXT NOT NULL,
+    day TEXT NOT NULL,
+    idea_id TEXT,
+    query TEXT NOT NULL DEFAULT '',
+    request_count INTEGER NOT NULL DEFAULT 1,
+    estimated_cost_yen REAL,
+    actual_cost_yen REAL,
+    created_at TEXT NOT NULL
+  )`,
+
+  `CREATE INDEX IF NOT EXISTS idx_search_usage_provider ON search_usage(provider, day)`,
+
+  // 採点式の答え合わせ。予測（AIが出した点・確度）と実測を並べて誤差を残す。
+  // 数件の結果で採点式を書き換えないため、判断はサンプル数が最低ラインを超えてから行う。
+  `CREATE TABLE IF NOT EXISTS score_predictions (
+    id TEXT PRIMARY KEY,
+    idea_id TEXT NOT NULL,
+    idea_title TEXT NOT NULL DEFAULT '',
+    metric TEXT NOT NULL,
+    predicted REAL,
+    predicted_confidence REAL,
+    actual REAL,
+    sample_size INTEGER NOT NULL DEFAULT 0,
+    channel TEXT,
+    predicted_at TEXT NOT NULL,
+    measured_at TEXT,
+    note TEXT NOT NULL DEFAULT ''
+  )`,
+
+  `CREATE INDEX IF NOT EXISTS idx_predictions_idea ON score_predictions(idea_id)`,
+
   // 実販売テストの人間承認。ここに残すのは「承認したという事実」だけ。
   // 送信・架電・投稿・課金の処理はこのリポジトリに存在しないため、承認しても何も送られない。
   `CREATE TABLE IF NOT EXISTS test_approvals (
@@ -260,4 +295,16 @@ export const SCHEMA: string[] = [
   `CREATE INDEX IF NOT EXISTS idx_evidence_idea ON evidences(idea_id)`,
   `CREATE INDEX IF NOT EXISTS idx_competitors_idea ON japan_competitors(idea_id)`,
   `CREATE INDEX IF NOT EXISTS idx_events_content ON conversion_events(content_id)`,
+];
+
+/**
+ * 既にあるテーブルへ後から足す列。
+ * SQLite は「列がもうある」場合にエラーを返すだけなので、migrate 側で握りつぶす。
+ * 既存データは消さない（作り直しはしない）。
+ */
+export const ADDITIVE_COLUMNS: string[] = [
+  // 二段階検索（CHEAP=広く安く / DEEP=上位候補だけ深掘り）のどちらまで済んだか
+  `ALTER TABLE japan_research ADD COLUMN depth TEXT NOT NULL DEFAULT 'CHEAP'`,
+  // 日本市場の確からしさを決めた8指標の内訳。取れていない指標は0ではなく未取得として入る
+  `ALTER TABLE japan_research ADD COLUMN evidence_json TEXT`,
 ];

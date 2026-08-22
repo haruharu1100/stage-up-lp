@@ -73,6 +73,12 @@ export const config = {
 
   // 日本語市場調査用。鍵が無いチャネルは 0件ではなく UNAVAILABLE として記録する
   // 鍵そのものはコードにもGitにも置かない。.env から読むだけ
+
+  // 第一候補：広く安く引く検索
+  braveSearchKey: process.env.BRAVE_SEARCH_API_KEY || '',
+  // 第二候補：上位候補だけ深掘りする検索（本文抽出つき）
+  tavilyApiKey: process.env.TAVILY_API_KEY || '',
+  // 旧採用。Google Custom Search JSON API は新規提供停止・2027-01-01 終了予定のため主要基盤にしない
   googleCseKey:
     process.env.GOOGLE_SEARCH_API_KEY || process.env.GOOGLE_CSE_KEY || process.env.GOOGLE_API_KEY || '',
   googleCseCx:
@@ -82,6 +88,14 @@ export const config = {
   // 無料枠を浪費しないための上限。1日あたりの検索回数と、1案件あたりの検索語数
   googleSearchDailyLimit: num(process.env.GOOGLE_SEARCH_DAILY_LIMIT, 100),
   googleSearchPerIdea: num(process.env.GOOGLE_SEARCH_PER_IDEA, 4),
+  braveDailyLimit: num(process.env.BRAVE_SEARCH_DAILY_LIMIT, 200),
+  tavilyDailyLimit: num(process.env.TAVILY_DAILY_LIMIT, 30),
+
+  // 検索費用の見積り単価。実額は請求書を見て cost-ledger.csv に入れる（ここは仮定値）
+  braveCostPerRequestUsd: num(process.env.BRAVE_COST_PER_REQUEST_USD, 0.005),
+  tavilyCostPerCreditUsd: num(process.env.TAVILY_COST_PER_CREDIT_USD, 0.008),
+  googleCseCostPerRequestUsd: num(process.env.GOOGLE_CSE_COST_PER_REQUEST_USD, 0.005),
+  usdJpy: num(process.env.USD_JPY, 150),
 
   // 判定しきい値（コードで計算する。AIに決めさせない）
   minLtvCacRatio: num(process.env.MIN_LTV_CAC_RATIO, 3),

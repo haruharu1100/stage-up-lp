@@ -25,41 +25,71 @@ const LEDGER_FILE = path.join(DATA_DIR, 'cost-ledger.csv');
 
 export const COST_LEDGER_PATH = LEDGER_FILE;
 
-/** 費目。どのP&Lに乗るかがここで決まる */
+/**
+ * 費目。どのP&Lに乗るかがここで決まる。
+ *
+ * 「その他」に寄せると、後から何に使ったのか分からなくなって減らしようが無い。
+ * 実際に請求が別々に来る単位まで割ってある（AI利用料と検索API利用料は請求元が違う）。
+ */
 export type CostKind =
-  | 'CONTENT_PRODUCTION'
-  | 'AD'
   | 'DEVELOPMENT'
-  | 'API'
-  | 'SUPPORT'
+  | 'AI_API'
+  | 'SEARCH_API'
+  | 'SERVER'
+  | 'DOMAIN'
+  | 'CONTENT'
+  | 'ADVERTISING'
   | 'SALES'
+  | 'PHONE'
+  | 'EMAIL'
+  | 'SUPPORT'
   | 'TOOL'
   | 'OTHER';
 
 export const COST_KINDS: CostKind[] = [
-  'CONTENT_PRODUCTION',
-  'AD',
   'DEVELOPMENT',
-  'API',
-  'SUPPORT',
+  'AI_API',
+  'SEARCH_API',
+  'SERVER',
+  'DOMAIN',
+  'CONTENT',
+  'ADVERTISING',
   'SALES',
+  'PHONE',
+  'EMAIL',
+  'SUPPORT',
   'TOOL',
   'OTHER',
 ];
 
 export const COST_KIND_LABEL: Record<CostKind, string> = {
-  CONTENT_PRODUCTION: 'コンテンツ制作費',
-  AD: '広告費',
   DEVELOPMENT: '開発費',
-  API: 'API利用料',
-  SUPPORT: 'サポート費',
+  AI_API: 'AI利用料（生成AIのAPI）',
+  SEARCH_API: '検索API利用料（Brave・Tavily等）',
+  SERVER: 'サーバー費',
+  DOMAIN: 'ドメイン費',
+  CONTENT: 'コンテンツ制作費',
+  ADVERTISING: '広告費',
   SALES: '営業費',
+  PHONE: '電話費',
+  EMAIL: 'メール配信費',
+  SUPPORT: 'サポート費',
   TOOL: 'ツール利用料',
   OTHER: 'その他',
 };
 
+/**
+ * 昔の費目名。すでに書いてある cost-ledger.csv を読めなくしないための読み替え表。
+ * 名前を変えた時に過去の記入が無視されると、費用が実際より安く見えてしまう。
+ */
+export const LEGACY_COST_KINDS: Record<string, CostKind> = {
+  CONTENT_PRODUCTION: 'CONTENT',
+  AD: 'ADVERTISING',
+  API: 'AI_API',
+};
+
 /** CONTENT側に乗る費目。ここに無いものはSAAS側に乗る */
-const CONTENT_KINDS: CostKind[] = ['CONTENT_PRODUCTION', 'AD'];
+const CONTENT_KINDS: CostKind[] = ['CONTENT', 'ADVERTISING'];
 
 export const COST_LEDGER_COLUMNS = [
   'date',
@@ -74,8 +104,10 @@ export const COST_LEDGER_TEMPLATE = `${COST_LEDGER_COLUMNS.join(',')}
 # 実際に払った費用と、かけた時間を1行ずつ書く。分からない列は空欄（0と書かない）。
 # kind: ${COST_KINDS.join(' / ')}
 # amount_yen = 実際に払った金額（円）。minutes = かけた分数（時給${HOURLY_YEN.toLocaleString()}円で費用に換算する）
-# 開発費・API利用料・サポート費はAIシステム側（SAAS P&L）に乗る
 # コンテンツ制作費・広告費はコンテンツ側（CONTENT P&L）に乗る
+# それ以外（開発費・AI利用料・検索API利用料・サーバー費・ドメイン費・営業費・電話費・
+#   メール配信費・サポート費・ツール利用料・その他）はAIシステム側（SAAS P&L）に乗る
+# 検索API利用料は案件を探すためにかかる費用。0円扱いにせず必ずここへ書く
 # 個人情報・APIキー・取引先の口座情報はこのファイルに書かない
 `;
 
@@ -109,7 +141,8 @@ export function parseCostLedger(text: string): CostEntry[] {
   const out: CostEntry[] = [];
   for (const line of lines) {
     const c = line.split(',');
-    const kind = (at(c, 'kind') ?? '').trim() as CostKind;
+    const raw = (at(c, 'kind') ?? '').trim();
+    const kind = (LEGACY_COST_KINDS[raw] ?? raw) as CostKind;
     if (!COST_KINDS.includes(kind)) continue;
     out.push({
       date: (at(c, 'date') ?? '').trim(),
@@ -156,6 +189,8 @@ export type TotalPnl = {
   costYen: number;
   profitYen: number;
   missingCostKinds: CostKind[];
+  /** 費用のうち「自分が動いた時間」の分。上の costYen にも含まれている（二重計上ではなく内訳） */
+  labor: LaborCost;
   note: string;
 };
 
@@ -202,12 +237,69 @@ export function salesTotal(rows: SalesActual[] = readSalesActuals()): SalesMetri
   );
 }
 
+export type LaborLine = {
+  kind: CostKind;
+  label: string;
+  minutes: number;
+  amountYen: number;
+};
+
+export type LaborCost = {
+  /** 台帳に書かれた作業時間の合計（分） */
+  minutes: number;
+  /** 換算に使った仮の時給 */
+  hourlyYen: number;
+  /** 時間を金額に換算した合計 */
+  amountYen: number;
+  lines: LaborLine[];
+  note: string;
+};
+
+/**
+ * 自分が動いた時間を費用に換算する（LABOR COST）。
+ *
+ * 現金が出ていかない時間を0円のままにすると、
+ * 「手作業でやれば無料」という結論になり、赤字の事業が黒字に見えてしまう。
+ * 時給は仮置きなので、金額だけでなく「何時間をいくらで見積もったか」を必ず一緒に出す。
+ */
+export function laborCost(entries: CostEntry[] = readCostLedger()): LaborCost {
+  const lines: LaborLine[] = [];
+  let minutes = 0;
+  for (const kind of COST_KINDS) {
+    const m = entries.filter((e) => e.kind === kind).reduce((a, e) => a + (e.minutes ?? 0), 0);
+    if (m <= 0) continue;
+    minutes += m;
+    lines.push({
+      kind,
+      label: COST_KIND_LABEL[kind],
+      minutes: m,
+      amountYen: Math.round((m / 60) * HOURLY_YEN),
+    });
+  }
+  return {
+    minutes,
+    hourlyYen: HOURLY_YEN,
+    amountYen: Math.round((minutes / 60) * HOURLY_YEN),
+    lines,
+    note:
+      minutes === 0
+        ? '作業時間の記入がまだ無い。0時間ではなく未記入として扱う'
+        : `作業時間 ${Math.round((minutes / 60) * 10) / 10}時間 を仮の時給 ${HOURLY_YEN.toLocaleString()}円で費用に換算した（仮定値であり実際の支払いではない）`,
+  };
+}
+
 export type PnlInput = {
   content?: ContentMetrics;
   sales?: SalesMetrics;
   ledger?: CostEntry[];
   /** 契約中の月額合計（MRR）。実績のある契約だけを入れる */
   mrrYen?: number;
+  /**
+   * 検索API利用料（Brave・Tavily等）。台帳に手書きが無くても、
+   * 実際に検索した回数から出た費用をここへ渡してSAAS側に必ず乗せる。
+   * 分からない間は渡さない（0と書かない）。
+   */
+  searchApiYen?: number;
 };
 
 /**
@@ -223,7 +315,7 @@ export function contentPnl(input: PnlInput): PnlSection {
   // 実測CSVに書かれた制作費・制作時間は、台帳に無くても必ず費用として数える
   const fromActuals = m.totalCost;
   if (fromActuals > 0) {
-    const i = lines.findIndex((l) => l.kind === 'CONTENT_PRODUCTION');
+    const i = lines.findIndex((l) => l.kind === 'CONTENT');
     lines[i] = {
       ...lines[i],
       amountYen: (lines[i].amountYen ?? 0) + fromActuals,
@@ -255,8 +347,21 @@ export function saasPnl(input: PnlInput): PnlSection {
     revenueLines.push({ label: '契約中の月額合計（MRR）', amountYen: Math.round(input.mrrYen) });
   }
 
-  const kinds: CostKind[] = ['DEVELOPMENT', 'API', 'SUPPORT', 'SALES', 'TOOL', 'OTHER'];
+  // コンテンツ側に乗る費目以外はすべてここ。費目を増やしたら自動でこちらに入る
+  const kinds: CostKind[] = COST_KINDS.filter((k) => !CONTENT_KINDS.includes(k));
   const lines = kinds.map((k) => sumKind(ledger, k));
+
+  // 検索API利用料は台帳への手書きが無くても、実際の検索回数から出た費用を必ず乗せる
+  const searchYen = input.searchApiYen;
+  if (searchYen !== undefined && searchYen > 0) {
+    const i = lines.findIndex((l) => l.kind === 'SEARCH_API');
+    lines[i] = {
+      ...lines[i],
+      amountYen: (lines[i].amountYen ?? 0) + Math.round(searchYen),
+      entries: lines[i].entries + 1,
+    };
+  }
+
   const salesCost = sales?.totalCost ?? 0;
   if (salesCost > 0) {
     const i = lines.findIndex((l) => l.kind === 'SALES');
@@ -287,6 +392,7 @@ export function totalPnl(input: PnlInput = {}): TotalPnl {
     costYen: content.costYen + saas.costYen,
     profitYen: content.profitYen + saas.profitYen,
     missingCostKinds: missing,
+    labor: laborCost(ledger),
     note:
       missing.length === 0
         ? '全ての費目が記入済み'
@@ -342,8 +448,9 @@ export function pnlFromFiles(params: {
   contentRows?: ContentActual[];
   salesRows?: SalesActual[];
   mrrYen?: number;
+  searchApiYen?: number;
 } = {}): TotalPnl {
   const content = contentTotal(params.contentRows ?? readContentActuals());
   const sales = salesTotal(params.salesRows ?? readSalesActuals()) ?? undefined;
-  return totalPnl({ content, sales, mrrYen: params.mrrYen });
+  return totalPnl({ content, sales, mrrYen: params.mrrYen, searchApiYen: params.searchApiYen });
 }

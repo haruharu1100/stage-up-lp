@@ -1,6 +1,6 @@
 import { createClient, type Client, type InValue } from '@libsql/client';
 import { config, ensureDataDir } from '../env';
-import { SCHEMA } from './schema';
+import { ADDITIVE_COLUMNS, SCHEMA } from './schema';
 
 let client: Client | null = null;
 
@@ -15,6 +15,15 @@ export function db(): Client {
 export async function migrate(): Promise<void> {
   const c = db();
   for (const sql of SCHEMA) await c.execute(sql);
+  // 後から足した列。既にある場合はSQLiteがエラーを返すだけなので無視してよい。
+  // 既存データを作り直さないための追記専用の仕組み。
+  for (const sql of ADDITIVE_COLUMNS) {
+    try {
+      await c.execute(sql);
+    } catch {
+      /* 列が既にある場合。既存データには触らない */
+    }
+  }
 }
 
 export async function run(sql: string, args: InValue[] = []) {
