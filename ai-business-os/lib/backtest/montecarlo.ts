@@ -214,7 +214,7 @@ export function simulate(
  * 価格を変えて比較する。価格を上げれば成約率は下がり解約は増える、という関係を
  * 標準価格(49,800円)を基準にした固定の係数で表す。AIの気分で変えない。
  */
-function adjustForPrice(a: FunnelAssumption, monthlyPrice: number): FunnelAssumption {
+export function adjustForPrice(a: FunnelAssumption, monthlyPrice: number): FunnelAssumption {
   const ratio = monthlyPrice / 49800;
   // 価格が2倍になると成約率はおよそ7割、解約率はおよそ1.2倍という前提を置く
   const closeFactor = Math.pow(ratio, -0.45);
@@ -410,9 +410,13 @@ export function solveBreakEven(a: FunnelAssumption, runs = 400): BreakEven {
     true
   );
 
-  // 単価だけを上げたら黒字になるか（＝価格の問題かどうか）
+  /**
+   * 単価だけを上げたら黒字になるか（＝価格の問題かどうか）。
+   * 値上げしても契約数が変わらない前提で計算すると、ほぼ全案件が「値上げすれば黒字」になってしまう。
+   * 実際には値上げすると成約率が下がり解約率が上がるので、価格シナリオと同じ調整を必ず通す。
+   */
   const arpuFactor = bisect(
-    (f) => netOf({ ...a, monthlyPrice: a.monthlyPrice * f }),
+    (f) => netOf(adjustForPrice(a, a.monthlyPrice * f)),
     1,
     8,
     true
@@ -471,11 +475,23 @@ export function solveBreakEven(a: FunnelAssumption, runs = 400): BreakEven {
     );
   if (minArpu !== null && minArpu > currentArpu)
     parts.push(`単価を${currentArpu.toLocaleString()}円→${minArpu.toLocaleString()}円`);
+  // 見込み客を増やす／解約を減らす／原価を下げる も同じ土俵で並べる。
+  // 打ち手を3つしか出さないと「値上げしかない」ように見えてしまう
+  if (minLeads !== null && minLeads > a.leads)
+    parts.push(`見込み客を月${a.leads.toLocaleString()}件→${minLeads.toLocaleString()}件`);
+  if (maxChurnRate !== null && maxChurnRate < mid(a.churnRate))
+    parts.push(
+      `解約率を${Math.round(mid(a.churnRate) * 100)}%→${Math.round(maxChurnRate * 100)}%`
+    );
+  if (minGrossMarginRate !== null && minGrossMarginRate > currentGrossMarginRate)
+    parts.push(
+      `粗利益率を${Math.round(currentGrossMarginRate * 100)}%→${Math.round(minGrossMarginRate * 100)}%`
+    );
 
   const summary =
     parts.length > 0
       ? `${parts.join(' か ')} のいずれかで12ヶ月利益が黒字に届く`
-      : maxCac !== null || minCloseRate !== null || minArpu !== null
+      : maxCac !== null || minCloseRate !== null || minArpu !== null || minLeads !== null
         ? '現在の前提のままでも12ヶ月利益の中央値は黒字'
         : '1項目だけを動かしても黒字にならない。採算構造そのものを変える必要がある';
 
@@ -551,14 +567,20 @@ function classify(
     return { verdictClass: 'CONDITIONAL_PASS', whatMustChange: must };
   }
 
-  const cacFixable = be.maxCac !== null;
-  const priceFixable = be.minArpu !== null;
-
   if (must.length === 0) {
     return { verdictClass: 'FAIL', whatMustChange: ['1項目だけを動かしても黒字にならない'] };
   }
-  // 獲得費を下げるだけで黒字になるなら、事業ではなく売り方（チャネル）の問題
-  if (cacFixable) {
+
+  /**
+   * どこを直せば黒字になるかで、赤字の性質を分ける。
+   * 見込み客を増やすことも「集め方」の話なので、獲得費と同じくチャネルの問題として扱う。
+   * ここを価格の問題に寄せると「値上げしましょう」で終わってしまい、
+   * 実際の詰まり（集客が細い・成約率が低い）が隠れる。
+   */
+  const channelFixable = be.maxCac !== null || be.minLeads !== null;
+  const priceFixable = be.minArpu !== null;
+
+  if (channelFixable) {
     return { verdictClass: 'CHANNEL_PROBLEM', whatMustChange: must };
   }
   if (priceFixable) {

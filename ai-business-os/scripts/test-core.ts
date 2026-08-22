@@ -4,6 +4,7 @@ import { MONEY_AND_OUTBOUND_ACTIONS_IMPLEMENTED, OUTBOUND_FLAGS, config } from '
 import { gradeFromScore } from '../lib/score';
 import { stageFromHits, stageRatio } from '../lib/japan';
 import {
+  adjustForPrice,
   compareChannels,
   comparePrices,
   DEFAULT_ASSUMPTION,
@@ -301,6 +302,24 @@ add('獲得費だけが原因の案件は「いくらまで下げれば黒字か
   `現在${beCac.currentCac}円 → 必要${beCac.maxCac}円`);
 add('獲得費を下げても黒字にならない案件では、獲得費の上限をnullにする（下げれば直ると誤解させない）',
   be.maxCac === null || be.maxCac > 0);
+// 値上げすれば契約数は減る。それを無視すると、ほとんどの案件が「値上げすれば黒字」に見える。
+// 価格シナリオと同じ前提（値上げで成約率が下がり解約率が上がる）を通しているか確かめる。
+const naivePrice = (() => {
+  const a = DEFAULT_ASSUMPTION;
+  const withoutDrop = simulate({ ...a, monthlyPrice: a.monthlyPrice * 1.5 }, 300)
+    .netProfitYear1.median;
+  const withDrop = simulate(adjustForPrice(a, a.monthlyPrice * 1.5), 300).netProfitYear1.median;
+  return { withoutDrop, withDrop };
+})();
+add('値上げの逆算は「値上げすると契約数が減ること」を必ず織り込む',
+  naivePrice.withDrop < naivePrice.withoutDrop,
+  `契約減を無視 ${Math.round(naivePrice.withoutDrop)}円 / 織り込み ${Math.round(naivePrice.withDrop)}円`);
+add('黒字化の打ち手に「値上げ」以外の道も並ぶ',
+  be.summary.includes('見込み客') || be.summary.includes('獲得費') ||
+    be.summary.includes('成約率') || be.summary.includes('解約率'), be.summary);
+// 見込み客を増やせば黒字になるなら、それは商品ではなく集め方の話。必ず打ち手として見せる
+add('見込み客を増やせば黒字になる案件は、その件数を必ず打ち手として出す',
+  be.minLeads === null || be.summary.includes('見込み客'), be.summary);
 
 // --- AI補助レーティング ---
 const demoIdea: Idea = {
