@@ -191,26 +191,41 @@ test("1回引くと、残り口数・売上・残高・抽選記録が同時に�
   assert.equal(rec.balanceAfter, u1.points, "記録上の残高と、実際の残高が食い違っている");
 });
 
-test("現物のお届けが要る等級が出たら、必ず発送依頼が1件増える", () => {
-  /* 発送が要る等級（S・A・B）が出るまで引き続け、
-     出た瞬間に発送依頼が増えているかを見る */
+/**
+ * ★当たった時点では、まだ発送しないこと。
+ *
+ *   当たると「獲得商品」に1件入るだけです。
+ *   発送するか、ポイントに交換するかは、お客様が後から選びます。
+ *   ここで勝手に発送依頼を作ってしまうと、
+ *   ポイント交換を選んだお客様の分まで倉庫が動いてしまいます。
+ */
+test("現物のお届けが要る等級が出たら、獲得商品が1件増える（発送依頼はまだ増えない）", () => {
   let s = loggedIn();
   const id = livingGachaId(s);
   let found = false;
 
   for (let i = 0; i < 200 && !found; i++) {
+    const beforePrizes = s.prizes.length;
     const beforeOrders = s.orders.length;
     const next = reducer(s, { type: "DRAW", gachaId: id, key: `k${i}` });
     if (next.draws.length === s.draws.length) break; /* 引けなくなった */
     const rec = next.draws[next.draws.length - 1];
     if (["S", "A", "B"].includes(rec.grade)) {
       assert.equal(
+        next.prizes.length,
+        beforePrizes + 1,
+        `${rec.grade}賞が出たのに、獲得商品が増えていない`,
+      );
+      const added = next.prizes[0];
+      assert.equal(added.status, "UNCHOSEN", "当たった直後は「未選択」でなければならない");
+      assert.equal(
         next.orders.length,
-        beforeOrders + 1,
-        `${rec.grade}賞が出たのに、発送依頼が増えていない`,
+        beforeOrders,
+        "お客様がまだ選んでいないのに、発送依頼が作られている",
       );
       found = true;
     } else {
+      assert.equal(next.prizes.length, beforePrizes, "現物不要の等級で獲得商品が増えている");
       assert.equal(next.orders.length, beforeOrders, "現物不要の等級で発送依頼が増えている");
     }
     s = next;

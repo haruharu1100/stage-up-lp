@@ -98,10 +98,17 @@ function Scene({
       <group position={[L.pc[0], L.pc[1], L.pc[2]]} rotation={[0.045, L.rotY, 0]}>
         <Drift amount={0.05} speed={0.42}>
           <AdminLaptop tier={tier} width={L.pcW} onScreen={onScreen} />
+          {/* ★英語のままにしないこと。
+              この画面をご覧になるのは、ガチャを運営される方です。
+              「AI GACHA OS」と書いてあっても、
+              それが自分が毎日開く画面なのか、
+              お客様に見える画面なのかは分かりません。
+              左右の関係が伝わらないなら、3Dで見せている意味がありません */}
           <Label
-            title="AI GACHA OS"
+            title="運営が使う"
+            value="管理サイト"
             accent="#1B4BD8"
-            position={[-L.pcW / 2 + 1.05, -0.34, L.pcW / 3.6]}
+            position={[-L.pcW / 2 + 1.05, -0.42, L.pcW / 3.6]}
             scale={compact ? 0.88 : 0.96}
           />
         </Drift>
@@ -118,9 +125,10 @@ function Scene({
           <Drift amount={0.07} speed={0.5} phase={1.6}>
             <CustomerPhone tier={tier} width={1.16} />
             <Label
-              title="CUSTOMER"
+              title="お客様が使う"
+              value="ユーザー側"
               accent="#0891B2"
-              position={[0.1, -1.62, 0.1]}
+              position={[0.1, -1.7, 0.1]}
               scale={0.8}
             />
           </Drift>

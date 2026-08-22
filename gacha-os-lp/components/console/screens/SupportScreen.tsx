@@ -115,7 +115,15 @@ export default function SupportScreen({
                 <p className="mt-2 text-note leading-[1.9] text-slate2">{t.body}</p>
                 {t.reply && (
                   <div className="mt-3 rounded-lg border border-edge bg-paper px-3 py-2.5">
-                    <p className="text-note font-bold text-slate3">返信した内容</p>
+                    {/* ★「AIが答えた」のか「人が答えた」のかを、必ず出すこと。
+                        どれを自分で確認したのか分からなくなると、
+                        後から全部を読み直すことになります */}
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="text-note font-bold text-slate3">返信した内容</p>
+                      <Badge tone={t.replyBy === "HUMAN" ? "ok" : "blue"}>
+                        {t.replyBy === "HUMAN" ? "人が返信" : "AIが返信"}
+                      </Badge>
+                    </div>
                     <p className="mt-1 text-note leading-[1.9] text-slate2">{t.reply}</p>
                   </div>
                 )}

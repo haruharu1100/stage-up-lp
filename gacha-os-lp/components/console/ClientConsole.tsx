@@ -30,11 +30,33 @@
  *   4) データはブラウザの中だけに置くこと。
  *      サーバーには保存しません。ページを閉じれば消えます。
  *      誰かが触った跡が、次の人に見えてしまうのを防ぎます。
+ *
+ * ═══════════════════════════════════════════════
+ * ★「管理サイト」と「ユーザー側」は、同じ1つのデータを見ている
+ * ═══════════════════════════════════════════════
+ *
+ *   上の切り替えで、運営側の管理画面と、
+ *   お客様が実際に使う画面（ガチャを引く・当たった商品を選ぶ）を
+ *   行き来できます。
+ *
+ *   ★このとき、データを2つ持たないこと。
+ *     ここでは useReducer が1つしかありません。
+ *     お客様が発送を依頼すれば、切り替えた先の管理画面に、
+ *     その瞬間もう入っています。逆も同じです。
+ *
+ *     もし「お客様側の見せかけデータ」を別に持ってしまうと、
+ *     デモとしては動いて見えるのに、
+ *     いちばん大事な「本当につながっているのか」が証明できません。
+ *     それは、見せる価値がありません。
+ *
+ *   ★お客様側には、2段階認証をかけないこと。
+ *     あれは運営を守るための鍵です。
+ *     お客様は、ただガチャを引きに来ただけです。
  */
 
 "use client";
 
-import { useReducer, useState } from "react";
+import { useEffect, useReducer, useRef, useState } from "react";
 import { initialState, reducer } from "@/lib/console/state";
 import { Login, Mfa } from "./Gate";
 import Shell from "./Shell";
@@ -59,11 +81,139 @@ import CustomersScreen from "./screens/CustomersScreen";
 import ProductsScreen from "./screens/ProductsScreen";
 import MarketScreen from "./screens/MarketScreen";
 import AnalyticsScreen from "./screens/AnalyticsScreen";
+import MyPage from "./customer/MyPage";
+
+/** いま、どちら側を見ているか */
+type Side = "admin" | "customer";
 
 export default function ClientConsole() {
   const [s, dispatch] = useReducer(reducer, undefined, initialState);
   const [page, setPage] = useState<MenuKey>("dashboard");
+  const [side, setSide] = useState<Side>("admin");
 
+  /**
+   * 切り替え帯の高さを測って、下の画面に伝える。
+   *
+   * ★決め打ちの数値を書かないこと。
+   *   この帯は、画面の幅と文字の大きさで高さが変わります。
+   *   「だいたい80px」と書いた瞬間、どこかの端末で
+   *   下の見出しが帯に隠れて読めなくなります。
+   *   隠れているかどうかは、作った本人には気づけません。
+   */
+  const switchRef = useRef<HTMLDivElement>(null);
+  const [switchH, setSwitchH] = useState(0);
+
+  useEffect(() => {
+    const el = switchRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => setSwitchH(el.offsetHeight));
+    ro.observe(el);
+    setSwitchH(el.offsetHeight);
+    return () => ro.disconnect();
+  }, []);
+
+  return (
+    <div style={{ "--switch-h": `${switchH}px` } as React.CSSProperties}>
+      <SideSwitch ref={switchRef} side={side} onChange={setSide} />
+      {side === "customer" ? (
+        /* ★お客様側。ログインも2段階認証も要りません。
+           見ているデータは、管理側とまったく同じ1つです */
+        <div className="bg-[#F4F5F7] pt-4">
+          <MyPage s={s} dispatch={dispatch} />
+        </div>
+      ) : (
+        <AdminSide
+          s={s}
+          dispatch={dispatch}
+          page={page}
+          setPage={setPage}
+        />
+      )}
+    </div>
+  );
+}
+
+/**
+ * 上に出しっぱなしにする、左右の切り替え。
+ *
+ * ★どちらを見ているか、常に分かるようにすること。
+ *   運営の画面とお客様の画面は、見た目が似ていなくても、
+ *   説明しながら行き来していると、すぐに分からなくなります。
+ *   「いま自分はどちら側にいるのか」は、画面のいちばん上に出しておきます。
+ *
+ * ★「同じデータを見ています」と、必ず添えること。
+ *   これを書かないと、左右で別々のサンプルを見せているだけだと思われます。
+ *   このデモでいちばん見ていただきたいのは、そこではありません。
+ */
+function SideSwitch({
+  ref,
+  side,
+  onChange,
+}: {
+  ref: React.Ref<HTMLDivElement>;
+  side: Side;
+  onChange: (s: Side) => void;
+}) {
+  const tab = (v: Side, label: string, sub: string) => {
+    const on = side === v;
+    return (
+      <button
+        type="button"
+        onClick={() => onChange(v)}
+        aria-pressed={on}
+        className={[
+          "flex-1 rounded-xl px-3 py-2.5 text-left transition sm:px-4",
+          on
+            ? "bg-white text-[#0F1B33] shadow-sm"
+            : "text-white/70 hover:bg-white/10 hover:text-white",
+        ].join(" ")}
+      >
+        <span className="nb block text-[0.85rem] font-bold leading-tight">{label}</span>
+        <span
+          className={[
+            "mt-0.5 block text-[0.68rem] leading-tight",
+            on ? "text-[#5E636B]" : "text-white/50",
+          ].join(" ")}
+        >
+          {sub}
+        </span>
+      </button>
+    );
+  };
+
+  return (
+    <div ref={ref} className="sticky top-0 z-40 bg-[#0F1B33] px-3 py-2.5 shadow-md sm:px-4">
+      <div className="mx-auto flex w-full max-w-[1400px] flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
+        <div className="flex flex-1 gap-1.5 rounded-2xl bg-white/5 p-1.5">
+          {tab("admin", "管理サイト", "運営が毎日見る画面")}
+          {tab("customer", "ユーザー側", "実際に販売される画面")}
+        </div>
+        {/* ★ここに nb（折り返し禁止）を付けないこと。
+            短い見出しなら1行に保てますが、この長さの文に付けると
+            画面の右端を突き抜けて、最後まで読めなくなります */}
+        <p className="shrink-0 text-[0.68rem] leading-[1.7] text-white/55 sm:max-w-[19rem] sm:text-right">
+          左右は<span className="nb font-bold text-white/80">同じ1つのデータ</span>
+          を見ています。片方で操作すると、もう片方にすぐ反映されます。
+        </p>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * 運営側。ここだけは、ログインと2段階認証を必ず通します。
+ */
+function AdminSide({
+  s,
+  dispatch,
+  page,
+  setPage,
+}: {
+  s: ReturnType<typeof initialState>;
+  dispatch: React.Dispatch<Parameters<typeof reducer>[1]>;
+  page: MenuKey;
+  setPage: (k: MenuKey) => void;
+}) {
   /* ① まだ誰としてログインするかを選んでいない */
   if (!s.me) {
     return (

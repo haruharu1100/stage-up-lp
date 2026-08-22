@@ -76,6 +76,17 @@ export type AuditAction =
   | "FRAUD_REVIEW"
   | "FRAUD_BLOCK"
   | "SHIPPING_MARK"
+  /**
+   * お客様が、当たった景品について「発送」か「ポイント交換」かを選んだ記録。
+   *
+   * ★ポイント交換は、お金が動くのと同じ扱いにすること。
+   *   交換した瞬間に残高が増えます。運営から見れば、
+   *   ポイントを1件発行したのと変わりません。
+   *   だから管理者の操作と同じ鎖に、同じ厳しさで残します。
+   */
+  | "PRIZE_SHIP_REQUEST"
+  | "PRIZE_EXCHANGE"
+  | "USER_ASK"
   | "SUPPORT_REPLY"
   | "ROLE_CHANGE"
   | "SETTINGS_CHANGE"

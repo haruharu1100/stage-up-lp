@@ -189,7 +189,8 @@ function Scene({
         <Drift amount={0.05} speed={0.4}>
           <AdminLaptop tier={tier} width={L.pcW} />
           <Label
-            title="OPERATOR"
+            title="あなたが見る"
+            value="管理サイト"
             accent="#1B4BD8"
             dark
             position={[-L.pcW / 2 + 1.2, -0.34, L.pcW / 3.6]}
@@ -208,7 +209,8 @@ function Scene({
         <Drift amount={0.06} speed={0.34} phase={0.8} rotate={0}>
           <Core tier={tier} />
           <Label
-            title="AI GACHA OS"
+            title="動かしているもの"
+            value="AI GACHA OS"
             accent="#2E6BFF"
             dark
             /* 縦積みのときは真下にお客様のスマホが来るので、名前は左へ逃がす */
@@ -226,7 +228,8 @@ function Scene({
         <Drift amount={0.07} speed={0.48} phase={1.7}>
           <CustomerPhone tier={tier} width={L.phoneW} />
           <Label
-            title="CUSTOMER"
+            title="お客様が使う"
+            value="ユーザー側"
             accent="#0891B2"
             dark
             position={[0.1, -1.52, 0.1]}

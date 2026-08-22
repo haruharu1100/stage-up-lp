@@ -509,15 +509,39 @@ function labelTexture(
     '"Hiragino Sans","Noto Sans JP","Yu Gothic",system-ui,sans-serif';
   const MONOF = '"JetBrains Mono","SFMono-Regular",Menlo,monospace';
 
+  /**
+   * 日本語が混ざっていたら、日本語が読める書体に切り替える。
+   *
+   * ★等幅書体を、日本語にそのまま使わないこと。
+   *   JetBrains Mono には日本語の字がありません。
+   *   指定しても表示自体は出ますが、
+   *   ブラウザが勝手に別の書体で埋めるため、
+   *   端末によって字の形も幅も変わります。
+   *   幅が変わるということは、ラベルの箱から字がはみ出す端末がある、
+   *   ということです。作った本人の画面では絶対に起きません。
+   */
+  const hasJa = (t: string) => /[^ -ÿ]/.test(t);
+
+  /** 箱の幅（左の色帯と余白を引いた分）に収まるまで、字を小さくする */
+  const fitFont = (text: string, weight: number, size: number, family: string) => {
+    const max = W - 44 - 28;
+    let px = size;
+    for (; px > 16; px -= 1) {
+      c.font = `${weight} ${px}px ${family}`;
+      if (c.measureText(text).width <= max) break;
+    }
+    return px;
+  };
+
   if (value) {
-    c.font = `600 30px ${MONOF}`;
+    fitFont(title, 600, 30, hasJa(title) ? JPF : MONOF);
     c.fillStyle = dark ? "rgba(233,241,255,0.5)" : "rgba(99,112,138,0.95)";
     c.fillText(title, 44, 62);
-    c.font = `700 54px ${JPF}`;
+    fitFont(value, 700, 54, hasJa(value) ? JPF : MONOF);
     c.fillStyle = dark ? "#EAF1FF" : "#0B1220";
     c.fillText(value, 44, 126);
   } else {
-    c.font = `700 40px ${MONOF}`;
+    fitFont(title, 700, 40, hasJa(title) ? JPF : MONOF);
     c.fillStyle = dark ? "#EAF1FF" : "#0B1220";
     c.textBaseline = "middle";
     c.fillText(title, 44, H / 2 + 2);

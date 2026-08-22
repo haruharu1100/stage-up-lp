@@ -33,6 +33,7 @@ import { appendAudit, type AuditEntry, type AuditAction } from "./audit";
 import { assess, SIGNALS, type Assessment, type Hit, type SignalKey } from "./fraud";
 import { drawOnce, seedOf, type DrawRecord } from "./draw";
 import { buildSpec } from "./spec";
+import { aiAnswer } from "./support";
 import { backtestReport, designedRtp, type GachaSpec } from "@/lib/backtest";
 
 /* ══════════════════════════════════════════════
@@ -231,6 +232,14 @@ export type ConsoleGacha = {
   drawn?: Record<string, number>;
 };
 
+/** お届け先。デモなので、実在しない住所を入れてあります */
+export type Address = {
+  name: string;
+  zip: string;
+  addr: string;
+  tel: string;
+};
+
 export type ConsoleUser = {
   id: string;
   name: string;
@@ -240,6 +249,127 @@ export type ConsoleUser = {
   shipments: number;
   risk: Assessment;
   status: "ACTIVE" | "STEP_UP" | "REVIEW" | "SUSPENDED";
+  /** 登録済みのお届け先。発送を選んだときに、この内容を確認していただきます */
+  address?: Address;
+};
+
+/* ══════════════════════════════════════════════
+   獲得商品（当たった景品）
+   ══════════════════════════════════════════════ */
+
+/**
+ * 当たった景品が、いまどうなっているか。
+ *
+ *   UNCHOSEN       … まだ「発送」か「ポイント交換」かを選んでいない
+ *   SHIP_REQUESTED … 発送を選んだ（発送依頼が1件立っている）
+ *   EXCHANGED      … ポイントに交換した（残高が増えている）
+ *
+ * ★この3つは、行ったり戻ったりしないこと。
+ *   UNCHOSEN から片方へ進んだら、そこで確定です。
+ *   「交換したけどやっぱり現物がほしい」を許すと、
+ *   ポイントを使い切った後に現物も受け取れることになり、
+ *   1つの景品で二重に払うことになります。
+ */
+export type PrizeStatus = "UNCHOSEN" | "SHIP_REQUESTED" | "EXCHANGED";
+
+export const PRIZE_STATUS_LABEL: Record<PrizeStatus, string> = {
+  UNCHOSEN: "受け取り方法をお選びください",
+  SHIP_REQUESTED: "発送依頼済み",
+  EXCHANGED: "ポイント交換済み",
+};
+
+/**
+ * 獲得商品（1点）。
+ *
+ * ★当たった瞬間に発送依頼を立てないこと。
+ *   以前はここが無く、当選＝発送依頼でした。
+ *   実際のオンラインガチャでは、当たった景品を
+ *   「現物で受け取る」か「ポイントに換える」かはお客様が選びます。
+ *   勝手に発送してしまうと、要らない現物が届き、
+ *   ポイントに換えたかった方から必ず苦情になります。
+ */
+export type Prize = {
+  id: string;
+  userId: string;
+  userName: string;
+  gachaId: string;
+  gachaTitle: string;
+  /** 等級（S / A / B …） */
+  grade: string;
+  /** 景品の名前 */
+  name: string;
+  /** 景品の価値（円） */
+  value: number;
+  /** ポイントに交換した場合にお返しする額（pt） */
+  exchangePt: number;
+  wonAt: string;
+  status: PrizeStatus;
+  /** 発送を選んだときに立った発送依頼のID */
+  orderId?: string;
+  /** ポイントに交換した時刻 */
+  exchangedAt?: string;
+  /** どの1回の抽選で当たったか */
+  drawId?: string;
+  /**
+   * この商品について成立した操作の鍵。
+   *
+   * ★同じ鍵の依頼が2回届いても、2回は処理しないこと。
+   *   連打・再読み込み・通信のやり直しで、実際に2回届きます。
+   */
+  opKey?: string;
+};
+
+/* ══════════════════════════════════════════════
+   ポイント履歴（POINT LEDGER）
+   ══════════════════════════════════════════════ */
+
+/**
+ * ポイントが動いた理由。
+ *
+ * ★「調整」だけで済ませないこと。
+ *   後から「なぜ19,000ptなのか」を聞かれたとき、
+ *   全部が「調整」だと、誰にも答えられません。
+ */
+export type PointEntryKind =
+  | "OPENING"
+  | "CHARGE"
+  | "DRAW_SPEND"
+  | "DRAW_RETURN"
+  | "PRIZE_EXCHANGE"
+  | "ADMIN_ADJUST"
+  | "CAMPAIGN";
+
+export const POINT_KIND_LABEL: Record<PointEntryKind, string> = {
+  OPENING: "開始時の残高",
+  CHARGE: "入金",
+  DRAW_SPEND: "ガチャ利用",
+  DRAW_RETURN: "抽選結果のお返し",
+  PRIZE_EXCHANGE: "獲得商品をポイントに交換",
+  ADMIN_ADJUST: "運営による調整",
+  CAMPAIGN: "キャンペーン付与",
+};
+
+/**
+ * ポイントが動いた記録を、1件ずつ残したもの。
+ *
+ * ★残高そのものではなく、動きを積み上げて残高になること。
+ *   残高だけを持って上書きしていくと、
+ *   ずれたときに、どこでずれたのかが永久に分かりません。
+ *   ここでは動きを全部残し、合計が残高と一致することを
+ *   テストで機械的に確かめています（pointsReconcile）。
+ */
+export type PointEntry = {
+  id: string;
+  at: string;
+  userId: string;
+  kind: PointEntryKind;
+  /** 増えるなら正、減るなら負 */
+  delta: number;
+  /** この記録を反映した後の残高 */
+  balanceAfter: number;
+  memo: string;
+  /** 抽選ID・獲得商品ID・申請IDなど */
+  ref?: string;
 };
 
 export type Signup = {
@@ -252,17 +382,60 @@ export type Signup = {
   handled: boolean;
 };
 
+/**
+ * 発送の進み具合。
+ *
+ * ★お客様に「準備中」としか出さないこと。
+ *   どこまで進んでいるのかが分からないと、
+ *   同じ方から3日おきに同じ問い合わせが来ます。
+ *   1つ進むたびに名前が変わるようにしてあります。
+ */
+export type OrderStatus =
+  | "UNSHIPPED"
+  | "PREPARING"
+  | "SHIPPED"
+  | "IN_TRANSIT"
+  | "DELIVERED";
+
+/**
+ * まだ運営が手を動かす必要がある状態。
+ *
+ * ═══════════════════════════════════════════════
+ * ★これを「SHIPPED ではないもの」と書き直さないこと
+ * ═══════════════════════════════════════════════
+ *
+ *   配送中も配達完了も、「SHIPPED ではない」です。
+ *   だから o.status !== "SHIPPED" と書くと、
+ *   とっくにお客様の手元へ届いた依頼まで
+ *   「未発送」として数えてしまいます。
+ *
+ *   数えてしまうと、何が起きるか。
+ *   ダッシュボードの「未発送 6件」が、いつまでも0になりません。
+ *   運営は毎朝それを見て、発送画面を開いて、
+ *   そこには何も無い、という空振りを毎日繰り返します。
+ *   数日で「あの数字は当てにならない」と学習し、
+ *   本当に未発送が溜まった日も、誰も気づかなくなります。
+ *
+ *   だから「やることがある状態」を、ここで1回だけ名指しで決めて、
+ *   数える場所すべてが、この1つを見ます。
+ */
+export const ORDER_TODO: OrderStatus[] = ["UNSHIPPED", "PREPARING"];
+
 export type Order = {
   id: string;
   userId: string;
   userName: string;
   prize: string;
   requestedAt: string;
-  status: "UNSHIPPED" | "PREPARING" | "SHIPPED";
+  status: OrderStatus;
   carrier?: string;
   tracking?: string;
   /** 仕入れ先（景品マスターに登録された購入URL）。デモではダミー */
   buyUrl?: string;
+  /** どの獲得商品に対する発送依頼か */
+  prizeId?: string;
+  /** お届け先。お客様が発送を選んだときに確認した内容 */
+  address?: Address;
 };
 
 export type Ticket = {
@@ -276,8 +449,18 @@ export type Ticket = {
   /** AIが用意した下書き。送るかどうかは人が決める */
   aiDraft?: string;
   reply?: string;
+  /**
+   * その返信を書いたのが、AIなのか人なのか。
+   *
+   * ★お客様の画面には、必ずどちらかを出すこと。
+   *   人が確認したうえでの回答なのか、AIが記録から答えただけなのかで、
+   *   受け取る側の重みが変わります。区別せずに出さないこと。
+   */
+  replyBy?: "AI" | "HUMAN";
   /** AIが自分で答えずに人へ回した理由 */
   escalateReason?: string;
+  /** 二重登録を防ぐ鍵（同じ鍵の問い合わせは1件しか作らない） */
+  opKey?: string;
 };
 
 /* ══════════════════════════════════════════════
@@ -299,9 +482,42 @@ export type ConsoleState = {
   audit: AuditEntry[];
   /** 抽選の記録。お客様画面から引いた分が入る */
   draws: DrawRecord[];
-  /** 直近の操作結果。画面上部に出す */
-  flash: { kind: "ok" | "warn" | "error"; text: string } | null;
+  /**
+   * 当たった景品（獲得商品）。
+   *
+   * ★ユーザー側の画面と管理サイトで、別々のダミーを持たないこと。
+   *   両方ともこの1つを見ます。片方だけ更新される作りにすると、
+   *   「お客様の画面では発送依頼済みなのに、管理画面には来ていない」が起きます。
+   *   それは、デモでは気づけても本番では必ず事故になります。
+   */
+  prizes: Prize[];
+  /** ポイントが動いた記録。合計が users[].points と一致すること */
+  ledger: PointEntry[];
+  /**
+   * 直近の操作結果。画面上部に出す。
+   *
+   * ★to は「その文章が、どちら側に向けて書かれたものか」です。
+   *
+   *   運営向けの文には、担当者の名前と役割が入ります。
+   *   例：「運営 太郎（管理者（全権））としてログインしました。」
+   *   これがお客様の画面に出てしまうと、
+   *   お客様に運営の内部事情を見せることになります。
+   *   本番なら、そのまま個人情報の漏れです。
+   *   （実際に、切り替えた先のお客様画面に出ているのを撮影して気づきました）
+   *
+   *   だから、どちら側の操作で出た文なのかを必ず持たせます。
+   *   お客様の画面には to === "customer" のものだけを出します。
+   *   運営の画面は両方出します。お客様が何をしたかは、運営が知ってよいことです。
+   *
+   *   ★to が付いていないときは、お客様には出しません。
+   *     「分からないものは、お客様に見せない」側に倒します。
+   *     逆にしてはいけません。付け忘れが、そのまま漏れになります。
+   */
+  flash: { kind: "ok" | "warn" | "error"; text: string; to?: FlashTo } | null;
 };
+
+/** その知らせが、どちら側に向けて書かれたものか */
+export type FlashTo = "admin" | "customer";
 
 /**
  * お客様画面の確認で使う、デモのお客様。
@@ -380,11 +596,27 @@ export const DEMO_GACHAS: ConsoleGacha[] = [
   },
 ];
 
+/**
+ * デモのお届け先。
+ *
+ * ★実在の住所・電話番号を書かないこと。
+ *   郵便番号 000-0000 と 000-0000-0000 は、実在しない値です。
+ *   本物らしく見せるために実在の住所を借りると、
+ *   スクリーンショットが出回った時点で、その住所の方に迷惑がかかります。
+ */
+export const DEMO_ADDRESS: Address = {
+  name: "会員 8842 様",
+  zip: "000-0000",
+  addr: "デモ県デモ市デモ町1-2-3 デモマンション101（架空の住所です）",
+  tel: "000-0000-0000",
+};
+
 export const DEMO_USERS: ConsoleUser[] = [
   {
     id: "u_8842", name: "会員 8842", joinedAt: "2026-06-02",
     points: 12_500, spent: 84_300, shipments: 7,
     risk: assess([]), status: "ACTIVE",
+    address: DEMO_ADDRESS,
   },
   {
     id: "u_9105", name: "会員 9105", joinedAt: "2026-08-22",
@@ -447,10 +679,63 @@ export const DEMO_SIGNUPS: Signup[] = [
 ];
 
 export const DEMO_ORDERS: Order[] = [
-  { id: "o_5001", userId: "u_8842", userName: "会員 8842", prize: "S賞 相当（デモ景品A）", requestedAt: "2026-08-22 10:05", status: "UNSHIPPED", buyUrl: "#demo-purchase" },
+  { id: "o_5001", userId: "u_8842", userName: "会員 8842", prize: "S賞 相当（デモ景品A）", requestedAt: "2026-08-22 10:05", status: "UNSHIPPED", buyUrl: "#demo-purchase", prizeId: "pz_04", address: DEMO_ADDRESS },
   { id: "o_5002", userId: "u_7731", userName: "会員 7731", prize: "A賞 相当（デモ景品B）", requestedAt: "2026-08-22 09:51", status: "UNSHIPPED", buyUrl: "#demo-purchase" },
-  { id: "o_5003", userId: "u_8842", userName: "会員 8842", prize: "B賞 相当（デモ景品C）", requestedAt: "2026-08-21 18:22", status: "PREPARING", buyUrl: "#demo-purchase" },
+  { id: "o_5003", userId: "u_8842", userName: "会員 8842", prize: "B賞 相当（デモ景品C）", requestedAt: "2026-08-21 18:22", status: "PREPARING", buyUrl: "#demo-purchase", prizeId: "pz_05", address: DEMO_ADDRESS },
   { id: "o_5004", userId: "u_7731", userName: "会員 7731", prize: "C賞 相当（デモ景品D）", requestedAt: "2026-08-21 14:09", status: "SHIPPED", carrier: "デモ運輸", tracking: "DEMO-4821-0093" },
+  { id: "o_5005", userId: "u_8842", userName: "会員 8842", prize: "A賞 相当（デモ景品E）", requestedAt: "2026-08-19 16:40", status: "IN_TRANSIT", carrier: "デモ運輸", tracking: "DEMO-4819-0071", prizeId: "pz_06", address: DEMO_ADDRESS },
+  { id: "o_5006", userId: "u_8842", userName: "会員 8842", prize: "B賞 相当（デモ景品F）", requestedAt: "2026-08-15 11:02", status: "DELIVERED", carrier: "デモ運輸", tracking: "DEMO-4815-0044", prizeId: "pz_07", address: DEMO_ADDRESS },
+];
+
+/**
+ * 獲得商品のサンプル。
+ *
+ * ★全部を作り込まないこと。
+ *   実際にお客様が何十点も持っている状態を全部並べても、
+ *   触って確かめられるのは最初の数点だけです。
+ *   ここでは「3つの状態が全部そろっていること」を優先し、
+ *   受け取り方法を選べるものを3点、選び終わったものを4点だけ置いています。
+ */
+export const DEMO_PRIZES: Prize[] = [
+  /* ── まだ選んでいない（ここから発送 or ポイント交換ができる） ── */
+  { id: "pz_01", userId: "u_8842", userName: "会員 8842", gachaId: "g_101", gachaTitle: "トレカ プレミアム 500", grade: "S", name: "S賞 相当（デモ景品G）", value: 25_000, exchangePt: 25_000, wonAt: "2026-08-22 09:41", status: "UNCHOSEN" },
+  { id: "pz_02", userId: "u_8842", userName: "会員 8842", gachaId: "g_101", gachaTitle: "トレカ プレミアム 500", grade: "A", name: "A賞 相当（デモ景品H）", value: 6_500, exchangePt: 6_500, wonAt: "2026-08-22 09:38", status: "UNCHOSEN" },
+  { id: "pz_03", userId: "u_8842", userName: "会員 8842", gachaId: "g_102", gachaTitle: "スニーカー 1000", grade: "B", name: "B賞 相当（デモ景品I）", value: 2_400, exchangePt: 2_400, wonAt: "2026-08-21 20:15", status: "UNCHOSEN" },
+
+  /* ── 発送を選んだもの ── */
+  { id: "pz_04", userId: "u_8842", userName: "会員 8842", gachaId: "g_101", gachaTitle: "トレカ プレミアム 500", grade: "S", name: "S賞 相当（デモ景品A）", value: 25_000, exchangePt: 25_000, wonAt: "2026-08-22 10:03", status: "SHIP_REQUESTED", orderId: "o_5001" },
+  { id: "pz_05", userId: "u_8842", userName: "会員 8842", gachaId: "g_102", gachaTitle: "スニーカー 1000", grade: "B", name: "B賞 相当（デモ景品C）", value: 2_400, exchangePt: 2_400, wonAt: "2026-08-21 18:20", status: "SHIP_REQUESTED", orderId: "o_5003" },
+  { id: "pz_06", userId: "u_8842", userName: "会員 8842", gachaId: "g_102", gachaTitle: "スニーカー 1000", grade: "A", name: "A賞 相当（デモ景品E）", value: 6_500, exchangePt: 6_500, wonAt: "2026-08-19 16:38", status: "SHIP_REQUESTED", orderId: "o_5005" },
+  { id: "pz_07", userId: "u_8842", userName: "会員 8842", gachaId: "g_101", gachaTitle: "トレカ プレミアム 500", grade: "B", name: "B賞 相当（デモ景品F）", value: 2_400, exchangePt: 2_400, wonAt: "2026-08-15 11:00", status: "SHIP_REQUESTED", orderId: "o_5006" },
+
+  /* ── ポイントに交換したもの（もう発送はできない） ── */
+  { id: "pz_08", userId: "u_8842", userName: "会員 8842", gachaId: "g_101", gachaTitle: "トレカ プレミアム 500", grade: "B", name: "B賞 相当（デモ景品J）", value: 2_400, exchangePt: 2_400, wonAt: "2026-08-14 21:07", status: "EXCHANGED", exchangedAt: "2026-08-14 21:09" },
+];
+
+/**
+ * ポイント履歴のサンプル。
+ *
+ * ★合計が、必ず users[].points と一致すること。
+ *   会員 8842 の残高は 12,500pt なので、
+ *   下の delta を全部足すと 12,500 になります。
+ *   ここがずれたまま画面に出すと、
+ *   「履歴を見ても残高の説明がつかない」状態になります。
+ *   テスト（pointsReconcile）で機械的に確かめています。
+ */
+export const DEMO_LEDGER: PointEntry[] = [
+  { id: "pl_01", at: "2026-06-02 10:00", userId: "u_8842", kind: "OPENING", delta: 0, balanceAfter: 0, memo: "会員登録" },
+  { id: "pl_02", at: "2026-08-14 20:55", userId: "u_8842", kind: "CHARGE", delta: 20_000, balanceAfter: 20_000, memo: "入金（デモ）" },
+  { id: "pl_03", at: "2026-08-14 21:02", userId: "u_8842", kind: "DRAW_SPEND", delta: -500, balanceAfter: 19_500, memo: "トレカ プレミアム 500 を1回" },
+  { id: "pl_04", at: "2026-08-14 21:09", userId: "u_8842", kind: "PRIZE_EXCHANGE", delta: 2_400, balanceAfter: 21_900, memo: "B賞 相当（デモ景品J）をポイントに交換", ref: "pz_08" },
+  { id: "pl_05", at: "2026-08-15 10:58", userId: "u_8842", kind: "DRAW_SPEND", delta: -500, balanceAfter: 21_400, memo: "トレカ プレミアム 500 を1回" },
+  { id: "pl_06", at: "2026-08-19 16:36", userId: "u_8842", kind: "DRAW_SPEND", delta: -1_000, balanceAfter: 20_400, memo: "スニーカー 1000 を1回" },
+  { id: "pl_07", at: "2026-08-21 18:18", userId: "u_8842", kind: "DRAW_SPEND", delta: -1_000, balanceAfter: 19_400, memo: "スニーカー 1000 を1回" },
+  { id: "pl_08", at: "2026-08-21 20:13", userId: "u_8842", kind: "DRAW_SPEND", delta: -1_000, balanceAfter: 18_400, memo: "スニーカー 1000 を1回" },
+  { id: "pl_09", at: "2026-08-22 09:36", userId: "u_8842", kind: "DRAW_SPEND", delta: -500, balanceAfter: 17_900, memo: "トレカ プレミアム 500 を1回" },
+  { id: "pl_10", at: "2026-08-22 09:39", userId: "u_8842", kind: "DRAW_SPEND", delta: -500, balanceAfter: 17_400, memo: "トレカ プレミアム 500 を1回" },
+  { id: "pl_11", at: "2026-08-22 10:01", userId: "u_8842", kind: "DRAW_SPEND", delta: -500, balanceAfter: 16_900, memo: "トレカ プレミアム 500 を1回" },
+  { id: "pl_12", at: "2026-08-22 10:04", userId: "u_8842", kind: "DRAW_RETURN", delta: 50, balanceAfter: 16_950, memo: "はずれ（参加ポイント）" },
+  { id: "pl_13", at: "2026-08-22 10:20", userId: "u_8842", kind: "ADMIN_ADJUST", delta: -4_450, balanceAfter: 12_500, memo: "誤付与分の取り消し（運営による調整）" },
 ];
 
 export const DEMO_TICKETS: Ticket[] = [
@@ -493,8 +778,78 @@ export function initialState(): ConsoleState {
     tickets: DEMO_TICKETS.map((t) => ({ ...t })),
     audit: [],
     draws: [],
+    prizes: DEMO_PRIZES.map((p) => ({ ...p })),
+    ledger: DEMO_LEDGER.map((e) => ({ ...e })),
     flash: null,
   };
+}
+
+/* ══════════════════════════════════════════════
+   ポイントの整合性
+   ══════════════════════════════════════════════ */
+
+/** 台帳から計算した、その会員の残高 */
+export function ledgerBalance(s: ConsoleState, userId: string): number {
+  return s.ledger
+    .filter((e) => e.userId === userId)
+    .reduce((acc, e) => acc + e.delta, 0);
+}
+
+/**
+ * 会員ごとに「残高」と「台帳の合計」が合っているかを調べる。
+ *
+ * ★合わない状態を、画面で黙って隠さないこと。
+ *   合わないということは、どこかで残高だけを動かして
+ *   記録を残していないということです。
+ *   それは、後から誰も説明できないお金です。
+ *   だから画面にも出し、テストでも落とします。
+ */
+export function pointsReconcile(
+  s: ConsoleState,
+): { userId: string; name: string; wallet: number; ledger: number; ok: boolean }[] {
+  return s.users
+    .filter((u) => s.ledger.some((e) => e.userId === u.id))
+    .map((u) => {
+      const led = ledgerBalance(s, u.id);
+      return {
+        userId: u.id,
+        name: u.name,
+        wallet: u.points,
+        ledger: led,
+        ok: led === u.points,
+      };
+    });
+}
+
+/**
+ * ポイント履歴を1件足す（残高は、直前の残高から積み上げる）。
+ *
+ * ★状態そのものではなく「台帳の配列」を受け取ること。
+ *   1回の操作で2件以上積むことがあるからです。
+ *   （例：1回引くと「利用 −500pt」と「お返し +50pt」の2件が同時に出ます）
+ *   状態を受け取る形にすると、2件目が1件目を見ないまま計算してしまい、
+ *   balanceAfter がずれます。
+ */
+function addLedger(
+  ledger: PointEntry[],
+  e: { userId: string; kind: PointEntryKind; delta: number; memo: string; ref?: string },
+): PointEntry[] {
+  const before = ledger
+    .filter((x) => x.userId === e.userId)
+    .reduce((acc, x) => acc + x.delta, 0);
+  return [
+    ...ledger,
+    {
+      id: `pl_${String(ledger.length + 1).padStart(2, "0")}`,
+      at: NOW,
+      userId: e.userId,
+      kind: e.kind,
+      delta: e.delta,
+      balanceAfter: before + e.delta,
+      memo: e.memo,
+      ref: e.ref,
+    },
+  ];
 }
 
 /* ══════════════════════════════════════════════
@@ -534,6 +889,27 @@ export type ConsoleAction =
    * 同じ鍵で2回届いても、抽選は1回しか成立しません。
    */
   | { type: "DRAW"; gachaId: string; key: string }
+  /**
+   * 当たった景品を「現物で受け取る」。
+   *
+   * ★key は二重処理を防ぐ鍵です。DRAW と同じ考え方です。
+   *   連打・再読み込み・通信のやり直しで、同じ依頼が2回届きます。
+   * ★address は、その場で確認していただいた内容をそのまま持たせます。
+   *   後から会員情報を変えられても、この依頼が
+   *   「どこ宛てに出されたものか」は動かないようにするためです。
+   */
+  | { type: "PRIZE_SHIP_REQUEST"; prizeId: string; key: string; address: Address }
+  /**
+   * 当たった景品を「ポイントに換える」。
+   *
+   * ★これは金銭相当の処理です。
+   *   押した瞬間に残高が増えます。だから
+   *   ①同じ商品で2回できないこと ②発送を選んだ商品ではできないこと
+   *   ③交換前後の残高ごと監査ログに残ること、を必ず守ります。
+   */
+  | { type: "PRIZE_EXCHANGE"; prizeId: string; key: string }
+  /** お客様が問い合わせを送る。AIが答えるか、人に回すかはここで決まる */
+  | { type: "USER_ASK"; text: string; key: string }
   | { type: "SUPPORT_REPLY"; ticketId: string; text: string }
   | { type: "CLEAR_FLASH" }
   | { type: "RESET" }
@@ -572,27 +948,85 @@ function log(
   action: AuditAction,
   target: string,
   summary: string,
-  extra: { before?: string; after?: string; reason?: string } = {},
+  extra: {
+    before?: string;
+    after?: string;
+    reason?: string;
+    /**
+     * 操作したのが管理者ではなく、お客様である場合。
+     *
+     * ★お客様の操作も、同じ1本の鎖に残すこと。
+     *   ポイント交換は、運営がポイントを発行したのと同じだけお金が動きます。
+     *   「お客様がやったこと」を別の場所に分けて置くと、
+     *   後から時系列で追えなくなり、突き合わせに何時間もかかります。
+     */
+    actor?: { id: string; name: string; role: string };
+  } = {},
 ): AuditEntry[] {
+  const { actor, ...rest } = extra;
   const me = s.me;
   return appendAudit(s.audit, {
     at: NOW,
-    actorId: me?.id ?? "-",
-    actorName: me?.name ?? "-",
-    actorRole: me?.role ?? "-",
+    actorId: actor?.id ?? me?.id ?? "-",
+    actorName: actor?.name ?? me?.name ?? "-",
+    actorRole: actor?.role ?? me?.role ?? "-",
     action,
     target,
     summary,
-    ...extra,
+    ...rest,
   });
 }
+
+/** お客様の操作を監査ログに残すときの「誰が」 */
+const asCustomer = (u: ConsoleUser) => ({
+  id: u.id,
+  name: u.name,
+  role: "お客様",
+});
 
 const deny = (s: ConsoleState, text: string): ConsoleState => ({
   ...s,
   flash: { kind: "error", text },
 });
 
+/**
+ * お客様が自分で行う操作。
+ *
+ * ★ここに載せる基準は「お客様の画面から押せるか」だけです。
+ *   運営がお客様の代わりに行う操作（ポイントの調整など）は入りません。
+ *   あれは運営の操作なので、文面も運営に向けて書かれています。
+ */
+/* ★ここの型を string にしないこと。
+   操作の名前を打ち間違えても気づけなくなります。
+   ConsoleAction["type"] にしておけば、存在しない名前は書けません */
+const CUSTOMER_ACTIONS: ReadonlySet<ConsoleAction["type"]> = new Set<
+  ConsoleAction["type"]
+>([
+  "DRAW",
+  "PRIZE_SHIP_REQUEST",
+  "PRIZE_EXCHANGE",
+  "USER_ASK",
+]);
+
+/**
+ * 知らせに「どちら側の操作で出たか」を付ける。
+ *
+ * ★印を付ける場所を1か所にすること。
+ *   知らせを作っている場所は、この中に30か所近くあります。
+ *   そこへ1つずつ手で書き足すと、必ず書き忘れが出ます。
+ *   書き忘れた1か所が、お客様に運営の名前を見せます。
+ *   だから、出口でまとめて押します。ここを通らない知らせはありません。
+ */
 export function reducer(s: ConsoleState, a: ConsoleAction): ConsoleState {
+  const next = core(s, a);
+  if (!next.flash || next.flash === s.flash) return next;
+  return {
+    ...next,
+    flash: { ...next.flash, to: CUSTOMER_ACTIONS.has(a.type) ? "customer" : "admin" },
+  };
+}
+
+function core(s: ConsoleState, a: ConsoleAction): ConsoleState {
   switch (a.type) {
     case "LOGIN": {
       const me = s.admins.find((x) => x.id === a.adminId);
@@ -846,6 +1280,14 @@ export function reducer(s: ConsoleState, a: ConsoleAction): ConsoleState {
         return {
           ...s,
           users: s.users.map((x) => (x.id === u.id ? { ...x, points: after } : x)),
+          /* 運営がポイントを動かしたときも、必ずお客様の履歴に出すこと。
+             履歴に出ない増減があると、お客様から見て残高の説明がつきません */
+          ledger: addLedger(s.ledger, {
+            userId: u.id,
+            kind: "ADMIN_ADJUST",
+            delta: a.delta,
+            memo: `運営による調整：${a.reason}`,
+          }),
           pointRequests: [
             ...s.pointRequests,
             { ...req, status: "APPLIED", balanceAfter: after },
@@ -888,6 +1330,12 @@ export function reducer(s: ConsoleState, a: ConsoleAction): ConsoleState {
       return {
         ...s,
         users: s.users.map((x) => (x.id === u.id ? { ...x, points: after } : x)),
+        ledger: addLedger(s.ledger, {
+          userId: u.id,
+          kind: "ADMIN_ADJUST",
+          delta: req.delta,
+          memo: `運営による調整：${req.reason}`,
+        }),
         pointRequests: s.pointRequests.map((x) =>
           x.id === req.id
             ? {
@@ -1066,20 +1514,51 @@ export function reducer(s: ConsoleState, a: ConsoleAction): ConsoleState {
         nth,
       };
 
-      const orders: Order[] = out.needsShipping
+      /* ★当たっても、この時点では発送しないこと。
+         現物が要る等級（S・A・B）は「獲得商品」に入るだけです。
+         発送するか、ポイントに交換するかは、お客様が後から選びます。
+         ここで勝手に発送依頼を作ると、
+         ポイント交換を選んだお客様の分まで倉庫が動いてしまいます。 */
+      const prizes: Prize[] = out.needsShipping
         ? [
             {
-              id: `o_${5000 + s.orders.length + 1}`,
+              id: `pz_${String(s.prizes.length + 1).padStart(2, "0")}`,
               userId: u.id,
               userName: u.name,
-              prize: `${out.grade}賞 ${out.name}`,
-              requestedAt: NOW,
-              status: "UNSHIPPED",
-              buyUrl: "#demo-purchase",
+              gachaId: g.id,
+              gachaTitle: g.title,
+              grade: out.grade,
+              name: out.name,
+              value: out.value,
+              /* 交換ポイントは景品の価値と同じ（1円 = 1pt）。
+                 デモなので割引はしていません。実物では等級ごとに率を変えられます */
+              exchangePt: out.value,
+              wonAt: NOW,
+              status: "UNCHOSEN",
+              drawId: record.id,
             },
-            ...s.orders,
+            ...s.prizes,
           ]
-        : s.orders;
+        : s.prizes;
+
+      /* ポイントの動きは、必ず台帳に残すこと。
+         残高だけ書き換えると、後から「なぜこの残高なのか」を誰も説明できません */
+      let ledger = addLedger(s.ledger, {
+        userId: u.id,
+        kind: "DRAW_SPEND",
+        delta: -g.price,
+        memo: `${g.title} を1回`,
+        ref: record.id,
+      });
+      if (out.points > 0) {
+        ledger = addLedger(ledger, {
+          userId: u.id,
+          kind: "DRAW_RETURN",
+          delta: out.points,
+          memo: out.grade === "-" ? "はずれ（参加ポイント）" : `${out.grade}賞（ポイントでお返し）`,
+          ref: record.id,
+        });
+      }
 
       return {
         ...s,
@@ -1100,14 +1579,275 @@ export function reducer(s: ConsoleState, a: ConsoleAction): ConsoleState {
               },
         ),
         users: s.users.map((x) => (x.id === u.id ? { ...x, points: balanceAfter, spent: x.spent + g.price } : x)),
-        orders,
+        prizes,
+        ledger,
         draws: [...s.draws, record],
         flash: {
           kind: out.needsShipping ? "ok" : "warn",
           text: out.needsShipping
-            ? `${out.grade}賞（${out.value.toLocaleString()}円相当）が出ました。発送依頼が1件増えています。`
+            ? `${out.grade}賞（${out.value.toLocaleString()}円相当）が出ました。` +
+              `獲得商品に入っています。発送するか、ポイントに交換するかをお選びください。`
             : `${out.grade === "-" ? "はずれ" : `${out.grade}賞`}でした。${out.points.toLocaleString()}pt をお返ししました。`,
         },
+      };
+    }
+
+    /**
+     * お客様が、当たった商品を「発送する」を選んだ。
+     *
+     * ═══════════════════════════════════════════════
+     * ★1つの商品は、一生に一度しか処理できないこと
+     * ═══════════════════════════════════════════════
+     *
+     *   発送依頼を出したら、その商品はもうポイントに交換できません。
+     *   ポイントに交換したら、その商品はもう発送できません。
+     *   どちらも「現物を1つ渡す」か「ポイントを1つ発行する」かなので、
+     *   両方できてしまうと、同じ景品で二重に受け取れてしまいます。
+     *
+     *   だから守り方を2つ重ねています。
+     *
+     *     1) 状態で守る … UNCHOSEN でなければ、何もしない
+     *     2) 鍵で守る   … 同じ opKey の依頼は、2回目以降を成立させない
+     *
+     *   1) だけでは足りません。ボタンを2回押したとき、
+     *   1回目の結果が返る前に2回目が届くことがあるからです。
+     *   画面でボタンを消すだけでは防げません。
+     *   ★この判定は必ず「受け取った側」で行うこと。画面の側では守れません。
+     */
+    case "PRIZE_SHIP_REQUEST": {
+      /* 同じ鍵で、もう処理が済んでいないか（二重送信・再読み込み・通信の再送） */
+      const done = s.prizes.find((p) => p.opKey === a.key);
+      if (done) {
+        return {
+          ...s,
+          flash: {
+            kind: "warn",
+            text:
+              "同じ依頼をもう一度受け取りましたが、二重には処理していません。" +
+              `「${done.name}」は発送依頼済みのままです。`,
+          },
+        };
+      }
+
+      const p = s.prizes.find((x) => x.id === a.prizeId);
+      if (!p) return deny(s, "その商品が見つかりません。");
+      if (p.status === "EXCHANGED") {
+        return deny(
+          s,
+          `「${p.name}」は ${p.exchangedAt ?? ""} にポイントへ交換済みのため、発送はできません。`,
+        );
+      }
+      if (p.status === "SHIP_REQUESTED") {
+        return deny(s, `「${p.name}」はすでに発送依頼済みです。二重には受け付けません。`);
+      }
+
+      const u = s.users.find((x) => x.id === p.userId);
+      if (!u) return s;
+
+      const order: Order = {
+        id: `o_${5000 + s.orders.length + 1}`,
+        userId: p.userId,
+        userName: p.userName,
+        prize: `${p.grade}賞 ${p.name}`,
+        requestedAt: NOW,
+        status: "UNSHIPPED",
+        prizeId: p.id,
+        /* ★住所は、依頼した時点のものを写して持つこと。
+           会員情報の住所を後から書き換えても、
+           すでに出した伝票の宛先は変わってはいけません */
+        address: { ...a.address },
+        buyUrl: "#demo-purchase",
+      };
+
+      return {
+        ...s,
+        orders: [order, ...s.orders],
+        prizes: s.prizes.map((x) =>
+          x.id === p.id
+            ? { ...x, status: "SHIP_REQUESTED", orderId: order.id, opKey: a.key }
+            : x,
+        ),
+        users: s.users.map((x) =>
+          x.id === u.id ? { ...x, address: { ...a.address } } : x,
+        ),
+        audit: log(
+          s,
+          "PRIZE_SHIP_REQUEST",
+          p.id,
+          `${p.userName} が「${p.name}」の発送を依頼（伝票 ${order.id}）`,
+          {
+            before: PRIZE_STATUS_LABEL[p.status],
+            after: PRIZE_STATUS_LABEL.SHIP_REQUESTED,
+            reason: `お届け先 ${a.address.zip} / ${a.address.name}（鍵 ${a.key}）`,
+            actor: asCustomer(u),
+          },
+        ),
+        flash: {
+          kind: "ok",
+          text:
+            `「${p.name}」の発送を承りました。管理サイトの未発送が1件増えています。` +
+            "（デモのため、実際の配送は行いません）",
+        },
+      };
+    }
+
+    /**
+     * お客様が、当たった商品を「ポイントに交換する」を選んだ。
+     *
+     * ★これは、お金が動くのと同じ処理です。
+     *   交換した瞬間に残高が増えます。運営から見れば、
+     *   ポイントを1件発行したのと変わりません。
+     *   だから抽選と同じ厳しさで、
+     *   二重処理の防止・台帳への記帳・監査ログを全部そろえます。
+     *
+     * ★監査ログに残すもの（後から1件で説明できること）
+     *   誰が / どの商品を / 交換前の状態 / 交換後の状態 /
+     *   何pt / 交換前の残高 / 交換後の残高 / 二重処理防止の鍵 / いつ
+     */
+    case "PRIZE_EXCHANGE": {
+      const done = s.prizes.find((p) => p.opKey === a.key);
+      if (done) {
+        return {
+          ...s,
+          flash: {
+            kind: "warn",
+            text:
+              "同じ依頼をもう一度受け取りましたが、二重には交換していません。" +
+              `「${done.name}」は1回だけ交換されています。`,
+          },
+        };
+      }
+
+      const p = s.prizes.find((x) => x.id === a.prizeId);
+      if (!p) return deny(s, "その商品が見つかりません。");
+      if (p.status === "SHIP_REQUESTED") {
+        return deny(
+          s,
+          `「${p.name}」はすでに発送依頼済みのため、ポイントには交換できません。` +
+            "取り消しをご希望の場合は、お問い合わせからご連絡ください。",
+        );
+      }
+      if (p.status === "EXCHANGED") {
+        return deny(s, `「${p.name}」はすでにポイントへ交換済みです。二重には交換しません。`);
+      }
+
+      const u = s.users.find((x) => x.id === p.userId);
+      if (!u) return s;
+
+      const balanceBefore = u.points;
+      const balanceAfter = balanceBefore + p.exchangePt;
+
+      return {
+        ...s,
+        users: s.users.map((x) => (x.id === u.id ? { ...x, points: balanceAfter } : x)),
+        prizes: s.prizes.map((x) =>
+          x.id === p.id
+            ? { ...x, status: "EXCHANGED", exchangedAt: NOW, opKey: a.key }
+            : x,
+        ),
+        ledger: addLedger(s.ledger, {
+          userId: u.id,
+          kind: "PRIZE_EXCHANGE",
+          delta: p.exchangePt,
+          memo: `${p.name} をポイントに交換`,
+          ref: p.id,
+        }),
+        audit: log(
+          s,
+          "PRIZE_EXCHANGE",
+          p.id,
+          `${p.userName} が「${p.name}」を ${p.exchangePt.toLocaleString()}pt に交換`,
+          {
+            before: `${PRIZE_STATUS_LABEL[p.status]} / 残高 ${balanceBefore.toLocaleString()}pt`,
+            after: `${PRIZE_STATUS_LABEL.EXCHANGED} / 残高 ${balanceAfter.toLocaleString()}pt`,
+            reason: `交換 ${p.exchangePt.toLocaleString()}pt（鍵 ${a.key}）`,
+            actor: asCustomer(u),
+          },
+        ),
+        flash: {
+          kind: "ok",
+          text:
+            `${p.exchangePt.toLocaleString()}pt をお渡ししました。` +
+            `残高は ${balanceAfter.toLocaleString()}pt です。` +
+            `「${p.name}」は交換済みのため、発送はできません。`,
+        },
+      };
+    }
+
+    /**
+     * お客様が問い合わせを送った。AIがその場で答えるか、人に回す。
+     *
+     * ★AIが答えられるのは、記録を読めば答えが1つに決まることだけです。
+     *   判断が要るものは、下書きだけ作って人に回します。
+     *   下書きのまま自動で送ることはありません（lib/console/support.ts）。
+     */
+    case "USER_ASK": {
+      const already = s.tickets.find((t) => t.opKey === a.key);
+      if (already) {
+        return {
+          ...s,
+          flash: {
+            kind: "warn",
+            text: "同じお問い合わせをもう一度受け取りましたが、二重には登録していません。",
+          },
+        };
+      }
+
+      const u = s.users.find((x) => x.id === PREVIEW_USER_ID);
+      if (!u) return s;
+
+      const ans = aiAnswer(a.text, {
+        userName: u.name,
+        balance: u.points,
+        orders: s.orders.filter((o) => o.userId === u.id),
+        prizes: s.prizes.filter((p) => p.userId === u.id),
+        ledger: s.ledger.filter((e) => e.userId === u.id),
+      });
+
+      const subject = a.text.trim().slice(0, 24) || "お問い合わせ";
+      const base = {
+        id: `t_${s.tickets.length + 1}`,
+        userId: u.id,
+        userName: u.name,
+        subject,
+        body: a.text.trim(),
+        at: NOW,
+        opKey: a.key,
+      };
+
+      const ticket: Ticket =
+        ans.kind === "ANSWERED"
+          ? { ...base, status: "AI_ANSWERED", reply: ans.text, replyBy: "AI" }
+          : {
+              ...base,
+              status: "HUMAN_REVIEW",
+              escalateReason: ans.reason,
+              aiDraft: ans.draft,
+            };
+
+      return {
+        ...s,
+        tickets: [ticket, ...s.tickets],
+        audit: log(
+          s,
+          "USER_ASK",
+          ticket.id,
+          `${u.name} からお問い合わせ「${subject}」`,
+          {
+            after: ans.kind === "ANSWERED" ? "AIが回答" : "人へ引き継ぎ",
+            reason: ans.kind === "ANSWERED" ? "記録から答えが決まる内容" : ans.reason,
+            actor: asCustomer(u),
+          },
+        ),
+        flash:
+          ans.kind === "ANSWERED"
+            ? { kind: "ok", text: "AIがその場でお答えしました。" }
+            : {
+                kind: "warn",
+                text:
+                  "この内容はAIが判断せず、運営者へ引き継ぎました。" +
+                  "管理サイトの問い合わせ画面に「要確認」として届いています。",
+              },
       };
     }
 
@@ -1120,7 +1860,9 @@ export function reducer(s: ConsoleState, a: ConsoleAction): ConsoleState {
       return {
         ...s,
         tickets: s.tickets.map((x) =>
-          x.id === a.ticketId ? { ...x, status: "DONE", reply: a.text } : x,
+          x.id === a.ticketId
+            ? { ...x, status: "DONE", reply: a.text, replyBy: "HUMAN" }
+            : x,
         ),
         audit: log(s, "SUPPORT_REPLY", t.id, `${t.userName} の「${t.subject}」に返信`),
         flash: { kind: "ok", text: "返信しました。お客様の画面に届いています（デモのため実際には送信していません）。" },
@@ -1200,8 +1942,13 @@ export function todayTodos(s: ConsoleState): TodoItem[] {
   const approve = s.pointRequests.filter((r) => r.status === "PENDING").length;
   if (approve > 0) out.push({ urgency: "MUST", label: "承認待ちのポイント変更", count: approve, to: "points" });
 
-  const unship = s.orders.filter((o) => o.status !== "SHIPPED").length;
+  const unship = s.orders.filter((o) => ORDER_TODO.includes(o.status)).length;
   if (unship > 0) out.push({ urgency: "SHOULD", label: "未発送", count: unship, to: "shipping" });
+
+  /* ★お客様が受け取り方法を選ぶのを待っている商品は、
+     運営の「やること」ではありません。ここには入れません。
+     入れてしまうと、運営が何もできない件数が毎日残り続け、
+     やることの一覧そのものが信用されなくなります */
 
   const stepUp = s.signups.filter((x) => !x.handled && x.risk.level === "MEDIUM").length;
   if (stepUp > 0) out.push({ urgency: "SHOULD", label: "追加認証を求めた登録", count: stepUp, to: "fraud" });
@@ -1219,9 +1966,11 @@ export function summary(s: ConsoleState) {
     users: 2_847,
     publishedCount: published.length,
     rtpAlerts: published.filter((g) => g.realRtp >= 105 || g.marketRtp >= 110).length,
-    unshipped: s.orders.filter((o) => o.status !== "SHIPPED").length,
+    unshipped: s.orders.filter((o) => ORDER_TODO.includes(o.status)).length,
     tickets: s.tickets.filter((t) => t.status === "HUMAN_REVIEW").length,
     fraudReview: s.signups.filter((x) => !x.handled && x.risk.level !== "LOW").length,
+    /* お客様が、まだ受け取り方法を選んでいない商品 */
+    unchosenPrizes: s.prizes.filter((p) => p.status === "UNCHOSEN").length,
   };
 }
 

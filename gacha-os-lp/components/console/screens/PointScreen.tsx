@@ -34,8 +34,9 @@ import {
   approversOtherThan,
   can,
   canApprove,
+  pointsReconcile,
 } from "@/lib/console/state";
-import { Badge, Btn, Card, Field, KV, WhatIsThis, inputClass } from "../ui";
+import { Badge, Btn, Card, Field, KV, Stat, WhatIsThis, inputClass } from "../ui";
 
 export default function PointScreen({
   s,
@@ -67,6 +68,8 @@ export default function PointScreen({
         <strong className="font-bold text-slate">別の管理者の承認</strong>
         がないと反映されません。
       </WhatIsThis>
+
+      <Reconcile s={s} />
 
       {/* ── 申請する ── */}
       <Card title="ポイントを変更する" note="お詫び・調査結果の反映・入力ミスの訂正など。">
@@ -278,5 +281,112 @@ export default function PointScreen({
         )}
       </Card>
     </>
+  );
+}
+
+/* ══════════════════════════════════════════════
+   ポイントが合っているかの点検
+   ══════════════════════════════════════════════ */
+
+/**
+ * 会員ごとに「いまの残高」と「ポイント履歴の合計」を突き合わせる。
+ *
+ * ═══════════════════════════════════════════════
+ * ★なぜ、この画面のいちばん上に置くのか
+ * ═══════════════════════════════════════════════
+ *
+ *   ポイントは、お金と同じものです。
+ *   お客様がガチャを引けば減り、商品をポイントに交換すれば増え、
+ *   運営が調整すれば動きます。動く場所が多いということは、
+ *   どこか1か所でも記録を書き忘れれば、静かにずれるということです。
+ *
+ *   ずれは、音を立てません。
+ *   画面には残高がそのまま出るので、見た目は何ともありません。
+ *   気づくのは、たいてい月末に集計が合わなくなったときで、
+ *   そこから「いつからずれていたのか」を探す作業が始まります。
+ *   1か月ぶんの操作を全部読み直すことになります。
+ *
+ *   だから、ポイントを触る画面を開いた瞬間に、
+ *   いちばん最初に目に入る場所へ置きます。
+ *
+ * ★合っているときも、必ず表示すること。
+ *   異常なときだけ出す作りにすると、
+ *   何も出ていないのが「正常」なのか「点検していない」のかが
+ *   区別できません。
+ */
+function Reconcile({ s }: { s: ConsoleState }) {
+  const rows = pointsReconcile(s);
+  if (rows.length === 0) return null;
+
+  const bad = rows.filter((r) => !r.ok);
+  const ok = bad.length === 0;
+
+  return (
+    <Card
+      title="ポイントの点検"
+      note="いまの残高と、ポイント履歴の合計が合っているかを、開くたびに確かめています。"
+    >
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <Stat label="点検した会員" value={rows.length} unit="名" />
+        <Stat
+          label="合っている"
+          value={rows.length - bad.length}
+          unit="名"
+          tone="ok"
+        />
+        <Stat
+          label="合っていない"
+          value={bad.length}
+          unit="名"
+          tone={ok ? "ok" : "danger"}
+          sub={ok ? undefined : "原因が分かるまで触らないでください"}
+        />
+        <Stat
+          label="履歴の件数"
+          value={s.ledger.length}
+          unit="件"
+        />
+      </div>
+
+      <div
+        className={[
+          "mt-4 rounded-xl border px-4 py-3 text-note leading-[1.9]",
+          ok
+            ? "border-ok/30 bg-ok/10 text-ok-ink"
+            : "border-danger/40 bg-danger/10 text-danger-ink",
+        ].join(" ")}
+      >
+        {ok ? (
+          <>
+            <strong className="font-bold">全員ぶん、合っています。</strong>{" "}
+            それぞれの残高は、ポイント履歴を1件ずつ足し上げた金額と、1ptの違いもありません。
+            つまり、いまの残高は全部「なぜその金額なのか」を説明できます。
+          </>
+        ) : (
+          <>
+            <strong className="font-bold">合っていない会員がいます。</strong>{" "}
+            残高だけが動いて、履歴に残っていないポイントがあります。
+            これは、後から誰にも説明できないお金です。
+            原因が分かるまで、この会員のポイントは変更しないでください。
+          </>
+        )}
+      </div>
+
+      <ul className="mt-4 space-y-1.5">
+        {rows.map((r) => (
+          <li
+            key={r.userId}
+            className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 rounded-lg border border-edge bg-paper2 px-3 py-2"
+          >
+            <span className="text-note font-bold text-slate">{r.name}</span>
+            <span className="num flex flex-wrap items-baseline gap-x-3 text-note text-slate3">
+              <span>残高 {r.wallet.toLocaleString()}pt</span>
+              <span>履歴の合計 {r.ledger.toLocaleString()}pt</span>
+              <Badge tone={r.ok ? "ok" : "danger"}>{r.ok ? "一致" : "不一致"}</Badge>
+            </span>
+          </li>
+        ))}
+      </ul>
+    </Card>
   );
 }

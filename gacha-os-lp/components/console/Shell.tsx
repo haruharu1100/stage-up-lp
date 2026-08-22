@@ -59,7 +59,9 @@ export default function Shell({
   return (
     <div className="min-h-screen bg-paper2">
       {/* ── 上のバー ── */}
-      <header className="sticky top-0 z-30 border-b border-edge bg-paper/95 backdrop-blur">
+      {/* ★上に「管理サイト／ユーザー側」の切り替え帯があるときは、その下に貼りつく。
+          --switch-h は帯の実測値。帯が無い場所で使われたときは 0px になる */}
+      <header className="sticky top-[var(--switch-h,0px)] z-30 border-b border-edge bg-paper/95 backdrop-blur">
         <div className="flex items-center gap-3 px-4 py-3 sm:px-6">
           <button
             type="button"
@@ -129,7 +131,7 @@ export default function Shell({
       <div className="lg:flex">
         {/* ── 左メニュー ── */}
         <nav
-          className={`${openMenu ? "block" : "hidden"} border-b border-edge bg-paper px-4 py-4 lg:sticky lg:top-[6.5rem] lg:block lg:h-[calc(100vh-6.5rem)] lg:w-[17rem] lg:shrink-0 lg:overflow-y-auto lg:border-b-0 lg:border-r lg:px-3`}
+          className={`${openMenu ? "block" : "hidden"} border-b border-edge bg-paper px-4 py-4 lg:sticky lg:top-[calc(6.5rem+var(--switch-h,0px))] lg:block lg:h-[calc(100vh-6.5rem-var(--switch-h,0px))] lg:w-[17rem] lg:shrink-0 lg:overflow-y-auto lg:border-b-0 lg:border-r lg:px-3`}
         >
           {MENU_GROUPS.map((g) => (
             <div key={g} className="mb-5">

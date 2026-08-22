@@ -35,18 +35,29 @@ const ACTION_LABEL: Record<AuditAction, string> = {
   FRAUD_REVIEW: "不正判定の処理",
   FRAUD_BLOCK: "登録の停止",
   SHIPPING_MARK: "発送処理",
+  PRIZE_SHIP_REQUEST: "お客様が発送を依頼",
+  PRIZE_EXCHANGE: "お客様が商品をポイントに交換",
+  USER_ASK: "お客様からの問い合わせ",
   SUPPORT_REPLY: "問い合わせ返信",
   ROLE_CHANGE: "権限の変更",
   SETTINGS_CHANGE: "設定の変更",
   DEMO_RESET: "デモの初期化",
 };
 
-/** お金が動く操作は、目立たせる */
+/**
+ * お金が動く操作は、目立たせる。
+ *
+ * ★お客様のポイント交換も、ここに入れること。
+ *   交換した瞬間に残高が増えるので、
+ *   運営から見れば、ポイントを1件発行したのと同じです。
+ *   管理者の操作ではないからという理由で外さないこと。
+ */
 const MONEY: AuditAction[] = [
   "POINT_ADJUST_REQUEST",
   "POINT_ADJUST_APPROVE",
   "POINT_ADJUST_REJECT",
   "POINT_ADJUST_APPLY",
+  "PRIZE_EXCHANGE",
 ];
 
 export default function AuditScreen({ s }: { s: ConsoleState }) {

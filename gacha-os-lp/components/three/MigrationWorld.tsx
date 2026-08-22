@@ -93,13 +93,21 @@ function seg(p: number, from: number, to: number) {
   return clamp01((p - from) / (to - from));
 }
 
-/** 引き継ぐデータ。左から右へ、この順番で流れていく */
+/**
+ * 引き継ぐデータ。左から右へ、この順番で流れていく。
+ *
+ * ★英語の見出しにしないこと。
+ *   ここで見ていただきたいのは、
+ *   「いま積み上がっているものが、そのまま移る」という一点だけです。
+ *   USERS と書いてあると、システムの用語として読み流されます。
+ *   「会員」と書いてあれば、ご自分のお客様の顔が浮かびます。
+ */
 const CARDS = [
-  { title: "USERS", accent: "#1B4BD8" },
-  { title: "POINTS", accent: "#0891B2" },
-  { title: "GACHA", accent: "#1B4BD8" },
-  { title: "ORDER", accent: "#0891B2" },
-  { title: "SHIPPING", accent: "#1B4BD8" },
+  { title: "会員", accent: "#1B4BD8" },
+  { title: "ポイント残高", accent: "#0891B2" },
+  { title: "ガチャ", accent: "#1B4BD8" },
+  { title: "購入履歴", accent: "#0891B2" },
+  { title: "発送待ち", accent: "#1B4BD8" },
 ] as const;
 
 /* ────────────────────────────────────────────
@@ -238,7 +246,8 @@ function Scene({
         <Drift amount={0.035} speed={0.36}>
           <LegacyLaptop tier={tier} width={L.deviceW} />
           <Label
-            title="OLD ADMIN"
+            title="いまお使いの"
+            value="管理画面"
             accent="#8A94A8"
             position={[0, -0.42, L.deviceW / 3.6]}
             scale={compact ? 0.7 : 0.82}
@@ -260,7 +269,8 @@ function Scene({
         <Drift amount={0.045} speed={0.42} phase={1.9}>
           <AdminLaptop tier={tier} width={L.deviceW} driver={newDriver} />
           <Label
-            title="AI GACHA OS"
+            title="入れ替える"
+            value="管理サイト"
             accent="#1B4BD8"
             position={[0, -0.42, L.deviceW / 3.6]}
             scale={compact ? 0.7 : 0.82}

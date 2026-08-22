@@ -229,7 +229,8 @@ function Scene({
         <Drift amount={0.04} speed={0.4}>
           <AdminLaptop tier={tier} width={L.pcW} driver={adminDriver} />
           <Label
-            title="AI GACHA OS"
+            title="運営が使う"
+            value="管理サイト"
             accent="#1B4BD8"
             // 終盤はカメラがスマホ側へ寄るので、ラベルは本体寄りに置いて切れを防ぐ
             position={[-L.pcW / 2 + 1.55, -0.34, L.pcW / 3.6]}
@@ -251,7 +252,8 @@ function Scene({
         <Drift amount={0.06} speed={0.48} phase={1.6}>
           <CustomerPhone tier={tier} width={L.phoneW} driver={phoneDriver} />
           <Label
-            title="CUSTOMER"
+            title="お客様が使う"
+            value="ユーザー側"
             accent="#0891B2"
             position={[0.1, -1.5, 0.1]}
             scale={0.78}

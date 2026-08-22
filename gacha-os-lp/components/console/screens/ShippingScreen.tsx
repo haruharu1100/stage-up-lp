@@ -24,14 +24,27 @@
 "use client";
 
 import type { ConsoleState, ConsoleAction, Order } from "@/lib/console/state";
-import { can } from "@/lib/console/state";
+import { ORDER_TODO, can } from "@/lib/console/state";
 import { Badge, Btn, Card, DemoNote, KV, RowCard, Rows, Stat, Table, Td, WhatIsThis } from "../ui";
 
 const STATUS: Record<Order["status"], { label: string; tone: "warn" | "blue" | "ok" }> = {
   UNSHIPPED: { label: "未発送", tone: "warn" },
   PREPARING: { label: "準備中", tone: "blue" },
   SHIPPED: { label: "発送済み", tone: "ok" },
+  IN_TRANSIT: { label: "配送中", tone: "ok" },
+  DELIVERED: { label: "配達完了", tone: "ok" },
 };
+
+/**
+ * まだ手を動かす必要がある状態。
+ *
+ * ★この画面で作り直さないこと。
+ *   同じ「未発送とは何か」を、この画面とダッシュボードの2か所に書くと、
+ *   片方だけ直したときに、両者の件数が食い違います。
+ *   食い違った瞬間、どちらが正しいのか誰にも分からなくなります。
+ *   決めるのは state.ts の1か所だけです。
+ */
+const TODO_STATUS = ORDER_TODO;
 
 export default function ShippingScreen({
   s,
@@ -45,9 +58,9 @@ export default function ShippingScreen({
 
   /* 待たせている人から片づける。新しい順ではありません */
   const todo = s.orders
-    .filter((o) => o.status !== "SHIPPED")
+    .filter((o) => TODO_STATUS.includes(o.status))
     .sort((a, b) => a.requestedAt.localeCompare(b.requestedAt));
-  const done = s.orders.filter((o) => o.status === "SHIPPED");
+  const done = s.orders.filter((o) => !TODO_STATUS.includes(o.status));
 
   return (
     <>
@@ -88,6 +101,19 @@ export default function ShippingScreen({
                   </div>
                   <Badge tone={STATUS[o.status].tone}>{STATUS[o.status].label}</Badge>
                 </div>
+
+                {/* ★お届け先は、お客様が依頼したときのものを写して持っています。
+                    会員情報の住所を後から直しても、この宛先は変わりません */}
+                {o.address && (
+                  <div className="mt-3 rounded-lg border border-edge bg-paper px-3 py-2">
+                    <p className="text-note font-bold text-slate">お届け先</p>
+                    <p className="num mt-0.5 text-note leading-[1.85] text-slate3">
+                      〒{o.address.zip}　{o.address.addr}
+                      <br />
+                      {o.address.name}　{o.address.tel}
+                    </p>
+                  </div>
+                )}
 
                 <div className="mt-4 flex flex-wrap gap-2">
                   {mayShip ? (
@@ -141,7 +167,7 @@ export default function ShippingScreen({
                   <Td>{o.carrier ?? "-"}</Td>
                   <Td className="num">{o.tracking ?? "-"}</Td>
                   <Td>
-                    <Badge tone="ok">発送済み</Badge>
+                    <Badge tone={STATUS[o.status].tone}>{STATUS[o.status].label}</Badge>
                   </Td>
                 </tr>
               ))}
@@ -152,7 +178,7 @@ export default function ShippingScreen({
                 <RowCard key={o.id}>
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <span className="text-note font-bold text-slate">{o.prize}</span>
-                    <Badge tone="ok">発送済み</Badge>
+                    <Badge tone={STATUS[o.status].tone}>{STATUS[o.status].label}</Badge>
                   </div>
                   <div className="mt-2 border-t border-edge pt-2">
                     <KV k="会員" v={o.userName} />

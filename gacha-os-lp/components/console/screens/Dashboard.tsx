@@ -104,6 +104,16 @@ export default function Dashboard({
             unit="件"
             tone={sum.tickets > 0 ? "warn" : "ok"}
           />
+          {/* ★これは運営の「やること」ではありません。
+              お客様が発送とポイント交換のどちらにするかを選ぶのを
+              待っている件数です。だから色は付けません。
+              警告色にすると、運営が何もできない件数に毎朝反応することになります */}
+          <Stat
+            label="お客様が受け取り方法を選ぶ待ち"
+            value={sum.unchosenPrizes}
+            unit="件"
+            sub="運営の作業はありません"
+          />
         </div>
       </Card>
 
