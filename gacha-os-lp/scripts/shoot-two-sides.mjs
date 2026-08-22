@@ -50,7 +50,7 @@
  */
 
 import { createRequire } from "node:module";
-import { mkdirSync, existsSync, rmSync } from "node:fs";
+import { mkdirSync, existsSync, rmSync, writeFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
@@ -195,14 +195,64 @@ const beforeUnchosen = numAfter(before, "お客様が受け取り方法を選ぶ
 console.log(`  ・いまの「受け取り方法を選ぶ待ち」：${beforeUnchosen} 件`);
 
 /* ══════════════════════════════════════════════
-   TEST B：ユーザー側へ切り替える（鍵をかけ直さないこと）
+   TEST B：ユーザー側へ切り替える（ここにも鍵がかかっていること）
    ══════════════════════════════════════════════ */
-console.log("\n── TEST B：ユーザー側（ログインを求めないこと）");
+
+/* ★ここは前と逆になりました。
+   前は「ユーザー側はログインを求めないこと」を確かめていました。
+   それは半分だけ正しくて、半分は危険でした。
+   棚を見るのに鍵は要りませんが、この画面には
+   保有ポイント・当たった商品・お届け先の住所が並びます。
+   誰でも開ける場所に置くのは、店の金庫を開けっぱなしにするのと同じです。
+   だからいまは、逆に「鍵がかかっていること」を確かめます。 */
+console.log("\n── TEST B：ユーザー側（棚は開いていて、その先に鍵がかかっていること）");
 
 await btn(page, "ユーザー側").click();
+
+/* ★まず、棚が開いていることを確かめます。
+   ここまで閉めてしまうと、何を売っているのかを見る前に
+   会員登録を求める店になります。それでは誰も入りません。 */
+await page.waitForSelector("text=ガチャ一覧");
+await expectText(page, "ログインしていません", "ユーザー側の棚");
+await expectText(page, "pt / 1回", "ユーザー側の棚（価格）");
+await cap(page, "user-shop", "ユーザー側：ログインなしで見える棚（価格・残口数）");
+
+/* 中身（賞品の本数）も、ログインなしで見えること */
+await page.locator("main button:visible").first().click();
+await page.waitForSelector("text=賞の内容");
+await expectText(page, "引くにはログインが必要です", "ガチャの詳細");
+await cap(page, "user-gacha-public", "ユーザー側：賞品の本数は見える。引くにはログインが要る");
+
+/* ★ここから先が鍵の内側。「引く」を押したら、ログインを求められること */
+await btn(page, "pt で引く").click();
+await page.waitForSelector("text=マイページにログイン");
+await expectText(page, "ご本人だけのもの", "ユーザー側のログイン画面");
+await expectText(page, "DEMO MODE", "ユーザー側のログイン画面");
+await expectText(page, "本番環境では設定した認証方式が適用されます", "DEMO MODE の断り書き");
+await cap(page, "user-login", "ユーザー側：ログインしないと中身は見えない（DEMO MODE つき）");
+
+/* ★本物のパスワード欄が出ていないこと。
+   出すと、本当のパスワードを打ってしまう方が必ず出ます */
+const pw = await page.locator('input[type="password"]').count();
+if (pw > 0) {
+  throw new Error("デモなのにパスワード欄が出ています。打てない作りにしてください。");
+}
+console.log("  ✓ パスワード欄は出ていない（打てない作りになっている）");
+
+await page.locator('button:visible:has-text("GD-0001")').first().click();
+
+/* ★ログインが済んだら、見ていたガチャに戻すこと。
+   引こうとしてログインを求められた方を、
+   関係のないマイページに放り出すと、また探し直しになります。
+   そこで諦める方が出ます */
+await page.waitForSelector("text=賞の内容");
+console.log("  ✓ ログインのあと、見ていたガチャに戻っている");
+
+await btn(page, "ガチャ一覧へ").click();
+await btn(page, "マイページへ").click();
 await page.waitForSelector("text=のマイページ");
 await expectText(page, "獲得商品", "ユーザー側のマイページ");
-await cap(page, "user-mypage", "ユーザー側：マイページ（ログインなしで入れる）");
+await cap(page, "user-mypage", "ユーザー側：ログインした本人のマイページ");
 
 await btn(page, "受け取り方法を選ぶ").click();
 await page.waitForSelector("text=当たった商品の一覧です");
@@ -345,6 +395,69 @@ await goto(
 
 await browser.close();
 
+/* ══════════════════════════════════════════════
+   目次を、撮った本人ではなく機械に書かせる
+   ══════════════════════════════════════════════
+
+   ★手で書いた目次を置かないこと。
+     このスクリプトは撮り直すたびにフォルダごと作り直します。
+     手書きの目次は、そこで消えるか、消えずに古いまま残ります。
+     どちらも困ります。「16枚」と書いてあるのに19枚ある目次は、
+     見た方に「中身も適当なのだろう」と思わせます。
+
+     撮った絵から書き起こせば、ずれようがありません。
+*/
+writeFileSync(
+  join(OUT, "README.md"),
+  [
+    "# 「管理サイト」と「ユーザー側」が、同じ1つのデータを見ていることの記録",
+    "",
+    `ここに入っている ${shots.length} 枚は、**1つのブラウザを開いたまま、途中で読み込み直さずに**`,
+    "順番に撮ったものです。",
+    "",
+    "途中でページを開き直すと、それは「別々のサンプルを2つ見せただけ」になり、",
+    "いちばん見ていただきたい「本当につながっているのか」が証明できません。",
+    "だから、通しで1回操作したものを、そのまま並べています。",
+    "",
+    "★この目次は、このスクリプトが撮った絵から自動で書き起こしています。",
+    "　手で書き直さないでください。撮り直せば、ここも一緒に直ります。",
+    "",
+    "撮り直すとき：",
+    "",
+    "```",
+    "npm run dev                                        # 既定では http://localhost:3210",
+    "node scripts/shoot-two-sides.mjs http://localhost:3210",
+    "```",
+    "",
+    "playwright はこのプロジェクトの依存ではありません。",
+    "同じリポジトリの `blog-to-social` が持っているものを借ります。",
+    "別の場所にあるときは `PLAYWRIGHT_DIR` で教えてください。",
+    "",
+    "---",
+    "",
+    "## 撮った順に、何が写っているか",
+    "",
+    "| # | 絵 | 何が写っているか |",
+    "| --- | --- | --- |",
+    ...shots.map((s, i) => `| ${i + 1} | \`${s.file}\` | ${s.note} |`),
+    "",
+    "---",
+    "",
+    "## このスクリプトが、通ること自体で証明していること",
+    "",
+    "- 棚（ガチャ一覧・賞の内容・価格・残り口数）は、ログインなしで見られる（項目1）",
+    "- 引くところから先は、ログインが要る（項目2）",
+    "- ログインのあとは、見ていたガチャに戻る（探し直しにさせない）",
+    "- デモにパスワード欄を出していない（項目11）",
+    "- お客様の発送依頼・ポイント交換が、その瞬間に運営側の数字へ出ている",
+    "- 交換済みの商品は、もう発送できない（二重処理の防止）",
+    "- 残高と履歴の突合が、操作のあとも合っている",
+    "- お客様の操作も、監査ログに「誰が何をしたか」として残っている（項目31）",
+    "",
+  ].join("\n"),
+  "utf8",
+);
+
 console.log(`\n✅ ${shots.length} 枚を ${OUT} に保存しました\n`);
 for (const s of shots) console.log(`   ${s.file}  … ${s.note}`);
-console.log("");
+console.log("\n   README.md … 上の一覧を、そのまま目次として書き出しました\n");

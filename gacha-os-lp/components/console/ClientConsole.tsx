@@ -171,10 +171,32 @@ export default function ClientConsole() {
     return () => ro.disconnect();
   }, []);
 
+  /**
+   * 下の案内パネルの高さも、同じやり方で測る。
+   *
+   * ★このパネルは手順ごとに文章の長さが変わり、高さも変わります。
+   *   固定値で逃げると、ある手順だけボタンが隠れて押せなくなり、
+   *   「案内どおりにやったのに進まない」という状態になります。
+   */
+  const dayRef = useRef<HTMLDivElement>(null);
+  const [dayH, setDayH] = useState(0);
+
+  useEffect(() => {
+    const el = dayRef.current;
+    if (!el) {
+      setDayH(0);
+      return;
+    }
+    const ro = new ResizeObserver(() => setDayH(el.offsetHeight + 16));
+    ro.observe(el);
+    setDayH(el.offsetHeight + 16);
+    return () => ro.disconnect();
+  }, [run]);
+
   return (
     <div style={{ "--switch-h": `${switchH}px` } as React.CSSProperties}>
       <SideSwitch
-        ref={switchRef}
+        boxRef={switchRef}
         side={side}
         onChange={setSide}
         dayRunning={run !== null}
@@ -202,6 +224,7 @@ export default function ClientConsole() {
           下に置くと、スマホでは画面の外へ流れて見えなくなります */}
       {run && (
         <DayInLife
+          boxRef={dayRef}
           s={s}
           run={run}
           side={side}
@@ -216,8 +239,12 @@ export default function ClientConsole() {
         />
       )}
 
-      {/* 案内が下に居座るぶん、いちばん下の中身が隠れないようにする */}
-      {run && <div className="h-52" aria-hidden />}
+      {/* ★案内が下に居座るぶん、いちばん下の中身が隠れないようにする。
+          高さは必ず実測すること。「だいたい208px」と書くと、
+          文章が1行増えただけで、いちばん下のボタンが案内の裏に隠れます。
+          隠れたボタンは押せません。押せないボタンがあると、
+          手順どおりに進めているのに、進めなくなります。 */}
+      {run && <div style={{ height: dayH }} aria-hidden />}
     </div>
   );
 }
@@ -235,13 +262,22 @@ export default function ClientConsole() {
  *   このデモでいちばん見ていただきたいのは、そこではありません。
  */
 function SideSwitch({
-  ref,
+  boxRef,
   side,
   onChange,
   dayRunning,
   onStartDay,
 }: {
-  ref: React.Ref<HTMLDivElement>;
+  /**
+   * 高さを測るための取っ手。
+   *
+   * ★prop の名前を ref にしないこと。
+   *   React では ref は特別扱いで、ただの関数コンポーネントには
+   *   渡ってきません（undefined になります）。型では気づけません。
+   *   気づけないまま「高さを測っている」つもりになると、
+   *   実際には 0 のまま、下の中身が帯に隠れ続けます。
+   */
+  boxRef: React.Ref<HTMLDivElement>;
   side: Side;
   onChange: (s: Side) => void;
   dayRunning: boolean;
@@ -275,7 +311,7 @@ function SideSwitch({
   };
 
   return (
-    <div ref={ref} className="sticky top-0 z-40 bg-[#0F1B33] px-3 py-2.5 shadow-md sm:px-4">
+    <div ref={boxRef} className="sticky top-0 z-40 bg-[#0F1B33] px-3 py-2.5 shadow-md sm:px-4">
       <div className="mx-auto flex w-full max-w-[1400px] flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
         <div className="flex flex-1 gap-1.5 rounded-2xl bg-white/5 p-1.5">
           {tab("admin", "管理サイト", "運営が毎日使う画面")}

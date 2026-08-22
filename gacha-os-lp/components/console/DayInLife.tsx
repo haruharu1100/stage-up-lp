@@ -18,6 +18,7 @@
 
 "use client";
 
+import type React from "react";
 import { useMemo, useState } from "react";
 import type { ConsoleState } from "@/lib/console/state";
 import {
@@ -35,6 +36,7 @@ export type DayRun = { base: DayBase; seen: Set<string> };
 
 export default function DayInLife({
   s,
+  boxRef,
   run,
   side,
   page,
@@ -43,6 +45,17 @@ export default function DayInLife({
   onFinish,
   onReset,
 }: {
+  /**
+   * このパネルの高さを、呼び出し元が実測するための取っ手。
+   *
+   * ★prop の名前を ref にしないこと。React では ref は特別扱いで、
+   *   ただの関数コンポーネントには渡ってきません。
+   *
+   * ★高さを外から決め打ちさせないこと。
+   *   手順ごとに文章の長さが違うので、高さも変わります。
+   *   決め打ちにすると、ある手順だけ下のボタンが隠れて押せません。
+   */
+  boxRef: React.Ref<HTMLDivElement>;
   s: ConsoleState;
   run: DayRun;
   side: DaySide;
@@ -81,7 +94,7 @@ export default function DayInLife({
   const atGate = !!st && st.side === "admin" && side === "admin" && !adminReady;
 
   return (
-    <div className="fixed inset-x-0 bottom-0 z-50 px-3 pb-3 sm:px-4 sm:pb-4">
+    <div ref={boxRef} className="fixed inset-x-0 bottom-0 z-50 px-3 pb-3 sm:px-4 sm:pb-4">
       <div className="mx-auto w-full max-w-[1400px] overflow-hidden rounded-2xl border border-[#1E2B49] bg-[#0F1B33] shadow-lift2">
         {/* ── 見出しの帯。畳んでもここは残す ── */}
         <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-2.5">

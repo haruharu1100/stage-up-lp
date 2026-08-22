@@ -46,10 +46,12 @@ import { useState } from "react";
 import type {
   ConsoleAction,
   ConsoleState,
+  ConsoleGacha,
   Address,
   Prize,
   StepUpReason,
 } from "@/lib/console/state";
+import { poolOf, type DrawRecord } from "@/lib/console/draw";
 import {
   PRIZE_STATUS_LABEL,
   POINT_KIND_LABEL,
@@ -67,6 +69,18 @@ import { ORDER_STATUS_LABEL } from "@/lib/console/support";
    ══════════════════════════════════════════════ */
 
 type View =
+  /**
+   * お店の棚。
+   *
+   * ★ここだけは、ログインしていなくても見られること。
+   *   何が当たるのか・いくらか・残りいくつかを見られない店では、
+   *   そもそも買うかどうかを決められません。
+   *   鍵をかけるのは、この先（引く・残高・住所）からです。
+   */
+  | { name: "shop" }
+  | { name: "gacha"; id: string }
+  /** ログイン画面。棚から「引く」を押したときに、ここへ来ます */
+  | { name: "login" }
   | { name: "home" }
   | { name: "prizes" }
   | { name: "prize"; id: string }
@@ -119,7 +133,23 @@ export default function MyPage({
   s: ConsoleState;
   dispatch: React.Dispatch<ConsoleAction>;
 }) {
-  const [view, setView] = useState<View>({ name: "home" });
+  /**
+   * 最初に出す画面。
+   *
+   * ★お店なので、最初に出るのは棚であること。
+   *   いきなりログイン画面が出る店は、
+   *   何を売っているのかを見る前に会員登録を求める店と同じです。
+   */
+  const [view, setView] = useState<View>({ name: "shop" });
+
+  /**
+   * ログインの前に見ていたガチャ。
+   *
+   * ★ログインしたら、見ていたところへ戻すこと。
+   *   毎回マイページの先頭へ飛ばすと、
+   *   引こうとした方が、もう一度ガチャを探し直すことになります。
+   */
+  const [pending, setPending] = useState<string | null>(null);
 
   /**
    * ★誰であるかは、ログイン情報からだけ決めること。
@@ -134,16 +164,63 @@ export default function MyPage({
     ? s.users.find((u) => u.id === s.customer!.userId)
     : undefined;
 
-  /* ── ログインしていない ── */
+  /* ══════════════════════════════════════════
+     ログインしていないとき
+     ══════════════════════════════════════════
+
+     ★ここで全部を閉じないこと。
+       前は、開いた瞬間にログイン画面でした。
+       鍵をかける場所としては正しいのですが、
+       棚まで閉めてしまっていました。
+       店の前を通った人が、何を売っているのかも見られません。
+
+       いま見られるのは、棚（ガチャ一覧）と、
+       その中身（賞品・価格・残口数）だけです。
+       引く・残高・獲得商品・住所は、この先です。 */
   if (!me) {
-    return (
+    const login = (
       <CustomerLogin
         s={s}
         onLogin={(userId) => {
-          setView({ name: "home" });
+          setView(pending ? { name: "gacha", id: pending } : { name: "home" });
+          setPending(null);
           dispatch({ type: "CUSTOMER_LOGIN", userId });
         }}
+        back={() => setView({ name: "shop" })}
       />
+    );
+
+    if (view.name === "login") return login;
+
+    if (view.name === "gacha") {
+      const g = s.gachas.find((x) => x.id === view.id);
+      if (g && g.status === "PUBLISHED") {
+        return (
+          <PublicShell onLogin={() => setView({ name: "login" })}>
+            <GachaDetail
+              g={g}
+              balance={null}
+              lastDraw={null}
+              onDraw={() => {
+                setPending(g.id);
+                setView({ name: "login" });
+              }}
+              back={() => setView({ name: "shop" })}
+            />
+          </PublicShell>
+        );
+      }
+    }
+
+    return (
+      <PublicShell onLogin={() => setView({ name: "login" })}>
+        <Shop
+          gachas={s.gachas}
+          balance={null}
+          go={setView}
+          back={null}
+        />
+      </PublicShell>
     );
   }
 
@@ -242,6 +319,44 @@ export default function MyPage({
       )}
 
       <main className="px-4 pt-4">
+        {view.name === "shop" && (
+          <Shop
+            gachas={s.gachas}
+            balance={me.points}
+            go={setView}
+            back={() => setView({ name: "home" })}
+          />
+        )}
+
+        {view.name === "gacha" &&
+          (() => {
+            const g = s.gachas.find((x) => x.id === view.id);
+            if (!g || g.status !== "PUBLISHED") {
+              return <MissingGacha back={() => setView({ name: "shop" })} />;
+            }
+            /* ★出す結果は、この方ご本人の分だけにすること。
+               いちばん新しい抽選をそのまま出すと、
+               他の方が引いた結果が画面に出ます */
+            const mine = s.draws.filter(
+              (d) => d.userId === me.id && d.gachaId === g.id,
+            );
+            return (
+              <GachaDetail
+                g={g}
+                balance={me.points}
+                lastDraw={mine[mine.length - 1] ?? null}
+                onDraw={() =>
+                  dispatch({
+                    type: "DRAW",
+                    gachaId: g.id,
+                    key: newKey("draw", g.id),
+                  })
+                }
+                back={() => setView({ name: "shop" })}
+              />
+            );
+          })()}
+
         {view.name === "home" && (
           <Home
             userName={me.name}
@@ -500,6 +615,295 @@ function Missing({ back }: { back: () => void }) {
 }
 
 /* ══════════════════════════════════════════════
+   ⓪-a お店の棚（ログインなしで見られる範囲）
+   ══════════════════════════════════════════════ */
+
+/**
+ * ログインしていない方に見せる、外枠。
+ *
+ * ★ここに、残高も、獲得商品も、住所も出さないこと。
+ *   出してよいのは、誰が見ても困らないものだけです。
+ *   上の帯に残高を出す作りのまま流用すると、
+ *   ログインしていない人の画面に、誰かの残高が出ます。
+ */
+function PublicShell({
+  children,
+  onLogin,
+}: {
+  children: React.ReactNode;
+  onLogin: () => void;
+}) {
+  return (
+    <div className="mx-auto w-full max-w-[560px] pb-16">
+      <header className="sticky top-[var(--switch-h,0px)] z-20 rounded-b-2xl bg-[#0F1B33] px-4 py-3 text-white shadow-lg">
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-[0.7rem] font-bold tracking-wider text-white/60">
+              DEMO SHOP（架空のお店です）
+            </p>
+            <p className="truncate text-[0.95rem] font-bold">
+              ログインしていません
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onLogin}
+            className="shrink-0 rounded-xl bg-white px-4 py-2.5 text-[0.85rem] font-bold text-[#0F1B33] transition hover:bg-white/85"
+          >
+            ログイン
+          </button>
+        </div>
+      </header>
+
+      <DemoModeNote />
+
+      <main className="px-4 pt-4">{children}</main>
+
+      <p className="mt-8 px-4 text-center text-[0.72rem] leading-[1.9] text-slate3">
+        これは動作を確かめるためのデモ画面です。DEMO DATA（架空のデータ）で動いています。<br />
+        実際の決済・発送・メール送信は行いません。
+      </p>
+    </div>
+  );
+}
+
+/**
+ * ガチャ一覧。
+ *
+ * ★販売中のものだけを並べること。
+ *   下書き・停止中のガチャをお客様の棚に出すと、
+ *   押せるのに引けない商品が並びます。
+ */
+function Shop({
+  gachas,
+  balance,
+  go,
+  back,
+}: {
+  gachas: ConsoleGacha[];
+  /** ログインしていなければ null。残高は出しません */
+  balance: number | null;
+  go: (v: View) => void;
+  back: (() => void) | null;
+}) {
+  const live = gachas.filter((g) => g.status === "PUBLISHED");
+
+  return (
+    <>
+      {back && <Back onClick={back} label="マイページへ" />}
+      <H sub="いま販売中のガチャです。中身と残りは、ログインなしでもご覧いただけます。">
+        ガチャ一覧
+      </H>
+
+      {live.length === 0 && (
+        <p className="rounded-xl border border-edge bg-white px-4 py-4 text-[0.85rem] leading-[1.9] text-slate3">
+          いま販売中のガチャはありません。
+        </p>
+      )}
+
+      <div className="space-y-3">
+        {live.map((g) => {
+          const soldPct = Math.round(((g.total - g.left) / g.total) * 100);
+          return (
+            <button
+              key={g.id}
+              type="button"
+              onClick={() => go({ name: "gacha", id: g.id })}
+              className="block w-full rounded-2xl border border-edge bg-white px-4 py-4 text-left shadow-sm transition hover:border-[#1B4BD8] hover:shadow-md"
+            >
+              <span className="block text-[1rem] font-bold leading-[1.6] text-slate">
+                {g.title}
+              </span>
+              <span className="mt-2 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                <span className="num text-[1.4rem] font-bold text-[#1B4BD8]">
+                  {g.price.toLocaleString()}
+                </span>
+                <span className="text-[0.78rem] text-slate2">pt / 1回</span>
+                <span className="num text-[0.78rem] text-slate3">
+                  残り {g.left.toLocaleString()} / {g.total.toLocaleString()}
+                </span>
+              </span>
+              <span className="mt-2 block h-2 w-full overflow-hidden rounded-full bg-[#EDEEF0]">
+                <span
+                  className="block h-full rounded-full bg-[#1B4BD8]"
+                  style={{ width: `${soldPct}%` }}
+                />
+              </span>
+              {balance !== null && balance < g.price && (
+                <span className="mt-2 block text-[0.74rem] font-bold text-[#9B1C1C]">
+                  いまの残高では足りません
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      {balance === null && (
+        <p className="mt-4 rounded-xl border border-[#A9C8F5] bg-[#F5F9FF] px-4 py-3 text-[0.78rem] leading-[1.9] text-slate2">
+          賞品・価格・残口数は、ログインなしでご覧いただけます。
+          引くにはログインが必要です。ポイントが減るため、
+          どなたの残高から引くのかが決まっている必要があるからです。
+        </p>
+      )}
+    </>
+  );
+}
+
+/**
+ * ガチャの詳細と、引くところ。
+ *
+ * ★当たりの本数を隠さないこと。
+ *   何が何本入っているかを見てから引くかどうかを決められる、
+ *   というのが、お客様側の最低限です。
+ *
+ * ★設計還元率・粗利・仕入れ値は出さないこと。
+ *   これは運営の数字で、出すと当たりやすい時期を狙って引かれます。
+ */
+function GachaDetail({
+  g,
+  balance,
+  lastDraw,
+  onDraw,
+  back,
+}: {
+  g: ConsoleGacha;
+  balance: number | null;
+  lastDraw: DrawRecord | null;
+  onDraw: () => void;
+  back: () => void;
+}) {
+  const pool = poolOf(g.title, g.price, g.total, g.designedRtp);
+  const soldPct = Math.round(((g.total - g.left) / g.total) * 100);
+  const short = balance !== null && balance < g.price;
+  const soldOut = g.left <= 0;
+
+  return (
+    <>
+      <Back onClick={back} label="ガチャ一覧へ" />
+      <H>{g.title}</H>
+
+      <div className="rounded-2xl border border-edge bg-white px-4 py-4 shadow-sm">
+        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+          <span className="num text-[2rem] font-bold leading-none text-[#1B4BD8]">
+            {g.price.toLocaleString()}
+          </span>
+          <span className="text-[0.85rem] text-slate2">pt / 1回</span>
+        </div>
+
+        <div className="mt-4">
+          <div className="flex items-baseline justify-between">
+            <span className="text-[0.8rem] text-slate2">残り</span>
+            <span className="num text-[0.85rem] font-bold text-slate">
+              {g.left.toLocaleString()} / {g.total.toLocaleString()}
+            </span>
+          </div>
+          <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-[#EDEEF0]">
+            <div
+              className="h-full rounded-full bg-[#1B4BD8]"
+              style={{ width: `${soldPct}%` }}
+            />
+          </div>
+          <p className="mt-2 text-[0.74rem] text-slate3">{soldPct}% が売れました</p>
+        </div>
+      </div>
+
+      {/* ── 賞の内容 ── */}
+      <div className="mt-3 rounded-2xl border border-edge bg-white p-2 shadow-sm">
+        <p className="px-2 pb-1 pt-1.5 text-[0.78rem] font-bold text-slate3">
+          賞の内容
+        </p>
+        <ul>
+          {pool.map((p) => (
+            <li
+              key={p.grade}
+              className="flex items-center gap-3 border-b border-edge px-2 py-2.5 last:border-b-0"
+            >
+              <PrizeArt grade={p.grade} size="sm" />
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-[0.85rem] font-bold text-slate">{p.name}</p>
+                <p className="mt-0.5 text-[0.74rem] text-slate3">
+                  {["S", "A", "B"].includes(p.grade)
+                    ? "現物のお届け、またはポイントに交換できます"
+                    : "ポイントでお返しします"}
+                </p>
+              </div>
+              <span className="num shrink-0 text-[0.85rem] font-bold text-slate">
+                {p.count.toLocaleString()}本
+              </span>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      {/* ── 引いた結果 ──
+          ★結果は、この画面で決めていないこと。
+            受け取り側（reducer）で決めた結果を、見せているだけです */}
+      {lastDraw && (
+        <div
+          className={[
+            "mt-4 rounded-2xl border-2 px-4 py-4",
+            lastDraw.grade === "-"
+              ? "border-edge bg-[#F7F8F9]"
+              : "border-[#A9C8F5] bg-[#F5F9FF]",
+          ].join(" ")}
+        >
+          <p className="text-[0.75rem] font-bold text-slate3">いちばん新しい結果</p>
+          <div className="mt-2 flex items-center gap-3">
+            {lastDraw.grade !== "-" && <PrizeArt grade={lastDraw.grade} size="sm" />}
+            <div className="min-w-0">
+              <p className="text-[1.1rem] font-bold text-slate">
+                {lastDraw.grade === "-" ? "はずれ" : `${lastDraw.grade}賞`}
+              </p>
+              <p className="mt-0.5 text-[0.82rem] leading-[1.8] text-slate2">
+                {lastDraw.prizeName}
+              </p>
+            </div>
+          </div>
+          <p className="num mt-3 border-t border-edge pt-3 text-[0.78rem] text-slate3">
+            残高 {lastDraw.balanceBefore.toLocaleString()}pt →{" "}
+            {lastDraw.balanceAfter.toLocaleString()}pt
+          </p>
+        </div>
+      )}
+
+      {/* ── 引く ── */}
+      <div className="mt-4 space-y-2">
+        <BigBtn
+          onClick={onDraw}
+          disabled={soldOut || short}
+          note={
+            balance === null
+              ? "引くにはログインが必要です"
+              : short
+                ? "残高が足りません"
+                : undefined
+          }
+        >
+          {soldOut ? "完売しました" : `${g.price.toLocaleString()}pt で引く`}
+        </BigBtn>
+      </div>
+
+      <p className="mt-4 text-[0.74rem] leading-[1.9] text-slate3">
+        ・当たった商品は、現物のお届けか、ポイントへの交換をお選びいただけます。<br />
+        ・これはデモです。実際の決済・発送・メール送信は行いません。
+      </p>
+    </>
+  );
+}
+
+function MissingGacha({ back }: { back: () => void }) {
+  return (
+    <>
+      <Back onClick={back} label="ガチャ一覧へ" />
+      <p className="rounded-xl border border-[#EDA9A9] bg-[#FDECEC] px-4 py-4 text-[0.85rem] leading-[1.9] text-[#9B1C1C]">
+        そのガチャは、いま販売しておりません。
+      </p>
+    </>
+  );
+}
+
+/* ══════════════════════════════════════════════
    ⓪ ログイン／DEMO MODE／追加の本人確認
    ══════════════════════════════════════════════ */
 
@@ -533,9 +937,12 @@ function Missing({ back }: { back: () => void }) {
 function CustomerLogin({
   s,
   onLogin,
+  back,
 }: {
   s: ConsoleState;
   onLogin: (userId: string) => void;
+  /** 棚へ戻る。★ログイン画面を行き止まりにしないこと */
+  back: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const method = s.customerAuth;
@@ -550,6 +957,7 @@ function CustomerLogin({
 
   return (
     <div className="mx-auto w-full max-w-[560px] px-4 pb-16 pt-4">
+      <Back onClick={back} label="ガチャ一覧へ" />
       <div className="rounded-2xl bg-[#0F1B33] px-5 py-5 text-white shadow-lg">
         <p className="text-[0.7rem] font-bold tracking-wider text-white/60">
           DEMO SHOP（架空のお店です）
@@ -803,6 +1211,24 @@ function Home({
   return (
     <>
       <H sub={`${userName}様。数字を押すと、中身をご確認いただけます。`}>マイページ</H>
+
+      {/* ★お店なので、いちばん上は「引く」であること。
+          マイページの管理項目だけが並ぶ画面は、店ではなく事務所です */}
+      <button
+        type="button"
+        onClick={() => go({ name: "shop" })}
+        className="mb-4 flex w-full items-center justify-between gap-3 rounded-2xl bg-[#1B4BD8] px-5 py-4 text-left text-white shadow-sm transition hover:bg-[#163CAE]"
+      >
+        <span className="min-w-0">
+          <span className="block text-[1rem] font-bold">ガチャを引く</span>
+          <span className="mt-1 block text-[0.75rem] leading-[1.8] text-white/75">
+            販売中のガチャと、当たる商品の本数をご覧いただけます
+          </span>
+        </span>
+        <span className="shrink-0 text-[1.1rem]" aria-hidden>
+          ›
+        </span>
+      </button>
 
       {unchosenCount > 0 && (
         <div className="mb-4 rounded-2xl border-2 border-[#E5C97A] bg-[#FFF7E4] px-4 py-4">

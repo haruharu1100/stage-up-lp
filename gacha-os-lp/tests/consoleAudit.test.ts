@@ -99,7 +99,7 @@ function chainOf3(): AuditEntry[] {
   });
   log = appendAudit(log, {
     at: "2026-08-22 12:01", actorId: "ad_01", actorName: "運営 太郎", actorRole: "SUPER_ADMIN",
-    action: "POINT_ADJUST_APPLY", target: "u_8842", summary: "会員 8842 のポイントを +500pt 変更",
+    action: "POINT_ADJUST_APPLY", target: "GD-0001", summary: "会員 0001 のポイントを +500pt 変更",
     before: "12,500pt", after: "13,000pt", reason: "お詫び",
   });
   log = appendAudit(log, {
@@ -341,7 +341,7 @@ test("権限：サポートは返信できるが、ポイントは動かせな�
 const admin = (id: string) => DEMO_ADMINS.find((a) => a.id === id)!;
 
 const pendingReq = (requestedBy: string, delta = FOUR_EYES_THRESHOLD): PointRequest => ({
-  id: "pr_1", userId: "u_8842", userName: "会員 8842",
+  id: "pr_1", userId: "GD-0001", userName: "会員 0001",
   delta, reason: "システム障害のお詫び",
   requestedBy, requestedByName: "申請者",
   requestedAt: "2026-08-22 12:00",
@@ -396,7 +396,7 @@ function loggedIn(adminId = "ad_01"): ConsoleState {
  *   「またテストが壊れた」と思って直さなくなります。
  *   見たいのは「いくらだったか」ではなく「いくら動いたか」です。
  */
-const pt = (s: ConsoleState, id = "u_8842") => s.users.find((u) => u.id === id)!.points;
+const pt = (s: ConsoleState, id = "GD-0001") => s.users.find((u) => u.id === id)!.points;
 
 test("操作：バックテスト未実施のガチャは公開できない", () => {
   const s = loggedIn();
@@ -419,7 +419,7 @@ test("操作：検証済みのガチャは公開でき、監査ログに残る",
 test("操作：理由を書かないポイント変更は、そもそも受け付けない", () => {
   const s = loggedIn();
   const before = pt(s);
-  const after = reducer(s, { type: "POINT_REQUEST", userId: "u_8842", delta: 500, reason: "   " });
+  const after = reducer(s, { type: "POINT_REQUEST", userId: "GD-0001", delta: 500, reason: "   " });
   assert.equal(after.flash?.kind, "error");
   assert.equal(pt(after), before, "理由が無いのに残高が動いた");
   assert.equal(after.pointRequests.length, 0);
@@ -428,7 +428,7 @@ test("操作：理由を書かないポイント変更は、そもそも受け�
 test("操作：閾値未満のポイント変更は、その場で反映されて記録が残る", () => {
   const s = loggedIn();
   const before = pt(s);
-  const after = reducer(s, { type: "POINT_REQUEST", userId: "u_8842", delta: 500, reason: "お詫び" });
+  const after = reducer(s, { type: "POINT_REQUEST", userId: "GD-0001", delta: 500, reason: "お詫び" });
   assert.equal(pt(after), before + 500);
   assert.equal(after.pointRequests[0].status, "APPLIED");
   assert.equal(verifyAudit(after.audit).ok, true);
@@ -438,7 +438,7 @@ test("操作：高額なポイント変更は、承認されるまで1ptも動�
   const s = loggedIn();
   const before = pt(s);
   const after = reducer(s, {
-    type: "POINT_REQUEST", userId: "u_8842",
+    type: "POINT_REQUEST", userId: "GD-0001",
     delta: FOUR_EYES_THRESHOLD, reason: "システム障害のお詫び",
   });
   assert.equal(pt(after), before, "承認前に反映されている");
@@ -449,7 +449,7 @@ test("操作：高額申請を、申請した本人が承認しても反映さ�
   let s = loggedIn("ad_01");
   const before = pt(s);
   s = reducer(s, {
-    type: "POINT_REQUEST", userId: "u_8842",
+    type: "POINT_REQUEST", userId: "GD-0001",
     delta: FOUR_EYES_THRESHOLD, reason: "システム障害のお詫び",
   });
   const after = reducer(s, { type: "POINT_APPROVE", requestId: s.pointRequests[0].id });
@@ -462,7 +462,7 @@ test("操作：別の管理者が承認すると反映され、監査ログが�
   let s = loggedIn("ad_02"); // 経理（申請する側）
   const before = pt(s);
   s = reducer(s, {
-    type: "POINT_REQUEST", userId: "u_8842",
+    type: "POINT_REQUEST", userId: "GD-0001",
     delta: FOUR_EYES_THRESHOLD, reason: "システム障害のお詫び",
   });
   assert.equal(s.pointRequests.length, 1, "申請が作られていない");
@@ -483,7 +483,7 @@ test("操作：申請できない役割は、そもそもポイントを動か�
   /* 運営（OPERATOR）はガチャは公開できるが、お金には触れない */
   const s = loggedIn("ad_03");
   const before = pt(s);
-  const after = reducer(s, { type: "POINT_REQUEST", userId: "u_8842", delta: 500, reason: "お詫び" });
+  const after = reducer(s, { type: "POINT_REQUEST", userId: "GD-0001", delta: 500, reason: "お詫び" });
   assert.equal(after.flash?.kind, "error");
   assert.equal(pt(after), before);
 });
@@ -497,7 +497,7 @@ test("操作：承認できる人が他にいなければ、高額の申請を�
     admins: base.admins.filter((x) => x.id === "ad_01"), // 承認できるのは自分だけ
   };
   const after = reducer(alone, {
-    type: "POINT_REQUEST", userId: "u_8842",
+    type: "POINT_REQUEST", userId: "GD-0001",
     delta: FOUR_EYES_THRESHOLD, reason: "システム障害のお詫び",
   });
   assert.equal(after.flash?.kind, "error");
@@ -536,7 +536,7 @@ test("操作：サポート担当は、不正判定を処理できない", () =>
 test("実演：監査ログを1件書き換えると、検証が TAMPER を報告する", () => {
   let s = loggedIn();
   s = reducer(s, { type: "PUBLISH_GACHA", gachaId: "g_104" });
-  s = reducer(s, { type: "POINT_REQUEST", userId: "u_8842", delta: 500, reason: "お詫び" });
+  s = reducer(s, { type: "POINT_REQUEST", userId: "GD-0001", delta: 500, reason: "お詫び" });
   assert.equal(verifyAudit(s.audit).ok, true, "書き換える前は通るはず");
 
   const attacked = reducer(s, { type: "TAMPER_AUDIT", seq: 2 });
@@ -580,7 +580,7 @@ test("今日やること：処理すると、その用件は消える", () => {
 test("デモを初期状態に戻せる（何度でもやり直せる）", () => {
   let s = loggedIn("ad_01");
   const start = pt(s);
-  s = reducer(s, { type: "POINT_REQUEST", userId: "u_8842", delta: 500, reason: "お詫び" });
+  s = reducer(s, { type: "POINT_REQUEST", userId: "GD-0001", delta: 500, reason: "お詫び" });
   assert.equal(pt(s), start + 500, "そもそも動いていない");
   const back = reducer(s, { type: "RESET" });
   assert.equal(pt(back), start, "初期状態に戻っていない");

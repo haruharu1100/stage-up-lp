@@ -862,7 +862,7 @@ export type Flash = {
  *   本番の管理画面では、運営者専用のテスト会員を別に作ります。
  *   本物のお客様のアカウントで試し引きをすると、その方の残高が動きます。
  */
-export const PREVIEW_USER_ID = "u_8842";
+export const PREVIEW_USER_ID = "GD-0001";
 
 /* ══════════════════════════════════════════════
    デモ用の初期データ（すべて架空）
@@ -939,7 +939,7 @@ export const DEMO_GACHAS: ConsoleGacha[] = [
  *   スクリーンショットが出回った時点で、その住所の方に迷惑がかかります。
  */
 export const DEMO_ADDRESS: Address = {
-  name: "会員 8842 様",
+  name: "会員 0001 様",
   zip: "000-0000",
   addr: "デモ県デモ市デモ町1-2-3 デモマンション101（架空の住所です）",
   tel: "000-0000-0000",
@@ -953,8 +953,8 @@ export const DEMO_ADDRESS: Address = {
  *   本当に他人の商品が要ります。自分しかいない画面では、
  *   何を試しても必ず通ってしまい、確かめたことになりません。
  */
-export const DEMO_ADDRESS_7731: Address = {
-  name: "会員 7731 様",
+export const DEMO_ADDRESS_0002: Address = {
+  name: "会員 0002 様",
   zip: "000-0000",
   addr: "デモ県デモ市デモ町9-8-7 デモハイツ202（架空の住所です）",
   tel: "000-0000-0000",
@@ -962,7 +962,7 @@ export const DEMO_ADDRESS_7731: Address = {
 
 const DEMO_OTHER_USERS: ConsoleUser[] = [
   {
-    id: "u_9105", name: "会員 9105", joinedAt: "2026-08-22",
+    id: "GD-0003", name: "会員 0003", joinedAt: "2026-08-22",
     points: 500, spent: 0, shipments: 0,
     risk: assess([
       hit("ipBurst", "同一IPから17アカウント（10分以内）"),
@@ -973,13 +973,13 @@ const DEMO_OTHER_USERS: ConsoleUser[] = [
     status: "REVIEW",
   },
   {
-    id: "u_9107", name: "会員 9107", joinedAt: "2026-08-22",
+    id: "GD-0004", name: "会員 0004", joinedAt: "2026-08-22",
     points: 500, spent: 0, shipments: 0,
     risk: assess([hit("anonymizer", "VPN経由の登録")]),
     status: "ACTIVE",
   },
   {
-    id: "u_9110", name: "会員 9110", joinedAt: "2026-08-22",
+    id: "GD-0005", name: "会員 0005", joinedAt: "2026-08-22",
     points: 0, spent: 0, shipments: 0,
     risk: assess([
       hit("referralRing", "同じ4人の間だけで紹介が循環"),
@@ -1073,13 +1073,13 @@ const GACHA_OF = {
 } as const;
 
 /**
- * 会員 8842 の23点。
+ * 会員 0001 の23点。
  *
  * ★S賞25,000pt を「未選択」に1点残してあること。
  *   これが無いと、高額のポイント交換で追加認証が出る様子を
  *   その場で確かめられません（STEP_UP_EXCHANGE_PT = 20,000）。
  */
-const PLAN_8842: PrizePlan[] = [
+const PLAN_0001: PrizePlan[] = [
   /* ── まだ受け取り方法を選んでいない（8点） ── */
   { g: "S", n: "A", v: 25_000, at: "2026-08-22 09:41", from: "card", did: { k: "UNCHOSEN" } },
   { g: "A", n: "B", v: 6_500, at: "2026-08-22 09:38", from: "card", did: { k: "UNCHOSEN" } },
@@ -1111,14 +1111,14 @@ const PLAN_8842: PrizePlan[] = [
 ];
 
 /**
- * 会員 7731 の2点。
+ * 会員 0002 の2点。
  *
  * ★別の会員の商品を、必ず用意しておくこと。
  *   「他人の商品IDを送っても操作できない」ことを確かめるには、
  *   本当に他人の商品が1点も無ければ、そもそも試せません。
  *   tests/consoleOwnership.test.ts が、この2点を使います。
  */
-const PLAN_7731: PrizePlan[] = [
+const PLAN_0002: PrizePlan[] = [
   { g: "A", n: "X", v: 6_500, at: "2026-08-22 09:02", from: "card", did: { k: "UNCHOSEN" } },
   { g: "B", n: "Y", v: 2_400, at: "2026-08-21 14:05", from: "sneaker", did: { k: "SHIP", at: "2026-08-21 14:09", status: "SHIPPED" } },
 ];
@@ -1228,21 +1228,21 @@ function buildDemo(
   };
 }
 
-const DEMO_8842 = buildDemo(
-  "u_8842", "会員 8842", DEMO_ADDRESS, PLAN_8842,
+const DEMO_0001 = buildDemo(
+  "GD-0001", "会員 0001", DEMO_ADDRESS, PLAN_0001,
   { at: "2026-06-02 10:00", charge: 20_000, chargeAt: "2026-08-08 10:00" },
   { prize: 101, order: 5101, ledger: 101 },
 );
 
-const DEMO_7731 = buildDemo(
-  "u_7731", "会員 7731", DEMO_ADDRESS_7731, PLAN_7731,
+const DEMO_0002 = buildDemo(
+  "GD-0002", "会員 0002", DEMO_ADDRESS_0002, PLAN_0002,
   { at: "2026-07-14 09:00", charge: 5_000, chargeAt: "2026-08-20 09:00" },
   { prize: 201, order: 5201, ledger: 201 },
 );
 
-export const DEMO_PRIZES: Prize[] = [...DEMO_8842.prizes, ...DEMO_7731.prizes];
+export const DEMO_PRIZES: Prize[] = [...DEMO_0001.prizes, ...DEMO_0002.prizes];
 
-export const DEMO_ORDERS: Order[] = [...DEMO_8842.orders, ...DEMO_7731.orders].sort(
+export const DEMO_ORDERS: Order[] = [...DEMO_0001.orders, ...DEMO_0002.orders].sort(
   (a, b) => b.requestedAt.localeCompare(a.requestedAt),
 );
 
@@ -1255,7 +1255,7 @@ export const DEMO_ORDERS: Order[] = [...DEMO_8842.orders, ...DEMO_7731.orders].s
  *   合わなければ画面にもテストにも出します。
  *   「作り方が正しいから確かめなくてよい」とはしません。
  */
-export const DEMO_LEDGER: PointEntry[] = [...DEMO_8842.ledger, ...DEMO_7731.ledger];
+export const DEMO_LEDGER: PointEntry[] = [...DEMO_0001.ledger, ...DEMO_0002.ledger];
 
 /**
  * 会員。
@@ -1269,41 +1269,41 @@ export const DEMO_LEDGER: PointEntry[] = [...DEMO_8842.ledger, ...DEMO_7731.ledg
  */
 export const DEMO_USERS: ConsoleUser[] = [
   {
-    id: "u_8842", name: "会員 8842", joinedAt: "2026-06-02",
-    points: DEMO_8842.balance,
-    spent: DEMO_8842.spent,
-    shipments: DEMO_8842.shipments,
+    id: "GD-0001", name: "会員 0001", joinedAt: "2026-06-02",
+    points: DEMO_0001.balance,
+    spent: DEMO_0001.spent,
+    shipments: DEMO_0001.shipments,
     risk: assess([]), status: "ACTIVE",
     address: DEMO_ADDRESS,
   },
   ...DEMO_OTHER_USERS,
   {
-    id: "u_7731", name: "会員 7731", joinedAt: "2026-07-14",
-    points: DEMO_7731.balance,
-    spent: DEMO_7731.spent,
-    shipments: DEMO_7731.shipments,
+    id: "GD-0002", name: "会員 0002", joinedAt: "2026-07-14",
+    points: DEMO_0002.balance,
+    spent: DEMO_0002.spent,
+    shipments: DEMO_0002.shipments,
     risk: assess([hit("emailPattern", "連番のメールアドレス")]),
     status: "ACTIVE",
-    address: DEMO_ADDRESS_7731,
+    address: DEMO_ADDRESS_0002,
   },
 ];
 
 export const DEMO_TICKETS: Ticket[] = [
   {
-    id: "t_301", userId: "u_8842", userName: "会員 8842",
+    id: "t_301", userId: "GD-0001", userName: "会員 0001",
     subject: "発送はいつになりますか", body: "先週依頼した商品の発送予定を知りたいです。",
     at: "2026-08-22 10:12", status: "AI_ANSWERED",
     reply: "ご依頼の商品は準備中です。発送時に追跡番号をお知らせします。",
   },
   {
-    id: "t_302", userId: "u_7731", userName: "会員 7731",
+    id: "t_302", userId: "GD-0002", userName: "会員 0002",
     subject: "返金してほしい", body: "先ほど引いたガチャの結果に納得できません。返金してもらえますか。",
     at: "2026-08-22 11:20", status: "HUMAN_REVIEW",
     escalateReason: "返金の可否は規約とその場の判断が要るため、AIは回答しません。",
     aiDraft: "お問い合わせありがとうございます。抽選結果に対する返金は承っておりませんが、ご事情をうかがったうえで対応を検討いたします。差し支えなければ、詳しい状況をお聞かせください。",
   },
   {
-    id: "t_303", userId: "u_9105", userName: "会員 9105",
+    id: "t_303", userId: "GD-0003", userName: "会員 0003",
     subject: "アカウントが登録できない", body: "登録しようとすると止まってしまいます。",
     at: "2026-08-22 11:45", status: "HUMAN_REVIEW",
     escalateReason: "不正判定に関わる内容のため、AIは回答しません。運営者が確認します。",
