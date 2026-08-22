@@ -31,8 +31,8 @@
 "use client";
 
 import { useState } from "react";
-import type { Admin } from "@/lib/console/state";
-import { ROLE_LABEL, can } from "@/lib/console/state";
+import type { Admin, Permission, Role } from "@/lib/console/state";
+import { PERMISSION_LABEL, ROLE_LABEL, ROLE_ORDER, can } from "@/lib/console/state";
 import { Badge, Btn, DemoNote, inputClass } from "./ui";
 
 /** デモの2段階認証コード。本物は、お手元のアプリに出る6桁です */
@@ -83,12 +83,131 @@ export function Login({
         ))}
       </div>
 
+      <RoleGlance />
+
       <DemoNote>
         全員が架空の担当者です。実在のアカウントではありません。
         パスワードは入力しません。デモで本物らしい入力欄を出すと、
         本当のパスワードを打ってしまう方がいるためです。
       </DemoNote>
     </Frame>
+  );
+}
+
+/**
+ * どの担当が、何をできて、何をできないか。
+ *
+ * ═══════════════════════════════════════════════
+ * ★入る前に見せること
+ * ═══════════════════════════════════════════════
+ *
+ *   ログインしたあとに権限の説明をしても、もう遅いのです。
+ *   「サポートの子に全部やらせていた」に気づくのは、
+ *   たいてい、何かが起きたあとです。
+ *
+ *   だから、入口で先に出します。
+ *   ここで「サポートはお金に触れない」と分かっていれば、
+ *   誰にどのアカウントを渡すかを、最初から間違えません。
+ *
+ * ★出す項目を、5つに絞ること。
+ *   16項目すべてをここに並べると、誰も読みません。
+ *   読まれない表は、無いのと同じです。
+ *   全部見たい方のために、中の設定画面に完全版を置いてあります。
+ */
+const GLANCE: Permission[] = [
+  "point.approve",
+  "point.request",
+  "gacha.publish",
+  "shipping.act",
+  "settings.edit",
+];
+
+/** 入口では短く言い切る。長い正式名称は、中の権限マトリクスにあります */
+const GLANCE_SHORT: Record<string, string> = {
+  "point.approve": "ポイント承認",
+  "point.request": "ポイント申請",
+  "gacha.publish": "ガチャ公開",
+  "shipping.act": "発送処理",
+  "settings.edit": "設定変更",
+};
+
+function RoleGlance() {
+  const [open, setOpen] = useState(false);
+  /* 見るだけの役割は、入口の表には出さない（実際に配るのはこの5つです） */
+  const roles: Role[] = ROLE_ORDER.filter((r) => r !== "VIEWER");
+
+  return (
+    <div className="rounded-xl border border-edge2 bg-paper2 px-4 py-3">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center justify-between gap-3 text-left"
+        aria-expanded={open}
+      >
+        <span className="text-note font-bold text-slate2">
+          担当ごとに、できること・できないこと
+        </span>
+        <span className="nb text-note font-bold text-blue-ink">
+          {open ? "閉じる" : "見る"}
+        </span>
+      </button>
+
+      {open && (
+        <>
+          <div className="-mx-1 mt-3 overflow-x-auto px-1">
+            <table className="w-full min-w-[30rem] border-collapse text-[0.78rem]">
+              <thead>
+                <tr>
+                  <th className="border-b border-edge px-2 py-2 text-left font-bold text-slate3">
+                    担当
+                  </th>
+                  {GLANCE.map((p) => (
+                    <th
+                      key={p}
+                      className="nb border-b border-edge px-1.5 py-2 text-center font-bold text-slate3"
+                    >
+                      {GLANCE_SHORT[p]}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {roles.map((r) => (
+                  <tr key={r}>
+                    <td className="nb whitespace-nowrap border-b border-edge px-2 py-2 font-bold text-slate">
+                      {ROLE_LABEL[r]}
+                    </td>
+                    {GLANCE.map((p) => (
+                      <td key={p} className="border-b border-edge px-1.5 py-2 text-center">
+                        <span
+                          className={
+                            can(r, p)
+                              ? "font-bold text-ok-ink"
+                              : "font-bold text-slate3"
+                          }
+                          aria-label={`${PERMISSION_LABEL[p]}：${can(r, p) ? "できる" : "できない"}`}
+                        >
+                          {can(r, p) ? "○" : "×"}
+                        </span>
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <p className="mt-3 text-note leading-[1.85] text-slate3">
+            ★ポイントは「申請する人」と「承認する人」を分けています。
+            経理は申請だけ、承認は管理者だけです。1人では動かせません。
+            <br />
+            ★画面からボタンを消しているだけではありません。
+            権限の無い操作は、直接呼び出しても断られ、その記録が残ります。
+            完全な一覧は、ログイン後の「設定」にあります。
+          </p>
+        </>
+      )}
+    </div>
   );
 }
 

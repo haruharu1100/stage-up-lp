@@ -33,7 +33,9 @@ import assert from "node:assert/strict";
 import {
   DEMO_ADDRESS,
   DEMO_ADMINS,
+  DEMO_STEP_UP_CODE,
   PREVIEW_USER_ID,
+  STEP_UP_EXCHANGE_PT,
   initialState,
   ledgerBalance,
   pointsReconcile,
@@ -43,19 +45,54 @@ import {
 } from "../lib/console/state";
 import { verifyAudit } from "../lib/console/audit";
 
-/** 管理者としてログインし、2段階認証まで通した状態を作る */
+/**
+ * 管理者としてログインし、2段階認証まで通し、
+ * さらにお客様としてもログインした状態を作る。
+ *
+ * ★お客様のログインを、ここで必ず通すこと。
+ *   お客様の操作は、ログインしていなければ全部止まります。
+ *   止まった状態でテストを書くと「増えていない」ことは確認できても、
+ *   「正しく増える」ことを一度も確かめないままになります。
+ */
 function loggedIn(): ConsoleState {
   let s = initialState();
   s = reducer(s, { type: "LOGIN", adminId: DEMO_ADMINS[0].id });
   s = reducer(s, { type: "MFA_OK" });
+  s = reducer(s, { type: "CUSTOMER_LOGIN", userId: PREVIEW_USER_ID });
   return s;
 }
 
-/** まだ受け取り方法を選んでいない商品を1つ取る */
+/**
+ * まだ受け取り方法を選んでいない、ログイン中のご本人の商品を1つ取る。
+ *
+ * ★持ち主を必ず絞ること。
+ *   絞らずに拾うと、他の会員の商品が混ざります。
+ *   すると「本人の操作が通るか」を確かめたつもりが、
+ *   実は「他人の商品が止まるか」を見ているだけになります。
+ *
+ * ★追加の本人確認に回る高額品は避けること。
+ *   高額のポイント交換は、途中で止まるのが正しい動きです。
+ *   その動きは別のテスト（consoleCustomerAuth）で確かめます。
+ */
 function unchosen(s: ConsoleState): Prize {
-  const p = s.prizes.find((x) => x.status === "UNCHOSEN");
+  const p = s.prizes.find(
+    (x) =>
+      x.status === "UNCHOSEN" &&
+      x.userId === PREVIEW_USER_ID &&
+      x.exchangePt < STEP_UP_EXCHANGE_PT,
+  );
   assert.ok(p, "受け取り方法を選べる商品が、デモデータに1つも無い");
   return p!;
+}
+
+/** 未選択で、追加確認に回らない商品を、順に取る */
+function unchosenList(s: ConsoleState): Prize[] {
+  return s.prizes.filter(
+    (x) =>
+      x.status === "UNCHOSEN" &&
+      x.userId === PREVIEW_USER_ID &&
+      x.exchangePt < STEP_UP_EXCHANGE_PT,
+  );
 }
 
 const wallet = (s: ConsoleState) =>
@@ -73,7 +110,6 @@ test("発送を依頼した商品は、ポイントに交換できない", () =>
     type: "PRIZE_SHIP_REQUEST",
     prizeId: p.id,
     key: "ship-1",
-    address: DEMO_ADDRESS,
   });
   assert.equal(
     s1.prizes.find((x) => x.id === p.id)!.status,
@@ -113,7 +149,6 @@ test("ポイントに交換した商品は、発送できない", () => {
     type: "PRIZE_SHIP_REQUEST",
     prizeId: p.id,
     key: "ship-2",
-    address: DEMO_ADDRESS,
   });
 
   assert.equal(
@@ -138,13 +173,11 @@ test("同じ鍵の発送依頼が2回届いても、伝票は1枚しか作られ
     type: "PRIZE_SHIP_REQUEST",
     prizeId: p.id,
     key: "same-ship",
-    address: DEMO_ADDRESS,
   });
   const s2 = reducer(s1, {
     type: "PRIZE_SHIP_REQUEST",
     prizeId: p.id,
     key: "same-ship",
-    address: DEMO_ADDRESS,
   });
 
   assert.equal(s2.orders.length, orders0 + 1, "同じ鍵で伝票が2枚できている");
@@ -173,7 +206,7 @@ test("同じ鍵のポイント交換が2回届いても、ポイントは1回し
 
 test("違う商品なら、続けて交換できる（鍵が違えば止まらない）", () => {
   const s0 = loggedIn();
-  const list = s0.prizes.filter((x) => x.status === "UNCHOSEN");
+  const list = unchosenList(s0);
   assert.ok(list.length >= 2, "未選択の商品が2つ以上ないと、この確認ができない");
 
   const before = wallet(s0);
@@ -266,7 +299,6 @@ test("発送を依頼した瞬間、管理サイトの未発送が1件増える"
     type: "PRIZE_SHIP_REQUEST",
     prizeId: p.id,
     key: "ship-3",
-    address: DEMO_ADDRESS,
   });
 
   const todo1 = s1.orders.filter((o) => o.status === "UNSHIPPED").length;
@@ -277,28 +309,57 @@ test("発送を依頼した瞬間、管理サイトの未発送が1件増える"
   assert.equal(o!.address?.zip, DEMO_ADDRESS.zip, "依頼時のお届け先が伝票に写っていない");
 });
 
-test("依頼したあとに会員情報の住所を変えても、出した伝票の宛先は変わらない", () => {
+/**
+ * ★発送先は、依頼のたびに画面から送られてくるものではありません。
+ *
+ *   以前は、依頼の中に住所を入れて送っていました。
+ *   それは「送り先を、送信のたびに自由に決められる」ということです。
+ *   乗っ取った人は、そこに自分の家を書くだけで済みます。
+ *
+ *   今は、受け取った側が、ログイン中のご本人の登録住所を使います。
+ *   だから、このテストで確かめるのは2つです。
+ *     ① 伝票に写るのは、その方の登録住所である
+ *     ② あとから登録住所を変えても、出した伝票は書き換わらない
+ */
+test("出した伝票の宛先は、あとから住所を変えても書き換わらない", () => {
   const s0 = loggedIn();
-  const list = s0.prizes.filter((x) => x.status === "UNCHOSEN");
+  const list = unchosenList(s0);
   assert.ok(list.length >= 2, "未選択の商品が2つ以上ないと、この確認ができない");
 
   const s1 = reducer(s0, {
     type: "PRIZE_SHIP_REQUEST",
     prizeId: list[0].id,
     key: "ship-old",
-    address: { ...DEMO_ADDRESS, addr: "むかしの住所" },
   });
-  const s2 = reducer(s1, {
-    type: "PRIZE_SHIP_REQUEST",
-    prizeId: list[1].id,
-    key: "ship-new",
-    address: { ...DEMO_ADDRESS, addr: "あたらしい住所" },
+  assert.equal(
+    s1.orders.find((o) => o.prizeId === list[0].id)!.address?.addr,
+    DEMO_ADDRESS.addr,
+    "伝票の宛先が、ご本人の登録住所になっていない",
+  );
+
+  /* 住所を変える。★追加の本人確認を必ず通ること */
+  const held = reducer(s1, {
+    type: "ADDRESS_UPDATE",
+    address: { ...DEMO_ADDRESS, addr: "あたらしいデモの住所" },
   });
+  assert.ok(held.stepUp, "住所の変更が、追加の本人確認なしで通ってしまっている");
+  assert.equal(
+    held.users.find((u) => u.id === PREVIEW_USER_ID)!.address?.addr,
+    DEMO_ADDRESS.addr,
+    "確認が済む前に、住所が書き換わっている",
+  );
+
+  const s2 = reducer(held, { type: "CUSTOMER_STEP_UP", code: DEMO_STEP_UP_CODE });
+  assert.equal(
+    s2.users.find((u) => u.id === PREVIEW_USER_ID)!.address?.addr,
+    "あたらしいデモの住所",
+    "確認が済んだのに、預かっていた住所変更が実行されていない",
+  );
 
   assert.equal(
     s2.orders.find((o) => o.prizeId === list[0].id)!.address?.addr,
-    "むかしの住所",
-    "先に出した伝票の宛先が、後の変更で書き換わっている",
+    DEMO_ADDRESS.addr,
+    "先に出した伝票の宛先が、あとの住所変更で書き換わっている",
   );
 });
 
@@ -324,14 +385,13 @@ test("ポイント交換は、交換前後の残高まで監査ログに残る",
 
 test("お客様の操作を混ぜても、監査ログの鎖は切れない", () => {
   const s0 = loggedIn();
-  const list = s0.prizes.filter((x) => x.status === "UNCHOSEN");
+  const list = unchosenList(s0);
 
   let s = reducer(s0, { type: "PRIZE_EXCHANGE", prizeId: list[0].id, key: "chain-1" });
   s = reducer(s, {
     type: "PRIZE_SHIP_REQUEST",
     prizeId: list[1].id,
     key: "chain-2",
-    address: DEMO_ADDRESS,
   });
   s = reducer(s, { type: "USER_ASK", text: "発送はいつ届きますか？", key: "chain-3" });
 

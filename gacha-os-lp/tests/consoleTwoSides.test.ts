@@ -26,7 +26,13 @@
  *   4) お客様側に、管理者のログインを要らなくすること
  *      お客様は、ただガチャを引きに来ただけです。
  *      2段階認証は運営を守るための鍵で、お客様のためのものではありません。
- *      だからお客様の操作は、誰もログインしていなくても通ります。
+ *      だからお客様の操作に、運営のログインは要りません。
+ *
+ *      ★ただし「誰のログインも要らない」ではありません。
+ *        ここは以前、誰もログインしていなくても発送依頼が通る作りでした。
+ *        それは、ポイント・当選商品・住所という、
+ *        その方だけのものが、誰にでも触れる場所にあったということです。
+ *        いまは「運営のログインは要らない／ご本人のログインは要る」です。
  */
 
 import test from "node:test";
@@ -37,6 +43,7 @@ import {
   DEMO_ADMINS,
   ORDER_TODO,
   PREVIEW_USER_ID,
+  STEP_UP_EXCHANGE_PT,
   initialState,
   reducer,
   summary,
@@ -46,17 +53,37 @@ import {
   type Prize,
 } from "../lib/console/state";
 
-/** 管理者としてログインし、2段階認証まで通した状態を作る */
+/** 管理者としてログインし、2段階認証まで通し、お客様としてもログインする */
 function loggedIn(): ConsoleState {
   let s = initialState();
   s = reducer(s, { type: "LOGIN", adminId: DEMO_ADMINS[0].id });
   s = reducer(s, { type: "MFA_OK" });
+  s = reducer(s, { type: "CUSTOMER_LOGIN", userId: PREVIEW_USER_ID });
   return s;
 }
 
-/** まだ受け取り方法を選んでいない商品を1つ取る */
+/** お客様だけがログインした状態（運営は誰も入っていない） */
+function customerOnly(): ConsoleState {
+  return reducer(initialState(), {
+    type: "CUSTOMER_LOGIN",
+    userId: PREVIEW_USER_ID,
+  });
+}
+
+/**
+ * まだ受け取り方法を選んでいない、ログイン中のご本人の商品を1つ取る。
+ *
+ * ★持ち主で絞ること。他の会員の商品を混ぜると、
+ *   確かめたいことと、実際に確かめていることがずれます。
+ * ★追加の本人確認に回る高額品は避けること。止まるのが正しい動きだからです。
+ */
 function unchosen(s: ConsoleState): Prize {
-  const p = s.prizes.find((x) => x.status === "UNCHOSEN");
+  const p = s.prizes.find(
+    (x) =>
+      x.status === "UNCHOSEN" &&
+      x.userId === PREVIEW_USER_ID &&
+      x.exchangePt < STEP_UP_EXCHANGE_PT,
+  );
   assert.ok(p, "受け取り方法を選べる商品が、デモデータに1つも無い");
   return p!;
 }
@@ -74,7 +101,6 @@ test("お客様が発送を依頼すると、運営の未発送がその場で1�
     type: "PRIZE_SHIP_REQUEST",
     prizeId: p.id,
     key: "two-sides-ship",
-    address: DEMO_ADDRESS,
   });
   const after = summary(s1);
 
@@ -169,7 +195,6 @@ test("お客様の操作で出た知らせだけが、お客様向けになる",
     type: "PRIZE_SHIP_REQUEST",
     prizeId: p.id,
     key: "two-sides-flash",
-    address: DEMO_ADDRESS,
   });
   assert.equal(s1.flash?.to, "customer", "お客様の操作の結果が、お客様に出ない");
 
@@ -185,7 +210,6 @@ test("知らせが変わらない操作では、宛先が書き換わらない",
     type: "PRIZE_SHIP_REQUEST",
     prizeId: p.id,
     key: "two-sides-keep",
-    address: DEMO_ADDRESS,
   });
 
   /* 知らせを出さない操作を挟んでも、さっきの宛先はそのまま。
@@ -205,19 +229,19 @@ test("知らせが変わらない操作では、宛先が書き換わらない",
 });
 
 /* ══════════════════════════════════════════════
-   ④ お客様側に、管理者のログインは要らない
+   ④ 運営のログインは要らない。ご本人のログインは要る
    ══════════════════════════════════════════════ */
 
-test("誰もログインしていなくても、お客様の操作は通る", () => {
-  const s0 = initialState();
-  assert.equal(s0.me, null, "はじめは誰もログインしていないこと");
+test("運営が誰もログインしていなくても、お客様ご本人の操作は通る", () => {
+  const s0 = customerOnly();
+  assert.equal(s0.me, null, "運営は誰もログインしていないこと");
+  assert.ok(s0.customer, "お客様のログインが通っていない");
 
   const p = unchosen(s0);
   const s1 = reducer(s0, {
     type: "PRIZE_SHIP_REQUEST",
     prizeId: p.id,
-    key: "no-login-ship",
-    address: DEMO_ADDRESS,
+    key: "no-admin-ship",
   });
 
   assert.equal(
@@ -231,10 +255,54 @@ test("誰もログインしていなくても、お客様の操作は通る", ()
   );
 });
 
-test("お客様の操作は、監査ログに「お客様」として残る", () => {
+/**
+ * ★ここが、今回いちばん大事な1本です。
+ *
+ *   以前は、誰もログインしていない状態でも
+ *   発送依頼とポイント交換が通っていました。
+ *   デモとしては動いて見えます。
+ *   しかし本番であれば、住所を知らない他人が、
+ *   他人の当選商品を、他人の住所へ送らせられる、ということです。
+ */
+test("お客様がログインしていなければ、発送もポイント交換も通らない", () => {
   const s0 = initialState();
+  assert.equal(s0.customer, null, "はじめは誰もログインしていないこと");
+
+  const p = s0.prizes.find((x) => x.status === "UNCHOSEN")!;
+  const orders0 = s0.orders.length;
+  const points0 = s0.users.find((u) => u.id === p.userId)!.points;
+
+  const s1 = reducer(s0, {
+    type: "PRIZE_SHIP_REQUEST",
+    prizeId: p.id,
+    key: "anon-ship",
+  });
+  assert.equal(
+    s1.prizes.find((x) => x.id === p.id)!.status,
+    "UNCHOSEN",
+    "ログインしていないのに、発送依頼が通っている",
+  );
+  assert.equal(s1.orders.length, orders0, "ログインなしで伝票が作られている");
+
+  const s2 = reducer(s1, { type: "PRIZE_EXCHANGE", prizeId: p.id, key: "anon-ex" });
+  assert.equal(
+    s2.users.find((u) => u.id === p.userId)!.points,
+    points0,
+    "ログインしていないのに、ポイントが増えている",
+  );
+
+  /* ★止めたことを、必ず残すこと。
+     成功だけを記録すると、何回叩かれたのかが誰にも分かりません */
+  assert.ok(
+    s2.securityEvents.length >= 2,
+    "止めた操作が、セキュリティの記録に残っていない",
+  );
+});
+
+test("お客様の操作は、監査ログに「お客様」として残る", () => {
+  const s0 = customerOnly();
   const p = unchosen(s0);
-  const s1 = reducer(s0, { type: "PRIZE_EXCHANGE", prizeId: p.id, key: "no-login-ex" });
+  const s1 = reducer(s0, { type: "PRIZE_EXCHANGE", prizeId: p.id, key: "cust-ex" });
 
   const last = s1.audit[s1.audit.length - 1];
   assert.equal(
@@ -251,4 +319,62 @@ test("お客様の操作は、監査ログに「お客様」として残る", ()
      運営が誰もログインしていないときの既定値がそのまま入ると、
      誰がやったのか永久に分からない記録になります */
   assert.notEqual(last.actorName, "-", "操作した人の名前が記録に残っていない");
+});
+
+/* ══════════════════════════════════════════════
+   ⑤ 他人の商品は、ログインしていても操作できない
+   ══════════════════════════════════════════════ */
+
+/**
+ * ★これが IDOR（他人のIDを指定して操作すること）への備えです。
+ *
+ *   画面に他人の商品は出ません。しかし、
+ *   画面に出ないことと、操作できないことは別のことです。
+ *   商品のIDを1つ書き換えて送るだけなら、誰にでもできます。
+ *   だから、受け取った側で持ち主を必ず確かめます。
+ */
+test("ログイン中でも、他人の商品は発送もポイント交換もできない", () => {
+  const s0 = customerOnly();
+
+  const other = s0.prizes.find(
+    (p) => p.userId !== PREVIEW_USER_ID && p.status === "UNCHOSEN",
+  );
+  assert.ok(other, "他の会員の未選択商品が、デモデータに1つも無い");
+
+  const points0 = s0.users.find((u) => u.id === PREVIEW_USER_ID)!.points;
+  const orders0 = s0.orders.length;
+
+  const s1 = reducer(s0, {
+    type: "PRIZE_SHIP_REQUEST",
+    prizeId: other!.id,
+    key: "idor-ship",
+  });
+  assert.equal(
+    s1.prizes.find((x) => x.id === other!.id)!.status,
+    "UNCHOSEN",
+    "他人の商品の発送依頼が通っている",
+  );
+  assert.equal(s1.orders.length, orders0, "他人の商品で伝票が作られている");
+
+  const s2 = reducer(s1, {
+    type: "PRIZE_EXCHANGE",
+    prizeId: other!.id,
+    key: "idor-ex",
+  });
+  assert.equal(
+    s2.prizes.find((x) => x.id === other!.id)!.status,
+    "UNCHOSEN",
+    "他人の商品がポイントに交換されている",
+  );
+  assert.equal(
+    s2.users.find((u) => u.id === PREVIEW_USER_ID)!.points,
+    points0,
+    "他人の商品を交換して、自分のポイントが増えている",
+  );
+
+  /* ★止めたことを記録に残すこと */
+  assert.ok(
+    s2.audit.some((e) => e.action === "IDOR_BLOCKED"),
+    "他人の商品への操作を止めたことが、監査ログに残っていない",
+  );
 });

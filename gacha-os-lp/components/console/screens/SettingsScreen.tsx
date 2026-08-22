@@ -25,8 +25,18 @@
 "use client";
 
 import { useState } from "react";
-import type { ConsoleState } from "@/lib/console/state";
-import { FOUR_EYES_THRESHOLD, ROLE_LABEL, ROLE_PERMISSIONS, can } from "@/lib/console/state";
+import type { ConsoleAction, ConsoleState, CustomerAuthMethod, Role } from "@/lib/console/state";
+import {
+  CUSTOMER_AUTH_LABEL,
+  CUSTOMER_AUTH_NOTE,
+  FOUR_EYES_THRESHOLD,
+  PERMISSION_GROUPS,
+  PERMISSION_LABEL,
+  ROLE_LABEL,
+  ROLE_ORDER,
+  ROLE_PERMISSIONS,
+  can,
+} from "@/lib/console/state";
 import { Badge, Card, DemoNote, Field, KV, RowCard, Rows, Table, Td, WhatIsThis, inputClass } from "../ui";
 
 /** 実装状況の3区分 */
@@ -38,18 +48,25 @@ const READY: Record<Ready, { label: string; tone: "ok" | "blue" | "neutral" }> =
   PLANNED: { label: "今後対応予定", tone: "neutral" },
 };
 
-const AUTH_METHODS: { key: string; label: string; note: string; ready: Ready }[] = [
-  { key: "email", label: "メールアドレスの確認のみ", note: "いちばん軽い方法です。登録は増えますが、不正も入りやすくなります。", ready: "AVAILABLE" },
-  { key: "sms", label: "SMS（電話番号）の確認のみ", note: "電話番号1つにつき1アカウントに絞れます。送信費用がかかります。", ready: "AVAILABLE" },
-  { key: "both", label: "メール ＋ SMS の両方", note: "特典目当ての大量登録には、いちばん効きます。", ready: "AVAILABLE" },
-  { key: "risk", label: "ふだんはメール、怪しいときだけSMS", note: "手がかりが重なった登録にだけ、追加の確認を求めます。ふつうのお客様の手間は増えません。", ready: "AVAILABLE" },
-  { key: "passkey", label: "パスキー（指紋・顔）", note: "パスワードを使わない方式です。対応の設計は済んでいますが、まだ入れていません。", ready: "PLANNED" },
-];
+/**
+ * お客様の本人確認の選択肢。
+ *
+ * ★ここで選んだものが、そのままお客様側のログイン画面に出ること。
+ *   設定画面だけで切り替わって、実際のログインが変わらないなら、
+ *   それは設定ではなく、ただの飾りです。
+ *   だから選択肢の実体は state.ts の CustomerAuthMethod と同じにします。
+ */
+const AUTH_METHODS: CustomerAuthMethod[] = ["EMAIL", "SMS", "EMAIL_SMS", "TOTP"];
 
-export default function SettingsScreen({ s }: { s: ConsoleState }) {
+export default function SettingsScreen({
+  s,
+  dispatch,
+}: {
+  s: ConsoleState;
+  dispatch: React.Dispatch<ConsoleAction>;
+}) {
   const me = s.me!;
   const mayEdit = can(me.role, "settings.edit");
-  const [auth, setAuth] = useState("risk");
   const [threshold, setThreshold] = useState(FOUR_EYES_THRESHOLD);
 
   return (
@@ -73,15 +90,15 @@ export default function SettingsScreen({ s }: { s: ConsoleState }) {
 
       {/* ── 会員の登録方法 ── */}
       <Card
-        title="お客様の登録・ログイン方法"
-        note="厳しくするほど不正は減りますが、ふつうのお客様の手間も増えます。"
+        title="お客様の本人確認の方法"
+        note="厳しくするほど不正は減りますが、ふつうのお客様の手間も増えます。ここで選んだものが、お客様のログイン画面にそのまま出ます。"
       >
         <ul className="space-y-3">
           {AUTH_METHODS.map((m) => (
             <li
-              key={m.key}
+              key={m}
               className={`rounded-xl border px-4 py-4 ${
-                auth === m.key && m.ready === "AVAILABLE"
+                s.customerAuth === m
                   ? "border-blue-ink/30 bg-blue-pale/40"
                   : "border-edge2 bg-paper2"
               }`}
@@ -91,16 +108,19 @@ export default function SettingsScreen({ s }: { s: ConsoleState }) {
                   type="radio"
                   name="auth"
                   className="mt-1 h-4 w-4 shrink-0"
-                  checked={auth === m.key}
-                  disabled={!mayEdit || m.ready !== "AVAILABLE"}
-                  onChange={() => setAuth(m.key)}
+                  checked={s.customerAuth === m}
+                  disabled={!mayEdit}
+                  onChange={() => dispatch({ type: "SET_CUSTOMER_AUTH", method: m })}
                 />
                 <span className="min-w-0">
                   <span className="flex flex-wrap items-center gap-2">
-                    <span className="text-note font-bold text-slate">{m.label}</span>
-                    <Badge tone={READY[m.ready].tone}>{READY[m.ready].label}</Badge>
+                    <span className="text-note font-bold text-slate">{CUSTOMER_AUTH_LABEL[m]}</span>
+                    <Badge tone="ok">いま使えます</Badge>
+                    {m === "TOTP" && <Badge tone="blue">お客様は任意設定</Badge>}
                   </span>
-                  <span className="mt-1 block text-note leading-[1.85] text-slate3">{m.note}</span>
+                  <span className="mt-1 block text-note leading-[1.85] text-slate3">
+                    {CUSTOMER_AUTH_NOTE[m]}
+                  </span>
                 </span>
               </label>
             </li>
@@ -110,6 +130,16 @@ export default function SettingsScreen({ s }: { s: ConsoleState }) {
         <p className="mt-4 text-note leading-[1.9] text-slate3">
           ★どれを選んでも、同じ端末から短時間に何度も登録された場合は、
           回数の上限で先に止まります。認証方法だけに頼りません。
+        </p>
+        <p className="mt-3 rounded-xl border border-blue-ink/25 bg-blue-pale/40 px-4 py-4 text-note leading-[1.9] text-slate2">
+          <strong className="font-bold text-slate">
+            ★お客様に2段階認証を必須にはしません。危ないときだけ、その場で確認します。
+          </strong>
+          <br />
+          全員に必須にすると、買う前に離脱します。
+          そのかわり、高額のポイント交換・お届け先を変えた直後の高額発送・まとめての操作は、
+          ログイン済みでも、もう一度ご本人確認をお願いします。
+          管理者側の2段階認証は、これとは別に必須のままです。
         </p>
       </Card>
 
@@ -236,27 +266,30 @@ export default function SettingsScreen({ s }: { s: ConsoleState }) {
         </p>
       </Card>
 
-      {/* ── 役割ごとにできること ── */}
-      <Card title="役割ごとにできること" note="全員を管理者にしないための表です。">
-        <Table head={["役割", "できること"]}>
-          {(Object.keys(ROLE_PERMISSIONS) as (keyof typeof ROLE_PERMISSIONS)[]).map((r) => (
-            <tr key={r}>
-              <Td className="whitespace-nowrap font-bold text-slate">{ROLE_LABEL[r]}</Td>
-              <Td>
-                <span className="num">{ROLE_PERMISSIONS[r].length}項目</span>
-                <span className="mt-1 block text-slate3">{PERM_SUMMARY[r]}</span>
-              </Td>
-            </tr>
-          ))}
-        </Table>
+      {/* ── 権限マトリクス ── */}
+      <PermissionMatrix />
+
+      {/* ── 役割ごとの要約 ── */}
+      <Card title="役割ごとの、ひとことでの説明" note="上の表を、言葉にするとこうなります。">
         <Rows>
-          {(Object.keys(ROLE_PERMISSIONS) as (keyof typeof ROLE_PERMISSIONS)[]).map((r) => (
+          {ROLE_ORDER.map((r) => (
             <RowCard key={r}>
               <p className="text-note font-bold text-slate">{ROLE_LABEL[r]}</p>
               <p className="mt-1 text-note leading-[1.85] text-slate3">{PERM_SUMMARY[r]}</p>
             </RowCard>
           ))}
         </Rows>
+        <ul className="hidden space-y-2 md:block">
+          {ROLE_ORDER.map((r) => (
+            <li key={r} className="rounded-xl border border-edge2 bg-paper2 px-4 py-3">
+              <span className="nb text-note font-bold text-slate">{ROLE_LABEL[r]}</span>
+              <span className="num ml-2 text-note text-slate3">
+                {ROLE_PERMISSIONS[r].length}項目
+              </span>
+              <p className="mt-1 text-note leading-[1.85] text-slate3">{PERM_SUMMARY[r]}</p>
+            </li>
+          ))}
+        </ul>
         <p className="mt-4 text-note leading-[1.9] text-slate3">
           ★ポイントを「申請できる人」と「承認できる人」を分けてあります。
           経理は申請だけ、承認は管理者だけです。
@@ -291,7 +324,114 @@ export default function SettingsScreen({ s }: { s: ConsoleState }) {
   );
 }
 
-const PERM_SUMMARY: Record<string, string> = {
+/**
+ * 権限マトリクス（Roles & Permissions）。
+ *
+ * ═══════════════════════════════════════════════
+ * ★なぜ、わざわざ表にするのか
+ * ═══════════════════════════════════════════════
+ *
+ *   「サポートは何ができるんですか」と聞かれて、
+ *   その場で答えられない状態が、いちばん危ないからです。
+ *   答えられないということは、誰も把握していないということで、
+ *   把握していないものは、たいてい広すぎます。
+ *
+ *   この表は ROLE_PERMISSIONS から作っています。手で書いていません。
+ *   手で書くと、中身を変えたときに表だけ古いままになり、
+ *   「表では×なのに、実際は押せる」が生まれます。
+ *   それが起きると、この表を誰も信じなくなります。
+ *
+ * ★画面でボタンを隠すことは、権限ではありません。
+ *   隠れているだけのボタンは、直接呼べば動きます。
+ *   本当の判定は、受け取り側（state.ts の requireRole）でやっています。
+ *   ここに出ている×は、その受け取り側の×と同じものです。
+ */
+function PermissionMatrix() {
+  return (
+    <Card
+      title="権限マトリクス（役割 × できること）"
+      note="全員を管理者にしないための表です。○が付いていない操作は、直接呼び出しても断られます。"
+    >
+      <div className="-mx-1 overflow-x-auto px-1">
+        <table className="w-full min-w-[46rem] border-collapse text-note">
+          <thead>
+            <tr>
+              <th className="sticky left-0 z-10 border-b border-edge bg-paper px-3 py-2.5 text-left font-bold text-slate2">
+                できること
+              </th>
+              {ROLE_ORDER.map((r) => (
+                <th
+                  key={r}
+                  className="nb border-b border-edge px-2 py-2.5 text-center text-[0.72rem] font-bold text-slate2"
+                >
+                  {ROLE_LABEL[r]}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {PERMISSION_GROUPS.flatMap((g) => [
+              <tr key={`g:${g.title}`}>
+                <th
+                  colSpan={ROLE_ORDER.length + 1}
+                  className="border-b border-edge bg-paper2 px-3 py-2 text-left text-[0.72rem] font-bold text-slate3"
+                >
+                  {g.title}
+                </th>
+              </tr>,
+              ...g.items.map((p) => (
+                <tr key={p}>
+                  <td className="sticky left-0 z-10 whitespace-nowrap border-b border-edge bg-paper px-3 py-2.5 font-medium text-slate">
+                    {PERMISSION_LABEL[p]}
+                  </td>
+                  {ROLE_ORDER.map((r) => (
+                    <td key={r} className="border-b border-edge px-2 py-2.5 text-center">
+                      <Mark on={can(r, p)} />
+                    </td>
+                  ))}
+                </tr>
+              )),
+            ])}
+          </tbody>
+        </table>
+      </div>
+
+      <p className="mt-4 text-note leading-[1.9] text-slate3">
+        ★この表は、実際の判定に使っている設定から自動で作っています。
+        表だけ直して中身が変わらない、ということが起きません。
+      </p>
+      <p className="mt-3 rounded-xl border border-warn/30 bg-warn/8 px-4 py-4 text-note leading-[1.9] text-warn-ink">
+        <strong className="font-bold">★画面からボタンを消すのは、権限ではありません。</strong>
+        <br />
+        たとえばサポートの担当者が、管理者の画面のURLを直接開いたり、
+        通信の内容をまねて送ったりしても、
+        ポイント変更・ガチャ公開・権限変更は通りません。
+        受け取る側で、もう一度この表を見て断ります。断った記録も監査ログに残ります。
+      </p>
+    </Card>
+  );
+}
+
+/** ○と× を、色でも分かるようにする（記号だけだと見落とします） */
+function Mark({ on }: { on: boolean }) {
+  return on ? (
+    <span
+      className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-ok/12 text-[0.8rem] font-bold text-ok-ink"
+      aria-label="できる"
+    >
+      ○
+    </span>
+  ) : (
+    <span
+      className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-slate3/10 text-[0.8rem] font-bold text-slate3"
+      aria-label="できない"
+    >
+      ×
+    </span>
+  );
+}
+
+const PERM_SUMMARY: Record<Role, string> = {
   VIEWER: "見るだけ。何も変えられません。",
   SUPPORT: "発送処理と、問い合わせへの返信ができます。",
   OPERATOR: "ガチャの作成・公開・停止と、発送・問い合わせができます。ポイントは触れません。",

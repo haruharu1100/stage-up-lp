@@ -39,6 +39,24 @@ const ACTION_LABEL: Record<AuditAction, string> = {
   PRIZE_EXCHANGE: "お客様が商品をポイントに交換",
   USER_ASK: "お客様からの問い合わせ",
   SUPPORT_REPLY: "問い合わせ返信",
+
+  /* お客様の本人確認まわり。
+     ★ログインと住所変更を必ず残すこと。
+       乗っ取りは、ほぼ必ず「ログイン→住所変更→高額発送」の順で進みます。
+       前の2つが残っていないと、最後の発送だけを見ることになり、
+       なぜそれが起きたのかを、誰も説明できません */
+  CUSTOMER_LOGIN: "お客様のログイン",
+  CUSTOMER_STEP_UP: "お客様の追加本人確認",
+  ADDRESS_UPDATE: "お届け先の変更",
+  SET_CUSTOMER_AUTH: "お客様の認証方式の変更",
+
+  /* 止めた記録。
+     ★「起きなかったこと」も残すこと。
+       成功した操作だけが並ぶ記録は、いつもきれいなままです。
+       きれいな記録は、攻撃されていない証明にはなりません */
+  IDOR_BLOCKED: "他人の商品への操作を拒否",
+  RBAC_DENIED: "権限のない操作を拒否",
+
   ROLE_CHANGE: "権限の変更",
   SETTINGS_CHANGE: "設定の変更",
   DEMO_RESET: "デモの初期化",

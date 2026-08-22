@@ -387,6 +387,17 @@ function loggedIn(adminId = "ad_01"): ConsoleState {
   return s;
 }
 
+/**
+ * その時点の、会員の残高。
+ *
+ * ★残高の数字を、テストに直接書かないこと。
+ *   デモの見本データを作り直すと、初期残高は変わります。
+ *   数字を書いてしまうと、そのたびにテストが赤くなり、
+ *   「またテストが壊れた」と思って直さなくなります。
+ *   見たいのは「いくらだったか」ではなく「いくら動いたか」です。
+ */
+const pt = (s: ConsoleState, id = "u_8842") => s.users.find((u) => u.id === id)!.points;
+
 test("操作：バックテスト未実施のガチャは公開できない", () => {
   const s = loggedIn();
   const before = s.gachas.find((g) => g.id === "g_105")!;
@@ -407,44 +418,49 @@ test("操作：検証済みのガチャは公開でき、監査ログに残る",
 
 test("操作：理由を書かないポイント変更は、そもそも受け付けない", () => {
   const s = loggedIn();
+  const before = pt(s);
   const after = reducer(s, { type: "POINT_REQUEST", userId: "u_8842", delta: 500, reason: "   " });
   assert.equal(after.flash?.kind, "error");
-  assert.equal(after.users.find((u) => u.id === "u_8842")!.points, 12_500);
+  assert.equal(pt(after), before, "理由が無いのに残高が動いた");
   assert.equal(after.pointRequests.length, 0);
 });
 
 test("操作：閾値未満のポイント変更は、その場で反映されて記録が残る", () => {
   const s = loggedIn();
+  const before = pt(s);
   const after = reducer(s, { type: "POINT_REQUEST", userId: "u_8842", delta: 500, reason: "お詫び" });
-  assert.equal(after.users.find((u) => u.id === "u_8842")!.points, 13_000);
+  assert.equal(pt(after), before + 500);
   assert.equal(after.pointRequests[0].status, "APPLIED");
   assert.equal(verifyAudit(after.audit).ok, true);
 });
 
 test("操作：高額なポイント変更は、承認されるまで1ptも動かない", () => {
   const s = loggedIn();
+  const before = pt(s);
   const after = reducer(s, {
     type: "POINT_REQUEST", userId: "u_8842",
     delta: FOUR_EYES_THRESHOLD, reason: "システム障害のお詫び",
   });
-  assert.equal(after.users.find((u) => u.id === "u_8842")!.points, 12_500, "承認前に反映されている");
+  assert.equal(pt(after), before, "承認前に反映されている");
   assert.equal(after.pointRequests[0].status, "PENDING");
 });
 
 test("操作：高額申請を、申請した本人が承認しても反映されない", () => {
   let s = loggedIn("ad_01");
+  const before = pt(s);
   s = reducer(s, {
     type: "POINT_REQUEST", userId: "u_8842",
     delta: FOUR_EYES_THRESHOLD, reason: "システム障害のお詫び",
   });
   const after = reducer(s, { type: "POINT_APPROVE", requestId: s.pointRequests[0].id });
-  assert.equal(after.users.find((u) => u.id === "u_8842")!.points, 12_500);
+  assert.equal(pt(after), before);
   assert.equal(after.pointRequests[0].status, "PENDING");
   assert.equal(after.flash?.kind, "error");
 });
 
 test("操作：別の管理者が承認すると反映され、監査ログが両方に残る", () => {
   let s = loggedIn("ad_02"); // 経理（申請する側）
+  const before = pt(s);
   s = reducer(s, {
     type: "POINT_REQUEST", userId: "u_8842",
     delta: FOUR_EYES_THRESHOLD, reason: "システム障害のお詫び",
@@ -453,7 +469,7 @@ test("操作：別の管理者が承認すると反映され、監査ログが�
   s = reducer(s, { type: "SWITCH_ADMIN", adminId: "ad_01" }); // 管理者（承認する側）
   const after = reducer(s, { type: "POINT_APPROVE", requestId: "pr_1" });
 
-  assert.equal(after.users.find((u) => u.id === "u_8842")!.points, 12_500 + FOUR_EYES_THRESHOLD);
+  assert.equal(pt(after), before + FOUR_EYES_THRESHOLD);
   assert.equal(after.pointRequests[0].status, "APPLIED");
   assert.equal(after.pointRequests[0].approvedBy, "ad_01");
 
@@ -466,9 +482,10 @@ test("操作：別の管理者が承認すると反映され、監査ログが�
 test("操作：申請できない役割は、そもそもポイントを動かせない", () => {
   /* 運営（OPERATOR）はガチャは公開できるが、お金には触れない */
   const s = loggedIn("ad_03");
+  const before = pt(s);
   const after = reducer(s, { type: "POINT_REQUEST", userId: "u_8842", delta: 500, reason: "お詫び" });
   assert.equal(after.flash?.kind, "error");
-  assert.equal(after.users.find((u) => u.id === "u_8842")!.points, 12_500);
+  assert.equal(pt(after), before);
 });
 
 test("操作：承認できる人が他にいなければ、高額の申請を受け付けない", () => {
@@ -562,9 +579,11 @@ test("今日やること：処理すると、その用件は消える", () => {
 
 test("デモを初期状態に戻せる（何度でもやり直せる）", () => {
   let s = loggedIn("ad_01");
+  const start = pt(s);
   s = reducer(s, { type: "POINT_REQUEST", userId: "u_8842", delta: 500, reason: "お詫び" });
+  assert.equal(pt(s), start + 500, "そもそも動いていない");
   const back = reducer(s, { type: "RESET" });
-  assert.equal(back.users.find((u) => u.id === "u_8842")!.points, 12_500);
+  assert.equal(pt(back), start, "初期状態に戻っていない");
   assert.equal(back.pointRequests.length, 0);
   assert.equal(back.me?.id, "ad_01", "ログインまで切れると使いにくい");
   assert.equal(verifyAudit(back.audit).ok, true);

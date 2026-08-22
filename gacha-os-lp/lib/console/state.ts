@@ -114,6 +114,53 @@ export const ROLE_LABEL: Record<Role, string> = {
   SUPER_ADMIN: "管理者（全権）",
 };
 
+/**
+ * 権限の名前を、日本語で。
+ *
+ * ★"point.approve" のまま画面に出さないこと。
+ *   権限表は、運営者が「この人に何を任せるか」を決めるための表です。
+ *   決めるのは、たいてい技術の人ではありません。
+ */
+export const PERMISSION_LABEL: Record<Permission, string> = {
+  "gacha.view": "ガチャを見る",
+  "gacha.edit": "ガチャを作る・直す",
+  "gacha.publish": "ガチャを公開する・止める",
+  "point.view": "ポイントを見る",
+  "point.request": "ポイント変更を申請する",
+  "point.approve": "ポイント変更を承認する",
+  "fraud.view": "不正判定を見る",
+  "fraud.act": "不正判定を確定する",
+  "shipping.view": "発送を見る",
+  "shipping.act": "発送を処理する",
+  "support.view": "問い合わせを見る",
+  "support.reply": "問い合わせに返信する",
+  "security.view": "セキュリティを見る",
+  "audit.view": "監査ログを見る",
+  "user.suspend": "会員を停止する",
+  "settings.edit": "設定を変える",
+};
+
+/**
+ * 権限表に出す順番と、まとまり。
+ *
+ * ★危ないものを下に埋めないこと。
+ *   お金と個人情報に触れる権限を先に見せます。
+ *   「サポートに全部渡してしまっていた」に、その場で気づけるようにです。
+ */
+export const PERMISSION_GROUPS: { title: string; items: Permission[] }[] = [
+  { title: "お金（ポイント）", items: ["point.view", "point.request", "point.approve"] },
+  { title: "ガチャ", items: ["gacha.view", "gacha.edit", "gacha.publish"] },
+  { title: "発送", items: ["shipping.view", "shipping.act"] },
+  { title: "問い合わせ", items: ["support.view", "support.reply"] },
+  { title: "不正・セキュリティ", items: ["fraud.view", "fraud.act", "security.view", "audit.view", "user.suspend"] },
+  { title: "設定", items: ["settings.edit"] },
+];
+
+/** 権限表に出す役割の順番（弱い順。強くなっていく様子が見えるように） */
+export const ROLE_ORDER: Role[] = [
+  "VIEWER", "SUPPORT", "OPERATOR", "FINANCE", "SECURITY", "SUPER_ADMIN",
+];
+
 export type Admin = {
   id: string;
   name: string;
@@ -125,6 +172,187 @@ export type Admin = {
 export function can(role: Role, p: Permission): boolean {
   return ROLE_PERMISSIONS[role].includes(p);
 }
+
+/* ══════════════════════════════════════════════
+   お客様側の認証（CUSTOMER AUTH）
+   ══════════════════════════════════════════════ */
+
+/**
+ * ═══════════════════════════════════════════════════════
+ * ★「お客様側はログイン不要」の範囲を、ここで1回だけ決める
+ * ═══════════════════════════════════════════════════════
+ *
+ *   以前は、お客様側をまるごとログイン不要にしていました。
+ *   これは間違いです。正しくは「見るだけの棚は開いていてよい」であって、
+ *   「金庫の扉も開けておいてよい」ではありません。
+ *
+ *   お客様側で扱うものを並べると、はっきりします。
+ *
+ *     ポイント残高 ／ 獲得した景品 ／ お届け先の住所 ／
+ *     電話番号 ／ 問い合わせの内容 ／ 追跡番号
+ *
+ *   これは全部、その方だけのものです。
+ *   URLを知っているだけの他人に見せてよいものは1つもありません。
+ *
+ *   ★ここを表にして1か所にまとめる理由。
+ *     画面ごとに「ここはログインが要る」と手で書いていくと、
+ *     必ず1つ書き忘れます。書き忘れた1画面が、そのまま漏れになります。
+ *     だから、どの入口も必ずこの表を見ます。
+ *     テスト（tests/consoleCustomerAuth.test.ts）も、この表を見ます。
+ */
+export type CustomerCapability =
+  /* ── ログイン不要（お店の棚。誰が見てもよい） ── */
+  | "catalog.list"
+  | "catalog.detail"
+  | "catalog.prizes"
+  | "catalog.price"
+  | "catalog.stock"
+  | "faq.view"
+  | "terms.view"
+  /* ── ログイン必須（その方だけのもの） ── */
+  | "points.balance"
+  | "points.charge"
+  | "gacha.draw"
+  | "prize.won"
+  | "prize.list"
+  | "prize.ship"
+  | "prize.exchange"
+  | "points.history"
+  | "address.view"
+  | "address.edit"
+  | "support.history"
+  | "support.ask"
+  | "shipping.track";
+
+export type CustomerGate = {
+  key: CustomerCapability;
+  label: string;
+  needsLogin: boolean;
+  /** なぜそうなのか。画面にそのまま出す */
+  why: string;
+};
+
+export const CUSTOMER_GATES: CustomerGate[] = [
+  { key: "catalog.list", label: "ガチャ一覧を見る", needsLogin: false, why: "お店の棚と同じです。誰が見ても困りません。" },
+  { key: "catalog.detail", label: "ガチャの詳細を見る", needsLogin: false, why: "中身の説明です。買う前に見られないと選べません。" },
+  { key: "catalog.prizes", label: "賞品を見る", needsLogin: false, why: "何が当たるのかは、買う前に分かる必要があります。" },
+  { key: "catalog.price", label: "価格を見る", needsLogin: false, why: "値札です。隠す理由がありません。" },
+  { key: "catalog.stock", label: "残口数を見る", needsLogin: false, why: "残りの本数です。誰の情報でもありません。" },
+  { key: "faq.view", label: "よくあるご質問を見る", needsLogin: false, why: "全員に共通の案内です。" },
+  { key: "terms.view", label: "利用規約を見る", needsLogin: false, why: "契約前に読めないと、そもそも契約できません。" },
+
+  { key: "points.balance", label: "ポイント残高を見る", needsLogin: true, why: "その方の資産です。金額が他人に見えてはいけません。" },
+  { key: "points.charge", label: "ポイントを購入する", needsLogin: true, why: "お金が動きます。誰の残高に入れるのかが決まっていなければ実行できません。" },
+  { key: "gacha.draw", label: "ガチャを引く", needsLogin: true, why: "ポイントが減ります。誰の残高から引くのかが必要です。" },
+  { key: "prize.won", label: "当選商品を見る", needsLogin: true, why: "その方が何を当てたかは、その方だけの情報です。" },
+  { key: "prize.list", label: "獲得商品一覧を見る", needsLogin: true, why: "同上。一覧にすると、資産の全体が見えてしまいます。" },
+  { key: "prize.ship", label: "発送を依頼する", needsLogin: true, why: "現物が動きます。他人が押せてよい操作ではありません。" },
+  { key: "prize.exchange", label: "ポイントに交換する", needsLogin: true, why: "ポイントの発行と同じです。金銭相当の処理です。" },
+  { key: "points.history", label: "ポイント履歴を見る", needsLogin: true, why: "いつ何に使ったかが全部載ります。行動の記録そのものです。" },
+  { key: "address.view", label: "お届け先を確認する", needsLogin: true, why: "住所と電話番号です。漏れたときの被害がいちばん大きい情報です。" },
+  { key: "address.edit", label: "お届け先を変更する", needsLogin: true, why: "書き換えられると、景品の宛先を他人の家に変えられます。" },
+  { key: "support.history", label: "問い合わせ履歴を見る", needsLogin: true, why: "やりとりの中身には、個人の事情が入ります。" },
+  { key: "support.ask", label: "AIへ個別に問い合わせる", needsLogin: true, why: "AIはその方の残高・注文・履歴を読んで答えます。誰として聞いているかが要ります。" },
+  { key: "shipping.track", label: "追跡番号を確認する", needsLogin: true, why: "追跡番号から配送先が分かることがあります。" },
+];
+
+/** その操作に、お客様のログインが要るか */
+export function needsCustomerLogin(k: CustomerCapability): boolean {
+  const g = CUSTOMER_GATES.find((x) => x.key === k);
+  /* ★見つからないものは「要る」に倒すこと。
+     表に足し忘れた新しい操作が、素通りしてはいけません */
+  return g ? g.needsLogin : true;
+}
+
+/**
+ * お客様の本人確認のやり方。
+ *
+ * ★運営者が選べるようにすること。
+ *   SMSは1通ごとに費用がかかります。全員に必須にすると、
+ *   売上の薄い店では成り立ちません。
+ *   逆にメールだけでは、メールが乗っ取られた時点で終わります。
+ *   だから「既定はこれ、危ないときだけ追加で聞く」を選べる形にします。
+ */
+export type CustomerAuthMethod = "EMAIL" | "SMS" | "EMAIL_SMS" | "TOTP";
+
+export const CUSTOMER_AUTH_LABEL: Record<CustomerAuthMethod, string> = {
+  EMAIL: "メール認証",
+  SMS: "SMS認証",
+  EMAIL_SMS: "メール＋SMS",
+  TOTP: "認証アプリ（Google Authenticator など）",
+};
+
+export const CUSTOMER_AUTH_NOTE: Record<CustomerAuthMethod, string> = {
+  EMAIL: "費用がかかりません。メールを乗っ取られると突破されます。",
+  SMS: "電話番号を持っている人しか通れません。1通ごとに費用がかかります。",
+  EMAIL_SMS: "いちばん固い代わりに、登録の途中で離脱する方が増えます。",
+  TOTP: "費用がかからず強いですが、設定できる方が限られます。お客様には任意設定です。",
+};
+
+/**
+ * ログイン中のお客様。
+ *
+ * ★本番では、これはサーバー側のセッションです。
+ *   ブラウザには署名済みの Cookie（Secure / HttpOnly / SameSite）だけを置き、
+ *   中身は持たせません。有効期限を必ず入れ、ログインのたびに作り直します
+ *   （Session Rotation。使い回すと、盗まれた1本が永久に使えます）。
+ *   ここはデモなので同じ形をブラウザの中だけで再現しています。
+ */
+export type CustomerSession = {
+  userId: string;
+  name: string;
+  method: CustomerAuthMethod;
+  at: string;
+  /**
+   * 追加認証（STEP-UP）を通した時刻。
+   * ★本番では有効期限を短く切ること（例：10分）。
+   *   ここでは、住所を変えるたびに無効に戻す形にしています。
+   */
+  stepUpAt?: string;
+  /** 住所を変えた時刻。直後の高額発送は、もう一度確認します */
+  addressChangedAt?: string;
+};
+
+/**
+ * 追加認証（STEP-UP AUTH）が要る理由。
+ *
+ * ★ログインを1回通ったからといって、
+ *   そのあと何をしてもよいわけではありません。
+ *   乗っ取られたあとに起きるのは、たいていこの4つです。
+ */
+export type StepUpReason =
+  | "HIGH_VALUE_EXCHANGE"
+  | "ADDRESS_JUST_CHANGED"
+  | "BULK_OPERATION"
+  | "ADDRESS_CHANGE";
+
+export const STEP_UP_LABEL: Record<StepUpReason, string> = {
+  HIGH_VALUE_EXCHANGE: "高額のポイント交換",
+  ADDRESS_JUST_CHANGED: "お届け先を変更した直後の、高額商品の発送",
+  BULK_OPERATION: "多数の商品をまとめて処理",
+  ADDRESS_CHANGE: "お届け先の変更",
+};
+
+export const STEP_UP_WHY: Record<StepUpReason, string> = {
+  HIGH_VALUE_EXCHANGE:
+    "乗っ取られた口座で最初に起きるのが、高額商品の一括ポイント化です。ここだけもう一度ご本人か確かめます。",
+  ADDRESS_JUST_CHANGED:
+    "住所を書き換えてから高額品を送らせる手口があります。変更の直後だけ、もう一度確かめます。",
+  BULK_OPERATION:
+    "一度に大量の処理は、後から取り消せません。ご本人の操作であることを確かめます。",
+  ADDRESS_CHANGE:
+    "お届け先が変わると、景品の届く場所が変わります。ご本人の操作であることを確かめます。",
+};
+
+/** この額以上のポイント交換は、追加認証が要る */
+export const STEP_UP_EXCHANGE_PT = 20_000;
+/** この点数以上のまとめ操作は、追加認証が要る */
+export const STEP_UP_BULK_COUNT = 5;
+/** 住所を変えた直後、この額以上の発送は追加認証が要る */
+export const STEP_UP_AFTER_ADDRESS_VALUE = 20_000;
+
+/** デモの追加認証コード。本物は、メールかSMSに届く6桁です */
+export const DEMO_STEP_UP_CODE = "391027";
 
 /* ══════════════════════════════════════════════
    ポイント操作と、二人承認（FOUR EYES APPROVAL）
@@ -372,6 +600,57 @@ export type PointEntry = {
   ref?: string;
 };
 
+/* ══════════════════════════════════════════════
+   セキュリティの記録（SECURITY EVENT）
+   ══════════════════════════════════════════════ */
+
+/**
+ * お客様側で起きた「おかしな動き」。
+ *
+ * ═══════════════════════════════════════════════
+ * ★止めただけで終わりにしないこと
+ * ═══════════════════════════════════════════════
+ *
+ *   他人の商品IDを送ってきた要求を、その場で403にして返す。
+ *   それ自体は正しい動きです。でも、そこで終わると
+ *   「誰かが今、他人の資産を触ろうとした」という事実が、
+ *   どこにも残りません。
+ *
+ *   1回なら、URLの打ち間違いかもしれません。
+ *   でも同じ人から30分で200回来ていたら、それは攻撃です。
+ *   数えていなければ、その区別が永久につきません。
+ *
+ *   だから、止めた要求も必ず1件ずつ残して SECURITY CENTER に出します。
+ */
+export type SecurityEventKind =
+  | "IDOR_ATTEMPT"
+  | "UNAUTHENTICATED"
+  | "STEP_UP_REQUIRED"
+  | "STEP_UP_FAILED"
+  | "BULK_ANOMALY"
+  | "RBAC_DENIED";
+
+export const SECURITY_EVENT_LABEL: Record<SecurityEventKind, string> = {
+  IDOR_ATTEMPT: "他人の商品を操作しようとした",
+  UNAUTHENTICATED: "ログインせずに、本人だけの操作を呼んだ",
+  STEP_UP_REQUIRED: "追加認証を求めて止めた",
+  STEP_UP_FAILED: "追加認証の確認コードが違った",
+  BULK_ANOMALY: "一度に大量の処理を求めた",
+  RBAC_DENIED: "権限のない操作を呼んだ",
+};
+
+export type SecurityEvent = {
+  id: string;
+  at: string;
+  kind: SecurityEventKind;
+  /** 誰が。ログインしていなければ「未ログイン」 */
+  actor: string;
+  /** 何を触ろうとしたか */
+  target: string;
+  detail: string;
+  severity: "INFO" | "WARN" | "BLOCK";
+};
+
 export type Signup = {
   id: string;
   at: string;
@@ -493,6 +772,8 @@ export type ConsoleState = {
   prizes: Prize[];
   /** ポイントが動いた記録。合計が users[].points と一致すること */
   ledger: PointEntry[];
+  /** 止めた要求の記録。SECURITY CENTER に出す */
+  securityEvents: SecurityEvent[];
   /**
    * 直近の操作結果。画面上部に出す。
    *
@@ -509,15 +790,68 @@ export type ConsoleState = {
    *   お客様の画面には to === "customer" のものだけを出します。
    *   運営の画面は両方出します。お客様が何をしたかは、運営が知ってよいことです。
    *
-   *   ★to が付いていないときは、お客様には出しません。
-   *     「分からないものは、お客様に見せない」側に倒します。
-   *     逆にしてはいけません。付け忘れが、そのまま漏れになります。
+   *   ★to は必須です。省略できません。
+   *     以前は省略可（to?）にしていました。省略された知らせは
+   *     お客様に出さない側へ倒していたので漏れはしませんが、
+   *     「付け忘れても動いてしまう」ままでした。
+   *     必須にすれば、付け忘れた瞬間に型が通りません。
+   *     人の注意力ではなく、機械で止めます。
    */
-  flash: { kind: "ok" | "warn" | "error"; text: string; to?: FlashTo } | null;
+  flash: Flash | null;
+
+  /* ── お客様側 ── */
+
+  /**
+   * いまログインしているお客様。null なら未ログイン。
+   *
+   * ★運営のログイン（me）とは、まったく別のものです。
+   *   運営がログインしていても、お客様としてはログインしていません。
+   *   逆も同じです。ここを1つにまとめると、
+   *   運営が管理画面を開いているだけで、お客様側の
+   *   残高や住所が見える状態になります。
+   */
+  customer: CustomerSession | null;
+
+  /**
+   * いま追加認証（STEP-UP）を求めている最中の要求。
+   *
+   * ★操作を「拒否」ではなく「保留」にすること。
+   *   拒否だけだと、お客様は何をすればよいのか分かりません。
+   *   ここに理由を置いて、確認コードの入力へご案内します。
+   *
+   * ★保留した操作そのもの（pending）を、ここに預かること。
+   *   「確認が取れたら、画面がもう一度同じ操作を送り直す」形にすると、
+   *   送り直しの中身を画面側で作れてしまいます。
+   *   つまり、確認を通した操作と、実際に実行される操作が
+   *   別物になり得ます。それでは確認した意味がありません。
+   *   だから、止めた操作を原本のまま預かり、
+   *   確認が取れたら、預かったそれをそのまま実行します。
+   */
+  stepUp: { reason: StepUpReason; note: string; pending: ConsoleAction } | null;
+
+  /** 運営が選んでいる、お客様側の本人確認のやり方 */
+  customerAuth: CustomerAuthMethod;
 };
 
-/** その知らせが、どちら側に向けて書かれたものか */
-export type FlashTo = "admin" | "customer";
+/**
+ * その知らせが、どちら側に向けて書かれたものか。
+ *
+ *   admin    … 運営の画面に出す。担当者名や役割が入ってよい
+ *   customer … お客様の画面に出す。運営の内部事情は入れない
+ *   internal … どちらの画面にも出さない。記録だけに残す
+ *
+ * ★internal を用意した理由。
+ *   「どちらに出すか決めきれないから、とりあえず admin」を
+ *   させないためです。出さないなら、出さないと書きます。
+ */
+export type FlashTo = "admin" | "customer" | "internal";
+
+/** 画面上部に出す知らせ。★宛先（to）は必須です */
+export type Flash = {
+  kind: "ok" | "warn" | "error";
+  text: string;
+  to: FlashTo;
+};
 
 /**
  * お客様画面の確認で使う、デモのお客様。
@@ -611,13 +945,22 @@ export const DEMO_ADDRESS: Address = {
   tel: "000-0000-0000",
 };
 
-export const DEMO_USERS: ConsoleUser[] = [
-  {
-    id: "u_8842", name: "会員 8842", joinedAt: "2026-06-02",
-    points: 12_500, spent: 84_300, shipments: 7,
-    risk: assess([]), status: "ACTIVE",
-    address: DEMO_ADDRESS,
-  },
+/**
+ * もう一人分のお届け先。
+ *
+ * ★別の会員を、必ず1人は用意しておくこと。
+ *   「他人の商品は操作できない」を確かめるには、
+ *   本当に他人の商品が要ります。自分しかいない画面では、
+ *   何を試しても必ず通ってしまい、確かめたことになりません。
+ */
+export const DEMO_ADDRESS_7731: Address = {
+  name: "会員 7731 様",
+  zip: "000-0000",
+  addr: "デモ県デモ市デモ町9-8-7 デモハイツ202（架空の住所です）",
+  tel: "000-0000-0000",
+};
+
+const DEMO_OTHER_USERS: ConsoleUser[] = [
   {
     id: "u_9105", name: "会員 9105", joinedAt: "2026-08-22",
     points: 500, spent: 0, shipments: 0,
@@ -644,12 +987,6 @@ export const DEMO_USERS: ConsoleUser[] = [
       hit("paymentReuse", "同一カードが9アカウントに紐づく"),
     ]),
     status: "REVIEW",
-  },
-  {
-    id: "u_7731", name: "会員 7731", joinedAt: "2026-07-14",
-    points: 3_200, spent: 26_800, shipments: 2,
-    risk: assess([hit("emailPattern", "連番のメールアドレス")]),
-    status: "ACTIVE",
   },
 ];
 
@@ -678,64 +1015,277 @@ export const DEMO_SIGNUPS: Signup[] = [
   },
 ];
 
-export const DEMO_ORDERS: Order[] = [
-  { id: "o_5001", userId: "u_8842", userName: "会員 8842", prize: "S賞 相当（デモ景品A）", requestedAt: "2026-08-22 10:05", status: "UNSHIPPED", buyUrl: "#demo-purchase", prizeId: "pz_04", address: DEMO_ADDRESS },
-  { id: "o_5002", userId: "u_7731", userName: "会員 7731", prize: "A賞 相当（デモ景品B）", requestedAt: "2026-08-22 09:51", status: "UNSHIPPED", buyUrl: "#demo-purchase" },
-  { id: "o_5003", userId: "u_8842", userName: "会員 8842", prize: "B賞 相当（デモ景品C）", requestedAt: "2026-08-21 18:22", status: "PREPARING", buyUrl: "#demo-purchase", prizeId: "pz_05", address: DEMO_ADDRESS },
-  { id: "o_5004", userId: "u_7731", userName: "会員 7731", prize: "C賞 相当（デモ景品D）", requestedAt: "2026-08-21 14:09", status: "SHIPPED", carrier: "デモ運輸", tracking: "DEMO-4821-0093" },
-  { id: "o_5005", userId: "u_8842", userName: "会員 8842", prize: "A賞 相当（デモ景品E）", requestedAt: "2026-08-19 16:40", status: "IN_TRANSIT", carrier: "デモ運輸", tracking: "DEMO-4819-0071", prizeId: "pz_06", address: DEMO_ADDRESS },
-  { id: "o_5006", userId: "u_8842", userName: "会員 8842", prize: "B賞 相当（デモ景品F）", requestedAt: "2026-08-15 11:02", status: "DELIVERED", carrier: "デモ運輸", tracking: "DEMO-4815-0044", prizeId: "pz_07", address: DEMO_ADDRESS },
-];
+/* ══════════════════════════════════════════════
+   獲得商品・発送・ポイント履歴（1つの表から作る）
+   ══════════════════════════════════════════════ */
 
 /**
- * 獲得商品のサンプル。
+ * ═══════════════════════════════════════════════════════
+ * ★3つを手で書かないこと。1つの表から作ること
+ * ═══════════════════════════════════════════════════════
  *
- * ★全部を作り込まないこと。
- *   実際にお客様が何十点も持っている状態を全部並べても、
- *   触って確かめられるのは最初の数点だけです。
- *   ここでは「3つの状態が全部そろっていること」を優先し、
- *   受け取り方法を選べるものを3点、選び終わったものを4点だけ置いています。
+ *   獲得商品・発送依頼・ポイント履歴は、本来ばらばらの3つではありません。
+ *   「1回引いて、当たって、どうしたか」という1つの出来事の
+ *   3つの側面です。
+ *
+ *   これを3つの配列に手で書き分けると、必ずずれます。
+ *   実際、前は「獲得商品8点・発送依頼6件・履歴13行」を手で並べていて、
+ *   1点増やすたびに3か所を直す必要がありました。
+ *   直し忘れれば、履歴の合計と残高が合わなくなります。
+ *   合わない残高は、後から誰にも説明できないお金です。
+ *
+ *   だから、下の表1つだけを人が書きます。
+ *   発送依頼も、ポイント履歴も、残高も、そこから機械が作ります。
+ *   ずれようがありません。
+ *
+ * ═══════════════════════════════════════════════════════
+ * ★件数の内訳を、自然な形にすること
+ * ═══════════════════════════════════════════════════════
+ *
+ *   前は「獲得商品8点」で「発送手配中も同じような数」でした。
+ *   初めて見た方は「全部発送中なの？」と読みます。
+ *   合計と内訳の区別がつかない並べ方をしているからです。
+ *
+ *   ここでは 23点 ＝ 未選択8 ＋ 発送中11 ＋ 交換済4 と、
+ *   足すと合計になる内訳にしています。
  */
-export const DEMO_PRIZES: Prize[] = [
-  /* ── まだ選んでいない（ここから発送 or ポイント交換ができる） ── */
-  { id: "pz_01", userId: "u_8842", userName: "会員 8842", gachaId: "g_101", gachaTitle: "トレカ プレミアム 500", grade: "S", name: "S賞 相当（デモ景品G）", value: 25_000, exchangePt: 25_000, wonAt: "2026-08-22 09:41", status: "UNCHOSEN" },
-  { id: "pz_02", userId: "u_8842", userName: "会員 8842", gachaId: "g_101", gachaTitle: "トレカ プレミアム 500", grade: "A", name: "A賞 相当（デモ景品H）", value: 6_500, exchangePt: 6_500, wonAt: "2026-08-22 09:38", status: "UNCHOSEN" },
-  { id: "pz_03", userId: "u_8842", userName: "会員 8842", gachaId: "g_102", gachaTitle: "スニーカー 1000", grade: "B", name: "B賞 相当（デモ景品I）", value: 2_400, exchangePt: 2_400, wonAt: "2026-08-21 20:15", status: "UNCHOSEN" },
+type PrizePlan = {
+  /** 等級 */
+  g: string;
+  /** 景品名の枝番（実在の商品名は書かない） */
+  n: string;
+  /** 価値（円）。交換ポイントも同額（1円 = 1pt） */
+  v: number;
+  /** 当たった日時 */
+  at: string;
+  /** どのガチャで当たったか */
+  from: "card" | "sneaker";
+  /** そのあと、お客様が何を選んだか */
+  did:
+    | { k: "UNCHOSEN" }
+    | { k: "SHIP"; at: string; status: OrderStatus }
+    | { k: "EXCHANGE"; at: string };
+};
 
-  /* ── 発送を選んだもの ── */
-  { id: "pz_04", userId: "u_8842", userName: "会員 8842", gachaId: "g_101", gachaTitle: "トレカ プレミアム 500", grade: "S", name: "S賞 相当（デモ景品A）", value: 25_000, exchangePt: 25_000, wonAt: "2026-08-22 10:03", status: "SHIP_REQUESTED", orderId: "o_5001" },
-  { id: "pz_05", userId: "u_8842", userName: "会員 8842", gachaId: "g_102", gachaTitle: "スニーカー 1000", grade: "B", name: "B賞 相当（デモ景品C）", value: 2_400, exchangePt: 2_400, wonAt: "2026-08-21 18:20", status: "SHIP_REQUESTED", orderId: "o_5003" },
-  { id: "pz_06", userId: "u_8842", userName: "会員 8842", gachaId: "g_102", gachaTitle: "スニーカー 1000", grade: "A", name: "A賞 相当（デモ景品E）", value: 6_500, exchangePt: 6_500, wonAt: "2026-08-19 16:38", status: "SHIP_REQUESTED", orderId: "o_5005" },
-  { id: "pz_07", userId: "u_8842", userName: "会員 8842", gachaId: "g_101", gachaTitle: "トレカ プレミアム 500", grade: "B", name: "B賞 相当（デモ景品F）", value: 2_400, exchangePt: 2_400, wonAt: "2026-08-15 11:00", status: "SHIP_REQUESTED", orderId: "o_5006" },
+const GACHA_OF = {
+  card: { id: "g_101", title: "トレカ プレミアム 500", price: 500 },
+  sneaker: { id: "g_102", title: "スニーカー 1000", price: 1_000 },
+} as const;
 
-  /* ── ポイントに交換したもの（もう発送はできない） ── */
-  { id: "pz_08", userId: "u_8842", userName: "会員 8842", gachaId: "g_101", gachaTitle: "トレカ プレミアム 500", grade: "B", name: "B賞 相当（デモ景品J）", value: 2_400, exchangePt: 2_400, wonAt: "2026-08-14 21:07", status: "EXCHANGED", exchangedAt: "2026-08-14 21:09" },
+/**
+ * 会員 8842 の23点。
+ *
+ * ★S賞25,000pt を「未選択」に1点残してあること。
+ *   これが無いと、高額のポイント交換で追加認証が出る様子を
+ *   その場で確かめられません（STEP_UP_EXCHANGE_PT = 20,000）。
+ */
+const PLAN_8842: PrizePlan[] = [
+  /* ── まだ受け取り方法を選んでいない（8点） ── */
+  { g: "S", n: "A", v: 25_000, at: "2026-08-22 09:41", from: "card", did: { k: "UNCHOSEN" } },
+  { g: "A", n: "B", v: 6_500, at: "2026-08-22 09:38", from: "card", did: { k: "UNCHOSEN" } },
+  { g: "B", n: "C", v: 2_400, at: "2026-08-21 20:15", from: "sneaker", did: { k: "UNCHOSEN" } },
+  { g: "A", n: "D", v: 8_000, at: "2026-08-21 20:11", from: "sneaker", did: { k: "UNCHOSEN" } },
+  { g: "B", n: "E", v: 2_400, at: "2026-08-20 22:04", from: "card", did: { k: "UNCHOSEN" } },
+  { g: "C", n: "F", v: 900, at: "2026-08-20 21:58", from: "card", did: { k: "UNCHOSEN" } },
+  { g: "B", n: "G", v: 3_200, at: "2026-08-19 12:31", from: "sneaker", did: { k: "UNCHOSEN" } },
+  { g: "C", n: "H", v: 1_200, at: "2026-08-18 23:47", from: "sneaker", did: { k: "UNCHOSEN" } },
+
+  /* ── 発送を選んだもの（11点） ── */
+  { g: "S", n: "I", v: 25_000, at: "2026-08-22 10:03", from: "card", did: { k: "SHIP", at: "2026-08-22 10:05", status: "UNSHIPPED" } },
+  { g: "A", n: "J", v: 6_500, at: "2026-08-22 08:52", from: "sneaker", did: { k: "SHIP", at: "2026-08-22 08:55", status: "UNSHIPPED" } },
+  { g: "B", n: "K", v: 2_400, at: "2026-08-21 18:20", from: "card", did: { k: "SHIP", at: "2026-08-21 18:22", status: "PREPARING" } },
+  { g: "B", n: "L", v: 3_200, at: "2026-08-21 11:07", from: "sneaker", did: { k: "SHIP", at: "2026-08-21 11:10", status: "PREPARING" } },
+  { g: "A", n: "M", v: 6_500, at: "2026-08-19 16:38", from: "sneaker", did: { k: "SHIP", at: "2026-08-19 16:40", status: "IN_TRANSIT" } },
+  { g: "C", n: "N", v: 900, at: "2026-08-19 09:14", from: "card", did: { k: "SHIP", at: "2026-08-19 09:20", status: "IN_TRANSIT" } },
+  { g: "B", n: "O", v: 2_400, at: "2026-08-15 11:00", from: "card", did: { k: "SHIP", at: "2026-08-15 11:02", status: "DELIVERED" } },
+  { g: "A", n: "P", v: 8_000, at: "2026-08-14 19:30", from: "sneaker", did: { k: "SHIP", at: "2026-08-14 19:33", status: "DELIVERED" } },
+  { g: "C", n: "Q", v: 1_200, at: "2026-08-12 20:05", from: "card", did: { k: "SHIP", at: "2026-08-12 20:08", status: "SHIPPED" } },
+  { g: "B", n: "R", v: 2_400, at: "2026-08-11 21:44", from: "sneaker", did: { k: "SHIP", at: "2026-08-11 21:50", status: "SHIPPED" } },
+  { g: "C", n: "S", v: 900, at: "2026-08-09 13:22", from: "card", did: { k: "SHIP", at: "2026-08-09 13:25", status: "DELIVERED" } },
+
+  /* ── ポイントに交換したもの（4点。もう発送はできない） ── */
+  { g: "B", n: "T", v: 2_400, at: "2026-08-14 21:07", from: "card", did: { k: "EXCHANGE", at: "2026-08-14 21:09" } },
+  { g: "A", n: "U", v: 6_500, at: "2026-08-13 22:15", from: "card", did: { k: "EXCHANGE", at: "2026-08-13 22:18" } },
+  { g: "C", n: "V", v: 900, at: "2026-08-10 18:03", from: "sneaker", did: { k: "EXCHANGE", at: "2026-08-10 18:06" } },
+  { g: "B", n: "W", v: 3_200, at: "2026-08-08 20:41", from: "sneaker", did: { k: "EXCHANGE", at: "2026-08-08 20:45" } },
 ];
 
 /**
- * ポイント履歴のサンプル。
+ * 会員 7731 の2点。
+ *
+ * ★別の会員の商品を、必ず用意しておくこと。
+ *   「他人の商品IDを送っても操作できない」ことを確かめるには、
+ *   本当に他人の商品が1点も無ければ、そもそも試せません。
+ *   tests/consoleOwnership.test.ts が、この2点を使います。
+ */
+const PLAN_7731: PrizePlan[] = [
+  { g: "A", n: "X", v: 6_500, at: "2026-08-22 09:02", from: "card", did: { k: "UNCHOSEN" } },
+  { g: "B", n: "Y", v: 2_400, at: "2026-08-21 14:05", from: "sneaker", did: { k: "SHIP", at: "2026-08-21 14:09", status: "SHIPPED" } },
+];
+
+/** 発送依頼の追跡番号。デモなので、実在しない体系の番号です */
+const trackingOf = (orderId: string, at: string) =>
+  `DEMO-${at.slice(5, 7)}${at.slice(8, 10)}-${orderId.slice(-4)}`;
+
+/**
+ * 表から、獲得商品・発送依頼・ポイント履歴を作る。
+ *
+ * ★残高は、ここで計算した合計をそのまま使うこと。
+ *   会員の points に別の数字を手で書くと、その瞬間にずれます。
+ *   下の buildDemo() が返した balance を、そのまま会員に入れています。
+ */
+function buildDemo(
+  userId: string,
+  userName: string,
+  address: Address | undefined,
+  plan: PrizePlan[],
+  opening: { at: string; charge: number; chargeAt: string },
+  seq: { prize: number; order: number; ledger: number },
+) {
+  const prizes: Prize[] = [];
+  const orders: Order[] = [];
+  const moves: Omit<PointEntry, "id" | "balanceAfter">[] = [];
+
+  moves.push({ at: opening.at, userId, kind: "OPENING", delta: 0, memo: "会員登録" });
+  moves.push({
+    at: opening.chargeAt, userId, kind: "CHARGE", delta: opening.charge,
+    memo: "ポイント購入（デモのため、決済は行っていません）",
+  });
+
+  plan.forEach((p, i) => {
+    const g = GACHA_OF[p.from];
+    const prizeId = `pz_${String(seq.prize + i).padStart(3, "0")}`;
+    const name = `${p.g}賞 相当（デモ景品${p.n}）`;
+
+    /* 引いたときに、必ずポイントが減っていること。
+       景品だけあって、支払った記録が無い状態を作らない */
+    moves.push({
+      at: p.at, userId, kind: "DRAW_SPEND", delta: -g.price,
+      memo: `${g.title} を1回`, ref: prizeId,
+    });
+
+    const base: Prize = {
+      id: prizeId, userId, userName,
+      gachaId: g.id, gachaTitle: g.title,
+      grade: p.g, name, value: p.v, exchangePt: p.v,
+      wonAt: p.at, status: "UNCHOSEN",
+    };
+
+    if (p.did.k === "UNCHOSEN") {
+      prizes.push(base);
+      return;
+    }
+
+    if (p.did.k === "EXCHANGE") {
+      prizes.push({ ...base, status: "EXCHANGED", exchangedAt: p.did.at });
+      moves.push({
+        at: p.did.at, userId, kind: "PRIZE_EXCHANGE", delta: p.v,
+        memo: `${name} をポイントに交換`, ref: prizeId,
+      });
+      return;
+    }
+
+    const orderId = `o_${seq.order + orders.length}`;
+    const shipped = p.did.status !== "UNSHIPPED" && p.did.status !== "PREPARING";
+    orders.push({
+      id: orderId, userId, userName,
+      prize: `${p.g}賞 ${name}`,
+      requestedAt: p.did.at,
+      status: p.did.status,
+      prizeId,
+      address: address ? { ...address } : undefined,
+      buyUrl: "#demo-purchase",
+      /* ★発送前に追跡番号を出さないこと。
+         まだ荷物が無いのに番号だけ出すと、
+         配送会社のサイトで「該当なし」と表示され、必ず問い合わせになります */
+      carrier: shipped ? "デモ運輸" : undefined,
+      tracking: shipped ? trackingOf(orderId, p.did.at) : undefined,
+    });
+    prizes.push({ ...base, status: "SHIP_REQUESTED", orderId });
+  });
+
+  /* 時系列に並べてから、残高を積み上げる。
+     ★並べ替えてから積むこと。書いた順で積むと、
+       画面に出る「残高」が行き来して読めなくなります */
+  moves.sort((a, b) => a.at.localeCompare(b.at));
+  let bal = 0;
+  const ledger: PointEntry[] = moves.map((m, i) => {
+    bal += m.delta;
+    return { ...m, id: `pl_${String(seq.ledger + i).padStart(3, "0")}`, balanceAfter: bal };
+  });
+
+  const spent = ledger
+    .filter((e) => e.kind === "DRAW_SPEND")
+    .reduce((a, e) => a - e.delta, 0);
+
+  return {
+    prizes,
+    orders,
+    ledger,
+    balance: bal,
+    spent,
+    shipments: orders.length,
+  };
+}
+
+const DEMO_8842 = buildDemo(
+  "u_8842", "会員 8842", DEMO_ADDRESS, PLAN_8842,
+  { at: "2026-06-02 10:00", charge: 20_000, chargeAt: "2026-08-08 10:00" },
+  { prize: 101, order: 5101, ledger: 101 },
+);
+
+const DEMO_7731 = buildDemo(
+  "u_7731", "会員 7731", DEMO_ADDRESS_7731, PLAN_7731,
+  { at: "2026-07-14 09:00", charge: 5_000, chargeAt: "2026-08-20 09:00" },
+  { prize: 201, order: 5201, ledger: 201 },
+);
+
+export const DEMO_PRIZES: Prize[] = [...DEMO_8842.prizes, ...DEMO_7731.prizes];
+
+export const DEMO_ORDERS: Order[] = [...DEMO_8842.orders, ...DEMO_7731.orders].sort(
+  (a, b) => b.requestedAt.localeCompare(a.requestedAt),
+);
+
+/**
+ * ポイント履歴。
  *
  * ★合計が、必ず users[].points と一致すること。
- *   会員 8842 の残高は 12,500pt なので、
- *   下の delta を全部足すと 12,500 になります。
- *   ここがずれたまま画面に出すと、
- *   「履歴を見ても残高の説明がつかない」状態になります。
- *   テスト（pointsReconcile）で機械的に確かめています。
+ *   ここは手で書いていないので、ずれること自体が起きません。
+ *   それでも pointsReconcile() で毎回確かめ、
+ *   合わなければ画面にもテストにも出します。
+ *   「作り方が正しいから確かめなくてよい」とはしません。
  */
-export const DEMO_LEDGER: PointEntry[] = [
-  { id: "pl_01", at: "2026-06-02 10:00", userId: "u_8842", kind: "OPENING", delta: 0, balanceAfter: 0, memo: "会員登録" },
-  { id: "pl_02", at: "2026-08-14 20:55", userId: "u_8842", kind: "CHARGE", delta: 20_000, balanceAfter: 20_000, memo: "入金（デモ）" },
-  { id: "pl_03", at: "2026-08-14 21:02", userId: "u_8842", kind: "DRAW_SPEND", delta: -500, balanceAfter: 19_500, memo: "トレカ プレミアム 500 を1回" },
-  { id: "pl_04", at: "2026-08-14 21:09", userId: "u_8842", kind: "PRIZE_EXCHANGE", delta: 2_400, balanceAfter: 21_900, memo: "B賞 相当（デモ景品J）をポイントに交換", ref: "pz_08" },
-  { id: "pl_05", at: "2026-08-15 10:58", userId: "u_8842", kind: "DRAW_SPEND", delta: -500, balanceAfter: 21_400, memo: "トレカ プレミアム 500 を1回" },
-  { id: "pl_06", at: "2026-08-19 16:36", userId: "u_8842", kind: "DRAW_SPEND", delta: -1_000, balanceAfter: 20_400, memo: "スニーカー 1000 を1回" },
-  { id: "pl_07", at: "2026-08-21 18:18", userId: "u_8842", kind: "DRAW_SPEND", delta: -1_000, balanceAfter: 19_400, memo: "スニーカー 1000 を1回" },
-  { id: "pl_08", at: "2026-08-21 20:13", userId: "u_8842", kind: "DRAW_SPEND", delta: -1_000, balanceAfter: 18_400, memo: "スニーカー 1000 を1回" },
-  { id: "pl_09", at: "2026-08-22 09:36", userId: "u_8842", kind: "DRAW_SPEND", delta: -500, balanceAfter: 17_900, memo: "トレカ プレミアム 500 を1回" },
-  { id: "pl_10", at: "2026-08-22 09:39", userId: "u_8842", kind: "DRAW_SPEND", delta: -500, balanceAfter: 17_400, memo: "トレカ プレミアム 500 を1回" },
-  { id: "pl_11", at: "2026-08-22 10:01", userId: "u_8842", kind: "DRAW_SPEND", delta: -500, balanceAfter: 16_900, memo: "トレカ プレミアム 500 を1回" },
-  { id: "pl_12", at: "2026-08-22 10:04", userId: "u_8842", kind: "DRAW_RETURN", delta: 50, balanceAfter: 16_950, memo: "はずれ（参加ポイント）" },
-  { id: "pl_13", at: "2026-08-22 10:20", userId: "u_8842", kind: "ADMIN_ADJUST", delta: -4_450, balanceAfter: 12_500, memo: "誤付与分の取り消し（運営による調整）" },
+export const DEMO_LEDGER: PointEntry[] = [...DEMO_8842.ledger, ...DEMO_7731.ledger];
+
+/**
+ * 会員。
+ *
+ * ★残高・使った額・発送件数を、手で書かないこと。
+ *   以前はここに 12,500pt と書いていました。
+ *   けれど履歴を1行足すたびに、この数字も直さなければならず、
+ *   直し忘れた瞬間に「履歴では説明できない残高」ができます。
+ *   お金の画面でそれが起きたら、もう誰も信用しません。
+ *   だから上で組み立てた合計を、そのまま入れます。
+ */
+export const DEMO_USERS: ConsoleUser[] = [
+  {
+    id: "u_8842", name: "会員 8842", joinedAt: "2026-06-02",
+    points: DEMO_8842.balance,
+    spent: DEMO_8842.spent,
+    shipments: DEMO_8842.shipments,
+    risk: assess([]), status: "ACTIVE",
+    address: DEMO_ADDRESS,
+  },
+  ...DEMO_OTHER_USERS,
+  {
+    id: "u_7731", name: "会員 7731", joinedAt: "2026-07-14",
+    points: DEMO_7731.balance,
+    spent: DEMO_7731.spent,
+    shipments: DEMO_7731.shipments,
+    risk: assess([hit("emailPattern", "連番のメールアドレス")]),
+    status: "ACTIVE",
+    address: DEMO_ADDRESS_7731,
+  },
 ];
 
 export const DEMO_TICKETS: Ticket[] = [
@@ -780,7 +1330,18 @@ export function initialState(): ConsoleState {
     draws: [],
     prizes: DEMO_PRIZES.map((p) => ({ ...p })),
     ledger: DEMO_LEDGER.map((e) => ({ ...e })),
+    securityEvents: [],
     flash: null,
+
+    /* ★お客様も、最初はログインしていない状態から始めること。
+       いきなりマイページが開いている画面を見せると、
+       「ログインしなくても見られるのでは」と受け取られます。
+       入口の順番そのものを、見ていただきます */
+    customer: null,
+    stepUp: null,
+
+    /* 既定はメール認証。設定画面で切り替えられます */
+    customerAuth: "EMAIL",
   };
 }
 
@@ -894,11 +1455,18 @@ export type ConsoleAction =
    *
    * ★key は二重処理を防ぐ鍵です。DRAW と同じ考え方です。
    *   連打・再読み込み・通信のやり直しで、同じ依頼が2回届きます。
-   * ★address は、その場で確認していただいた内容をそのまま持たせます。
-   *   後から会員情報を変えられても、この依頼が
-   *   「どこ宛てに出されたものか」は動かないようにするためです。
+   *
+   * ★お届け先を、この依頼に入れさせないこと（重要な変更）。
+   *   以前は address を画面から受け取っていました。これは間違いです。
+   *   受け取った側は、送られてきた住所が本当にその方のものかを
+   *   確かめられません。番号を書き換えて送れば、
+   *   他人の商品を自分の住所へ送らせることができてしまいます。
+   *   だから宛先は、ログインしている本人の登録住所だけを使います。
+   *   画面から来た値は、一切信用しません。
    */
-  | { type: "PRIZE_SHIP_REQUEST"; prizeId: string; key: string; address: Address }
+  | { type: "PRIZE_SHIP_REQUEST"; prizeId: string; key: string }
+  /** まとめて発送依頼（1個ずつ何十回も押させないため） */
+  | { type: "PRIZE_SHIP_BULK"; prizeIds: string[]; key: string }
   /**
    * 当たった景品を「ポイントに換える」。
    *
@@ -908,9 +1476,24 @@ export type ConsoleAction =
    *   ③交換前後の残高ごと監査ログに残ること、を必ず守ります。
    */
   | { type: "PRIZE_EXCHANGE"; prizeId: string; key: string }
+  /** まとめてポイント交換 */
+  | { type: "PRIZE_EXCHANGE_BULK"; prizeIds: string[]; key: string }
   /** お客様が問い合わせを送る。AIが答えるか、人に回すかはここで決まる */
   | { type: "USER_ASK"; text: string; key: string }
   | { type: "SUPPORT_REPLY"; ticketId: string; text: string }
+
+  /* ── お客様側の入口 ── */
+  /** お客様としてログインする（デモでは本物のパスワードを入力させません） */
+  | { type: "CUSTOMER_LOGIN"; userId: string }
+  | { type: "CUSTOMER_LOGOUT" }
+  /** 追加の本人確認。確認できたら、待たせていた操作をそのまま続ける */
+  | { type: "CUSTOMER_STEP_UP"; code: string }
+  | { type: "CUSTOMER_STEP_UP_CANCEL" }
+  /** お届け先の変更。ここも追加の本人確認を通します */
+  | { type: "ADDRESS_UPDATE"; address: Address }
+  /** どの本人確認方式を使うか（運営が設定画面で選ぶ） */
+  | { type: "SET_CUSTOMER_AUTH"; method: CustomerAuthMethod }
+
   | { type: "CLEAR_FLASH" }
   | { type: "RESET" }
   /** 監査ログの改ざん検知を実演するための操作。デモ専用 */
@@ -984,10 +1567,320 @@ const asCustomer = (u: ConsoleUser) => ({
   role: "お客様",
 });
 
-const deny = (s: ConsoleState, text: string): ConsoleState => ({
+/**
+ * core() が返す途中の形。
+ *
+ * ★知らせの宛先（to）だけは、ここでは省略してよいことにします。
+ *   本体は30か所近くで知らせを作ります。そのすべてに宛先を手で書かせると、
+ *   必ずどこかで書き忘れます。書き忘れた1か所が、
+ *   運営あての文面をお客様の画面に出します。
+ *   だから既定は下の reducer() が押し、
+ *   例外（どちらにも見せない等）のときだけ、その場で明示します。
+ */
+type Draft = Omit<ConsoleState, "flash"> & {
+  flash: { kind: Flash["kind"]; text: string; to?: FlashTo } | null;
+};
+
+const deny = (s: ConsoleState, text: string): Draft => ({
   ...s,
   flash: { kind: "error", text },
 });
+
+/* ══════════════════════════════════════════════
+   お客様の本人確認。ここを通らない操作を作らない
+   ══════════════════════════════════════════════
+
+   ★確認する場所は、画面ではなく、ここ。
+
+     画面のボタンを隠すのは、親切のためです。安全のためではありません。
+     ボタンを隠しても、操作そのものは外から送れます。
+     本物のシステムなら、URL を直接叩けば届きます。
+
+     だから、届いた側で必ず確かめます。
+       ① ログインしているか
+       ② その商品は、本当にその方のものか
+       ③ 大きな金額・大量の処理・住所を変えた直後なら、もう一度確認する
+
+   ★③で止めたものを「拒否」で終わらせないこと。
+     正しいお客様が、正しい操作をして、理由も分からず弾かれたら、
+     その方は問い合わせをするか、二度と使わないかのどちらかです。 */
+
+/** セキュリティ事象を1件、先頭に足す */
+function addSecurityEvent(
+  s: { securityEvents: SecurityEvent[] },
+  e: Omit<SecurityEvent, "id" | "at">,
+): SecurityEvent[] {
+  return [
+    { ...e, id: `se_${s.securityEvents.length + 1}`, at: NOW },
+    ...s.securityEvents,
+  ];
+}
+
+/**
+ * 止めた記録を残しつつ、相手には理由を教えない。
+ *
+ * ★弾いた理由を、細かく返さないこと。
+ *   「その商品はあなたのものではありません」と返すと、
+ *   番号を1つずつ変えながら、当たりを探せてしまいます。
+ *   見つからないのか、他人のものなのかが区別できない返し方にします。
+ */
+function blocked(
+  s: ConsoleState,
+  ev: Omit<SecurityEvent, "id" | "at">,
+  audit?: {
+    action: AuditAction;
+    target: string;
+    summary: string;
+    actor?: { id: string; name: string; role: string };
+  },
+): Draft {
+  return {
+    ...s,
+    securityEvents: addSecurityEvent(s, ev),
+    audit: audit
+      ? log(s, audit.action, audit.target, audit.summary, {
+          reason: ev.detail,
+          actor: audit.actor,
+        })
+      : s.audit,
+    flash: {
+      kind: "error",
+      text: "この操作は受け付けられませんでした。ご不明な場合はお問い合わせください。",
+      to: "customer",
+    },
+  };
+}
+
+type CustomerGuard =
+  | { ok: true; u: ConsoleUser }
+  | { ok: false; next: Draft };
+
+/**
+ * ログインしているお客様を返す。していなければ止める。
+ *
+ * ★「画面から user_id が送られてきたから、その人だ」としないこと。
+ *   送られてきた番号は、いくらでも書き換えられます。
+ *   誰であるかは、こちらが持っているログイン情報だけで決めます。
+ */
+function requireCustomer(
+  s: ConsoleState,
+  cap: CustomerCapability,
+): CustomerGuard {
+  const sess = s.customer;
+  if (!sess) {
+    return {
+      ok: false,
+      next: {
+        ...s,
+        securityEvents: addSecurityEvent(s, {
+          kind: "UNAUTHENTICATED",
+          actor: "未ログイン",
+          target: cap,
+          detail: `ログインが要る操作（${cap}）を、ログインせずに呼びました。`,
+          severity: "BLOCK",
+        }),
+        flash: {
+          kind: "error",
+          text: "この操作にはログインが必要です。ログインしてからもう一度お試しください。",
+          to: "customer",
+        },
+      },
+    };
+  }
+
+  const u = s.users.find((x) => x.id === sess.userId);
+  if (!u) {
+    return {
+      ok: false,
+      next: blocked(s, {
+        kind: "UNAUTHENTICATED",
+        actor: sess.userId,
+        target: cap,
+        detail: "ログイン情報はありますが、その会員が見つかりません。",
+        severity: "BLOCK",
+      }),
+    };
+  }
+  return { ok: true, u };
+}
+
+type PrizeGuard =
+  | { ok: true; p: Prize }
+  | { ok: false; next: Draft };
+
+/**
+ * その商品が、本当にその方のものかを確かめる（IDOR 対策）。
+ *
+ * ★これが、この画面でいちばん大事な10行です。
+ *   商品番号を1つずらして送るだけで他人の商品を
+ *   自分の住所へ送らせられる、という事故は、
+ *   実際のサービスで何度も起きています。
+ *   画面に出していないから安全、ではありません。
+ */
+function requireOwnPrize(
+  s: ConsoleState,
+  u: ConsoleUser,
+  prizeId: string,
+  what: string,
+): PrizeGuard {
+  const p = s.prizes.find((x) => x.id === prizeId);
+
+  /* ★「見つからない」と「他人のもの」を、同じ返し方にすること。
+       返し方を変えると、それだけで
+       「この番号は存在する」と教えることになります */
+  if (!p || p.userId !== u.id) {
+    return {
+      ok: false,
+      next: blocked(
+        s,
+        {
+          kind: "IDOR_ATTEMPT",
+          actor: `${u.name}（${u.id}）`,
+          target: prizeId,
+          detail: p
+            ? `${what}：商品 ${prizeId} の持ち主は ${p.userId} です。${u.id} からの要求を止めました。`
+            : `${what}：存在しない商品 ${prizeId} への要求を止めました。`,
+          severity: p ? "BLOCK" : "WARN",
+        },
+        {
+          action: "IDOR_BLOCKED",
+          target: prizeId,
+          summary: `${u.name} が、自分のものではない商品 ${prizeId} を操作しようとしたため止めました`,
+          actor: asCustomer(u),
+        },
+      ),
+    };
+  }
+  return { ok: true, p };
+}
+
+/**
+ * この操作に、追加の本人確認が要るか。
+ *
+ * ★要る条件を、コードの中に散らさないこと。
+ *   「ここでは2万pt、あちらでは3万pt」になった瞬間、
+ *   どちらが正しいのか誰も分からなくなります。
+ */
+export function stepUpReasonFor(
+  s: ConsoleState,
+  op:
+    | { kind: "EXCHANGE"; value: number; count: number }
+    | { kind: "SHIP"; value: number; count: number }
+    | { kind: "ADDRESS" },
+): StepUpReason | null {
+  if (op.kind === "ADDRESS") return "ADDRESS_CHANGE";
+
+  if (op.count >= STEP_UP_BULK_COUNT) return "BULK_OPERATION";
+
+  if (op.kind === "EXCHANGE" && op.value >= STEP_UP_EXCHANGE_PT) {
+    return "HIGH_VALUE_EXCHANGE";
+  }
+
+  /* ★住所を変えた直後の高額発送を、そのまま通さないこと。
+       乗っ取りの手口は、だいたいこの順です。
+       ①ログインされる ②送り先を書き換える ③高いものを発送させる
+       ②と③の間に1回だけ確認を入れれば、この流れは止まります */
+  if (
+    op.kind === "SHIP" &&
+    s.customer?.addressChangedAt &&
+    op.value >= STEP_UP_AFTER_ADDRESS_VALUE
+  ) {
+    return "ADDRESS_JUST_CHANGED";
+  }
+  return null;
+}
+
+/** 追加の本人確認が済んでいるか */
+const stepUpDone = (s: ConsoleState) => Boolean(s.customer?.stepUpAt);
+
+/**
+ * 追加の本人確認が要るなら、操作を預かって止める。
+ *
+ * 返り値が null なら、そのまま進めてよい。
+ */
+function holdForStepUp(
+  s: ConsoleState,
+  u: ConsoleUser,
+  op: Parameters<typeof stepUpReasonFor>[1],
+  pending: ConsoleAction,
+  note: string,
+): Draft | null {
+  const reason = stepUpReasonFor(s, op);
+  if (!reason) return null;
+  if (stepUpDone(s)) return null;
+
+  return {
+    ...s,
+    stepUp: { reason, note, pending },
+    securityEvents: addSecurityEvent(s, {
+      kind: "STEP_UP_REQUIRED",
+      actor: `${u.name}（${u.id}）`,
+      target: pending.type,
+      detail: `${STEP_UP_LABEL[reason]}：${note}`,
+      severity: "INFO",
+    }),
+    flash: {
+      kind: "warn",
+      text: `念のため、もう一度ご本人確認をお願いします。（${STEP_UP_LABEL[reason]}）`,
+      to: "customer",
+    },
+  };
+}
+
+/**
+ * 運営側の権限を確かめる。
+ *
+ * ★画面でボタンを隠すことと、これは別のものです。
+ *   隠すのは見やすさのため。止めるのは安全のため。
+ *   隠しただけのシステムは、操作を直接送られたら何も守れません。
+ */
+function requireRole(
+  s: ConsoleState,
+  p: Permission,
+  what: string,
+): { ok: true; me: Admin } | { ok: false; next: Draft } {
+  const me = s.me;
+  if (!me || !s.mfaPassed) {
+    return {
+      ok: false,
+      next: {
+        ...s,
+        securityEvents: addSecurityEvent(s, {
+          kind: "UNAUTHENTICATED",
+          actor: "未ログイン",
+          target: what,
+          detail: `管理者としてログインしていない状態で ${what} を呼びました。`,
+          severity: "BLOCK",
+        }),
+        flash: { kind: "error", text: "管理者としてログインしてください。", to: "admin" },
+      },
+    };
+  }
+  if (!can(me.role, p)) {
+    return {
+      ok: false,
+      next: {
+        ...s,
+        securityEvents: addSecurityEvent(s, {
+          kind: "RBAC_DENIED",
+          actor: `${me.name}（${ROLE_LABEL[me.role]}）`,
+          target: what,
+          detail: `${ROLE_LABEL[me.role]} には「${PERMISSION_LABEL[p]}」がありません。`,
+          severity: "BLOCK",
+        }),
+        audit: log(s, "RBAC_DENIED", what, `${me.name} が権限のない操作 ${what} を呼んだため止めました`, {
+          reason: `不足している権限：${PERMISSION_LABEL[p]}`,
+        }),
+        flash: {
+          kind: "error",
+          text: `${ROLE_LABEL[me.role]} には「${PERMISSION_LABEL[p]}」の権限がありません。`,
+          to: "admin",
+        },
+      },
+    };
+  }
+  return { ok: true, me };
+}
 
 /**
  * お客様が自分で行う操作。
@@ -1004,8 +1897,15 @@ const CUSTOMER_ACTIONS: ReadonlySet<ConsoleAction["type"]> = new Set<
 >([
   "DRAW",
   "PRIZE_SHIP_REQUEST",
+  "PRIZE_SHIP_BULK",
   "PRIZE_EXCHANGE",
+  "PRIZE_EXCHANGE_BULK",
   "USER_ASK",
+  "CUSTOMER_LOGIN",
+  "CUSTOMER_LOGOUT",
+  "CUSTOMER_STEP_UP",
+  "CUSTOMER_STEP_UP_CANCEL",
+  "ADDRESS_UPDATE",
 ]);
 
 /**
@@ -1019,14 +1919,22 @@ const CUSTOMER_ACTIONS: ReadonlySet<ConsoleAction["type"]> = new Set<
  */
 export function reducer(s: ConsoleState, a: ConsoleAction): ConsoleState {
   const next = core(s, a);
-  if (!next.flash || next.flash === s.flash) return next;
+  const f = next.flash;
+  if (!f) return { ...next, flash: null };
+  if (f === s.flash) return { ...next, flash: s.flash };
   return {
     ...next,
-    flash: { ...next.flash, to: CUSTOMER_ACTIONS.has(a.type) ? "customer" : "admin" },
+    flash: {
+      kind: f.kind,
+      text: f.text,
+      /* その場で宛先が指定されていれば、それを尊重する。
+         指定が無いものは、操作した側に出す */
+      to: f.to ?? (CUSTOMER_ACTIONS.has(a.type) ? "customer" : "admin"),
+    },
   };
 }
 
-function core(s: ConsoleState, a: ConsoleAction): ConsoleState {
+function core(s: ConsoleState, a: ConsoleAction): Draft {
   switch (a.type) {
     case "LOGIN": {
       const me = s.admins.find((x) => x.id === a.adminId);
@@ -1072,9 +1980,8 @@ function core(s: ConsoleState, a: ConsoleAction): ConsoleState {
      *   その場で無意味になります。
      */
     case "CREATE_GACHA": {
-      if (!s.me || !can(s.me.role, "gacha.edit")) {
-        return deny(s, `${s.me ? ROLE_LABEL[s.me.role] : "この権限"} にはガチャを作る権限がありません。`);
-      }
+      const gate = requireRole(s, "gacha.edit", "CREATE_GACHA");
+      if (!gate.ok) return gate.next;
       const title = a.title.trim();
       if (!title) return deny(s, "ガチャの名前を入れてください。");
       if (a.spec.price <= 0 || a.spec.total <= 0) {
@@ -1127,9 +2034,8 @@ function core(s: ConsoleState, a: ConsoleAction): ConsoleState {
      *   入力が終わっていないだけです。
      */
     case "RUN_BACKTEST": {
-      if (!s.me || !can(s.me.role, "gacha.edit")) {
-        return deny(s, `${s.me ? ROLE_LABEL[s.me.role] : "この権限"} には検証を実行する権限がありません。`);
-      }
+      const gate = requireRole(s, "gacha.edit", "RUN_BACKTEST");
+      if (!gate.ok) return gate.next;
       const g = s.gachas.find((x) => x.id === a.gachaId);
       if (!g) return deny(s, "そのガチャは見つかりません。");
 
@@ -1188,9 +2094,8 @@ function core(s: ConsoleState, a: ConsoleAction): ConsoleState {
     }
 
     case "PUBLISH_GACHA": {
-      if (!s.me || !can(s.me.role, "gacha.publish")) {
-        return deny(s, `${s.me ? ROLE_LABEL[s.me.role] : "この権限"} には公開の権限がありません。`);
-      }
+      const gate = requireRole(s, "gacha.publish", "PUBLISH_GACHA");
+      if (!gate.ok) return gate.next;
       const g = s.gachas.find((x) => x.id === a.gachaId);
       if (!g) return s;
       /* ★バックテストを通していないガチャは公開させないこと。
@@ -1215,9 +2120,8 @@ function core(s: ConsoleState, a: ConsoleAction): ConsoleState {
     }
 
     case "PAUSE_GACHA": {
-      if (!s.me || !can(s.me.role, "gacha.publish")) {
-        return deny(s, "販売停止の権限がありません。");
-      }
+      const gate = requireRole(s, "gacha.publish", "PAUSE_GACHA");
+      if (!gate.ok) return gate.next;
       const g = s.gachas.find((x) => x.id === a.gachaId);
       if (!g) return s;
       return {
@@ -1233,12 +2137,9 @@ function core(s: ConsoleState, a: ConsoleAction): ConsoleState {
     }
 
     case "POINT_REQUEST": {
-      if (!s.me || !can(s.me.role, "point.request")) {
-        return deny(
-          s,
-          `${s.me ? ROLE_LABEL[s.me.role] : "この権限"} には、ポイントを変更する権限がありません。経理または管理者に依頼してください。`,
-        );
-      }
+      const gate = requireRole(s, "point.request", "POINT_REQUEST");
+      if (!gate.ok) return gate.next;
+      const me = gate.me;
       if (!a.reason.trim()) {
         return deny(s, "理由の入力は必須です。理由のないポイント操作は記録できません。");
       }
@@ -1251,7 +2152,7 @@ function core(s: ConsoleState, a: ConsoleAction): ConsoleState {
          受け付けてしまうと、誰も承認できない申請が残り続けます。
          「承認待ちのまま放置されている」のは、
          止まっていることに気づきにくい、いちばん困る壊れ方です。 */
-      if (needsApproval && approversOtherThan(s, s.me.id).length === 0) {
+      if (needsApproval && approversOtherThan(s, me.id).length === 0) {
         return deny(
           s,
           `${FOUR_EYES_THRESHOLD.toLocaleString()}pt 以上の変更には、別の管理者の承認が必要です。` +
@@ -1266,8 +2167,8 @@ function core(s: ConsoleState, a: ConsoleAction): ConsoleState {
         userName: u.name,
         delta: a.delta,
         reason: a.reason,
-        requestedBy: s.me.id,
-        requestedByName: s.me.name,
+        requestedBy: me.id,
+        requestedByName: me.name,
         requestedAt: NOW,
         status: "PENDING",
         needsApproval,
@@ -1316,11 +2217,16 @@ function core(s: ConsoleState, a: ConsoleAction): ConsoleState {
     }
 
     case "POINT_APPROVE": {
-      if (!s.me) return s;
+      /* ★権限の確認を、canApprove より先に行うこと。
+         canApprove は「自分の申請を自分で承認していないか」を見る係です。
+         そもそも承認する権限が無い人を止めるのは、こちらの役目です */
+      const gate = requireRole(s, "point.approve", "POINT_APPROVE");
+      if (!gate.ok) return gate.next;
+      const me = gate.me;
       const req = s.pointRequests.find((x) => x.id === a.requestId);
       if (!req) return s;
 
-      const check = canApprove(req, s.me);
+      const check = canApprove(req, me);
       if (!check.ok) return deny(s, check.why);
 
       const u = s.users.find((x) => x.id === req.userId);
@@ -1339,8 +2245,8 @@ function core(s: ConsoleState, a: ConsoleAction): ConsoleState {
         pointRequests: s.pointRequests.map((x) =>
           x.id === req.id
             ? {
-                ...x, status: "APPLIED", approvedBy: s.me!.id,
-                approvedByName: s.me!.name, approvedAt: NOW, balanceAfter: after,
+                ...x, status: "APPLIED", approvedBy: me.id,
+                approvedByName: me.name, approvedAt: NOW, balanceAfter: after,
               }
             : x,
         ),
@@ -1353,10 +2259,11 @@ function core(s: ConsoleState, a: ConsoleAction): ConsoleState {
     }
 
     case "POINT_REJECT": {
-      if (!s.me) return s;
+      const gate = requireRole(s, "point.approve", "POINT_REJECT");
+      if (!gate.ok) return gate.next;
       const req = s.pointRequests.find((x) => x.id === a.requestId);
       if (!req) return s;
-      const check = canApprove(req, s.me);
+      const check = canApprove(req, gate.me);
       if (!check.ok) return deny(s, check.why);
 
       return {
@@ -1372,9 +2279,8 @@ function core(s: ConsoleState, a: ConsoleAction): ConsoleState {
     }
 
     case "FRAUD_HANDLE": {
-      if (!s.me || !can(s.me.role, "fraud.act")) {
-        return deny(s, `${s.me ? ROLE_LABEL[s.me.role] : "この権限"} には、不正判定を処理する権限がありません。`);
-      }
+      const gate = requireRole(s, "fraud.act", "FRAUD_HANDLE");
+      if (!gate.ok) return gate.next;
       const sg = s.signups.find((x) => x.id === a.signupId);
       if (!sg) return s;
       const label = {
@@ -1393,9 +2299,8 @@ function core(s: ConsoleState, a: ConsoleAction): ConsoleState {
     }
 
     case "SHIP": {
-      if (!s.me || !can(s.me.role, "shipping.act")) {
-        return deny(s, "発送処理の権限がありません。");
-      }
+      const gate = requireRole(s, "shipping.act", "SHIP");
+      if (!gate.ok) return gate.next;
       const o = s.orders.find((x) => x.id === a.orderId);
       if (!o) return s;
       const tracking = `DEMO-${o.id.slice(-4)}-${String(s.orders.length * 17).padStart(4, "0")}`;
@@ -1437,6 +2342,12 @@ function core(s: ConsoleState, a: ConsoleAction): ConsoleState {
      *     ここでは1つの新しい状態としてまとめて返すことで、同じ形にしています。
      */
     case "DRAW": {
+      /* ★引くのは、ログインしている本人だけ。
+         棚を見るのは誰でもよいが、お金が動く操作は本人だけです */
+      const gate = requireCustomer(s, "gacha.draw");
+      if (!gate.ok) return gate.next;
+      const u = gate.u;
+
       const g = s.gachas.find((x) => x.id === a.gachaId);
       if (!g) return s;
 
@@ -1464,8 +2375,6 @@ function core(s: ConsoleState, a: ConsoleAction): ConsoleState {
         return deny(s, `「${g.title}」は完売しました。`);
       }
 
-      const u = s.users.find((x) => x.id === PREVIEW_USER_ID);
-      if (!u) return s;
       if (u.points < g.price) {
         return deny(
           s,
@@ -1615,7 +2524,12 @@ function core(s: ConsoleState, a: ConsoleAction): ConsoleState {
      *   ★この判定は必ず「受け取った側」で行うこと。画面の側では守れません。
      */
     case "PRIZE_SHIP_REQUEST": {
-      /* 同じ鍵で、もう処理が済んでいないか（二重送信・再読み込み・通信の再送） */
+      /* ① ログインしているか */
+      const gate = requireCustomer(s, "prize.ship");
+      if (!gate.ok) return gate.next;
+      const u = gate.u;
+
+      /* ② 同じ鍵で、もう処理が済んでいないか（二重送信・再読み込み・通信の再送） */
       const done = s.prizes.find((p) => p.opKey === a.key);
       if (done) {
         return {
@@ -1629,8 +2543,20 @@ function core(s: ConsoleState, a: ConsoleAction): ConsoleState {
         };
       }
 
-      const p = s.prizes.find((x) => x.id === a.prizeId);
-      if (!p) return deny(s, "その商品が見つかりません。");
+      /* ③ その商品は、本当にこの方のものか（IDOR 対策） */
+      const own = requireOwnPrize(s, u, a.prizeId, "発送依頼");
+      if (!own.ok) return own.next;
+      const p = own.p;
+
+      /* ④ 住所を変えた直後の高額発送なら、もう一度ご本人確認 */
+      const hold = holdForStepUp(
+        s, u,
+        { kind: "SHIP", value: p.value, count: 1 },
+        a,
+        `${p.name}（${p.value.toLocaleString()}円相当）の発送`,
+      );
+      if (hold) return hold;
+
       if (p.status === "EXCHANGED") {
         return deny(
           s,
@@ -1641,13 +2567,30 @@ function core(s: ConsoleState, a: ConsoleAction): ConsoleState {
         return deny(s, `「${p.name}」はすでに発送依頼済みです。二重には受け付けません。`);
       }
 
-      const u = s.users.find((x) => x.id === p.userId);
-      if (!u) return s;
+      /**
+       * ★お届け先は、ここで用意すること。画面から受け取らないこと。
+       *
+       *   以前は、画面が持っていた住所をそのまま伝票にしていました。
+       *   それだと、送られてきた宛先が本当にその方のものかを
+       *   確かめる手立てがありません。
+       *   ここでは、ログインしている本人の登録住所しか使いません。
+       *
+       * ★住所が登録されていないなら、依頼を作らないこと。
+       *   宛先の無い伝票は、倉庫で必ず止まります。
+       *   止まったことは、その日のうちには誰も気づきません。
+       */
+      const addr = u.address;
+      if (!addr) {
+        return deny(
+          s,
+          "お届け先が登録されていません。先にお届け先を登録してください。",
+        );
+      }
 
       const order: Order = {
         id: `o_${5000 + s.orders.length + 1}`,
-        userId: p.userId,
-        userName: p.userName,
+        userId: u.id,
+        userName: u.name,
         prize: `${p.grade}賞 ${p.name}`,
         requestedAt: NOW,
         status: "UNSHIPPED",
@@ -1655,7 +2598,7 @@ function core(s: ConsoleState, a: ConsoleAction): ConsoleState {
         /* ★住所は、依頼した時点のものを写して持つこと。
            会員情報の住所を後から書き換えても、
            すでに出した伝票の宛先は変わってはいけません */
-        address: { ...a.address },
+        address: { ...addr },
         buyUrl: "#demo-purchase",
       };
 
@@ -1667,18 +2610,15 @@ function core(s: ConsoleState, a: ConsoleAction): ConsoleState {
             ? { ...x, status: "SHIP_REQUESTED", orderId: order.id, opKey: a.key }
             : x,
         ),
-        users: s.users.map((x) =>
-          x.id === u.id ? { ...x, address: { ...a.address } } : x,
-        ),
         audit: log(
           s,
           "PRIZE_SHIP_REQUEST",
           p.id,
-          `${p.userName} が「${p.name}」の発送を依頼（伝票 ${order.id}）`,
+          `${u.name} が「${p.name}」の発送を依頼（伝票 ${order.id}）`,
           {
             before: PRIZE_STATUS_LABEL[p.status],
             after: PRIZE_STATUS_LABEL.SHIP_REQUESTED,
-            reason: `お届け先 ${a.address.zip} / ${a.address.name}（鍵 ${a.key}）`,
+            reason: `お届け先 ${addr.zip} / ${addr.name}（登録住所・鍵 ${a.key}）`,
             actor: asCustomer(u),
           },
         ),
@@ -1705,6 +2645,12 @@ function core(s: ConsoleState, a: ConsoleAction): ConsoleState {
      *   何pt / 交換前の残高 / 交換後の残高 / 二重処理防止の鍵 / いつ
      */
     case "PRIZE_EXCHANGE": {
+      /* ① ログインしているか */
+      const gate = requireCustomer(s, "prize.exchange");
+      if (!gate.ok) return gate.next;
+      const u = gate.u;
+
+      /* ② 二重送信・再送 */
       const done = s.prizes.find((p) => p.opKey === a.key);
       if (done) {
         return {
@@ -1718,8 +2664,22 @@ function core(s: ConsoleState, a: ConsoleAction): ConsoleState {
         };
       }
 
-      const p = s.prizes.find((x) => x.id === a.prizeId);
-      if (!p) return deny(s, "その商品が見つかりません。");
+      /* ③ その商品は、本当にこの方のものか（IDOR 対策）。
+         ★ここが無いと、番号を書き換えるだけで
+           他人の商品を自分のポイントに変えられます */
+      const own = requireOwnPrize(s, u, a.prizeId, "ポイント交換");
+      if (!own.ok) return own.next;
+      const p = own.p;
+
+      /* ④ 高額なら、もう一度ご本人確認 */
+      const hold = holdForStepUp(
+        s, u,
+        { kind: "EXCHANGE", value: p.exchangePt, count: 1 },
+        a,
+        `${p.name} を ${p.exchangePt.toLocaleString()}pt に交換`,
+      );
+      if (hold) return hold;
+
       if (p.status === "SHIP_REQUESTED") {
         return deny(
           s,
@@ -1730,9 +2690,6 @@ function core(s: ConsoleState, a: ConsoleAction): ConsoleState {
       if (p.status === "EXCHANGED") {
         return deny(s, `「${p.name}」はすでにポイントへ交換済みです。二重には交換しません。`);
       }
-
-      const u = s.users.find((x) => x.id === p.userId);
-      if (!u) return s;
 
       const balanceBefore = u.points;
       const balanceAfter = balanceBefore + p.exchangePt;
@@ -1782,6 +2739,13 @@ function core(s: ConsoleState, a: ConsoleAction): ConsoleState {
      *   下書きのまま自動で送ることはありません（lib/console/support.ts）。
      */
     case "USER_ASK": {
+      /* ★問い合わせも、ログインが要ります。
+         AIは、その方の残高・発送状況・履歴を読んで答えます。
+         誰だか分からない相手に、それを読ませてはいけません */
+      const gate = requireCustomer(s, "support.ask");
+      if (!gate.ok) return gate.next;
+      const u = gate.u;
+
       const already = s.tickets.find((t) => t.opKey === a.key);
       if (already) {
         return {
@@ -1792,9 +2756,6 @@ function core(s: ConsoleState, a: ConsoleAction): ConsoleState {
           },
         };
       }
-
-      const u = s.users.find((x) => x.id === PREVIEW_USER_ID);
-      if (!u) return s;
 
       const ans = aiAnswer(a.text, {
         userName: u.name,
@@ -1852,9 +2813,8 @@ function core(s: ConsoleState, a: ConsoleAction): ConsoleState {
     }
 
     case "SUPPORT_REPLY": {
-      if (!s.me || !can(s.me.role, "support.reply")) {
-        return deny(s, "返信の権限がありません。");
-      }
+      const gate = requireRole(s, "support.reply", "SUPPORT_REPLY");
+      if (!gate.ok) return gate.next;
       const t = s.tickets.find((x) => x.id === a.ticketId);
       if (!t) return s;
       return {
@@ -1866,6 +2826,259 @@ function core(s: ConsoleState, a: ConsoleAction): ConsoleState {
         ),
         audit: log(s, "SUPPORT_REPLY", t.id, `${t.userName} の「${t.subject}」に返信`),
         flash: { kind: "ok", text: "返信しました。お客様の画面に届いています（デモのため実際には送信していません）。" },
+      };
+    }
+
+    /* ══════════════════════════════════════════════
+       お客様側の入口
+       ══════════════════════════════════════════════ */
+
+    /**
+     * お客様としてログインする。
+     *
+     * ★デモでは、パスワードを入力させないこと。
+     *   本物らしい入力欄を出すと、本当にお使いのパスワードを
+     *   打ってしまう方が必ず出ます。打てない作りにしておくのが確実です。
+     *   本番では、設定した本人確認（メール／SMS／認証アプリ）が働きます。
+     */
+    case "CUSTOMER_LOGIN": {
+      const u = s.users.find((x) => x.id === a.userId);
+      if (!u) return deny(s, "その会員は見つかりません。");
+      if (u.status === "SUSPENDED") {
+        return {
+          ...s,
+          securityEvents: addSecurityEvent(s, {
+            kind: "UNAUTHENTICATED",
+            actor: `${u.name}（${u.id}）`,
+            target: "CUSTOMER_LOGIN",
+            detail: "停止中のアカウントでログインしようとしました。",
+            severity: "WARN",
+          }),
+          flash: {
+            kind: "error",
+            text: "このアカウントは現在ご利用いただけません。お問い合わせください。",
+            to: "customer",
+          },
+        };
+      }
+      return {
+        ...s,
+        customer: { userId: u.id, name: u.name, method: s.customerAuth, at: NOW },
+        stepUp: null,
+        audit: log(s, "CUSTOMER_LOGIN", u.id, `${u.name} がログイン（${CUSTOMER_AUTH_LABEL[s.customerAuth]}）`, {
+          actor: asCustomer(u),
+        }),
+        flash: {
+          kind: "ok",
+          text: `${u.name} 様としてログインしました。（${CUSTOMER_AUTH_LABEL[s.customerAuth]}）`,
+          to: "customer",
+        },
+      };
+    }
+
+    /**
+     * ログアウト。
+     *
+     * ★追加認証の済み印も、必ず一緒に捨てること。
+     *   残したままにすると、次に別の方がログインしたとき、
+     *   その方が確認していない状態で高額の操作が通ります。
+     */
+    case "CUSTOMER_LOGOUT": {
+      if (!s.customer) return s;
+      const who = s.customer.name;
+      return {
+        ...s,
+        customer: null,
+        stepUp: null,
+        flash: { kind: "ok", text: `${who} 様のログアウトが完了しました。`, to: "customer" },
+      };
+    }
+
+    /**
+     * 追加の本人確認（STEP-UP AUTH）。
+     *
+     * ★確認できたら、預かっていた操作をそのまま実行すること。
+     *   画面から送り直させると、確認した操作と
+     *   実行される操作が別物になり得ます。
+     */
+    case "CUSTOMER_STEP_UP": {
+      const req = s.stepUp;
+      if (!req) return s;
+      const sess = s.customer;
+      if (!sess) return requireCustomer(s, "prize.ship").ok ? s : s;
+
+      if (a.code !== DEMO_STEP_UP_CODE) {
+        return {
+          ...s,
+          securityEvents: addSecurityEvent(s, {
+            kind: "STEP_UP_FAILED",
+            actor: `${sess.name}（${sess.userId}）`,
+            target: req.pending.type,
+            detail: "追加認証の確認コードが違いました。",
+            severity: "WARN",
+          }),
+          flash: {
+            kind: "error",
+            text: "確認コードが違います。画面に出ている6桁を入れてください。",
+            to: "customer",
+          },
+        };
+      }
+
+      /* 確認が取れた状態を作ってから、預かっていた操作をそのまま流す */
+      const verified: ConsoleState = {
+        ...s,
+        customer: { ...sess, stepUpAt: NOW },
+        stepUp: null,
+        audit: log(s, "CUSTOMER_STEP_UP", sess.userId, `${sess.name} が追加の本人確認を完了（${STEP_UP_LABEL[req.reason]}）`, {
+          reason: req.note,
+          actor: { id: sess.userId, name: sess.name, role: "お客様" },
+        }),
+      };
+      return core(verified, req.pending);
+    }
+
+    case "CUSTOMER_STEP_UP_CANCEL":
+      return { ...s, stepUp: null, flash: null };
+
+    /**
+     * お届け先を変える。
+     *
+     * ★住所の変更は、それ自体が本人確認の対象です。
+     *   乗っ取りは、たいてい「送り先を書き換える」から始まります。
+     *   変えた事実を記録に残し、
+     *   直後の高額発送では、もう一度確認します。
+     */
+    case "ADDRESS_UPDATE": {
+      const gate = requireCustomer(s, "address.edit");
+      if (!gate.ok) return gate.next;
+      const u = gate.u;
+
+      const hold = holdForStepUp(s, u, { kind: "ADDRESS" }, a, "お届け先の変更");
+      if (hold) return hold;
+
+      const before = u.address;
+      return {
+        ...s,
+        users: s.users.map((x) => (x.id === u.id ? { ...x, address: { ...a.address } } : x)),
+        customer: s.customer ? { ...s.customer, addressChangedAt: NOW } : null,
+        securityEvents: addSecurityEvent(s, {
+          kind: "STEP_UP_REQUIRED",
+          actor: `${u.name}（${u.id}）`,
+          target: "ADDRESS_UPDATE",
+          detail: "お届け先が変更されました。しばらくの間、高額商品の発送前にもう一度確認します。",
+          severity: "INFO",
+        }),
+        audit: log(s, "ADDRESS_UPDATE", u.id, `${u.name} がお届け先を変更`, {
+          before: before ? `${before.zip} / ${before.name}` : "未登録",
+          after: `${a.address.zip} / ${a.address.name}`,
+          reason: "追加の本人確認を通過したうえで変更",
+          actor: asCustomer(u),
+        }),
+        flash: {
+          kind: "ok",
+          text:
+            "お届け先を変更しました。安全のため、しばらくの間は" +
+            "高額商品の発送前に、もう一度ご本人確認をお願いします。",
+          to: "customer",
+        },
+      };
+    }
+
+    /**
+     * お客様側の本人確認のやり方を、運営が選ぶ。
+     *
+     * ★これは運営の設定なので、運営の権限が要ります。
+     */
+    case "SET_CUSTOMER_AUTH": {
+      const gate = requireRole(s, "settings.edit", "SET_CUSTOMER_AUTH");
+      if (!gate.ok) return gate.next;
+      return {
+        ...s,
+        customerAuth: a.method,
+        audit: log(s, "SET_CUSTOMER_AUTH", "-", `お客様の本人確認を「${CUSTOMER_AUTH_LABEL[a.method]}」に変更`, {
+          before: CUSTOMER_AUTH_LABEL[s.customerAuth],
+          after: CUSTOMER_AUTH_LABEL[a.method],
+        }),
+        flash: {
+          kind: "ok",
+          text: `お客様の本人確認を「${CUSTOMER_AUTH_LABEL[a.method]}」にしました。`,
+          to: "admin",
+        },
+      };
+    }
+
+    /**
+     * まとめて発送依頼 ／ まとめてポイント交換。
+     *
+     * ═══════════════════════════════════════════════
+     * ★1件ずつの処理を、ここで書き直さないこと
+     * ═══════════════════════════════════════════════
+     *
+     *   まとめて処理する道を別に書くと、
+     *   1件ずつの道にある確認（持ち主か・二重でないか・状態は正しいか）を
+     *   どれか1つ写し忘れます。写し忘れた1つが穴になります。
+     *
+     *   だから、ここは1件ずつの処理を順に呼ぶだけにします。
+     *   確認は1か所にしかありません。
+     *
+     * ★鍵は、商品ごとに別のものにすること。
+     *   同じ鍵を使い回すと、2件目以降が
+     *   「二重送信」と見なされて、静かに処理されません。
+     */
+    case "PRIZE_SHIP_BULK":
+    case "PRIZE_EXCHANGE_BULK": {
+      const cap = a.type === "PRIZE_SHIP_BULK" ? "prize.ship" : "prize.exchange";
+      const gate = requireCustomer(s, cap);
+      if (!gate.ok) return gate.next;
+      const u = gate.u;
+
+      const ids = a.prizeIds;
+      if (ids.length === 0) return s;
+
+      /* まとめて処理するときだけの確認：件数が多ければ、もう一度ご本人確認 */
+      const mine = s.prizes.filter((p) => ids.includes(p.id) && p.userId === u.id);
+      const total = mine.reduce((acc, p) => acc + p.exchangePt, 0);
+      const hold = holdForStepUp(
+        s, u,
+        a.type === "PRIZE_SHIP_BULK"
+          ? { kind: "SHIP", value: total, count: ids.length }
+          : { kind: "EXCHANGE", value: total, count: ids.length },
+        a,
+        `${ids.length}件をまとめて${a.type === "PRIZE_SHIP_BULK" ? "発送依頼" : "ポイント交換"}`,
+      );
+      if (hold) return hold;
+
+      let cur: ConsoleState = { ...s, flash: null };
+      let ok = 0;
+      let ng = 0;
+
+      for (const id of ids) {
+        const one = core(cur, {
+          type: a.type === "PRIZE_SHIP_BULK" ? "PRIZE_SHIP_REQUEST" : "PRIZE_EXCHANGE",
+          prizeId: id,
+          key: `${a.key}#${id}`,
+        });
+        /* 成功したかどうかは、その商品の状態が動いたかで見る。
+           知らせの文章で判断しない（文章は変わるが、状態は嘘をつかない） */
+        const before = cur.prizes.find((p) => p.id === id)?.status;
+        const after = one.prizes.find((p) => p.id === id)?.status;
+        if (before !== after) ok += 1;
+        else ng += 1;
+        cur = { ...one, flash: null } as ConsoleState;
+      }
+
+      const what = a.type === "PRIZE_SHIP_BULK" ? "発送を承りました" : "ポイントに交換しました";
+      return {
+        ...cur,
+        flash: {
+          kind: ng === 0 ? "ok" : "warn",
+          text:
+            `${ok}件の${what}。` +
+            (ng > 0 ? `${ng}件は処理できませんでした（すでに処理済み、またはお客様の商品ではありません）。` : "") +
+            (a.type === "PRIZE_SHIP_BULK" ? "（デモのため、実際の配送は行いません）" : ""),
+          to: "customer",
+        },
       };
     }
 

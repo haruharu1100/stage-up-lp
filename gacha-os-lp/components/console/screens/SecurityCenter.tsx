@@ -32,9 +32,10 @@
 "use client";
 
 import { useState } from "react";
-import type { ConsoleState, ConsoleAction } from "@/lib/console/state";
+import type { ConsoleState, ConsoleAction, SecurityEvent } from "@/lib/console/state";
+import { SECURITY_EVENT_LABEL } from "@/lib/console/state";
 import { verifyAudit, type VerifyResult } from "@/lib/console/audit";
-import { Badge, Btn, Card, DemoNote, Stat, WhatIsThis } from "../ui";
+import { Badge, Btn, Card, DemoNote, KV, RowCard, Rows, Stat, Table, Td, WhatIsThis } from "../ui";
 
 export default function SecurityCenter({
   s,
@@ -48,9 +49,12 @@ export default function SecurityCenter({
   return (
     <>
       <WhatIsThis>
-        記録が後から書き換えられていないかを確かめます。
+        止めた操作の一覧と、記録が後から書き換えられていないかの検証です。
         実際に1件書き換えてから検証して、本当に見つかるかを試せます。
       </WhatIsThis>
+
+      {/* ── 止めた操作 ── */}
+      <BlockedList events={s.securityEvents} />
 
       {/* ── 監査ログの検証 ── */}
       <Card
@@ -199,6 +203,129 @@ export default function SecurityCenter({
         </p>
       </Card>
     </>
+  );
+}
+
+/**
+ * 止めた操作の一覧。
+ *
+ * ═══════════════════════════════════════════════
+ * ★成功した操作しか並ばない画面は、いつもきれいです
+ * ═══════════════════════════════════════════════
+ *
+ *   きれいな記録は、攻撃されていない証明にはなりません。
+ *   ただ「断ったことを数えていない」だけかもしれないからです。
+ *
+ *   他人の商品IDに書き換えて発送を頼む。
+ *   ログインせずに残高を見に行く。
+ *   権限の無い担当者が、ポイント変更のAPIを直接叩く。
+ *   ——どれも、システムは正しく断ります。
+ *   でも、断ったことを残していなければ、
+ *   「今この瞬間、誰かが他人の資産を触ろうとしている」に、誰も気づけません。
+ *
+ *   1回ならURLの打ち間違いかもしれません。
+ *   同じ人から30分で200回なら、それは攻撃です。
+ *   数えていなければ、その区別が永久につきません。
+ *
+ * ★0件のときに、この枠を消さないこと。
+ *   「0件でした」と出ているのと、枠ごと無いのとでは、意味が違います。
+ *   前者は見張っている証拠で、後者は何も分かりません。
+ */
+function BlockedList({ events }: { events: SecurityEvent[] }) {
+  const list = [...events].reverse();
+  const blocks = events.filter((e) => e.severity === "BLOCK").length;
+  const warns = events.filter((e) => e.severity === "WARN").length;
+
+  const tone = (sv: SecurityEvent["severity"]) =>
+    sv === "BLOCK" ? "danger" : sv === "WARN" ? "warn" : "neutral";
+
+  return (
+    <Card
+      title="止めた操作（SECURITY EVENTS）"
+      note="断った要求も、1件ずつ数えています。断ったことを残さないと、攻撃されていたことに気づけません。"
+    >
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+        <Stat label="記録した件数" value={events.length} unit="件" />
+        <Stat
+          label="拒否した操作"
+          value={blocks}
+          unit="件"
+          tone={blocks > 0 ? "danger" : "ok"}
+        />
+        <Stat
+          label="追加確認で止めた"
+          value={warns}
+          unit="件"
+          tone={warns > 0 ? "warn" : "normal"}
+        />
+      </div>
+
+      {list.length === 0 ? (
+        <p className="mt-4 rounded-xl border border-ok/25 bg-ok/8 px-4 py-4 text-note leading-[1.9] text-ok-ink">
+          いまのところ0件です。
+          <br />
+          <span className="text-slate3">
+            ★0件は「見ていない」ではありません。ユーザー側の画面で、
+            ログインせずに発送を頼んだり、高額のポイント交換をしたりすると、
+            ここに増えます。
+          </span>
+        </p>
+      ) : (
+        <div className="mt-4">
+          <Table head={["いつ", "何が起きたか", "誰が", "対象", "結果"]}>
+            {list.map((e) => (
+              <tr key={e.id}>
+                <Td className="num whitespace-nowrap">{e.at}</Td>
+                <Td>
+                  <span className="font-medium text-slate">
+                    {SECURITY_EVENT_LABEL[e.kind]}
+                  </span>
+                  <span className="mt-1 block text-slate3">{e.detail}</span>
+                </Td>
+                <Td className="whitespace-nowrap">{e.actor}</Td>
+                <Td className="num whitespace-nowrap">{e.target}</Td>
+                <Td>
+                  <Badge tone={tone(e.severity)}>
+                    {e.severity === "BLOCK"
+                      ? "拒否した"
+                      : e.severity === "WARN"
+                        ? "追加確認で止めた"
+                        : "記録のみ"}
+                  </Badge>
+                </Td>
+              </tr>
+            ))}
+          </Table>
+
+          <Rows>
+            {list.map((e) => (
+              <RowCard key={e.id}>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="text-note font-bold text-slate">
+                    {SECURITY_EVENT_LABEL[e.kind]}
+                  </span>
+                  <Badge tone={tone(e.severity)}>
+                    {e.severity === "BLOCK" ? "拒否した" : "止めた"}
+                  </Badge>
+                </div>
+                <p className="mt-2 text-note leading-[1.85] text-slate2">{e.detail}</p>
+                <div className="mt-2 border-t border-edge pt-2">
+                  <KV k="いつ" v={<span className="num">{e.at}</span>} />
+                  <KV k="誰が" v={e.actor} />
+                  <KV k="対象" v={<span className="num">{e.target}</span>} />
+                </div>
+              </RowCard>
+            ))}
+          </Rows>
+        </div>
+      )}
+
+      <p className="mt-4 text-note leading-[1.9] text-slate3">
+        ★「見つからない」と「他人のものだ」を、同じ断り方にしています。
+        断り方を分けると、商品IDを1つずつ試すだけで、
+        存在する番号を外から数えられてしまいます。
+      </p>
+    </Card>
   );
 }
 

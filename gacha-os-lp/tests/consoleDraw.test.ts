@@ -40,11 +40,19 @@ import {
   type ConsoleState,
 } from "../lib/console/state";
 
-/** 管理者としてログインし、2段階認証まで通した状態を作る */
+/**
+ * 管理者としてログインし、2段階認証まで通した状態を作る。
+ *
+ * ★お客様側のログインも、ここで一緒に通しておくこと。
+ *   ガチャを引くのはお客様の操作です。
+ *   お客様がログインしていない状態では、そもそも1回も引けません
+ *   （引けてしまうなら、そちらが不具合です）。
+ */
 function loggedIn(): ConsoleState {
   let s = initialState();
   s = reducer(s, { type: "LOGIN", adminId: DEMO_ADMINS[0].id });
   s = reducer(s, { type: "MFA_OK" });
+  s = reducer(s, { type: "CUSTOMER_LOGIN", userId: PREVIEW_USER_ID });
   return s;
 }
 

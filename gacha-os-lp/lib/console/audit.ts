@@ -88,6 +88,33 @@ export type AuditAction =
   | "PRIZE_EXCHANGE"
   | "USER_ASK"
   | "SUPPORT_REPLY"
+
+  /**
+   * お客様の本人確認まわり。
+   *
+   * ★ログインと住所変更を、必ず残すこと。
+   *   乗っ取りは、ほぼ必ずこの順で進みます。
+   *     ①見慣れない端末からログイン ②送り先を書き換える ③高いものを発送させる
+   *   ①と②が残っていないと、後から③だけを見ることになり、
+   *   「なぜこの発送が起きたのか」を誰も説明できません。
+   */
+  | "CUSTOMER_LOGIN"
+  | "CUSTOMER_STEP_UP"
+  | "ADDRESS_UPDATE"
+  | "SET_CUSTOMER_AUTH"
+
+  /**
+   * 止めた記録。
+   *
+   * ★「起きなかったこと」も残すこと。
+   *   成功した操作だけを残すと、記録はいつもきれいなままです。
+   *   きれいな記録は、攻撃されていない証明にはなりません。
+   *   どこを何回叩かれ、何回止めたのかが分かって、はじめて
+   *   「守れている」と言えます。
+   */
+  | "IDOR_BLOCKED"
+  | "RBAC_DENIED"
+
   | "ROLE_CHANGE"
   | "SETTINGS_CHANGE"
   | "DEMO_RESET";

@@ -49,9 +49,37 @@
  *     いちばん大事な「本当につながっているのか」が証明できません。
  *     それは、見せる価値がありません。
  *
- *   ★お客様側には、2段階認証をかけないこと。
- *     あれは運営を守るための鍵です。
- *     お客様は、ただガチャを引きに来ただけです。
+ * ═══════════════════════════════════════════════
+ * ★お客様側にも、ログインは要る
+ * ═══════════════════════════════════════════════
+ *
+ *   見るだけの画面（ガチャ一覧・賞の内容・価格・残り口数・
+ *   よくある質問・利用規約）は、ログインなしで見られます。
+ *   ここに鍵をかけても、売れなくなるだけです。
+ *
+ *   けれど、そこから先は全部ログインが要ります。
+ *   ポイント残高／購入／ガチャを引く／当たった商品／獲得商品一覧／
+ *   発送依頼／ポイント交換／ポイント履歴／お届け先／
+ *   問い合わせ／追跡番号。
+ *
+ *   ★理由は「個人情報だから」ではありません。
+ *     ポイントも、当たった商品も、お届け先も、全部お金です。
+ *     他人が触れる状態にしておくと、
+ *     取られたあとに取り返す方法がありません。
+ *
+ *   ★2段階認証について。
+ *     運営側は必須のままにします。
+ *     1人が乗っ取られると、全会員が危なくなるからです。
+ *     お客様側は、任意で設定できるようにします。
+ *     全員に強制すると、買う前に離脱します。
+ *     そのかわり、危ないときだけ、その場でもう一度確認します
+ *     （高額なポイント交換・住所を変えた直後の高額発送・まとめて操作）。
+ *     これを STEP-UP と呼びます。中身は lib/console/state.ts にあります。
+ *
+ *   ★どこから先がログインなのかを、この画面で決めないこと。
+ *     決めるのは state.ts の CUSTOMER_GATES ただ1か所です。
+ *     画面ごとに判断させると、20か所のうち1か所を必ず忘れます。
+ *     1か所忘れたら、そこが穴になります。
  */
 
 "use client";
@@ -116,7 +144,10 @@ export default function ClientConsole() {
     <div style={{ "--switch-h": `${switchH}px` } as React.CSSProperties}>
       <SideSwitch ref={switchRef} side={side} onChange={setSide} />
       {side === "customer" ? (
-        /* ★お客様側。ログインも2段階認証も要りません。
+        /* ★お客様側。
+           ここから先（残高・当たった商品・発送・交換・お届け先）は
+           ログインが要ります。止めるかどうかを決めるのは MyPage ではなく、
+           state.ts の CUSTOMER_GATES です。
            見ているデータは、管理側とまったく同じ1つです */
         <div className="bg-[#F4F5F7] pt-4">
           <MyPage s={s} dispatch={dispatch} />
@@ -185,8 +216,8 @@ function SideSwitch({
     <div ref={ref} className="sticky top-0 z-40 bg-[#0F1B33] px-3 py-2.5 shadow-md sm:px-4">
       <div className="mx-auto flex w-full max-w-[1400px] flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
         <div className="flex flex-1 gap-1.5 rounded-2xl bg-white/5 p-1.5">
-          {tab("admin", "管理サイト", "運営が毎日見る画面")}
-          {tab("customer", "ユーザー側", "実際に販売される画面")}
+          {tab("admin", "管理サイト", "運営が毎日使う画面")}
+          {tab("customer", "ユーザー側", "実際にお客様が利用する画面")}
         </div>
         {/* ★ここに nb（折り返し禁止）を付けないこと。
             短い見出しなら1行に保てますが、この長さの文に付けると
@@ -311,7 +342,7 @@ function Screen({
       case "operator":
         return <OperatorScreen s={s} onNav={onNav} />;
       case "settings":
-        return <SettingsScreen s={s} />;
+        return <SettingsScreen s={s} dispatch={dispatch} />;
       default:
         return <NotBuiltYet label={item.label} />;
     }
