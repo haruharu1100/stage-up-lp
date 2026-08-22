@@ -22,14 +22,27 @@ import { EV, trackOnce } from "@/lib/track";
  * content/site.ts の demoVideo.src が null の間は何も描画しません
  * （空の「準備中」枠は出しません）。
  *
- * ★この動画には音がありません。説明はすべて画面の中の文字です。
- * だから字幕（.vtt）を必ず付けています。
- * 焼き込んだ文字は「絵」で、読み上げソフトにも検索にも届かないためです。
+ * ★音は「あってもなくても同じだけ分かる」状態にしてあります。
+ * 2026-08-22 に日本語のナレーションを足しました（scripts/make-demo-narration.mjs）。
+ * ただし声は、画面に出ている文字を読み上げているのではなく、
+ * 「いま何が起きているか」を短く言い添えているだけです。
+ * 意味はすべて、字幕（.vtt）と画面の中の文字だけで最後まで通ります。
+ * 声にしか無い情報を作らないこと。ここが崩れると、
+ * 音を出せない場所で見ている人に伝わらなくなります。
+ *
+ * ★はじめは音を消してあります（muted）。外さないこと。
+ * スマホで画面を触った瞬間に音が鳴ると、電車の中では事故になります。
+ * 見る人が自分でスピーカーの印を押したときだけ、声が出ます。
  *
  * ★自動再生はしません。
  * 音のない自動再生でも、通信量とバッテリーを勝手に使うことになるためです。
  * 動画を見ない人にも同じことが伝わるよう、
  * このすぐ下に「ガチャ運営の1日」（OperatingDay）を置いています。
+ *
+ * ★動画と、触れるデモは、役目が違います。
+ * 動画は「31秒で全体を分かってもらう」もの。
+ * /demo は「自分の手で確かめてもらう」もの。
+ * だから動画のすぐ下のボタンは /demo へ送っています。
  *
  * 再生開始と最後まで見たかどうかを計測します
  * （動画が本当に効いているのかを、感覚ではなく数字で見るため）。
@@ -75,6 +88,14 @@ export default function ProductVideo() {
                 className="block h-auto w-full"
                 poster={demoVideo.poster ?? undefined}
                 controls
+                /*
+                  ★muted を外さないこと。
+                    この動画には日本語のナレーションが入っています。
+                    はじめから音が出る状態にすると、
+                    電車やお店で開いた人の手元で、いきなり声が鳴ります。
+                    見る人が自分でスピーカーの印を押したときだけ鳴らします。
+                */
+                muted
                 playsInline
                 preload="metadata"
                 onPlay={() => trackOnce(EV.videoPlay, { place: "lp" })}
@@ -86,12 +107,15 @@ export default function ProductVideo() {
                 <source src={demoVideo.src} type="video/mp4" />
                 {/*
                   ★字幕。消さないこと。
-                    この動画には音がありません。説明はすべて画面の中の文字です。
-                    ただしその文字は「絵」なので、
+                    この動画は、はじめは音が消えた状態で置いてあります。
+                    つまり多くの人は、声を聞かずにこの動画を見終わります。
+                    画面に焼き込んだ文字は「絵」なので、
                     読み上げソフトを使う人にも、検索にも、届いていません。
                     default を付けているのは、
                     「字幕があることに気づいてもらう」ためではなく、
-                    音のないこの動画では字幕が本文そのものだからです。
+                    この動画では字幕が本文そのものだからです。
+                    ★ナレーションの文言をここへ写さないこと。
+                      字幕は画面の説明、声は言い添え。役目が違います。
                 */}
                 {demoVideo.captions && (
                   <track
@@ -113,13 +137,43 @@ export default function ProductVideo() {
             <figcaption className="mx-auto mt-6 max-w-[46em] text-center text-note leading-[1.95] text-slate3">
               {demoVideo.caption}
             </figcaption>
+
+            {/*
+              ★この2行を消さないこと。
+
+                1行目は、見る人への案内です。
+                はじめは音が消えているので、
+                「音が入っていること」自体に気づいてもらえません。
+
+                2行目は、使わせてもらっている決まりです。
+                ナレーションは VOICEVOX（この機械の中で動く読み上げ）で作っています。
+                VOICEVOX は、使った場合にどの声を使ったかを書くことが条件です。
+                消すと、規約を守っていない状態になります。
+            */}
+            <p className="mx-auto mt-3.5 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-center text-label text-slate3/80">
+              <span className="nb">音声ナレーション入り</span>
+              <span className="text-slate3/40" aria-hidden>
+                ／
+              </span>
+              <span className="nb">はじめは音が消えています</span>
+              <span className="text-slate3/40" aria-hidden>
+                ／
+              </span>
+              <span className="num nb">音声：VOICEVOX:No.7</span>
+            </p>
           </figure>
         </Reveal>
 
         <Reveal delay={0.12}>
+          {/*
+            ★2つの行き先の順番を入れ替えないこと。
+              動画を見終わった直後の人が次にしたいのは、
+              「相談する」ではなく「本当に動くのか自分で確かめる」です。
+              先に触ってもらってから、相談へ進んでもらいます。
+          */}
           <div className="mt-10 flex flex-col items-center gap-3.5 sm:flex-row sm:justify-center">
             <Link href="/demo" className="btn-primary btn-lg w-full sm:w-auto">
-              同じ画面を自分で触る
+              自分で触ってみる
             </Link>
             <Link href="#contact" className="btn-outline btn-lg w-full sm:w-auto">
               導入について相談する
