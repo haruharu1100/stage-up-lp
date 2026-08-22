@@ -564,6 +564,31 @@ add('1年かけても回収できない獲得費は0点',
     sales: withPayback(14),
     japan: null, prospectFindability: null, willingnessToPay: null, regulated: false,
   }).items.find((i) => i.key === 'cac')?.earned === 0);
+// 単価も粗利も回収も良いのに件数が少なく赤字、という案件が高得点で出るのを防ぐ
+const bestSc = salesLike.scenarios.find((x) => x.label === salesLike.bestScenario);
+add('12ヶ月の利益が赤字なら、条件がどれだけ良くても50点を超えない',
+  (bestSc?.netProfitYear1Median ?? 0) < 0 && pricedMoney.total <= 50 && pricedMoney.capped);
+add('減点した理由を必ず文章で残す',
+  (pricedMoney.capReason ?? '').length > 0);
+const profitable = computeMoneyScore({
+  sales: {
+    ...salesLike,
+    scenarios: salesLike.scenarios.map((s) =>
+      s.label === salesLike.bestScenario ? { ...s, netProfitYear1Median: 1_000_000 } : s),
+  },
+  japan: null, prospectFindability: null, willingnessToPay: null, regulated: false,
+});
+add('黒字の試算が出ている案件には減点を掛けない', profitable.capped === false);
+add('赤字案件どうしでも「まだマシな方」が上に来るよう順序は残す',
+  computeMoneyScore({
+    sales: {
+      ...salesLike,
+      scenarios: salesLike.scenarios.map((s) =>
+        s.label === salesLike.bestScenario ? { ...s, ltvCacMedian: 1 } : s),
+    },
+    japan: null, prospectFindability: null, willingnessToPay: null, regulated: false,
+  }).total < pricedMoney.total);
+add('赤字案件は黒字案件より必ず低い点になる', pricedMoney.total < profitable.total);
 const lowConfidenceJapan = computeMoneyScore({
   sales: null, japan: { domesticCount: 0, confidence: 0.35 },
   prospectFindability: null, willingnessToPay: null, regulated: false,

@@ -59,8 +59,10 @@ export type MoneyScore = {
   /** 採点できた配点の合計。100未満なら、その分だけ調べきれていない */
   availableWeight: number;
   items: MoneyItem[];
-  /** バックテスト未実施のため上限を掛けたか */
+  /** 上限を掛けたか */
   capped: boolean;
+  /** なぜ頭打ちにしたか。掛けていないなら null */
+  capReason: string | null;
 };
 
 /** 目標値に対する達成度を0〜1にする。上振れは1で止める */
@@ -198,14 +200,32 @@ export function computeMoneyScore(ctx: MoneyContext): MoneyScore {
   }
 
   const raw = availableWeight === 0 ? 0 : (earned / availableWeight) * 100;
-  // バックテストが無い間は断定しない。上限70点に抑える（既存の方針を維持）
-  const capped = !usable;
-  const total = capped ? Math.min(70, raw) : raw;
+
+  /**
+   * 8項目はどれも「1件あたりの条件の良さ」しか見ていない。
+   * 単価が高く粗利も厚く回収も早いのに、そもそも売れる件数が少なくて12ヶ月の利益が赤字、
+   * という案件が高得点で出てしまう。条件が良いことと黒字であることは別なので、
+   * 黒字の証拠が無い間は点数の上限を掛ける（「儲かる」と断定しない方針の一部）。
+   */
+  let total = raw;
+  let capReason: string | null = null;
+  if (!usable) {
+    total = Math.min(70, raw);
+    capReason = 'バックテスト未実施のため70点で頭打ち';
+  } else if (sc && sc.netProfitYear1Median < 0) {
+    // 同点だらけにすると「どれがまだマシか」が分からなくなるので、
+    // 頭打ちではなく半分に減点する。順序は残しつつ、赤字案件が黒字案件を追い越さない
+    total = raw / 2;
+    capReason =
+      `推奨価格でも12ヶ月の利益は中央値で ${Math.abs(Math.round(sc.netProfitYear1Median)).toLocaleString()}円の赤字。` +
+      '黒字になる証拠が無いため半分に減点';
+  }
 
   return {
     total: Math.round(total * 10) / 10,
     availableWeight,
     items,
-    capped,
+    capped: capReason !== null,
+    capReason,
   };
 }

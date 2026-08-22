@@ -280,7 +280,7 @@ export default async function Page() {
               <div className="sub" style={{ marginBottom: 4 }}>
                 Money Score {o.moneyBreakdown.total}点の内訳（採点できた配点 {o.moneyBreakdown.availableWeight}
                 /100
-                {o.moneyBreakdown.capped ? '・バックテスト未実施のため70点で頭打ち' : ''}）
+                {o.moneyBreakdown.capReason ? `・${o.moneyBreakdown.capReason}` : ''}）
               </div>
               <table>
                 <thead>

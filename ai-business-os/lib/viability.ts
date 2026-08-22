@@ -315,6 +315,7 @@ export async function getViability(ideaId: string): Promise<ViabilityResult | nu
     availableWeight: 0,
     items: [],
     capped: true,
+    capReason: '内訳が保存されていない古い記録のため、点の根拠を出せない',
   };
   return {
     ideaId: r.idea_id,
