@@ -10,6 +10,7 @@
     "init": "tsx scripts/init-db.ts",
     "collect": "tsx scripts/collect.ts",
     "evaluate": "tsx scripts/evaluate.ts",
+    "pipeline": "tsx scripts/pipeline.ts",
     "backtest": "tsx scripts/backtest.ts",
     "productize": "tsx scripts/productize.ts",
     "report": "tsx scripts/report.ts",

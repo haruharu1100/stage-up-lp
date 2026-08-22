@@ -1,6 +1,13 @@
 import { all, nowIso, run } from '../db/client';
 import { config } from '../env';
-import type { FunnelAssumption, Percentiles, SalesBacktest } from '../types';
+import {
+  PRICE_SCENARIOS,
+  type FunnelAssumption,
+  type OutcomeProbabilities,
+  type Percentiles,
+  type PriceScenario,
+  type SalesBacktest,
+} from '../types';
 
 /** 再現性のある乱数（同じ入力なら同じ結果になる） */
 function makeRng(seed: number) {
@@ -21,10 +28,18 @@ function percentiles(values: number[]): Percentiles {
   return {
     worst: round(v[0]),
     p10: round(at(0.1)),
+    p25: round(at(0.25)),
     median: round(at(0.5)),
+    p75: round(at(0.75)),
     p90: round(at(0.9)),
     best: round(v[v.length - 1]),
   };
+}
+
+/** 条件を満たした試行の割合。小数第3位まで */
+function shareOf(values: number[], ok: (v: number) => boolean): number {
+  if (values.length === 0) return 0;
+  return Math.round((values.filter(ok).length / values.length) * 1000) / 1000;
 }
 
 function round(n: number): number {
@@ -50,6 +65,7 @@ export type MonteCarloOutput = {
   ltvCac: Percentiles;
   paybackMonths: Percentiles;
   netProfitYear1: Percentiles;
+  probabilities: OutcomeProbabilities;
 };
 
 export function simulate(
@@ -108,7 +124,59 @@ export function simulate(
     ltvCac: percentiles(ltvCacs),
     paybackMonths: percentiles(paybacks),
     netProfitYear1: percentiles(profits),
+    probabilities: {
+      lossYear1: shareOf(profits, (v) => v < 0),
+      payback6m: shareOf(paybacks, (v) => v <= 6),
+      mrr500k: shareOf(mrrs, (v) => v >= 500_000),
+      mrr1m: shareOf(mrrs, (v) => v >= 1_000_000),
+    },
   };
+}
+
+/**
+ * 価格を変えて比較する。価格を上げれば成約率は下がり解約は増える、という関係を
+ * 標準価格(49,800円)を基準にした固定の係数で表す。AIの気分で変えない。
+ */
+function adjustForPrice(a: FunnelAssumption, monthlyPrice: number): FunnelAssumption {
+  const ratio = monthlyPrice / 49800;
+  // 価格が2倍になると成約率はおよそ7割、解約率はおよそ1.2倍という前提を置く
+  const closeFactor = Math.pow(ratio, -0.45);
+  const churnFactor = Math.pow(ratio, 0.25);
+  const clamp = (v: number) => Math.min(0.95, Math.max(0.001, v));
+  return {
+    ...a,
+    monthlyPrice,
+    closeRate: [clamp(a.closeRate[0] * closeFactor), clamp(a.closeRate[1] * closeFactor)],
+    churnRate: [clamp(a.churnRate[0] * churnFactor), clamp(a.churnRate[1] * churnFactor)],
+  };
+}
+
+export function comparePrices(
+  a: FunnelAssumption,
+  runs = config.monteCarloRuns
+): { scenarios: PriceScenario[]; best: PriceScenario['label'] | null } {
+  const scenarios: PriceScenario[] = PRICE_SCENARIOS.map((p) => {
+    const out = simulate(adjustForPrice(a, p.monthlyPrice), runs);
+    // バランス点：利益中央値(50点) × LTV/CAC(30点) × 赤字にならない確率(20点)
+    const profitPart = Math.min(1, Math.max(0, out.netProfitYear1.median / 6_000_000)) * 50;
+    const ltvPart = Math.min(1, out.ltvCac.median / 5) * 30;
+    const safePart = (1 - out.probabilities.lossYear1) * 20;
+    return {
+      label: p.label,
+      monthlyPrice: p.monthlyPrice,
+      contractsMedian: out.contracts.median,
+      mrrMedian: out.mrr.median,
+      netProfitYear1Median: out.netProfitYear1.median,
+      ltvCacMedian: out.ltvCac.median,
+      probabilities: out.probabilities,
+      balanceScore: Math.round((profitPart + ltvPart + safePart) * 10) / 10,
+    };
+  });
+  const best = scenarios.reduce<PriceScenario | null>(
+    (acc, s) => (acc === null || s.balanceScore > acc.balanceScore ? s : acc),
+    null
+  );
+  return { scenarios, best: best ? best.label : null };
 }
 
 export async function runSalesBacktest(
@@ -117,6 +185,7 @@ export async function runSalesBacktest(
   runs = config.monteCarloRuns
 ): Promise<SalesBacktest> {
   const out = simulate(assumption, runs);
+  const priced = comparePrices(assumption, runs);
 
   // 合格条件：LTV/CAC の中央値がしきい値超 かつ 悲観側(P10)でも赤字が許容範囲
   let verdict: SalesBacktest['verdict'] = 'FAIL';
@@ -145,6 +214,9 @@ export async function runSalesBacktest(
     ltvCac: out.ltvCac,
     paybackMonths: out.paybackMonths,
     netProfitYear1: out.netProfitYear1,
+    probabilities: out.probabilities,
+    scenarios: priced.scenarios,
+    bestScenario: priced.best,
     verdict,
     reason,
     ranAt: nowIso(),
@@ -155,7 +227,15 @@ export async function runSalesBacktest(
      VALUES (?,?,?,?,?,?,?)
      ON CONFLICT(idea_id) DO UPDATE SET runs=excluded.runs, assumption_json=excluded.assumption_json,
        result_json=excluded.result_json, verdict=excluded.verdict, reason=excluded.reason, ran_at=excluded.ran_at`,
-    [ideaId, runs, JSON.stringify(assumption), JSON.stringify(out), verdict, reason, result.ranAt]
+    [
+      ideaId,
+      runs,
+      JSON.stringify(assumption),
+      JSON.stringify({ ...out, scenarios: priced.scenarios, bestScenario: priced.best }),
+      verdict,
+      reason,
+      result.ranAt,
+    ]
   );
 
   return result;
@@ -173,12 +253,24 @@ export async function getSalesBacktest(ideaId: string): Promise<SalesBacktest | 
   }>('SELECT * FROM sales_backtests WHERE idea_id = ?', [ideaId]);
   const r = rows[0];
   if (!r) return null;
-  const out = JSON.parse(r.result_json) as MonteCarloOutput;
+  const out = JSON.parse(r.result_json) as MonteCarloOutput & {
+    scenarios?: PriceScenario[];
+    bestScenario?: PriceScenario['label'] | null;
+  };
+  // 確率や価格シナリオを持たない古い保存形式は、欠けた項目を0で埋めず「未実施」として扱う
+  if (!out.probabilities) return null;
   return {
     ideaId: r.idea_id,
     runs: r.runs,
     assumption: JSON.parse(r.assumption_json),
-    ...out,
+    contracts: out.contracts,
+    mrr: out.mrr,
+    ltvCac: out.ltvCac,
+    paybackMonths: out.paybackMonths,
+    netProfitYear1: out.netProfitYear1,
+    probabilities: out.probabilities,
+    scenarios: out.scenarios ?? [],
+    bestScenario: out.bestScenario ?? null,
     verdict: r.verdict,
     reason: r.reason,
     ranAt: r.ran_at,

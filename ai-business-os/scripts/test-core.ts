@@ -3,12 +3,16 @@ import path from 'node:path';
 import { MONEY_AND_OUTBOUND_ACTIONS_IMPLEMENTED, OUTBOUND_FLAGS, config } from '../lib/env';
 import { gradeFromScore } from '../lib/score';
 import { stageFromHits, stageRatio } from '../lib/japan';
-import { DEFAULT_ASSUMPTION, simulate } from '../lib/backtest/montecarlo';
+import { comparePrices, DEFAULT_ASSUMPTION, simulate } from '../lib/backtest/montecarlo';
 import { rate } from '../lib/funnel';
 import { checkCompliance, isPublishable } from '../lib/compliance';
 import { buildUtm, parseUtm, withUtm } from '../lib/utm';
 import { LADDER } from '../lib/products';
-import { SCORE_WEIGHTS } from '../lib/types';
+import { AI_CONFIDENCE_MIN, EVENT_TYPES, SCORE_WEIGHTS, type Idea } from '../lib/types';
+import { suggestRatings } from '../lib/rating';
+import { preScoreOf, FUNNEL_STAGES } from '../lib/prescore';
+import { computeViability, regulatoryNote, VIABILITY_WEIGHTS } from '../lib/viability';
+import { japaneseKeywords } from '../lib/research/keywords-ja';
 import { classify, looksAiBusiness } from '../lib/sources/common';
 import { SOURCES } from '../lib/sources/registry';
 
@@ -112,6 +116,124 @@ add('本文にしかAI要素が無いものを弾く', !looksAiBusiness('Do team
 add('AI商品の告知は通す', looksAiBusiness('Show HN: AI receptionist for clinics', 'monthly pricing'));
 add('未接続ソースを一覧で保持している', SOURCES.some((s) => !s.implemented));
 add('未接続ソースは0件ではなく未接続として持つ', SOURCES.filter((s) => !s.implemented).every((s) => s.note.length > 0));
+
+// --- モンテカルロ拡張（P25/P75・確率・価格シナリオ） ---
+add('P10≦P25≦中央≦P75≦P90 の順になる',
+  mc.mrr.p10 <= mc.mrr.p25 && mc.mrr.p25 <= mc.mrr.median &&
+  mc.mrr.median <= mc.mrr.p75 && mc.mrr.p75 <= mc.mrr.p90,
+  JSON.stringify(mc.mrr));
+add('赤字確率が0〜1の範囲に収まる', mc.probabilities.lossYear1 >= 0 && mc.probabilities.lossYear1 <= 1);
+add('MRR100万到達確率は50万到達確率以下', mc.probabilities.mrr1m <= mc.probabilities.mrr500k);
+add('固定費を上げると赤字確率が上がる',
+  simulate({ ...DEFAULT_ASSUMPTION, fixedMonthlyCost: 3_000_000 }, 500).probabilities.lossYear1 >
+  simulate({ ...DEFAULT_ASSUMPTION, fixedMonthlyCost: 10_000 }, 500).probabilities.lossYear1);
+const priced = comparePrices(DEFAULT_ASSUMPTION, 500);
+add('価格シナリオが3本（29,800/49,800/98,000）出る',
+  priced.scenarios.length === 3 &&
+  priced.scenarios.map((s) => s.monthlyPrice).join(',') === '29800,49800,98000');
+add('価格を上げると成約数の中央値が減る',
+  priced.scenarios[2].contractsMedian < priced.scenarios[0].contractsMedian);
+add('最もバランスの良い価格が1つ選ばれる', priced.best !== null);
+
+// --- AI補助レーティング ---
+const demoIdea: Idea = {
+  id: 'test_1',
+  title: 'AI receptionist for dental clinics',
+  summary: 'Answers phone calls and books appointments. $499/mo subscription.',
+  category: 'VERTICAL_AI',
+  originCountry: 'US',
+  sourceName: 'test',
+  sourceUrl: 'https://example.com',
+  publishedAt: null,
+  fetchedAt: '2026-08-22T00:00:00.000Z',
+  status: 'NEW',
+  dedupeKey: 'test_1',
+};
+const sug = suggestRatings(demoIdea, { japan: null, market: null });
+add('AI推奨は0〜5の範囲に収まる',
+  Object.values(sug).every((s) => s !== undefined && s.score >= 0 && s.score <= 5));
+add('AI推奨には必ず理由が付く', Object.values(sug).every((s) => (s?.reason ?? '').length > 0));
+add('同じ入力なら同じAI推奨になる（再現性）',
+  JSON.stringify(sug) === JSON.stringify(suggestRatings(demoIdea, { japan: null, market: null })));
+add('日本調査が無い項目は低Confidenceになる（強い根拠にしない）',
+  (sug.marketSize?.confidence ?? 1) < AI_CONFIDENCE_MIN);
+add('AIを強い根拠として数える下限は0.6', AI_CONFIDENCE_MIN === 0.6);
+
+// 判定不能が解消される条件を、鍵が無い状態でも確かめる。
+// 強い日本語検索チャネルの実測が1本入れば、強い根拠が配点の50%を超えて S/A/B/C が付く。
+const strongJapan = {
+  ideaId: 'test_1', queries: ['AI 受付'], domesticCount: 1, stage: 'EARLY' as const,
+  confidence: 0.8, humanCorrected: false, reason: '', researchedAt: '2026-08-22T00:00:00.000Z',
+  competitors: [],
+  channels: [{ key: 'google', label: '日本語Google検索', query: 'AI 受付', hits: 52_000,
+    status: 'DATA_AVAILABLE' as const, competitors: [], strength: 'STRONG' as const,
+    note: '', checkedAt: '2026-08-22T00:00:00.000Z' }],
+};
+const strongWeight = (s: ReturnType<typeof suggestRatings>) =>
+  (Object.keys(s) as (keyof typeof SCORE_WEIGHTS)[])
+    .filter((k) => (s[k]?.confidence ?? 0) >= AI_CONFIDENCE_MIN)
+    .reduce((sum, k) => sum + SCORE_WEIGHTS[k], 0);
+const withJapan = suggestRatings(demoIdea, { japan: strongJapan, market: null });
+add('日本語検索の実測が入ると市場規模と差別化が強い根拠になる',
+  (withJapan.marketSize?.confidence ?? 0) >= AI_CONFIDENCE_MIN &&
+  (withJapan.differentiation?.confidence ?? 0) >= AI_CONFIDENCE_MIN);
+add('日本語検索の実測が入れば判定不能が解消する（強い根拠が配点の50%超）',
+  strongWeight(sug) <= 50 && strongWeight(withJapan) + SCORE_WEIGHTS.japanUnpenetrated > 50,
+  `鍵なし${strongWeight(sug)}点 → 鍵あり${strongWeight(withJapan) + SCORE_WEIGHTS.japanUnpenetrated}点`);
+
+// --- 粗選別 PRE_SCORE ---
+add('PRE_SCOREは0〜100に収まる', preScoreOf(demoIdea).preScore >= 0 && preScoreOf(demoIdea).preScore <= 100);
+add('判断材料が無い案件は0点ではなく中央値付近',
+  preScoreOf({ ...demoIdea, title: 'Something', summary: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', category: 'UNKNOWN' }).preScore === 50);
+add('ハードが絡む案件は減点される',
+  preScoreOf({ ...demoIdea, title: 'AI robot arm device', summary: 'hardware sensor robot' }).preScore <
+  preScoreOf(demoIdea).preScore);
+add('絞り込みは 20→10→3 の順に減る',
+  FUNNEL_STAGES.research > FUNNEL_STAGES.backtest && FUNNEL_STAGES.backtest > FUNNEL_STAGES.productize);
+
+// --- 事業性・Money Score ---
+add('事業性スコアの配点合計が100点',
+  Object.values(VIABILITY_WEIGHTS).reduce((a, b) => a + b, 0) === 100);
+const via = computeViability(demoIdea, { japan: null, market: null, sales: null });
+add('事業性スコアは0〜100に収まる', via.viability100 >= 0 && via.viability100 <= 100);
+add('日本の競合は実測が無ければ採点対象外（推測で埋めない）',
+  via.items.find((i) => i.key === 'japanCompetition')?.ratio === null);
+add('バックテスト未実施ならMoney Scoreは70点を超えない', via.money100 <= 70);
+
+// 調べていない案件は「減点材料が無い」ぶん点が高く出る。
+// 確度を掛けて並べる仕組みが効いているか（＝調べたほど順位が上がるか）を固定する。
+const viaJapan = computeViability(demoIdea, { japan: strongJapan, market: null, sales: null });
+const viaAll = computeViability(demoIdea, {
+  japan: strongJapan, market: null,
+  sales: { ...simulate(DEFAULT_ASSUMPTION, 200), ideaId: 'test_1', runs: 200,
+    assumption: DEFAULT_ASSUMPTION, scenarios: [], bestScenario: null,
+    verdict: 'FAIL', reason: '', ranAt: '2026-08-22T00:00:00.000Z' },
+});
+add('日本市場を調べた案件のほうが確度が高くなる', viaJapan.confidence > via.confidence);
+add('採算まで試算した案件のほうが確度が高くなる', viaAll.confidence > viaJapan.confidence);
+add('調べていない案件は Money×確度 で上位に来ない',
+  viaAll.money100 * viaAll.confidence > via.money100 * via.confidence,
+  `未調査${Math.round(via.money100 * via.confidence)} < 調査済${Math.round(viaAll.money100 * viaAll.confidence)}`);
+add('販売形態9種すべてに0〜100の点が付く',
+  Object.values(via.fit).length === 9 && Object.values(via.fit).every((v) => v >= 0 && v <= 100));
+add('推奨販売方法が1つ決まる', via.recommendedChannel.length > 0);
+add('医療系は要専門家確認になる', regulatoryNote({ ...demoIdea, summary: 'for patient diagnosis' }) !== null);
+add('一般業務は要専門家確認にならない',
+  regulatoryNote({ ...demoIdea, title: 'AI meeting notes', summary: 'summarize meetings' }) === null);
+
+// --- 日本語キーワード生成 ---
+const kw = japaneseKeywords(demoIdea);
+add('日本語の検索語が生成される', kw.queries.length > 0 && kw.queries.every((q) => q.length > 0));
+add('検索語は最大3本まで（API課金を抑える）', kw.queries.length <= 3);
+add('同じ案件なら同じ検索語になる（比較可能にする）',
+  JSON.stringify(kw.queries) === JSON.stringify(japaneseKeywords(demoIdea).queries));
+
+// --- 計測イベント ---
+add('計測イベントは16種', EVENT_TYPES.length === 16, `${EVENT_TYPES.length}種`);
+add('公開前の3段階（作成→承認→公開）が分かれている',
+  EVENT_TYPES.includes('CONTENT_CREATED') && EVENT_TYPES.includes('CONTENT_APPROVED') && EVENT_TYPES.includes('CONTENT_PUBLISHED'));
+add('契約・継続・解約・入金が分かれている',
+  EVENT_TYPES.includes('CONTRACT') && EVENT_TYPES.includes('RENEWAL') && EVENT_TYPES.includes('CHURN') && EVENT_TYPES.includes('REVENUE'));
 
 // --- 出力 ---
 let failed = 0;

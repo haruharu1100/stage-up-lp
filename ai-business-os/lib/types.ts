@@ -97,10 +97,16 @@ export const SCORE_LABEL: Record<ScoreKey, string> = {
 
 /**
  * 各項目は 0.0〜1.0 の達成率 + 根拠の種類。
- * EVIDENCE = 実データ / HUMAN = 人が入力 / HEURISTIC = 仮置き（弱い根拠）。
+ * EVIDENCE     = 実データ（検索結果・APIの実測値）
+ * HUMAN        = 人が入力
+ * AI_ASSISTED  = AIが実データから導いた推奨値。Confidenceが基準以上のときだけ強い根拠として数える
+ * HEURISTIC    = 型からの仮置き（弱い根拠）
  * 根拠が無い項目は 0 点ではなく「採点対象外」にする。
  */
-export type ScoreBasis = 'EVIDENCE' | 'HUMAN' | 'HEURISTIC' | 'NONE';
+export type ScoreBasis = 'EVIDENCE' | 'HUMAN' | 'AI_ASSISTED' | 'HEURISTIC' | 'NONE';
+
+/** AI推奨値を強い根拠として数えてよい最低Confidence。これ未満は REVIEW_REQUIRED */
+export const AI_CONFIDENCE_MIN = 0.6;
 
 export type ScoreItem = {
   key: ScoreKey;
@@ -108,6 +114,7 @@ export type ScoreItem = {
   basis: ScoreBasis;
   status: DataStatus;
   reason: string;
+  confidence?: number; // AI_ASSISTED のときだけ入る 0〜1
 };
 
 export type ScoreResult = {
@@ -154,10 +161,38 @@ export type FunnelAssumption = {
 export type Percentiles = {
   worst: number;
   p10: number;
+  p25: number;
   median: number;
+  p75: number;
   p90: number;
   best: number;
 };
+
+/** 「何%の確率でこうなるか」。平均値ひとつで語らないための指標 */
+export type OutcomeProbabilities = {
+  lossYear1: number; // 12ヶ月利益が赤字になる確率 0〜1
+  payback6m: number; // 6ヶ月以内に初期投資を回収できる確率
+  mrr500k: number; // MRR 50万円に到達する確率
+  mrr1m: number; // MRR 100万円に到達する確率
+};
+
+/** 価格を変えたときの比較。販売数×利益×継続率のバランスで選ぶ */
+export type PriceScenario = {
+  label: 'LOW_PRICE' | 'STANDARD' | 'PREMIUM';
+  monthlyPrice: number;
+  contractsMedian: number;
+  mrrMedian: number;
+  netProfitYear1Median: number;
+  ltvCacMedian: number;
+  probabilities: OutcomeProbabilities;
+  balanceScore: number; // 0〜100。利益中央値・LTV/CAC・赤字確率の3点から機械的に算出
+};
+
+export const PRICE_SCENARIOS: { label: PriceScenario['label']; monthlyPrice: number; note: string }[] = [
+  { label: 'LOW_PRICE', monthlyPrice: 29800, note: '数を取る価格。成約率は上がるが解約も増えやすい' },
+  { label: 'STANDARD', monthlyPrice: 49800, note: '標準価格' },
+  { label: 'PREMIUM', monthlyPrice: 98000, note: '単価を取る価格。成約率は下がるが1件の重みが増す' },
+];
 
 export type SalesBacktest = {
   ideaId: string;
@@ -168,6 +203,9 @@ export type SalesBacktest = {
   ltvCac: Percentiles;
   paybackMonths: Percentiles;
   netProfitYear1: Percentiles;
+  probabilities: OutcomeProbabilities;
+  scenarios: PriceScenario[];
+  bestScenario: PriceScenario['label'] | null;
   verdict: 'PASS' | 'FAIL' | 'INSUFFICIENT_DATA';
   reason: string;
   ranAt: string;
@@ -186,18 +224,67 @@ export type Product = {
   createdAt: string;
 };
 
+/** 計測イベント16種。海外ネタ1件から売上までを1本の線で辿るための最小単位 */
 export type ConversionEventType =
+  | 'CONTENT_CREATED'
+  | 'CONTENT_APPROVED'
+  | 'CONTENT_PUBLISHED'
+  | 'X_IMPRESSION'
   | 'X_CLICK'
   | 'NOTE_VIEW'
   | 'NOTE_PURCHASE'
   | 'LP_VIEW'
   | 'DEMO_START'
   | 'DEMO_COMPLETE'
-  | 'INQUIRY'
+  | 'LEAD'
   | 'MEETING'
   | 'CONTRACT'
-  | 'RETENTION'
-  | 'CHURN';
+  | 'RENEWAL'
+  | 'CHURN'
+  | 'REVENUE';
+
+export const EVENT_TYPES: ConversionEventType[] = [
+  'CONTENT_CREATED', 'CONTENT_APPROVED', 'CONTENT_PUBLISHED',
+  'X_IMPRESSION', 'X_CLICK', 'NOTE_VIEW', 'NOTE_PURCHASE',
+  'LP_VIEW', 'DEMO_START', 'DEMO_COMPLETE',
+  'LEAD', 'MEETING', 'CONTRACT', 'RENEWAL', 'CHURN', 'REVENUE',
+];
+
+export const EVENT_LABEL: Record<ConversionEventType, string> = {
+  CONTENT_CREATED: 'コンテンツ作成',
+  CONTENT_APPROVED: 'コンテンツ承認',
+  CONTENT_PUBLISHED: 'コンテンツ公開',
+  X_IMPRESSION: 'X表示',
+  X_CLICK: 'Xクリック',
+  NOTE_VIEW: 'note閲覧',
+  NOTE_PURCHASE: 'note購入',
+  LP_VIEW: 'LP閲覧',
+  DEMO_START: 'デモ開始',
+  DEMO_COMPLETE: 'デモ完了',
+  LEAD: '問い合わせ',
+  MEETING: '商談',
+  CONTRACT: '契約',
+  RENEWAL: '継続',
+  CHURN: '解約',
+  REVENUE: '入金',
+};
+
+/** 海外ネタ1件から生まれた金額を辿った結果 */
+export type Attribution = {
+  ideaId: string;
+  ideaTitle: string;
+  contents: number;
+  xImpressions: number;
+  xClicks: number;
+  noteViews: number;
+  notePurchases: number;
+  demos: number;
+  leads: number;
+  meetings: number;
+  contracts: number;
+  revenueYen: number;
+  chain: string; // 人が読める1行「Idea 104 → X投稿18 → note7 → デモ2 → 契約1 → 298,000円」
+};
 
 export type Experiment = {
   id: string;

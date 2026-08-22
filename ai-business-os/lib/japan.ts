@@ -63,22 +63,20 @@ export const STAGE_LABEL: Record<JapanStage, string> = {
   UNKNOWN: '未調査',
 };
 
+/** 日本未普及度の配点（15点満点）。検索不能は 0点ではなく UNKNOWN = null */
+export const STAGE_POINTS: Record<JapanStage, number | null> = {
+  NOT_FOUND: 15,
+  EARLY: 12,
+  EMERGING: 8,
+  COMPETITIVE: 4,
+  MATURE: 1,
+  UNKNOWN: null,
+};
+
 /** 未普及度の点数化（15点満点の達成率）。UNKNOWN は null（0点にしない） */
 export function stageRatio(stage: JapanStage): number | null {
-  switch (stage) {
-    case 'NOT_FOUND':
-      return 1.0;
-    case 'EARLY':
-      return 0.85;
-    case 'EMERGING':
-      return 0.6;
-    case 'COMPETITIVE':
-      return 0.25;
-    case 'MATURE':
-      return 0.05;
-    default:
-      return null;
-  }
+  const p = STAGE_POINTS[stage];
+  return p === null ? null : p / 15;
 }
 
 export async function assessJapan(idea: Idea): Promise<JapanAssessment> {

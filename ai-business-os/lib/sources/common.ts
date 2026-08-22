@@ -115,35 +115,56 @@ export function looksAiBusiness(title: string, body = ''): boolean {
   return BIZ_WORDS.some((w) => full.includes(w));
 }
 
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/** 相手が指定した待ち時間（秒）。無ければ null */
+function waitSecondsOf(res: Response): number | null {
+  const retryAfter = Number(res.headers.get('retry-after'));
+  if (Number.isFinite(retryAfter) && retryAfter > 0) return retryAfter;
+  const reset = Number(res.headers.get('x-ratelimit-reset'));
+  if (Number.isFinite(reset) && reset > 0) return reset - Math.floor(Date.now() / 1000);
+  return null;
+}
+
+const RATE_LIMIT_MAX_WAIT_SEC = 70;
+
 export async function fetchJson(
   url: string,
   init?: RequestInit
 ): Promise<{ status: DataStatus; data: unknown; message: string }> {
-  try {
-    const res = await fetch(url, {
-      ...init,
-      headers: {
-        'User-Agent': 'ai-business-os/0.1 (research; contact via repo owner)',
-        Accept: 'application/json',
-        ...(init?.headers ?? {}),
-      },
-    });
-    if (res.status === 401 || res.status === 403) {
-      const isRate = res.headers.get('x-ratelimit-remaining') === '0';
-      return {
-        status: isRate ? 'RATE_LIMIT' : 'AUTH_ERROR',
-        data: null,
-        message: `HTTP ${res.status}`,
-      };
-    }
-    if (res.status === 429) return { status: 'RATE_LIMIT', data: null, message: 'HTTP 429' };
-    if (!res.ok) return { status: 'API_ERROR', data: null, message: `HTTP ${res.status}` };
+  // 無認証APIは1分あたりの回数制限が厳しく、続けて呼ぶと取得できない。
+  // 取得失敗を「0件」にしてしまわないよう、制限に当たったら指定時間だけ待って数回やり直す。
+  for (let attempt = 0; ; attempt += 1) {
     try {
-      return { status: 'DATA_AVAILABLE', data: await res.json(), message: 'ok' };
+      const res = await fetch(url, {
+        ...init,
+        headers: {
+          'User-Agent': 'ai-business-os/0.1 (research; contact via repo owner)',
+          Accept: 'application/json',
+          ...(init?.headers ?? {}),
+        },
+      });
+      const rateLimited =
+        res.status === 429 || (res.status === 403 && res.headers.get('x-ratelimit-remaining') === '0');
+      if (rateLimited) {
+        const wait = waitSecondsOf(res) ?? 20 * (attempt + 1);
+        if (attempt < 2 && wait > 0 && wait <= RATE_LIMIT_MAX_WAIT_SEC) {
+          await sleep(wait * 1000);
+          continue;
+        }
+        return { status: 'RATE_LIMIT', data: null, message: `HTTP ${res.status}（回数制限）` };
+      }
+      if (res.status === 401 || res.status === 403) {
+        return { status: 'AUTH_ERROR', data: null, message: `HTTP ${res.status}` };
+      }
+      if (!res.ok) return { status: 'API_ERROR', data: null, message: `HTTP ${res.status}` };
+      try {
+        return { status: 'DATA_AVAILABLE', data: await res.json(), message: 'ok' };
+      } catch (e) {
+        return { status: 'PARSE_ERROR', data: null, message: String(e) };
+      }
     } catch (e) {
-      return { status: 'PARSE_ERROR', data: null, message: String(e) };
+      return { status: 'API_ERROR', data: null, message: String(e) };
     }
-  } catch (e) {
-    return { status: 'API_ERROR', data: null, message: String(e) };
   }
 }

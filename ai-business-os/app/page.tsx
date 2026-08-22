@@ -141,7 +141,7 @@ export default async function Page() {
               <th>デモ完了</th>
               <td>{d.last30.counts.DEMO_COMPLETE}</td>
               <th>問い合わせ</th>
-              <td>{d.last30.counts.INQUIRY}</td>
+              <td>{d.last30.counts.LEAD}</td>
             </tr>
             <tr>
               <th>商談</th>
@@ -159,8 +159,100 @@ export default async function Page() {
         </p>
       </div>
 
+      <h2>TOP AI BUSINESS OPPORTUNITIES</h2>
+      <p className="sub">
+        「面白いAI」ではなく「実際に金になる候補」を上から並べています。並び順は Money Score × 確度。
+        調べられていない案件が上に来ないようにするため、確度の低い案件は順位が下がります。
+        数字が取れていない欄は空欄（—）です。埋めるために推測はしていません。
+      </p>
+      <div className="card">
+        {d.opportunities.length === 0 ? (
+          <p className="empty">
+            まだ候補がありません。<code>npm run collect</code> のあと <code>npm run pipeline</code> を実行してください。
+          </p>
+        ) : (
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>事業名</th>
+                <th>海外</th>
+                <th>日本市場</th>
+                <th>機会</th>
+                <th>事業性</th>
+                <th>Money</th>
+                <th>確度</th>
+                <th>価格候補</th>
+                <th>LTV÷CAC</th>
+                <th>12ヶ月利益<br />中央値</th>
+                <th>赤字確率</th>
+                <th>推奨販売</th>
+                <th>note適性</th>
+                <th>SaaS適性</th>
+                <th>次アクション</th>
+              </tr>
+            </thead>
+            <tbody>
+              {d.opportunities.map((o) => (
+                <tr key={o.ideaId}>
+                  <td>{o.rank}</td>
+                  <td>
+                    <a href={o.sourceUrl} target="_blank" rel="noreferrer">
+                      {o.title.slice(0, 46)}
+                    </a>
+                  </td>
+                  <td>{o.overseasTrend}</td>
+                  <td>{o.japanState}</td>
+                  <td>{o.opportunityScore ?? '—'}</td>
+                  <td>{o.viability100 ?? '—'}</td>
+                  <td>
+                    <b>{o.money100 ?? '—'}</b>
+                  </td>
+                  <td>{o.confidence ?? '—'}</td>
+                  <td>{o.priceCandidateYen === null ? '—' : yen(o.priceCandidateYen)}</td>
+                  <td>{o.ltvCac ?? '—'}</td>
+                  <td>{o.netProfitYear1Median === null ? '—' : yen(Math.round(o.netProfitYear1Median))}</td>
+                  <td>{o.lossProbability === null ? '—' : `${Math.round(o.lossProbability * 100)}%`}</td>
+                  <td>{o.recommendedChannel}</td>
+                  <td>{o.paidNoteFit ?? '—'}</td>
+                  <td>{o.saasFit ?? '—'}</td>
+                  <td>{o.nextAction}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      <h2>上位5件｜なぜ日本で今やる価値があるのか</h2>
+      {d.opportunities.slice(0, 5).map((o) => (
+        <div className="card" key={`why-${o.ideaId}`}>
+          <div className="rec-title">
+            {o.rank}. {o.title}
+          </div>
+          <p style={{ margin: '8px 0 0', lineHeight: 1.8 }}>{o.whyJapanNow}</p>
+          {o.regulatory ? (
+            <p className="sub" style={{ marginBottom: 0 }}>
+              ⚠ 要専門家確認: {o.regulatory}
+            </p>
+          ) : null}
+        </div>
+      ))}
+
+      <h2>どの海外ネタから何円生まれたか</h2>
+      <div className="card">
+        <p className="sub" style={{ marginTop: 0 }}>
+          最重要データです。まだ1件も公開していない案件は「未計測」であって「成果ゼロ」ではありません。
+        </p>
+        {d.attribution.map((a) => (
+          <div key={a.ideaId} style={{ fontSize: 12, padding: '4px 0' }}>
+            {a.chain}
+          </div>
+        ))}
+      </div>
+
       <h2>
-        商品化候補（{d.ideaCount}件中 採点済み {d.scoredCount}件）
+        全案件（{d.ideaCount}件中 採点済み {d.scoredCount}件）
       </h2>
       <div className="card">
         {d.ideas.length === 0 ? (

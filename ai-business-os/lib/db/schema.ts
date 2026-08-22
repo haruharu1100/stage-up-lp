@@ -38,6 +38,64 @@ export const SCHEMA: string[] = [
     assessed_at TEXT NOT NULL
   )`,
 
+  // 日本市場の自動調査（JAPAN_MARKET_RESEARCHER）。判定と根拠を分けて残す
+  `CREATE TABLE IF NOT EXISTS japan_research (
+    idea_id TEXT PRIMARY KEY,
+    queries_json TEXT NOT NULL,
+    channels_json TEXT NOT NULL,
+    domestic_count INTEGER NOT NULL DEFAULT 0,
+    stage TEXT NOT NULL,
+    confidence REAL NOT NULL DEFAULT 0,
+    human_corrected INTEGER NOT NULL DEFAULT 0,
+    reason TEXT NOT NULL DEFAULT '',
+    researched_at TEXT NOT NULL
+  )`,
+
+  `CREATE TABLE IF NOT EXISTS japan_competitors (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    idea_id TEXT NOT NULL,
+    channel TEXT NOT NULL,
+    service_name TEXT NOT NULL,
+    url TEXT NOT NULL,
+    origin TEXT NOT NULL DEFAULT 'UNKNOWN',
+    similarity REAL NOT NULL DEFAULT 0,
+    snippet TEXT NOT NULL DEFAULT '',
+    found_at TEXT NOT NULL
+  )`,
+
+  // AI推奨値と人間入力を分けて保存し、最終値をどちらから採ったかを必ず残す
+  `CREATE TABLE IF NOT EXISTS idea_ratings (
+    idea_id TEXT NOT NULL,
+    key TEXT NOT NULL,
+    ai_score REAL,
+    human_score REAL,
+    final_score REAL,
+    source TEXT NOT NULL DEFAULT 'AI',
+    reason TEXT NOT NULL DEFAULT '',
+    confidence REAL NOT NULL DEFAULT 0,
+    review_required INTEGER NOT NULL DEFAULT 0,
+    rated_at TEXT NOT NULL,
+    PRIMARY KEY (idea_id, key)
+  )`,
+
+  `CREATE TABLE IF NOT EXISTS viability_scores (
+    idea_id TEXT PRIMARY KEY,
+    items_json TEXT NOT NULL,
+    viability100 REAL NOT NULL,
+    money100 REAL NOT NULL,
+    confidence REAL NOT NULL DEFAULT 0,
+    fit_json TEXT NOT NULL DEFAULT '{}',
+    scenario_json TEXT NOT NULL DEFAULT '{}',
+    scored_at TEXT NOT NULL
+  )`,
+
+  `CREATE TABLE IF NOT EXISTS pre_scores (
+    idea_id TEXT PRIMARY KEY,
+    pre_score REAL NOT NULL,
+    reason TEXT NOT NULL DEFAULT '',
+    scored_at TEXT NOT NULL
+  )`,
+
   `CREATE TABLE IF NOT EXISTS scores (
     idea_id TEXT PRIMARY KEY,
     items_json TEXT NOT NULL,
@@ -158,4 +216,6 @@ export const SCHEMA: string[] = [
   `CREATE INDEX IF NOT EXISTS idx_events_type ON conversion_events(event_type)`,
   `CREATE INDEX IF NOT EXISTS idx_events_idea ON conversion_events(idea_id)`,
   `CREATE INDEX IF NOT EXISTS idx_evidence_idea ON evidences(idea_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_competitors_idea ON japan_competitors(idea_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_events_content ON conversion_events(content_id)`,
 ];

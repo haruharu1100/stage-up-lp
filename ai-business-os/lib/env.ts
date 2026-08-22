@@ -21,6 +21,11 @@ const FALLBACK_ENV_FILES = [
   path.join(ROOT, '..', 'ai-commerce-os', '.env'),
   path.join(ROOT, '..', 'lp-ai-orchestrator', '.env'),
   path.join(ROOT, '..', 'aura', '.env'),
+  // 日本語調査で使う検索系の鍵は、既にこれらのプロジェクトが持っている場合がある
+  path.join(ROOT, '..', 'gorogoro-growth', '.env'),
+  path.join(ROOT, '..', 'zunda_video', '.env'),
+  path.join(ROOT, '..', 'youtube_shorts', '.env'),
+  path.join(ROOT, '..', 'trivia-channel', '.env'),
 ];
 
 function loadEnvFiles() {
@@ -65,6 +70,11 @@ export const config = {
 
   githubToken: process.env.GITHUB_TOKEN || '',
   productHuntToken: process.env.PRODUCT_HUNT_TOKEN || '',
+
+  // 日本語市場調査用。鍵が無いチャネルは 0件ではなく UNAVAILABLE として記録する
+  googleCseKey: process.env.GOOGLE_CSE_KEY || process.env.GOOGLE_API_KEY || '',
+  googleCseCx: process.env.GOOGLE_CSE_CX || process.env.GOOGLE_CSE_ID || '',
+  youtubeApiKey: process.env.YOUTUBE_API_KEY || process.env.YT_API_KEY || '',
 
   // 判定しきい値（コードで計算する。AIに決めさせない）
   minLtvCacRatio: num(process.env.MIN_LTV_CAC_RATIO, 3),

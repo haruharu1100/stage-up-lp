@@ -1,6 +1,6 @@
 import { all, nowIso, run } from './db/client';
 import { config } from './env';
-import type { ConversionEventType } from './types';
+import { EVENT_TYPES, type Attribution, type ConversionEventType } from './types';
 
 /** 少ない件数で結論を出さないための型。分母が足りなければ率を返さない。 */
 export type Rate = {
@@ -75,6 +75,7 @@ function daysAgoIso(days: number): string {
 export type FunnelSnapshot = {
   window: string;
   counts: Record<ConversionEventType, number>;
+  impressionToClick: Rate;
   xClickToNote: Rate;
   noteViewToPurchase: Rate;
   demoToMeeting: Rate;
@@ -82,21 +83,20 @@ export type FunnelSnapshot = {
   revenueYen: number;
 };
 
-const ALL_EVENTS: ConversionEventType[] = [
-  'X_CLICK', 'NOTE_VIEW', 'NOTE_PURCHASE', 'LP_VIEW', 'DEMO_START', 'DEMO_COMPLETE',
-  'INQUIRY', 'MEETING', 'CONTRACT', 'RETENTION', 'CHURN',
-];
-
 export async function funnelSnapshot(days: number | null): Promise<FunnelSnapshot> {
   const since = days === null ? undefined : daysAgoIso(days);
   const counts = {} as Record<ConversionEventType, number>;
-  for (const t of ALL_EVENTS) counts[t] = await countBy(t, since);
+  for (const t of EVENT_TYPES) counts[t] = await countBy(t, since);
 
-  const revenue = (await sumAmount('NOTE_PURCHASE', since)) + (await sumAmount('CONTRACT', since));
+  const revenue =
+    (await sumAmount('NOTE_PURCHASE', since)) +
+    (await sumAmount('CONTRACT', since)) +
+    (await sumAmount('REVENUE', since));
 
   return {
     window: days === null ? '累計' : `直近${days}日`,
     counts,
+    impressionToClick: rate(counts.X_CLICK, counts.X_IMPRESSION),
     xClickToNote: rate(counts.NOTE_VIEW, counts.X_CLICK),
     noteViewToPurchase: rate(counts.NOTE_PURCHASE, counts.NOTE_VIEW),
     demoToMeeting: rate(counts.MEETING, counts.DEMO_COMPLETE),
@@ -131,7 +131,7 @@ export async function saasKpi(): Promise<SaasKpi> {
 
   // 広告費・営業費が未記録の間は CAC を推定しない（0にしない）
   const spendRows = await all<{ s: number | null }>(
-    "SELECT SUM(amount_yen) as s FROM conversion_events WHERE event_type = 'INQUIRY' AND amount_yen > 0"
+    "SELECT SUM(amount_yen) as s FROM conversion_events WHERE event_type = 'LEAD' AND amount_yen > 0"
   );
   const spend = Number(spendRows[0]?.s ?? 0);
   const cac = spend > 0 && activeContracts > 0 ? spend / activeContracts : null;
@@ -152,6 +152,69 @@ export async function saasKpi(): Promise<SaasKpi> {
     paybackMonths: payback === null ? null : Math.round(payback * 10) / 10,
     status: total < 3 ? 'INSUFFICIENT_DATA' : 'OK',
   };
+}
+
+/**
+ * ATTRIBUTION：どの海外ネタから何円生まれたかを辿る。最重要データ。
+ * 実測が無い段階では 0 が並ぶが、これは「まだ動かしていない」であって
+ * 「成果が出なかった」ではない。chain 文にもその旨を書き分ける。
+ */
+export async function attributionByIdea(): Promise<Attribution[]> {
+  const rows = await all<{
+    idea_id: string;
+    title: string;
+    contents: number;
+    x_impressions: number;
+    x_clicks: number;
+    note_views: number;
+    note_purchases: number;
+    demos: number;
+    leads: number;
+    meetings: number;
+    contracts: number;
+    revenue: number | null;
+  }>(
+    `SELECT i.id as idea_id, i.title as title,
+            SUM(CASE WHEN e.event_type = 'CONTENT_PUBLISHED' THEN 1 ELSE 0 END) as contents,
+            SUM(CASE WHEN e.event_type = 'X_IMPRESSION' THEN 1 ELSE 0 END) as x_impressions,
+            SUM(CASE WHEN e.event_type = 'X_CLICK' THEN 1 ELSE 0 END) as x_clicks,
+            SUM(CASE WHEN e.event_type = 'NOTE_VIEW' THEN 1 ELSE 0 END) as note_views,
+            SUM(CASE WHEN e.event_type = 'NOTE_PURCHASE' THEN 1 ELSE 0 END) as note_purchases,
+            SUM(CASE WHEN e.event_type = 'DEMO_COMPLETE' THEN 1 ELSE 0 END) as demos,
+            SUM(CASE WHEN e.event_type = 'LEAD' THEN 1 ELSE 0 END) as leads,
+            SUM(CASE WHEN e.event_type = 'MEETING' THEN 1 ELSE 0 END) as meetings,
+            SUM(CASE WHEN e.event_type = 'CONTRACT' THEN 1 ELSE 0 END) as contracts,
+            SUM(CASE WHEN e.event_type IN ('NOTE_PURCHASE','CONTRACT','REVENUE') THEN e.amount_yen ELSE 0 END) as revenue
+     FROM ideas i
+     LEFT JOIN conversion_events e ON e.idea_id = i.id
+     GROUP BY i.id
+     ORDER BY revenue DESC, contracts DESC`
+  );
+
+  return rows.map((r) => {
+    const revenue = Number(r.revenue ?? 0);
+    const n = (v: number) => Number(v ?? 0);
+    const measured =
+      n(r.contents) + n(r.x_clicks) + n(r.note_purchases) + n(r.contracts) + revenue > 0;
+    const chain = measured
+      ? `${r.title} → 公開${n(r.contents)} → Xクリック${n(r.x_clicks)} → note購入${n(r.note_purchases)} → デモ${n(r.demos)} → 契約${n(r.contracts)} → ${revenue.toLocaleString()}円`
+      : `${r.title} → まだ1件も公開していないため未計測（成果ゼロではない）`;
+    return {
+      ideaId: r.idea_id,
+      ideaTitle: r.title,
+      contents: n(r.contents),
+      xImpressions: n(r.x_impressions),
+      xClicks: n(r.x_clicks),
+      noteViews: n(r.note_views),
+      notePurchases: n(r.note_purchases),
+      demos: n(r.demos),
+      leads: n(r.leads),
+      meetings: n(r.meetings),
+      contracts: n(r.contracts),
+      revenueYen: revenue,
+      chain,
+    };
+  });
 }
 
 /** どのX投稿から売れたかをUTMで辿る */

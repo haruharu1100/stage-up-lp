@@ -3,7 +3,9 @@ import path from 'node:path';
 import { DATA_DIR } from './env';
 import { all, nowIso, run } from './db/client';
 import { stageRatio } from './japan';
+import type { Rating } from './rating';
 import {
+  AI_CONFIDENCE_MIN,
   SCORE_WEIGHTS,
   type Grade,
   type Idea,
@@ -106,10 +108,11 @@ export const GRADE_LABEL: Record<Grade, string> = {
 
 export async function scoreIdea(
   idea: Idea,
-  ctx: { japan: JapanAssessment | null; market: MarketBacktest | null }
+  ctx: { japan: JapanAssessment | null; market: MarketBacktest | null; ratings?: Rating[] }
 ): Promise<ScoreResult> {
   const human = readHumanRatings().filter((h) => h.ideaId === idea.id);
   const heur = heuristics(idea);
+  const ai = (ctx.ratings ?? []).filter((r) => r.ideaId === idea.id && r.source === 'AI');
   const items: ScoreItem[] = [];
 
   for (const key of Object.keys(SCORE_WEIGHTS) as ScoreKey[]) {
@@ -150,14 +153,28 @@ export async function scoreIdea(
       continue;
     }
 
-    // 3) 仮置き（弱い根拠）
+    // 3) AI補助レーティング（実測値から手順で導いた推奨値）
+    const a = ai.find((x) => x.key === key);
+    if (a && a.finalScore !== null) {
+      items.push({
+        key,
+        ratio: Math.min(1, Math.max(0, a.finalScore / 5)),
+        basis: 'AI_ASSISTED',
+        status: 'DATA_AVAILABLE',
+        reason: a.reason,
+        confidence: a.confidence,
+      });
+      continue;
+    }
+
+    // 4) 仮置き（弱い根拠）
     const hv = heur[key];
     if (hv) {
       items.push({ key, ratio: hv.ratio, basis: 'HEURISTIC', status: 'DATA_AVAILABLE', reason: hv.reason });
       continue;
     }
 
-    // 4) 根拠なし = 採点対象外（0点にはしない）
+    // 5) 根拠なし = 採点対象外（0点にはしない）
     items.push({ key, ratio: null, basis: 'NONE', status: 'NO_DATA', reason: '根拠なし（未評価）' });
   }
 
@@ -171,7 +188,9 @@ export async function scoreIdea(
     if (it.ratio === null) continue;
     earned += w * it.ratio;
     availableWeight += w;
-    if (it.basis === 'EVIDENCE' || it.basis === 'HUMAN') strongWeight += w;
+    // AI推奨値は Confidence が基準以上のときだけ強い根拠として数える
+    const aiStrong = it.basis === 'AI_ASSISTED' && (it.confidence ?? 0) >= AI_CONFIDENCE_MIN;
+    if (it.basis === 'EVIDENCE' || it.basis === 'HUMAN' || aiStrong) strongWeight += w;
   }
 
   const normalized100 = availableWeight === 0 ? 0 : (earned / availableWeight) * 100;

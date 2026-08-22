@@ -124,6 +124,33 @@ export function generateXPosts(ctx: Ctx, noteUrl: string): GeneratedContent[] {
   return out;
 }
 
+/**
+ * 有料noteの最後を「読んで終わり」にしない。
+ * 商品階層の1つ上の商品へ自然につながる文面を、価格帯ごとに決めて返す。
+ */
+function nextStepBlock(priceYen: number, utm: string): string[] {
+  if (priceYen <= 980) {
+    return [
+      'ここまでで「何をやるか」は分かった状態です。次に必要なのは、実際に自分の業種でどう組むかです。',
+      `実践編（2,980円）で、業種を1つに絞った組み立て手順と失敗条件をまとめています: /note/practice?${utm}`,
+    ];
+  }
+  if (priceYen <= 2980) {
+    return [
+      '実践編までで、1工程を自動化するところまでは進められます。全工程をつなぐと運用の話になります。',
+      `完全版教材（9,800円）に、全工程の設計・運用・計測までを入れています: /note/full?${utm}`,
+    ];
+  }
+  if (priceYen <= 9800) {
+    return [
+      '教材どおりに作れば動きます。ただし「作る時間が無い」「社内に触れる人がいない」場合は、作らずに使う選択肢があります。',
+      `まず無料デモで実物を触ってください: /demo?${utm}`,
+      '導入は LIGHT 月29,800円 / STANDARD 月49,800円 / PRO 月98,000円（通常価格のみ）。効果には条件があり、成果を保証するものではありません。',
+    ];
+  }
+  return [`無料デモ: /demo?${utm}`];
+}
+
 export function generateNoteOutline(ctx: Ctx, priceYen: number): GeneratedContent {
   const t = ctx.idea.title;
   const camp = campaignId(ctx.idea.id, 1);
@@ -148,7 +175,7 @@ export function generateNoteOutline(ctx: Ctx, priceYen: number): GeneratedConten
       lines.push('法規制・プラットフォーム規約・再現性の限界をここに正直に書く。');
       lines.push('効果には個人差があり、成果を保証するものではありません。');
     } else if (s === '次のステップ') {
-      lines.push(`無料デモ: /demo?${utm}`);
+      for (const l of nextStepBlock(priceYen, utm)) lines.push(l);
     } else {
       lines.push('（本文をここに書く）');
     }
