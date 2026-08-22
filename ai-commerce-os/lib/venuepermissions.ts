@@ -225,26 +225,70 @@ export const VENUE_RESEARCH: VenueResearch[] = [
       commercial: 7, internal: 10, analysis: 5, storage: 10, auto: 10,
       volume: 10, identifier: 10, price: 10, url: 0, entry: 5,
     },
+    /*
+     * ★2026-08-22 出典URLを差し替えた。
+     *   developer-docs.amazon.com の acceptable-use-policy / data-protection-policy は
+     *   別ホストへ転送されたうえで「Page Not Found」になる（実際に開いて確認した）。
+     *   規約の本文が読めるのは Seller Central 側の下2つ。
+     *   ルール59「廃止されたものを前提にしない」は、APIだけでなく出典リンクにも当てはまる。
+     */
     source_urls: [
       'https://developer-docs.amazon.com/sp-api/',
       'https://developer-docs.amazon.com/sp-api/docs/product-pricing-api-v0-reference',
       'https://developer-docs.amazon.com/sp-api/docs/catalog-items-api-v2022-04-01-reference',
-      'https://developer-docs.amazon.com/sp-api/docs/data-protection-policy',
-      'https://developer-docs.amazon.com/sp-api/docs/acceptable-use-policy',
+      'https://sellercentral.amazon.com/mws/static/policy?documentType=AUP&locale=ja_JP',
+      'https://sellercentral.amazon.com/mws/static/policy?documentType=DPP&locale=ja_JP',
     ],
     rate_limit_note: '公式に公開されている。リプライサー（価格自動改定ツール）が想定用途として明記されている。',
+    /*
+     * ★2026-08-22：5件あった未確認のうち2件を、公式本文を実際に開いて確定させた。
+     *   確定したものは unknowns から外し、結果を note に原文つきで書く。
+     *   調べたのに未確認へ置いたままにすると、同じことを何度も調べ直すことになる。
+     *   ★残した3件は「調べたが公式に書かれていなかった」もの。憶測で埋めない。
+     */
     unknowns: [
-      'カタログAPIが商品ページURLを返すか（返らないと購入導線を作れない。最優先で確認）',
-      'AUP 4.5「Amazonのビジネスに関するインサイトを自社のビジネス目的で使用しない」の定義に、他社価格を見た仕入判断が含まれるか',
+      'AUP 4.5「Amazonのビジネスに関するインサイト」の定義に、他社の出品価格を見た仕入判断が含まれるか（本文に定義が無い）',
       'Amazon以外の市場で売る商品の仕入判断に使ってよいか（記述が無い）',
-      'AUP 4.3「Amazon以外のデータサービスの使用」により Keepa の併用が不可になるか',
-      'プライベート開発者登録の審査基準と所要日数',
+      'プライベート開発者登録の審査基準と所要日数（公式ページに到達できず。憶測で書かない）',
     ],
     note:
       'getItemOffers / getCompetitiveSummary は ASIN指定で他社の出品価格を返す。'
       + 'searchCatalogItems はキーワード＋JAN/EAN/UPC/GTIN/ISBN で検索でき、'
-      + 'getCatalogItem は型番・売れ筋順位を返す。PII以外は最長18ヶ月保存可（DPP）。'
-      + '利用には大口出品 月4,900円（税抜）が必要で、小口出品では使えない。',
+      + 'getCatalogItem は型番・売れ筋順位を返す。'
+      + '利用には大口出品が必要。**2026-08-22 時点で当社は大口出品を契約済み＝追加費用は発生しない。**'
+      /*
+       * ★確定その1：商品ページURLは返ってこない。
+       *   Catalog Items API v2022-04-01 の応答項目を1つずつ確認した結果、
+       *   Item にも ItemSummaryByMarketplace にも商品ページURLの欄が無い
+       *   （画像URLと売れ筋カテゴリURLはあるが、商品ページのURLは無い）。
+       *   ASINから自分で組み立てれば作れてしまうが、それはルール55
+       *   「AIはURLを作らない」に真正面から反するのでやらない。
+       *   → SP-APIだけでは「購入ページを開く」導線は作れない。url が0点なのは確定した。
+       */
+      + '／【確定2026-08-22】カタログAPIは商品ページURLを返さない。'
+      + 'Item・ItemSummaryByMarketplace のどちらにもURLの欄が無く、返るのは ASIN・JAN/EAN/UPC・'
+      + '型番・ブランド・画像URL・売れ筋順位まで。ASINからURLを組み立てるのはルール55違反なのでしない。'
+      /*
+       * ★確定その2：Keepa の併用について、規約本文がはっきり「してはいけません」と書いていた。
+       *   AUP 4.3（日本語原文）＝
+       *   「Amazonのウェブサイトから入手した情報またはデータを提供する外部の（Amazon以外の）
+       *     データサービスの使用、提供、宣伝をしてはいけません。」
+       *   Keepa はまさに「Amazonのウェブサイトから入手したデータを提供する外部サービス」で、
+       *   「使用」まで含めて禁じている。読み方を工夫して逃げ道を探さない（Fail Closed）。
+       *   ただしこの条項は SP-API を使い始めなければ掛からない。
+       *   つまり規約違反かどうかの話ではなく、「どちらを取るか」の経営判断になる。
+       */
+      + '／【確定2026-08-22】AUP 4.3 原文「Amazonのウェブサイトから入手した情報またはデータを提供する'
+      + '外部の（Amazon以外の）データサービスの使用、提供、宣伝をしてはいけません。」'
+      + 'Keepa はこれに該当する。SP-APIを使い始めると Keepa は併用できないと読むのが素直。'
+      + 'SP-APIに手を出さなければ掛からない条項なので、違反の問題ではなく取捨選択の問題。'
+      /*
+       * ★確認その3：保存期間。前回「PII以外は最長18ヶ月」と書いたのは正しかった。
+       *   DPPの日本語原文で裏が取れたので、推測ではなく確認済みに格上げする。
+       */
+      + '／【確認2026-08-22】DPP原文「法令や規制により、より長期の保存が必要とされる場合を除き、'
+      + '個人識別情報以外のデータ（PII以外のデータ）を18か月以内に削除する必要があります。」'
+      + '＝相場データは18ヶ月で消す仕組みが要る。',
   },
   {
     connector_code: 'AMAZON_CREATORS_API',
@@ -608,7 +652,14 @@ export function rankedResearch(): VenueResearch[] {
  */
 export const FIRST_LIVE_CONNECTOR: string | null = null;
 
+/*
+ * ★2026-08-22 更新。
+ *   費用の論点は消えた（大口出品は契約済みと分かった）が、代わりに規約本文を実際に読んだ結果、
+ *   もっと重い論点が2つ出てきた。安くなったから進める、にしない。
+ */
 export const FIRST_LIVE_CONNECTOR_STATUS_JA =
   '第1自動市場は未確定です。'
-  + '調査上の第1候補は Amazon SP-API（唯一Gateを通過）、第2候補は Yahoo!ショッピング商品検索v3（商用可否の確認待ち）ですが、'
-  + '月額費用と既存サービス（Keepa）への影響があるため、ご本人と一緒に決めます。';
+  + '調査上の第1候補は Amazon SP-API（唯一Gateを通過）、第2候補は Yahoo!ショッピング商品検索v3（商用可否の確認待ち）です。'
+  + '大口出品は契約済みのため追加費用は発生しませんが、規約本文を確認した結果、'
+  + '①AUP 4.3 により既存サービス（Keepa）を併用できなくなる ②カタログAPIが商品ページURLを返さないため'
+  + '「購入ページを開く」導線を作れない、の2点が確定しました。どちらもご本人と一緒に決めます。';

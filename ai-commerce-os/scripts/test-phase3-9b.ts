@@ -238,13 +238,30 @@ async function main(): Promise<void> {
     '★SP-APIで「Amazon以外で売るための仕入判断に使えるか」は UNKNOWN のままにしてある',
     sp?.permissions.price_analysis_allowed === 'UNKNOWN',
   );
+  /*
+   * ★2026-08-22 この2件は検査の中身を書き換えた（ルール64）。
+   *   もとは「Keepaの話が未確認欄に残っているか」「商品ページURLの件が未確認欄に残っているか」
+   *   を見ていた。2026-08-22 に公式本文（AUP日本語版・カタログAPI仕様）を実際に開いて
+   *   2件とも確定させたので、未確認欄にあることを合格条件にしたままだと
+   *   「ちゃんと調べて確定させると不合格になる」という逆さまの検査になる。
+   *   そこで「未確認に残っているか」ではなく「確定した結果が原文つきで記録されているか」を見る。
+   *   ★確定した＝安全になった、ではない。2件とも結論は当社に不利な内容。
+   */
   check(
-    'SP-APIの未確認項目に、Keepa併用の話が残っている',
-    (sp?.unknowns ?? []).some((u) => u.includes('Keepa')),
+    '★Keepa併用の結論が、規約の原文つきで記録されている',
+    (sp?.note ?? '').includes('Keepa') && (sp?.note ?? '').includes('AUP 4.3'),
   );
   check(
-    'SP-APIの未確認項目に、商品ページURLが取れるかが残っている',
-    (sp?.unknowns ?? []).some((u) => u.includes('URL')),
+    '★カタログAPIが商品ページURLを返さないことが記録されている',
+    (sp?.note ?? '').includes('商品ページURLを返さない'),
+  );
+  check(
+    '★URLが取れないと分かっても、ASINからURLを組み立てる逃げ道を作っていない',
+    (sp?.scores.url ?? -1) === 0,
+  );
+  check(
+    '調べても公式に書かれていなかったものは、未確認のまま残してある',
+    (sp?.unknowns ?? []).length > 0,
   );
 
   // ================================================================
@@ -367,9 +384,24 @@ async function main(): Promise<void> {
     '画面の一行が「未確定」と言い切っている',
     FIRST_LIVE_CONNECTOR_STATUS_JA.includes('未確定'),
   );
+  /*
+   * ★2026-08-22 検査の中身を書き換えた（ルール64）。
+   *   もとは「月額費用の話が書いてあるか」を見ていた。2026-08-22 に
+   *   大口出品が契約済みだと分かり、追加費用が発生しないことが事実になったため、
+   *   「月額費用」という言葉を必ず書かせる検査は、事実に反する文を強制することになる。
+   *   ★ただし「費用の話が消えた＝黙っていい」ではない。
+   *     費用の状況（契約済みで追加費用なし）を明示することを合格条件にする。
+   *     金の話を画面から消させないという元の意図はそのまま残す。
+   */
   check(
-    'その一行に、月額費用の話が書いてある',
-    FIRST_LIVE_CONNECTOR_STATUS_JA.includes('月額費用'),
+    'その一行に、費用がどうなっているかが書いてある',
+    FIRST_LIVE_CONNECTOR_STATUS_JA.includes('大口出品')
+      && FIRST_LIVE_CONNECTOR_STATUS_JA.includes('費用'),
+  );
+  check(
+    '★費用が無くなったことを、進めてよい理由にしていない（別の論点を書いている）',
+    FIRST_LIVE_CONNECTOR_STATUS_JA.includes('AUP 4.3')
+      && FIRST_LIVE_CONNECTOR_STATUS_JA.includes('商品ページURL'),
   );
   check(
     'その一行に、既存サービス（Keepa）への影響が書いてある',
@@ -443,7 +475,9 @@ async function main(): Promise<void> {
   console.log('※ Yahoo!ショッピングは「禁止」ではなく「商用に使ってよいかを確認中」です。');
   console.log('※ Yahoo!ショッピングとヤフオク!、Amazonの3つのAPIは、それぞれ別に扱っています。');
   console.log('※ 分からなかった項目には点を付けていません（0点です）。');
-  console.log('※ 第1自動市場は、費用と既存サービスへの影響があるため、まだ決めていません。');
+  console.log('※ 大口出品は契約済みのため、Amazon SP-API に追加費用はかかりません（2026-08-22 確認）。');
+  console.log('※ ただし規約本文を読んだ結果、Keepaを併用できなくなること・商品ページURLが取れないことが確定しました。');
+  console.log('※ 第1自動市場は、この2点をご本人が判断してから決めます。');
 }
 
 main().catch((e) => { console.error(e); process.exit(1); });
