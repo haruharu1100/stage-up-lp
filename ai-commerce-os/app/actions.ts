@@ -15,6 +15,7 @@ import { CONDITION_RANKS, type ConditionRank } from '@/lib/conditions';
 import { isBuyPaymentMethod } from '@/lib/paymentmethods';
 import { recordOpenOutcome, recordPageOpen, setUrlStatus } from '@/lib/purchaselink';
 import { isPurchaseOutcome } from '@/lib/producturl';
+import { recordSellCheck } from '@/lib/sellcheck';
 
 /**
  * 画面から呼べる操作はここだけ。
@@ -450,6 +451,41 @@ export async function recordOpenOutcomeAction(_prev: unknown, form: FormData) {
     await audit('PURCHASE_PAGE_OUTCOME', String(openId), { outcome });
     revalidatePath('/buy');
     revalidatePath('/validation');
+  }
+  return r;
+}
+
+/**
+ * 売れるかテストを1件記録する（Phase 3.9d）。
+ *
+ * 【ここでも通信はしない】
+ * Keepa の画面を開くのも、数字を読むのも人。
+ * このシステムがやるのは「受け取って、同じ物差しで判定して、消さずに積む」だけ。
+ */
+export async function recordSellCheckAction(_prev: unknown, form: FormData) {
+  await ensureReady();
+
+  const s = (k: string) => String(form.get(k) ?? '').trim();
+
+  const r = await recordSellCheck({
+    productKey: s('product_key'),
+    productName: s('product_name'),
+    venueCode: s('venue_code'),
+    sourceTool: s('source_tool'),
+    productUrl: s('product_url'),
+    observedAt: s('observed_at'),
+    windowDays: s('window_days'),
+    rankDrops: s('rank_drops'),
+    salesRank: s('sales_rank'),
+    offerCount: s('offer_count'),
+    avgPrice: s('avg_price'),
+    currentPrice: s('current_price'),
+    note: s('note'),
+  });
+
+  if (r.ok) {
+    await audit('SELLABILITY_CHECK', s('product_key'), { verdict: r.judged?.verdict, duplicate: r.duplicate });
+    revalidatePath('/sellability');
   }
   return r;
 }

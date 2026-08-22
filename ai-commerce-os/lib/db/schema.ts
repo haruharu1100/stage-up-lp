@@ -1331,3 +1331,60 @@ export const SCHEMA_PURCHASE_LINK: string[] = [
   )`,
   `CREATE INDEX IF NOT EXISTS idx_venue_connectors_state ON venue_connectors(state)`,
 ];
+
+/* ================================================================
+ * Phase 3.9d：売れるかテスト（2026-08-22）
+ * ================================================================ */
+
+export const SCHEMA_SELLABILITY: string[] = [
+  /*
+   * 【人が Keepa 等の画面を見て書き写した「売れているか」の記録】
+   *
+   * 【なぜ既存の表に相乗りしないのか】
+   *   venue_market_prices … 「いまの相場はいくらか」。上書きされる。
+   *   tracked_listings    … 「この1件の出品が売れたか」。答えが出るまで数ヶ月かかる。
+   *   ここ                … 「この商品は過去どれくらい売れてきたか」。待たずに分かる。
+   * 主語が違うので、混ぜると集計が意味を失う。
+   *
+   * 【上書きしない】
+   * 同じ商品を1ヶ月後にもう一度見たら、新しい行を積む。
+   * 上書きすると「先月より動きが鈍った」という一番大事な変化が消える。
+   *
+   * 【同じものを2回入れても2件にしない】
+   * UNIQUE で「商品・市場・道具・観測日・期間」が同じ行を弾く（冪等性）。
+   *
+   * 【counts_as_real_market を既定0にしてある理由】
+   * Keepa は Amazon ではなく第三者ツール。市場から正式に提供されたデータではない。
+   * また、Keepa の利用規約でこの使い方が認められているかは未確認である
+   * （keepa.com は自動アクセスを 403 で拒否するため、規約本文を機械的に読めていない）。
+   * だから既定では「実市場データ100件」の件数に数えない。
+   * 数え始めてよいのは、ご本人が規約を読んで確認したあとだけ。
+   */
+  `CREATE TABLE IF NOT EXISTS sellability_checks (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    product_key TEXT NOT NULL,
+    product_name TEXT,
+    venue_code TEXT NOT NULL,
+    source_tool TEXT NOT NULL,
+    product_url TEXT,
+    observed_at TEXT NOT NULL,
+    window_days INTEGER NOT NULL,
+    rank_drops INTEGER,
+    sales_rank INTEGER,
+    offer_count INTEGER,
+    avg_price INTEGER,
+    current_price INTEGER,
+    verdict TEXT NOT NULL,
+    reason TEXT NOT NULL,
+    estimated_monthly_sales REAL,
+    per_seller_monthly REAL,
+    estimated_turnover_days REAL,
+    warnings_json TEXT,
+    counts_as_real_market INTEGER NOT NULL DEFAULT 0,
+    note TEXT,
+    created_at TEXT NOT NULL,
+    UNIQUE(product_key, venue_code, source_tool, observed_at, window_days)
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_sellability_product ON sellability_checks(product_key)`,
+  `CREATE INDEX IF NOT EXISTS idx_sellability_verdict ON sellability_checks(verdict)`,
+];

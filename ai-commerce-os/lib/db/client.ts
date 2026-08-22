@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { createClient, type Client, type InValue } from '@libsql/client';
-import { ADD_COLUMNS, SCHEMA, SCHEMA_COST, SCHEMA_OBSERVATION, SCHEMA_PURCHASE_LINK } from './schema';
+import { ADD_COLUMNS, SCHEMA, SCHEMA_COST, SCHEMA_OBSERVATION, SCHEMA_PURCHASE_LINK, SCHEMA_SELLABILITY } from './schema';
 import { config, DATA_DIR } from '../env';
 
 let client: Client | null = null;
@@ -36,6 +36,8 @@ export async function migrate(): Promise<void> {
   for (const stmt of SCHEMA_COST) await c.execute(stmt);
   // Phase 3.9（購入ページを開く導線・市場接続状況）。購入処理は含まない。
   for (const stmt of SCHEMA_PURCHASE_LINK) await c.execute(stmt);
+  // Phase 3.9d（売れるかテスト）。人が書き写した数字を受け取るだけで、通信は含まない。
+  for (const stmt of SCHEMA_SELLABILITY) await c.execute(stmt);
   // 列追加は「既にある」だけを握りつぶす。それ以外のエラーは隠さない。
   for (const stmt of ADD_COLUMNS) {
     try {

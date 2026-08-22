@@ -459,6 +459,9 @@ async function main(): Promise<void> {
   console.log('【現状の正直な数字】');
   console.log(`  調査した接続先：${VENUE_RESEARCH.length}件`);
   console.log(`  候補にできる（Gate通過）：${gatePassed.length}件 — ${gatePassed.map((r) => r.name).join('・') || 'なし'}`);
+  // Gate通過は「調査の結果」であって「いま進んでいる」ではない。ここを混ぜると、
+  // 見送ったはずのものが進行中に見える。
+  console.log('    ※ 2026-08-22、Amazon SP-API はご本人の判断で見送り中です（調査結果はそのまま残しています）。');
   console.log(`  禁止と確認できた：${prohibited.length}件`);
   console.log(`  いま自動でデータを取っている市場：0件`);
   console.log(`  まだ分かっていないこと：${totalUnknown}件`);
@@ -477,7 +480,9 @@ async function main(): Promise<void> {
   console.log('※ 分からなかった項目には点を付けていません（0点です）。');
   console.log('※ 大口出品は契約済みのため、Amazon SP-API に追加費用はかかりません（2026-08-22 確認）。');
   console.log('※ ただし規約本文を読んだ結果、Keepaを併用できなくなること・商品ページURLが取れないことが確定しました。');
-  console.log('※ 第1自動市場は、この2点をご本人が判断してから決めます。');
+  console.log('※ 2026-08-22、ご本人の判断で SP-API は見送りになりました（まず Keepa で「売れるか」を確かめるため）。');
+  console.log('※ Keepa も一覧に登録しましたが、公式ページを機械的に開けないため8項目すべて未確認です。');
+  console.log('※ Keepa は自動取得の相手ではありません。人が画面を見て書き写す使い方だけです。');
 }
 
 main().catch((e) => { console.error(e); process.exit(1); });

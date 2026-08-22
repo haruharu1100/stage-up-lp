@@ -18,6 +18,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <nav>
               <Link href="/">経営ダッシュボード</Link>
               <Link href="/buy">仕入候補</Link>
+              <Link href="/sellability">売れるかテスト</Link>
               <Link href="/routes">どこで買ってどこで売るか</Link>
               <Link href="/matrix">市場マトリクス</Link>
               <Link href="/accuracy">予測精度</Link>
@@ -32,7 +33,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <Link href="/settings">設定</Link>
             </nav>
             <span className="mode">
-              Phase 3.9 ／ モード <strong>{config.autoMode}</strong> ／ 自動購入 <strong>未実装</strong>
+              Phase 3.9d ／ モード <strong>{config.autoMode}</strong> ／ 自動購入 <strong>未実装</strong>
             </span>
           </div>
         </header>
