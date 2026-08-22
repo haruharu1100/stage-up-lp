@@ -18,7 +18,7 @@
  *
  * ★ここに項目を足したくなったら、
  *   まず既にあるどれかの中に入らないかを考えること。
- *   18個は、左メニューとしてはもう多い方です。
+ *   19個は、左メニューとしてはもう多い方です。
  */
 
 import type { Permission } from "@/lib/console/state";
@@ -28,6 +28,7 @@ export type MenuKey =
   | "gacha"
   | "builder"
   | "backtest"
+  | "preview"
   | "rtp"
   | "products"
   | "market"
@@ -59,6 +60,7 @@ export const MENU: MenuItem[] = [
   { key: "gacha", label: "ガチャ管理", note: "作る・止める・公開する", group: "売る前", need: "gacha.view" },
   { key: "builder", label: "AI ガチャ作成", note: "話しかけると案が出ます", group: "売る前", need: "gacha.edit" },
   { key: "backtest", label: "公開前バックテスト", note: "赤字になる条件を先に試す", group: "売る前", need: "gacha.view" },
+  { key: "preview", label: "お客様画面の確認", note: "公開前に、お客様の目で見る", group: "売る前", need: "gacha.view" },
   { key: "products", label: "景品マスター", note: "景品と仕入れ値の管理", group: "売る前", need: "gacha.view" },
 
   { key: "rtp", label: "実還元率モニタ", note: "出しすぎていないか", group: "売っている間", need: "gacha.view" },

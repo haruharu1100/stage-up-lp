@@ -45,6 +45,7 @@ import Dashboard from "./screens/Dashboard";
 import GachaList from "./screens/GachaList";
 import Builder from "./screens/Builder";
 import BacktestScreen from "./screens/BacktestScreen";
+import PreviewScreen from "./screens/PreviewScreen";
 import RtpScreen from "./screens/RtpScreen";
 import FraudCenter from "./screens/FraudCenter";
 import PointScreen from "./screens/PointScreen";
@@ -132,6 +133,8 @@ function Screen({
         return <Builder />;
       case "backtest":
         return <BacktestScreen s={s} />;
+      case "preview":
+        return <PreviewScreen s={s} dispatch={dispatch} onNav={onNav} />;
       case "products":
         return <ProductsScreen />;
       case "rtp":

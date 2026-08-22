@@ -31,6 +31,7 @@
 
 import { appendAudit, type AuditEntry, type AuditAction } from "./audit";
 import { assess, SIGNALS, type Assessment, type Hit, type SignalKey } from "./fraud";
+import { drawOnce, seedOf, type DrawRecord } from "./draw";
 
 /* ══════════════════════════════════════════════
    権限（RBAC）
@@ -211,6 +212,12 @@ export type ConsoleGacha = {
   publishedAt?: string;
   /** 公開前バックテストの結果。未実施なら null */
   backtest: "SAFE" | "CAUTION" | "DANGER" | null;
+  /**
+   * 等級ごとに、もう何本出たか。
+   * 箱から札を抜く方式なので、ここが在庫の残りそのものになります。
+   * 未設定は「まだ1本も出ていない」と同じ扱いです。
+   */
+  drawn?: Record<string, number>;
 };
 
 export type ConsoleUser = {
@@ -279,9 +286,22 @@ export type ConsoleState = {
   orders: Order[];
   tickets: Ticket[];
   audit: AuditEntry[];
+  /** 抽選の記録。お客様画面から引いた分が入る */
+  draws: DrawRecord[];
   /** 直近の操作結果。画面上部に出す */
   flash: { kind: "ok" | "warn" | "error"; text: string } | null;
 };
+
+/**
+ * お客様画面の確認で使う、デモのお客様。
+ *
+ * ★実在の会員を使わないこと。
+ *   「お客様の目で確かめる」ために、わざと既存の会員の1人を借りています。
+ *   このデモの会員は全員が架空なので、これで問題ありません。
+ *   本番の管理画面では、運営者専用のテスト会員を別に作ります。
+ *   本物のお客様のアカウントで試し引きをすると、その方の残高が動きます。
+ */
+export const PREVIEW_USER_ID = "u_8842";
 
 /* ══════════════════════════════════════════════
    デモ用の初期データ（すべて架空）
@@ -461,6 +481,7 @@ export function initialState(): ConsoleState {
     orders: DEMO_ORDERS.map((o) => ({ ...o })),
     tickets: DEMO_TICKETS.map((t) => ({ ...t })),
     audit: [],
+    draws: [],
     flash: null,
   };
 }
@@ -481,6 +502,13 @@ export type ConsoleAction =
   | { type: "POINT_REJECT"; requestId: string; reason: string }
   | { type: "FRAUD_HANDLE"; signupId: string; decision: "ALLOW" | "STEP_UP" | "REVIEW" | "DENY" }
   | { type: "SHIP"; orderId: string }
+  /**
+   * お客様として1回引く（お客様画面の確認から使う）。
+   *
+   * key は二重送信を見分けるための鍵です。
+   * 同じ鍵で2回届いても、抽選は1回しか成立しません。
+   */
+  | { type: "DRAW"; gachaId: string; key: string }
   | { type: "SUPPORT_REPLY"; ticketId: string; text: string }
   | { type: "CLEAR_FLASH" }
   | { type: "RESET" }
@@ -762,6 +790,152 @@ export function reducer(s: ConsoleState, a: ConsoleAction): ConsoleState {
           before: o.status, after: "SHIPPED",
         }),
         flash: { kind: "ok", text: `伝票を作り、追跡番号 ${tracking} をお客様に通知しました（デモのため実際には送信していません）。` },
+      };
+    }
+
+    /**
+     * お客様として1回引く。
+     *
+     * ═══════════════════════════════════════════════
+     * ★1回の抽選で動くものを、全部まとめて動かすこと
+     * ═══════════════════════════════════════════════
+     *
+     *   1回引くと、これだけのものが同時に動きます。
+     *
+     *     ・お客様のポイントが減る
+     *     ・残り口数が1つ減る
+     *     ・等級ごとの在庫が1本減る
+     *     ・売上と粗利が動く
+     *     ・実還元率が変わる
+     *     ・当たった方には発送依頼ができる
+     *     ・抽選の記録が1件残る
+     *
+     *   ★このうち1つでも欠けたら、全部やらないこと。
+     *     いちばん多い事故は「ポイントだけ減って、当たりが記録されない」です。
+     *     お客様から見ると、お金だけ取られて何も起きていません。
+     *     本番では、これを1つのトランザクションでまとめます。
+     *     ここでは1つの新しい状態としてまとめて返すことで、同じ形にしています。
+     */
+    case "DRAW": {
+      const g = s.gachas.find((x) => x.id === a.gachaId);
+      if (!g) return s;
+
+      /* ★同じ鍵の抽選は、1回しか成立させないこと（二重送信対策）。
+         通信が不安定なときや、ボタンを連打されたとき、
+         同じ依頼が2回届きます。画面でボタンを押せなくするだけでは防げません。
+         押せなくなる前に、もう届いているからです。 */
+      const already = s.draws.find((d) => d.idempotencyKey === a.key);
+      if (already) {
+        return {
+          ...s,
+          flash: {
+            kind: "warn",
+            text:
+              `同じ依頼をもう一度受け取りましたが、二重には引いていません。` +
+              `前回の結果（${already.grade === "-" ? "はずれ" : `${already.grade}賞`}）をそのままお返ししています。`,
+          },
+        };
+      }
+
+      if (g.status !== "PUBLISHED") {
+        return deny(s, `「${g.title}」はいま販売中ではありません。お客様の画面にも出ていません。`);
+      }
+      if (g.left <= 0) {
+        return deny(s, `「${g.title}」は完売しました。`);
+      }
+
+      const u = s.users.find((x) => x.id === PREVIEW_USER_ID);
+      if (!u) return s;
+      if (u.points < g.price) {
+        return deny(
+          s,
+          `${u.name} の残高は ${u.points.toLocaleString()}pt です。` +
+            `${g.price.toLocaleString()}pt が足りません。` +
+            `ポイント管理から追加すると引けます（10万pt以上は別の管理者の承認が要ります）。`,
+        );
+      }
+
+      const drawn = g.drawn ?? {};
+      const nth = s.draws.filter((d) => d.gachaId === g.id).length + 1;
+      const out = drawOnce(
+        { title: g.title, price: g.price, total: g.total, left: g.left, designedRtp: g.designedRtp },
+        drawn,
+        seedOf(g.id),
+        nth,
+      );
+
+      /* 実還元率を計算し直す。
+         いままでにお返しした金額 ＝ これまでの売上 × これまでの実還元率 */
+      const paidBefore = g.revenue * (g.realRtp / 100);
+      const revenueAfter = g.revenue + g.price;
+      const paidAfter = paidBefore + out.value;
+      const realRtpAfter = Math.round((paidAfter / revenueAfter) * 1000) / 10;
+
+      const leftAfter = g.left - 1;
+      const balanceAfter = u.points - g.price + out.points;
+
+      const record: DrawRecord = {
+        id: `dr_${s.draws.length + 1}`,
+        idempotencyKey: a.key,
+        at: NOW,
+        userId: u.id,
+        userName: u.name,
+        gachaId: g.id,
+        gachaTitle: g.title,
+        price: g.price,
+        balanceBefore: u.points,
+        balanceAfter,
+        grade: out.grade,
+        prizeName: out.name,
+        prizeValue: out.value,
+        leftBefore: g.left,
+        leftAfter,
+        seed: seedOf(g.id),
+        nth,
+      };
+
+      const orders: Order[] = out.needsShipping
+        ? [
+            {
+              id: `o_${5000 + s.orders.length + 1}`,
+              userId: u.id,
+              userName: u.name,
+              prize: `${out.grade}賞 ${out.name}`,
+              requestedAt: NOW,
+              status: "UNSHIPPED",
+              buyUrl: "#demo-purchase",
+            },
+            ...s.orders,
+          ]
+        : s.orders;
+
+      return {
+        ...s,
+        gachas: s.gachas.map((x) =>
+          x.id !== g.id
+            ? x
+            : {
+                ...x,
+                left: leftAfter,
+                status: leftAfter === 0 ? "SOLD_OUT" : x.status,
+                drawn:
+                  out.grade === "-"
+                    ? drawn
+                    : { ...drawn, [out.grade]: (drawn[out.grade] ?? 0) + 1 },
+                revenue: revenueAfter,
+                profit: x.profit + g.price - out.value,
+                realRtp: realRtpAfter,
+              },
+        ),
+        users: s.users.map((x) => (x.id === u.id ? { ...x, points: balanceAfter, spent: x.spent + g.price } : x)),
+        orders,
+        draws: [...s.draws, record],
+        flash: {
+          kind: out.needsShipping ? "ok" : "warn",
+          text: out.needsShipping
+            ? `${out.grade}賞（${out.value.toLocaleString()}円相当）が出ました。発送依頼が1件増えています。`
+            : `${out.grade === "-" ? "はずれ" : `${out.grade}賞`}でした。${out.points.toLocaleString()}pt をお返ししました。`,
+        },
       };
     }
 
