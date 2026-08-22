@@ -455,11 +455,14 @@ const MIGRATIONS = [
   // 次のお客様の画面に前の組の注文と合計が出続ける。
   `ALTER TABLE order_items ADD COLUMN cleared_at TEXT`,
   `CREATE INDEX IF NOT EXISTS ix_oi_cleared ON order_items(tenant_id, store_id, table_id, cleared_at)`,
+  // 営業で見せるためのデモ店だけ1にする。既定は0なので、実際のお店は
+  // 何もしなくても「パスワード無しログイン」の対象から外れる。
+  `ALTER TABLE stores ADD COLUMN demo INTEGER DEFAULT 0`,
 ];
 
 // 「もう追いついているか」を1回で見分けるための問い合わせ。
 // ★項目を足したら、必ずこの1行も最後に足したものへ合わせて更新すること。
-const SCHEMA_PROBE = 'SELECT cleared_at FROM order_items LIMIT 1';
+const SCHEMA_PROBE = 'SELECT demo FROM stores LIMIT 1';
 
 async function migrate(db) {
   for (const sql of MIGRATIONS) {

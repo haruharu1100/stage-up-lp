@@ -25,6 +25,7 @@ export async function GET() {
     return NextResponse.json({
       ok: true,
       store: {
+        id: Number(s.id),
         name: s.name,
         businessDayStart: s.business_day_start || '05:00',
         taxRate: Number(s.tax_rate) || 10,

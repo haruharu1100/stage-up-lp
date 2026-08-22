@@ -59,6 +59,9 @@ CREATE TABLE IF NOT EXISTS stores (
   -- 人手の目安。店の作り（カウンターだけ／広い座敷）で必要人数は変わるので店ごとに持つ。
   guests_per_staff INTEGER DEFAULT 12,  -- ホール1人がだいたい何人まで見られるか
   min_staff INTEGER DEFAULT 2,          -- 客が少なくても最低これだけは要る人数
+  -- 営業で見せるためのデモ店だけ1。既定は0なので、実際のお店は
+  -- 何もしなくても「パスワード無しログイン」の対象から外れる。
+  demo INTEGER DEFAULT 0,
   created_at TEXT NOT NULL
 );
 

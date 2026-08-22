@@ -98,6 +98,29 @@
 昨日の予測を採点 → **明日から先だけ**予測を作り直します。今日と過去には触れません。
 何度動いても結果が変わらない作りです（二重計上しません）。
 
+#### 自動処理の本数はVercelの契約で決まる
+
+Vercelの無料プラン（Hobby）は**1日1回まで・合計2本まで**しか自動処理を持てません。
+また、Hobbyは規約上「個人・非商用」に限られるため、**お店へ月額で販売する前に
+Proなど商用で使えるプランへ切り替える必要があります。**
+
+Proに切り替えたら、`vercel.json` の `crons` を下記に差し替えると
+**営業中1時間ごとの天候更新**（雨が降り出したらその日の見込みを取り直す）が戻ります。
+
+```json
+"crons": [
+  { "path": "/api/cron?job=daily",                "schedule": "30 20 * * *" },
+  { "path": "/api/cron?job=report&slot=morning",  "schedule": "10 2 * * *" },
+  { "path": "/api/cron?job=report&slot=night",    "schedule": "0 18 * * *" },
+  { "path": "/api/cron?job=weather&slot=am11",    "schedule": "0 2 * * *" },
+  { "path": "/api/cron?job=weather&slot=pm16",    "schedule": "0 7 * * *" },
+  { "path": "/api/cron?job=live",                 "schedule": "0 8-16 * * *" }
+]
+```
+
+時刻はすべてUTC表記です（日本時間 −9時間）。`job=live` の `0 8-16` は
+**日本時間17時〜翌1時の毎正時**にあたり、営業時間外の店は自動で見送ります。
+
 ## 朝と閉店後のレポート（`/admin/reports`）
 
 **この画面を毎日開かなくてよくするための機能です。** 宛先をいちど登録すれば、

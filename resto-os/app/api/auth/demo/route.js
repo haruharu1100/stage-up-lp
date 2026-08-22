@@ -12,6 +12,10 @@ export const dynamic = 'force-dynamic';
  * 本番では絶対に使えないようにしてある：
  *   開発中（npm run dev）か、DEMO_LOGIN=1 を明示したときだけ動く。
  *   本番ビルドで DEMO_LOGIN を付けなければ、このAPIは常に 404 相当で止まる。
+ *
+ * さらに、入れるのは「営業で見せるためのデモ店（demo = 1）」だけ。
+ * 実際のお店は demo が既定の0なので、DEMO_LOGIN を付けたままでも
+ * パスワード無しで入られることはない。
  */
 function guard() {
   if (!demoEnabled()) {
@@ -24,7 +28,7 @@ export async function GET() {
   try {
     if (!demoEnabled()) return NextResponse.json({ ok: true, enabled: false, stores: [] });
 
-    const stores = await all('SELECT id, name FROM stores WHERE status = ? ORDER BY id', ['active']);
+    const stores = await all('SELECT id, name FROM stores WHERE status = ? AND demo = 1 ORDER BY id', ['active']);
     const staff = await all('SELECT id, store_id, name, role FROM staff WHERE active = 1 ORDER BY id');
     const order = ['owner', 'admin', 'manager', 'staff', 'kitchen'];
 
@@ -54,6 +58,10 @@ export async function POST(req) {
     const role = String(b.role || '');
     const storeId = Number(b.storeId) || 0;
     if (!storeId || !ROLE_LABEL[role]) throw new ApiError('BAD_REQUEST', '店舗と権限を指定してください');
+
+    // 実際のお店にはパスワード無しで入れない（デモ店だけ）
+    const store = await one('SELECT id FROM stores WHERE id = ? AND status = ? AND demo = 1', [storeId, 'active']);
+    if (!store) throw new ApiError('NOT_FOUND', 'テストプレイ用ログインは利用できません', 404);
 
     const staff = await one(
       'SELECT * FROM staff WHERE store_id = ? AND role = ? AND active = 1 ORDER BY id LIMIT 1',

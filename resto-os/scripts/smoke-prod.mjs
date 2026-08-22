@@ -215,11 +215,16 @@ async function main() {
     ok(10, '過去データ（AIの学習台帳）を見られる', hist.status === 200, `status=${hist.status}`);
     const fc = await api(B, '/api/history/forecast');
     ok(10, '予測の画面が動く', fc.status === 200, `status=${fc.status}`);
-    const rc = await api(null, '/api/recommend', { method: 'POST', body: { token: tblB.token } });
+    // QRの入場トークンは会計のたびに入れ替わる仕様なので、店側の卓指定で確認する
+    const rc = await api(B, '/api/recommend', { method: 'POST', body: { tableId: tblB.id } });
     ok(10, 'AIのおすすめが動く', rc.status === 200 && rc.json?.ok === true, `status=${rc.status}`);
     ok(10, 'AI DXプランではおすすめ機能が有効になっている', rc.json?.engine !== 'off', String(rc.json?.engine));
-    const rcA = await api(null, '/api/recommend', { method: 'POST', body: { token: tblA.token } });
+    ok(10, 'おすすめの結果に原価が混ざっていない', !JSON.stringify(rc.json || {}).includes('"cost"'), '');
+    const rcA = await api(A, '/api/recommend', { method: 'POST', body: { tableId: tblA.id } });
     ok(10, 'ライトプランではAIおすすめが出ない（画面は壊れない）', rcA.status === 200 && rcA.json?.engine === 'off', String(rcA.json?.engine));
+    // 会計が済んだ卓の古いQRは使えない（前のお客様が後から注文できない）
+    const oldQr = await api(null, '/api/recommend', { method: 'POST', body: { token: tblB.token } });
+    ok(10, '会計済みの古いQRからは何も見えない', oldQr.status === 404, `status=${oldQr.status}`);
   });
 
   // ── ⑪ 他店舗からデータが見えない
@@ -236,6 +241,16 @@ async function main() {
     ok(11, 'B店からA店の商品を売り切れにできない', patch.status === 404, `status=${patch.status}`);
     const noLogin = await api(null, '/api/tables');
     ok(11, 'ログインしていない人には何も見えない', noLogin.status === 401, `status=${noLogin.status}`);
+
+    // 営業で見せる「パスワード無しログイン」は、デモ店以外には絶対に入れない
+    const meA = await api(A, '/api/admin/store');
+    const myStoreId = Number(meA.json?.store?.id) || 0;
+    const demoList = await api(null, '/api/auth/demo');
+    const names = (demoList.json?.stores || []).map((s) => String(s.name));
+    ok(11, 'パスワード無しログインの一覧に検証店が出てこない',
+      !names.some((n) => n.startsWith('【テスト】')), names.join(' / '));
+    const sneak = await api(null, '/api/auth/demo', { method: 'POST', body: { storeId: myStoreId, role: 'owner' } });
+    ok(11, 'デモ店以外にはパスワード無しで入れない', sneak.status === 404, `store=${myStoreId} status=${sneak.status}`);
   });
 
   // ── ⑫ ライトプランから上位機能へアクセス不可

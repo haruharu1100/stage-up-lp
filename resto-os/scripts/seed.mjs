@@ -88,7 +88,9 @@ async function createTenant({ name, plan, storeName, genre }) {
   const companyId = Number(c.lastInsertRowid);
   const storeCode = newPublicId('st');
   const s = await run(
-    'INSERT INTO stores (public_id,tenant_id,company_id,name,genre,created_at) VALUES (?,?,?,?,?,?)',
+    // seed で作る店は営業で見せるためのデモ店なので demo = 1。
+    // 実際のお店は既定の0のまま＝パスワード無しログインの対象外。
+    'INSERT INTO stores (public_id,tenant_id,company_id,name,genre,demo,created_at) VALUES (?,?,?,?,?,1,?)',
     [storeCode, tenantId, companyId, storeName, genre, ts]
   );
   return { tenantId, companyId, storeId: Number(s.lastInsertRowid), storeCode };
