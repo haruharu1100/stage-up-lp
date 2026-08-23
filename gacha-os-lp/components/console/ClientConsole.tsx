@@ -441,8 +441,23 @@ function Screen({
 }) {
   const item = menuItem(page);
 
-  /* 見出しは、どの画面でも同じ形で出す */
-  const head = (
+  /**
+   * 見出しは、どの画面でも同じ形で出す。
+   *
+   * ★見出しを2つ出さないこと。
+   *   ダッシュボードは、いちばん上の帯の中に画面名を持っています
+   *   （あいさつと件数を、画面名と同じ塊で読ませるためです）。
+   *   ここでもう一度出すと、同じ言葉が上下に並びます。
+   *
+   * ★ただし「main の中の最初の見出し＝画面名」は崩さないこと。
+   *   どの画面に着いたかを機械で確かめる仕掛け
+   *   （scripts/check-admin-reach.mjs）が、この約束だけを頼りに
+   *   全項目を押して回っています。見出しの置き場所を変えるときは、
+   *   必ずその画面の中に、同じ名前の h1 を1つ残してください。
+   */
+  const ownHead = page === "dashboard";
+
+  const head = ownHead ? null : (
     <div>
       <h1 className="text-[1.375rem] font-bold tracking-tight text-slate">
         {item.label}

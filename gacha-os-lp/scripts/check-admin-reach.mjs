@@ -118,9 +118,25 @@ async function press(page, selector, until) {
   throw new Error(`${selector} を押しても ${until} が出ない`);
 }
 
+/**
+ * ★ログイン画面から担当者の一覧を外しました。
+ *
+ *   以前は「管理者（全権）」という担当者ボタンを押していました。
+ *   本番の管理サイトのログイン画面に社員名簿は並ばないので、
+ *   ID／パスワードの入力欄に作り替え、デモの入口だけを
+ *   「デモ管理者としてログイン」の1つに寄せています。
+ *
+ * ★ここで実在しそうなIDやパスワードを打たせないこと。
+ *   デモの入口は入力が要りません。入力欄に何か入れて通そうとすると、
+ *   その値がスクリプトに残り、いつか本物に置き換わります。
+ */
 async function enter(page) {
   await page.goto(URL, { waitUntil: "domcontentloaded" });
-  await press(page, 'button:has-text("管理者（全権）")', 'input[placeholder="000000"]');
+  await press(
+    page,
+    'button:has-text("デモ管理者としてログイン")',
+    'input[placeholder="000000"]',
+  );
   await page.locator('input[placeholder="000000"]').fill("204815");
   await press(page, 'button:has-text("管理画面に入る")', 'nav[aria-label="管理メニュー"]');
 }

@@ -161,7 +161,9 @@ await expectText(page, "管理サイト", "上の切り替え帯");
 await expectText(page, "ユーザー側", "上の切り替え帯");
 await expectText(page, "同じ1つのデータ", "上の切り替え帯");
 
-await btn(page, "運営 太郎").click();
+/* ★ログイン画面から担当者の一覧を外しました。
+   デモの入口は「デモ管理者としてログイン」の1つだけです */
+await btn(page, "デモ管理者としてログイン").click();
 await expectText(page, "2段階認証", "ログインの次の画面");
 
 /* ★「最初の p.num」を取らないこと。

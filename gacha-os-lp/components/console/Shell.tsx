@@ -85,6 +85,7 @@ import {
   type MenuKey,
 } from "./menu";
 import Icon from "./Icon";
+import DemoRoleSwitch from "./DemoRoleSwitch";
 import { Badge, Btn } from "./ui";
 
 export default function Shell({
@@ -143,7 +144,7 @@ export default function Shell({
     <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-paper2">
       {/* ══ 上のバー。中身のぶんだけの高さ（計算しない） ══ */}
       <header className="flex-none border-b border-edge bg-paper">
-        <div className="flex items-center gap-3 px-4 py-3 sm:px-5">
+        <div className="flex items-center gap-3 px-4 py-2.5 sm:px-5">
           <button
             type="button"
             onClick={() => setDrawer(true)}
@@ -182,39 +183,50 @@ export default function Shell({
             </kbd>
           </button>
 
-          <Badge tone="warn">デモ</Badge>
+          {/* ★担当の切り替えは、本番には無い機能です。
+              本番の操作と同じ見た目で並べないこと。
+              中身（誰が何をできるか）は、押した先にまとめてあります */}
+          <DemoRoleSwitch admins={s.admins} me={me} onSwitch={onSwitch} />
 
-          <div className="flex shrink-0 items-center gap-3">
-            <div className="hidden text-right lg:block">
-              <p className="nb text-note font-bold text-slate">{me.name}</p>
-              <p className="nb text-note text-slate3">{ROLE_LABEL[me.role]}</p>
-            </div>
-            <select
-              value={me.id}
-              onChange={(e) => onSwitch(e.target.value)}
-              aria-label="担当を切り替える"
-              className="nb max-w-[9.5rem] rounded-xl border border-silver bg-paper px-3 py-2 text-note text-slate2 sm:max-w-none"
+          <div className="hidden shrink-0 items-center gap-2.5 border-l border-edge2 pl-3 lg:flex">
+            <span
+              aria-hidden
+              className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-pale text-note font-bold text-blue-ink"
             >
-              {s.admins.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.name}（{ROLE_LABEL[a.role]}）
-                </option>
-              ))}
-            </select>
+              {me.name.slice(0, 1)}
+            </span>
+            <span className="text-right">
+              <span className="nb block text-note font-bold text-slate">
+                {me.name}
+              </span>
+              <span className="nb block text-note text-slate3">
+                {ROLE_LABEL[me.role]}
+              </span>
+            </span>
           </div>
         </div>
 
-        {/* デモの断り書き。常に出す */}
-        <p className="border-t border-edge2 bg-warn/8 px-4 py-2 text-note leading-[1.7] text-warn-ink sm:px-5">
-          これはデモです。本物の決済・メール送信・SMS送信・配送業者・本番データベースには、
-          いっさいつながっていません。何を押しても実害は出ません。
+        {/* デモの断り書き。常に出す。
+            ★消さないこと。本物と見分けがつかない画面を人に見せてはいけません。
+            ★ただし2行にしないこと。
+              ここは画面のいちばん上に居座り続ける帯です。
+              1024px幅で2行になると、それだけで28px、
+              毎日の作業領域が削られます。断り書きは1行で足ります。
+              押しても実害が出ない、までを1文で言い切ります。
+            ★ここに nb（折り返し禁止）を付けないこと。
+              PCでは1行に収まりますが、スマホでは必ず溢れます。
+              溢れた文は、横スクロールを生むか、途中で切れて読めなくなります。
+              断り書きが読めないのでは、置いている意味がありません。 */}
+        <p className="border-t border-edge2 bg-warn/8 px-4 py-1.5 text-note leading-[1.6] text-warn-ink sm:px-5">
+          デモ環境です。決済・メール・SMS・配送業者・本番データベースには
+          つながっていません。
         </p>
       </header>
 
       {/* ══ お知らせ帯 ══ */}
       {s.flash && (
         <div
-          className={`flex-none px-4 py-3 sm:px-5 ${
+          className={`flex-none px-4 py-2 sm:px-5 ${
             s.flash.kind === "error"
               ? "bg-danger/10 text-danger-ink"
               : s.flash.kind === "warn"
@@ -222,8 +234,8 @@ export default function Shell({
                 : "bg-ok/10 text-ok-ink"
           }`}
         >
-          <div className="mx-auto flex max-w-[1500px] items-start justify-between gap-4">
-            <p className="text-note font-medium leading-[1.85]">{s.flash.text}</p>
+          <div className="flex items-start justify-between gap-4">
+            <p className="text-note font-medium leading-[1.7]">{s.flash.text}</p>
             <button
               type="button"
               onClick={onClearFlash}
@@ -261,7 +273,12 @@ export default function Shell({
             unshipped={sum.unshipped}
             onGo={go}
           />
-          <div className="mx-auto max-w-[1500px] space-y-5 px-4 py-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:px-6 sm:py-8">
+          {/* ★ここで中央寄せの最大幅を掛けないこと。
+              管理画面は表を読む場所です。1920pxの画面で
+              左右に200pxずつ余白を作ると、その分だけ
+              表の列が潰れて、横スクロールが増えます。
+              販売LPの作法を、そのまま持ち込まないこと */}
+          <div className="w-full space-y-5 px-4 py-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:px-6 sm:py-7">
             {children}
           </div>
         </main>
@@ -344,14 +361,24 @@ function SideNav({
   const pins = pinned.map((k) => MENU.find((m) => m.key === k)!).filter(Boolean);
 
   return (
+    /**
+     * ★幅は 15.5rem（248px）／畳んだら 4.5rem（72px）。
+     *   これより広げると、中身（表）が狭くなります。
+     *   これより狭めると、「お客様サイト編集」のような
+     *   長めの名前が2行になって、行の高さが揃わなくなります。
+     */
     <nav
       aria-label="管理メニュー"
-      className={`${className} min-h-0 shrink-0 flex-col border-r border-edge bg-paper ${
-        collapsed ? "w-[4.75rem]" : "w-[17.5rem]"
+      className={`${className} relative min-h-0 shrink-0 flex-col border-r border-edge bg-paper ${
+        collapsed ? "w-[4.5rem]" : "w-[15.5rem]"
       }`}
     >
-      {/* 上：スクロールする一覧 */}
-      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2.5 py-4">
+      {/* 上：スクロールする一覧
+          ★nav の1つめの子であること。
+            到達確認（check-admin-reach.mjs）は
+            「nav の最初の div がスクロールする場所」として見ています。
+            ここに包みを増やすと、確認が別の要素を測り始めます */}
+      <div className="nav-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 py-3">
         {onClose && (
           <button
             type="button"
@@ -395,6 +422,11 @@ function SideNav({
             ))}
           </Group>
         ))}
+
+        {/* ★最後に、余白を少しだけ足すこと。
+            最下段の項目が、下のぼかしにぴったり接すると
+            「切れている」ように見えます */}
+        <div className="h-3" aria-hidden />
       </div>
 
       {/* ══ 下：絶対にスクロールしない場所 ══
@@ -410,7 +442,17 @@ function SideNav({
             使う回数の少ないものほど、小さく置きます。
             ログアウトは1日1回、販売サイトへ戻るはもっと少ない。
             毎日何十回も使う一覧のほうに、場所を渡します。 */}
-      <div className="flex-none border-t border-edge2 bg-paper px-2.5 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+      <div className="relative flex-none border-t border-edge2 bg-paper px-2 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+        {/* ★「まだ下に続いている」ことを、色で言うこと。
+            細いスクロールバーは、あることに気づかれません。
+            一覧の下端をぼかしておくと、
+            そこで終わっていないと一目で分かります。
+            ★pointer-events-none を必ず付けること。
+              付けないと、この帯の下にある行が押せなくなります */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-x-0 -top-8 h-8 bg-gradient-to-b from-transparent to-paper"
+        />
         {collapsed ? (
           <div className="space-y-1">
             {onToggleCollapse && (
@@ -489,15 +531,17 @@ function Group({
   children: ReactNode;
 }) {
   return (
-    <div className="mb-4">
+    <div className="mb-3.5">
       {hideTitle ? (
         <div className="mx-2 mb-2 border-t border-edge2" />
       ) : (
-        <p className="px-2 pb-1.5 text-label uppercase tracking-wide text-slate3">
+        /* ★区分の見出しは、項目より小さく・薄く・字間を広げること。
+             同じ濃さで並べると、見出しも押せる項目に見えます */
+        <p className="px-2.5 pb-1 pt-1 text-[0.7rem] font-bold uppercase tracking-[0.16em] text-slate3/80">
           {title}
         </p>
       )}
-      <ul className="space-y-0.5">{children}</ul>
+      <ul className="space-y-px">{children}</ul>
     </div>
   );
 }
@@ -550,19 +594,30 @@ function Row({
 }) {
   if (collapsed) {
     return (
-      <li>
+      <li className="group relative">
         <button
           type="button"
           onClick={() => onGo(m.key)}
           title={`${m.label}｜${m.note}`}
           aria-label={m.label}
           aria-current={active ? "page" : undefined}
-          className={`flex w-full items-center justify-center rounded-xl px-3 py-2.5 transition-colors ${
+          className={`relative flex w-full items-center justify-center rounded-xl px-3 py-2.5 transition-colors ${
             active ? "bg-blue-pale text-blue-ink" : "text-slate2 hover:bg-mist"
           }`}
         >
+          {active && <Accent />}
           <Icon name={m.icon} />
         </button>
+
+        {/* ★畳んだときも、名前が出ること。
+            印だけのメニューは、覚えるまでのあいだ使えません。
+            title だけに頼らないのは、出るまでに1〜2秒かかるからです */}
+        <span
+          role="tooltip"
+          className="nb pointer-events-none absolute left-full top-1/2 z-50 ml-2 -translate-y-1/2 rounded-lg bg-navy px-3 py-1.5 text-[0.8rem] font-bold text-white opacity-0 shadow-lift2 transition-opacity group-hover:opacity-100"
+        >
+          {m.label}
+        </span>
       </li>
     );
   }
@@ -575,28 +630,31 @@ function Row({
         aria-label={m.label}
         title={`${m.label}｜${m.note}`}
         aria-current={active ? "page" : undefined}
-        className={`flex w-full items-start gap-2.5 rounded-xl py-2 pl-3 pr-9 text-left transition-colors ${
+        /**
+         * ★選択中を、薄いブルーの背景だけで表さないこと。
+         *   淡い色は、画面の明るさや角度で消えます。
+         *   左の線・背景・印の色・文字の太さの4つで言います。
+         *   1つ消えても、残り3つで分かります。
+         */
+        className={`relative flex w-full items-center gap-2.5 rounded-xl py-[0.5rem] pl-3 pr-8 text-left transition-colors ${
           active
-            ? "bg-blue-pale text-blue-ink"
-            : "text-slate2 hover:bg-mist"
+            ? "bg-blue-pale font-bold text-blue-ink"
+            : "font-medium text-slate2 hover:bg-mist hover:text-slate"
         }`}
       >
+        {active && <Accent />}
         <Icon
           name={m.icon}
-          className={`mt-px ${active ? "text-blue-ink" : "text-slate3"}`}
+          className={active ? "text-blue-ink" : "text-slate3"}
         />
-        <span className="min-w-0 flex-1">
-          <span className="flex items-center gap-2">
-            <span className="nb text-note font-bold">{m.label}</span>
-            {!allowed && <Badge>権限なし</Badge>}
-          </span>
-          {/* 説明は、いま開いている項目にだけ */}
-          {active && (
-            <span className="mt-0.5 block text-note leading-[1.6] text-blue-ink/70">
-              {m.note}
-            </span>
-          )}
+        <span className="nb min-w-0 flex-1 truncate text-[0.94rem] leading-[1.5]">
+          {m.label}
         </span>
+        {!allowed && (
+          <span className="nb shrink-0 rounded-md bg-mist px-1.5 py-0.5 text-[0.68rem] font-bold text-slate3">
+            権限なし
+          </span>
+        )}
       </button>
 
       {/* ★「よく使う」への固定。
@@ -607,7 +665,7 @@ function Row({
         onClick={() => onTogglePin(m.key)}
         aria-label={pinned ? `${m.label}をよく使うから外す` : `${m.label}をよく使うに入れる`}
         title={pinned ? "よく使うから外す" : "よく使うに入れる"}
-        className={`absolute right-1.5 top-2 rounded-lg px-1.5 py-1 text-[0.9rem] leading-none transition ${
+        className={`absolute right-1 top-1/2 -translate-y-1/2 rounded-lg px-1.5 py-1 text-[0.9rem] leading-none transition ${
           pinned
             ? "text-blue-ink"
             : "text-slate3 opacity-0 hover:bg-mist focus:opacity-100 group-hover:opacity-100"
@@ -616,6 +674,23 @@ function Row({
         {pinned ? "★" : "☆"}
       </button>
     </li>
+  );
+}
+
+/**
+ * 選択中を示す、左の線。
+ *
+ * ★背景色と別に、必ず線でも言うこと。
+ *   薄いブルーの面だけだと、明るい場所や、角度の付いた画面では
+ *   ほとんど見えません。「いまどこにいるか」が分からない管理画面は、
+ *   毎日使う人の負担になります。
+ */
+function Accent() {
+  return (
+    <span
+      aria-hidden
+      className="absolute left-0 top-1/2 h-[1.4rem] w-[3px] -translate-y-1/2 rounded-r-full bg-blue-ink"
+    />
   );
 }
 

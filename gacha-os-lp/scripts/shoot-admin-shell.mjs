@@ -86,7 +86,13 @@ async function press(page, selector, until) {
 
 async function enter(page) {
   await page.goto(URL, { waitUntil: "domcontentloaded" });
-  await press(page, 'button:has-text("管理者（全権）")', 'input[placeholder="000000"]');
+  /* ★ログイン画面から担当者の一覧を外しました。
+       デモの入口は「デモ管理者としてログイン」の1つだけです。 */
+  await press(
+    page,
+    'button:has-text("デモ管理者としてログイン")',
+    'input[placeholder="000000"]',
+  );
   await page.locator('input[placeholder="000000"]').fill("204815");
   await press(page, 'button:has-text("管理画面に入る")', 'nav[aria-label="管理メニュー"]');
   await page.waitForTimeout(400);

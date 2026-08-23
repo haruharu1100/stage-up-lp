@@ -233,7 +233,10 @@ await step(page, 1, "9:00 ダッシュボード", async () => {
   await expectText(page, "先に、管理者としてログインしてください", "案内パネル");
   await cap(page, "gate", "管理サイトの手順は、ログインと2段階認証を通すまで進めない");
 
-  await tap(btn(page, "運営 太郎"));
+  /* ★ログイン画面から担当者の一覧を外しました。
+     本番の管理サイトに社員名簿は並ばないので、
+     デモの入口は「デモ管理者としてログイン」の1つだけにしています */
+  await tap(btn(page, "デモ管理者としてログイン"));
   await expectText(page, "2段階認証", "ログインの次の画面");
   const code = await page.evaluate(() => {
     for (const el of document.querySelectorAll("p")) {

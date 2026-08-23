@@ -94,6 +94,52 @@
   ::-webkit-scrollbar-thumb:hover {
     background: rgba(27, 75, 216, 0.55);
   }
+
+  /*
+   * 左メニューのスクロールバー。
+   *
+   * ═══════════════════════════════════════════════
+   * ★細いスクロールバーは、無いのと同じです
+   * ═══════════════════════════════════════════════
+   *
+   *   管理画面の左メニューは21項目あり、
+   *   背の低いノートPCでは必ず下が隠れます。
+   *   ところが、隠れていることに気づけません。
+   *   Mac は普段スクロールバーを表示しないので、
+   *   「これで全部だ」と思ったまま使い続けることになります。
+   *
+   *   だから、ここだけは常に出します。
+   *
+   *     ・つまみは 8px。細い線ではなく、指でつまめる太さ
+   *     ・レールは薄く。常に出ていても、うるさくならない濃さ
+   *     ・マウスを乗せたらブルーへ。触れる場所だと分かる
+   *
+   *   ★scrollbar-gutter を使って、幅を先に確保すること。
+   *     出たり消えたりすると、そのたびに項目が左右に動きます。
+   *     動く文字は、目で追う負担がそのまま増えます。
+   */
+  .nav-scroll {
+    scrollbar-gutter: stable;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(11, 18, 32, 0.22) rgba(11, 18, 32, 0.04);
+  }
+  .nav-scroll::-webkit-scrollbar {
+    width: 8px;
+  }
+  .nav-scroll::-webkit-scrollbar-track {
+    background: rgba(11, 18, 32, 0.04);
+    border-radius: 99px;
+  }
+  .nav-scroll::-webkit-scrollbar-thumb {
+    background: rgba(11, 18, 32, 0.22);
+    border-radius: 99px;
+  }
+  .nav-scroll:hover::-webkit-scrollbar-thumb {
+    background: rgba(27, 75, 216, 0.45);
+  }
+  .nav-scroll::-webkit-scrollbar-thumb:hover {
+    background: rgba(27, 75, 216, 0.72);
+  }
 }
 
 @layer components {
