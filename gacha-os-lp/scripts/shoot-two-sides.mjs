@@ -145,6 +145,17 @@ const ctx = await browser.newContext({
   deviceScaleFactor: 2,
   locale: "ja-JP",
 });
+/* ★はじめての方への案内を、先に「見たこと」にしておくこと。
+   案内は画面の手前に出るので、出たままだと下の操作が押せません。
+   ここで消しているのは案内だけです。画面の中身には触れていません。 */
+await ctx.addInitScript(() => {
+  try {
+    window.localStorage.setItem("gachaos.admin.tour.v1", "done");
+  } catch {
+    /* 保存が使えない環境。そのときは案内も出ません */
+  }
+});
+
 const page = await ctx.newPage();
 
 page.on("pageerror", (e) => console.error("  ⚠ 画面のエラー:", e.message));

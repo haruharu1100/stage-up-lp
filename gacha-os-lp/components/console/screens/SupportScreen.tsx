@@ -26,7 +26,23 @@
 import { useState } from "react";
 import type { ConsoleState, ConsoleAction, Ticket } from "@/lib/console/state";
 import { can } from "@/lib/console/state";
-import { Badge, Btn, Card, DemoNote, Field, Stat, WhatIsThis, inputClass } from "../ui";
+import {
+  Badge,
+  Btn,
+  Card,
+  DemoNote,
+  Drawer,
+  Field,
+  KV,
+  RowCard,
+  Rows,
+  Stat,
+  Table,
+  Td,
+  Tr,
+  WhatIsThis,
+  inputClass,
+} from "../ui";
 
 const STATUS: Record<
   Ticket["status"],
@@ -50,6 +66,17 @@ export default function SupportScreen({
 
   const human = s.tickets.filter((t) => t.status === "HUMAN_REVIEW");
   const rest = s.tickets.filter((t) => t.status !== "HUMAN_REVIEW");
+
+  /**
+   * いま開いている1件。
+   *
+   * ★件そのものではなく、番号だけを持つこと。
+   *   返信した瞬間に状態が「対応中」へ変わります。
+   *   件を写して持つと、板の中だけ「人の確認が必要」のまま残り、
+   *   押したのに何も起きていないように見えます。
+   */
+  const [openId, setOpenId] = useState<string | null>(null);
+  const open = openId ? (s.tickets.find((t) => t.id === openId) ?? null) : null;
 
   return (
     <>
@@ -82,56 +109,43 @@ export default function SupportScreen({
       {/* ── 人が見るもの ── */}
       <Card
         title="人の確認が必要なもの"
-        note="AIが自分では答えなかったものです。理由も出しています。"
+        note="AIが自分では答えなかったものです。行を押すと、理由と返信欄が右に出ます。"
       >
         {human.length === 0 ? (
           <p className="rounded-xl border border-ok/30 bg-ok/10 px-4 py-4 text-note font-bold text-ok-ink">
             人が見るべき問い合わせはありません。
           </p>
         ) : (
-          <ul className="space-y-4">
-            {human.map((t) => (
-              <TicketCard key={t.id} t={t} mayReply={mayReply} dispatch={dispatch} />
-            ))}
-          </ul>
+          <TicketList list={human} openId={openId} onOpen={setOpenId} tone="warn" />
         )}
       </Card>
 
       {/* ── それ以外 ── */}
-      <Card title="そのほかの問い合わせ" note="AIが答えたものと、対応が終わったものです。">
+      <Card
+        title="そのほかの問い合わせ"
+        note="AIが答えたものと、対応が終わったものです。行を押すと、やり取りが右に出ます。"
+      >
         {rest.length === 0 ? (
           <p className="text-note text-slate3">ありません。</p>
         ) : (
-          <ul className="space-y-3">
-            {rest.map((t) => (
-              <li key={t.id} className="rounded-xl border border-edge2 bg-paper2 px-4 py-4">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <p className="text-note font-bold text-slate">{t.subject}</p>
-                  <Badge tone={STATUS[t.status].tone}>{STATUS[t.status].label}</Badge>
-                </div>
-                <p className="num mt-1 text-note text-slate3">
-                  {t.userName} ／ {t.at}
-                </p>
-                <p className="mt-2 text-note leading-[1.9] text-slate2">{t.body}</p>
-                {t.reply && (
-                  <div className="mt-3 rounded-lg border border-edge bg-paper px-3 py-2.5">
-                    {/* ★「AIが答えた」のか「人が答えた」のかを、必ず出すこと。
-                        どれを自分で確認したのか分からなくなると、
-                        後から全部を読み直すことになります */}
-                    <div className="flex flex-wrap items-center gap-2">
-                      <p className="text-note font-bold text-slate3">返信した内容</p>
-                      <Badge tone={t.replyBy === "HUMAN" ? "ok" : "blue"}>
-                        {t.replyBy === "HUMAN" ? "人が返信" : "AIが返信"}
-                      </Badge>
-                    </div>
-                    <p className="mt-1 text-note leading-[1.9] text-slate2">{t.reply}</p>
-                  </div>
-                )}
-              </li>
-            ))}
-          </ul>
+          <TicketList list={rest} openId={openId} onOpen={setOpenId} />
         )}
       </Card>
+
+      {/* ── 1件のやり取りと、返信 ── */}
+      <Drawer
+        open={open !== null}
+        onClose={() => setOpenId(null)}
+        title={open?.subject ?? ""}
+        note={open ? `${open.userName} ／ ${open.at}` : undefined}
+      >
+        {/* ★key を付けること。
+              別の件を開いたときに、前の件の返信文が残らないようにします。
+              残ると、Aさん宛の文をBさんに送る事故になります。 */}
+        {open && (
+          <TicketBody key={open.id} t={open} mayReply={mayReply} dispatch={dispatch} />
+        )}
+      </Drawer>
 
       <DemoNote>
         このデモは、お客様へのメール送信につながっていません。
@@ -141,7 +155,63 @@ export default function SupportScreen({
   );
 }
 
-function TicketCard({
+/**
+ * 一覧。件名だけを並べる。
+ *
+ * ★本文を一覧に出さないこと。
+ *   問い合わせの本文は3行から5行あります。
+ *   20件並べると100行になり、目的の1件を探すのに
+ *   関係のない本文を19件分読まされます。
+ *   一覧は「どれを開くか決めるため」だけにあります。
+ */
+function TicketList({
+  list,
+  openId,
+  onOpen,
+  tone,
+}: {
+  list: Ticket[];
+  openId: string | null;
+  onOpen: (id: string) => void;
+  tone?: "warn";
+}) {
+  return (
+    <>
+      <Table head={["受信", "会員", "件名", "状態"]}>
+        {list.map((t) => (
+          <Tr key={t.id} onOpen={() => onOpen(t.id)} active={openId === t.id} tone={tone}>
+            <Td className="num whitespace-nowrap">{t.at}</Td>
+            <Td className="whitespace-nowrap">{t.userName}</Td>
+            <Td className="font-medium text-slate">{t.subject}</Td>
+            <Td>
+              <Badge tone={STATUS[t.status].tone}>{STATUS[t.status].label}</Badge>
+            </Td>
+          </Tr>
+        ))}
+      </Table>
+
+      <Rows>
+        {list.map((t) => (
+          <RowCard key={t.id}>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="text-note font-bold text-slate">{t.subject}</span>
+              <Badge tone={STATUS[t.status].tone}>{STATUS[t.status].label}</Badge>
+            </div>
+            <div className="mt-2 border-t border-edge pt-2">
+              <KV k="会員" v={t.userName} />
+              <KV k="受信" v={<span className="num">{t.at}</span>} />
+            </div>
+            <div className="mt-3">
+              <Btn onClick={() => onOpen(t.id)}>やり取りを開く</Btn>
+            </div>
+          </RowCard>
+        ))}
+      </Rows>
+    </>
+  );
+}
+
+function TicketBody({
   t,
   mayReply,
   dispatch,
@@ -151,66 +221,79 @@ function TicketCard({
   dispatch: React.Dispatch<ConsoleAction>;
 }) {
   const [text, setText] = useState(t.aiDraft ?? "");
+  const needsHuman = t.status === "HUMAN_REVIEW";
 
   return (
-    <li className="rounded-xl border border-warn/35 bg-warn/8 px-4 py-4 sm:px-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-note font-bold text-slate">{t.subject}</p>
-        <Badge tone="warn">人の確認が必要</Badge>
+    <>
+      <div>
+        <Badge tone={STATUS[t.status].tone}>{STATUS[t.status].label}</Badge>
       </div>
-      <p className="num mt-1 text-note text-slate3">
-        {t.userName} ／ {t.at}
-      </p>
 
-      <div className="mt-3 rounded-lg border border-edge bg-paper px-3 py-2.5">
+      <div className="rounded-xl border border-edge bg-paper2 px-4 py-3">
         <p className="text-note font-bold text-slate3">お客様からの内容</p>
         <p className="mt-1 text-note leading-[1.9] text-slate2">{t.body}</p>
       </div>
 
       {/* ★なぜAIが答えなかったのか。ここを省かないこと */}
       {t.escalateReason && (
-        <p className="mt-3 rounded-lg border border-blue-pale bg-blue-pale/50 px-3 py-2.5 text-note leading-[1.9] text-slate2">
+        <p className="rounded-xl border border-blue-pale bg-blue-pale/50 px-4 py-3 text-note leading-[1.9] text-slate2">
           <span className="mr-2 font-bold text-blue-ink">AIが答えなかった理由</span>
           {t.escalateReason}
         </p>
       )}
 
-      {mayReply ? (
-        <div className="mt-4 space-y-3">
-          <Field
-            label="返信する内容"
-            note="AIが下書きを用意しています。そのままでも、書き直しても構いません。"
-          >
-            <textarea
-              className={`${inputClass} min-h-[7rem]`}
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-            />
-          </Field>
-          <div className="flex flex-wrap gap-2">
-            <Btn
-              kind="primary"
-              disabled={!text.trim()}
-              onClick={() => dispatch({ type: "SUPPORT_REPLY", ticketId: t.id, text })}
-            >
-              この内容で返信する
-            </Btn>
-            {t.aiDraft && (
-              <Btn kind="ghost" onClick={() => setText(t.aiDraft!)}>
-                AIの下書きに戻す
-              </Btn>
-            )}
+      {t.reply && (
+        <div className="rounded-xl border border-edge bg-paper2 px-4 py-3">
+          {/* ★「AIが答えた」のか「人が答えた」のかを、必ず出すこと。
+              どれを自分で確認したのか分からなくなると、
+              後から全部を読み直すことになります */}
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-note font-bold text-slate3">返信した内容</p>
+            <Badge tone={t.replyBy === "HUMAN" ? "ok" : "blue"}>
+              {t.replyBy === "HUMAN" ? "人が返信" : "AIが返信"}
+            </Badge>
           </div>
-          <p className="text-note leading-[1.85] text-slate3">
-            ★送るかどうかは、必ず人が決めます。AIが勝手に送ることはありません。
-          </p>
+          <p className="mt-1 text-note leading-[1.9] text-slate2">{t.reply}</p>
         </div>
-      ) : (
-        <p className="mt-4 text-note text-slate3">
-          ★いまの担当には、返信の権限がありません。
-          上の担当の切り替えから「サポート 三郎」に変えると返信できます。
-        </p>
       )}
-    </li>
+
+      {needsHuman &&
+        (mayReply ? (
+          <div className="space-y-3">
+            <Field
+              label="返信する内容"
+              note="AIが下書きを用意しています。そのままでも、書き直しても構いません。"
+            >
+              <textarea
+                className={`${inputClass} min-h-[7rem]`}
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+              />
+            </Field>
+            <div className="flex flex-wrap gap-2">
+              <Btn
+                kind="primary"
+                disabled={!text.trim()}
+                onClick={() => dispatch({ type: "SUPPORT_REPLY", ticketId: t.id, text })}
+              >
+                この内容で返信する
+              </Btn>
+              {t.aiDraft && (
+                <Btn kind="ghost" onClick={() => setText(t.aiDraft!)}>
+                  AIの下書きに戻す
+                </Btn>
+              )}
+            </div>
+            <p className="text-note leading-[1.85] text-slate3">
+              ★送るかどうかは、必ず人が決めます。AIが勝手に送ることはありません。
+            </p>
+          </div>
+        ) : (
+          <p className="rounded-xl border border-warn/30 bg-warn/8 px-4 py-3 text-note leading-[1.85] text-warn-ink">
+            いまの担当には、返信の権限がありません。
+            上の「デモ：担当を切り替える」から「サポート 三郎」に変えると返信できます。
+          </p>
+        ))}
+    </>
   );
 }

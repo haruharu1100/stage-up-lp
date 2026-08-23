@@ -131,6 +131,16 @@ async function press(page, selector, until) {
  *   その値がスクリプトに残り、いつか本物に置き換わります。
  */
 async function enter(page) {
+  /* ★はじめての方への案内を、先に「見たこと」にしておくこと。
+     案内は画面の手前に出るので、出たままだと左メニューが押せません。
+     ここで消しているのは案内だけです。画面の中身には触れていません。 */
+  await page.addInitScript(() => {
+    try {
+      window.localStorage.setItem("gachaos.admin.tour.v1", "done");
+    } catch {
+      /* 保存が使えない環境。そのときは案内も出ません */
+    }
+  });
   await page.goto(URL, { waitUntil: "domcontentloaded" });
   await press(
     page,

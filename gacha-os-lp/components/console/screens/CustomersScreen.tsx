@@ -38,7 +38,22 @@ import {
   POINT_KIND_LABEL,
   ledgerBalance,
 } from "@/lib/console/state";
-import { Badge, Card, DemoNote, KV, RiskBadge, RowCard, Rows, Stat, Table, Td, WhatIsThis } from "../ui";
+import {
+  Badge,
+  Btn,
+  Card,
+  DemoNote,
+  Drawer,
+  KV,
+  RiskBadge,
+  RowCard,
+  Rows,
+  Stat,
+  Table,
+  Td,
+  Tr,
+  WhatIsThis,
+} from "../ui";
 
 const STATUS: Record<
   ConsoleUser["status"],
@@ -53,6 +68,10 @@ const STATUS: Record<
 export default function CustomersScreen({ s }: { s: ConsoleState }) {
   const [openId, setOpenId] = useState<string | null>(null);
   const totalPoints = s.users.reduce((a, u) => a + u.points, 0);
+
+  /* ★番号だけを持って、毎回いまの一覧から引き直すこと。
+       会員そのものを写して持つと、判定が変わっても板の中だけ古いままになります */
+  const opened = openId ? (s.users.find((u) => u.id === openId) ?? null) : null;
 
   return (
     <>
@@ -84,11 +103,7 @@ export default function CustomersScreen({ s }: { s: ConsoleState }) {
       <Card title="会員一覧" note="行を押すと、判定の理由を開きます。">
         <Table head={["会員", "登録日", "保有pt", "使った金額", "発送回数", "危険度", "状態"]}>
           {s.users.map((u) => (
-            <tr
-              key={u.id}
-              className="cursor-pointer hover:bg-paper2"
-              onClick={() => setOpenId(openId === u.id ? null : u.id)}
-            >
+            <Tr key={u.id} onOpen={() => setOpenId(u.id)} active={openId === u.id}>
               <Td className="font-bold text-slate">{u.name}</Td>
               <Td className="num whitespace-nowrap">{u.joinedAt}</Td>
               <Td className="num whitespace-nowrap">{u.points.toLocaleString()}pt</Td>
@@ -100,7 +115,7 @@ export default function CustomersScreen({ s }: { s: ConsoleState }) {
               <Td>
                 <Badge tone={STATUS[u.status].tone}>{STATUS[u.status].label}</Badge>
               </Td>
-            </tr>
+            </Tr>
           ))}
         </Table>
 
@@ -120,28 +135,15 @@ export default function CustomersScreen({ s }: { s: ConsoleState }) {
                 <KV k="使った金額" v={<span className="num">{u.spent.toLocaleString()}円</span>} />
                 <KV k="発送回数" v={<span className="num">{u.shipments}回</span>} />
               </div>
-              <Reasons u={u} />
-              <Activity s={s} u={u} />
+              {/* ★判定の理由と、この人がしたことは、ここに展開しないこと。
+                    1人ぶんで画面3つ分あります。5人並べると、
+                    一覧が一覧でなくなります。開いた1人だけ、右の板で読みます。 */}
+              <div className="mt-3">
+                <Btn onClick={() => setOpenId(u.id)}>判定の理由を開く</Btn>
+              </div>
             </RowCard>
           ))}
         </Rows>
-
-        {/* PC で選んだ会員の詳細 */}
-        {openId && (
-          <div className="mt-4 hidden rounded-xl border border-edge bg-paper2 px-4 py-4 md:block">
-            {(() => {
-              const u = s.users.find((x) => x.id === openId);
-              if (!u) return null;
-              return (
-                <>
-                  <p className="text-note font-bold text-slate">{u.name} の判定内容</p>
-                  <Reasons u={u} />
-                  <Activity s={s} u={u} />
-                </>
-              );
-            })()}
-          </div>
-        )}
 
         <p className="mt-5 rounded-xl border border-blue-pale bg-blue-pale/50 px-4 py-3 text-note leading-[1.9] text-slate2">
           <strong className="font-bold text-blue-ink">住所・電話番号・本名は、この一覧には出しません。</strong>{" "}
@@ -149,6 +151,25 @@ export default function CustomersScreen({ s }: { s: ConsoleState }) {
           毎日開く画面に個人情報を並べておくと、後ろから覗かれただけで漏れます。
         </p>
       </Card>
+
+      {/* ── 1人ぶんの判定の理由と、したこと ── */}
+      <Drawer
+        open={opened !== null}
+        onClose={() => setOpenId(null)}
+        title={opened ? `${opened.name} の判定内容` : ""}
+        note={opened ? `登録 ${opened.joinedAt} ／ 保有 ${opened.points.toLocaleString()}pt` : undefined}
+      >
+        {opened && (
+          <>
+            <div className="flex flex-wrap items-center gap-2">
+              <RiskBadge level={opened.risk.level} />
+              <Badge tone={STATUS[opened.status].tone}>{STATUS[opened.status].label}</Badge>
+            </div>
+            <Reasons u={opened} />
+            <Activity s={s} u={opened} />
+          </>
+        )}
+      </Drawer>
 
       <DemoNote>
         ここに出ている会員は、すべて架空です。実在の方の情報ではありません。

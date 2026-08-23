@@ -24,6 +24,7 @@
 
 "use client";
 
+import { useEffect } from "react";
 import type { ReactNode } from "react";
 import type { RiskLevel } from "@/lib/console/fraud";
 import { LEVEL_STYLE } from "@/lib/console/fraud";
@@ -73,15 +74,44 @@ export function Card({
  * ★全部の画面に必ず置くこと。
  *   初めて触る人は、項目名だけでは何をすればよいか分かりません。
  *   「REAL RTP」と書いてあっても、何を見て、どうなったら何をするのかは伝わりません。
+ *
+ * ★ただし、開いたままにしないこと。
+ *   ここは17個の画面すべての先頭にあります。
+ *   3行の説明を出しっぱなしにすると、どの画面でも
+ *   いちばん良い場所（画面のいちばん上）を説明文が占めます。
+ *   説明が要るのは最初の数日だけで、そのあとは毎日邪魔になります。
+ *   だから、たたんだ1行に変え、押したときだけ開くようにしています。
+ *
+ * ★消して代わりにしないこと。
+ *   「詰まったときに読む場所」が無いと、初めての人は手が止まります。
+ *   たたむのと、無くすのは違います。
+ *
+ * ★summary の中に見出し（h1〜h6）を入れないこと。
+ *   どの画面に着いたかを機械で確かめる仕掛けが、
+ *   main の中の最初の見出しを画面名として読んでいます。
  */
 export function WhatIsThis({ children }: { children: ReactNode }) {
   return (
-    <div className="rounded-xl border border-blue-pale bg-blue-pale/50 px-5 py-4">
-      <p className="text-note leading-[1.9] text-slate2">
-        <span className="mr-2 font-bold text-blue-ink">この画面ですること</span>
+    <details className="group rounded-xl border border-blue-pale bg-blue-pale/50">
+      <summary className="flex cursor-pointer list-none items-center gap-2 px-5 py-2.5 text-note font-bold text-blue-ink marker:content-none">
+        <svg
+          viewBox="0 0 24 24"
+          aria-hidden="true"
+          className="size-4 shrink-0 transition-transform group-open:rotate-90"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="m9 18 6-6-6-6" />
+        </svg>
+        <span className="nb">この画面ですること</span>
+      </summary>
+      <p className="border-t border-blue-pale px-5 py-4 text-note leading-[1.9] text-slate2">
         {children}
       </p>
-    </div>
+    </details>
   );
 }
 
@@ -282,6 +312,160 @@ export function Td({
     <td className={`border-b border-edge2 px-3 py-3 align-top text-note text-slate2 ${className}`}>
       {children}
     </td>
+  );
+}
+
+/**
+ * 押せる行。
+ *
+ * ═══════════════════════════════════════════════
+ * ★なぜ、1件1枚のカードをやめて、行にするのか
+ * ═══════════════════════════════════════════════
+ *
+ *   1件を1枚のカードにすると、1件あたり150pxくらい使います。
+ *   50件たまると7500px。画面7つ分を指で送ることになります。
+ *   件数が多い仕事ほど「まず全体を見て、必要な1件を選ぶ」形が要ります。
+ *
+ *   だから、一覧は行で詰めて、詳しい中身と操作は
+ *   右から出す板（Drawer）に寄せます。
+ *   一覧が短くなるほど、探す時間が減ります。
+ *
+ * ★行そのものを押せるようにすること。
+ *   行の右端に「詳細」ボタンを置く形は、
+ *   目的の行を見つけたあと、もう一度その行の右端まで
+ *   目とマウスを動かす必要があります。1件なら些細ですが、
+ *   50件やると効いてきます。
+ *
+ * ★キーボードでも押せること。
+ *   マウスが使えない場面（手が塞がる・故障）で、
+ *   一覧が丸ごと使えなくなるのを避けます。
+ */
+export function Tr({
+  children,
+  onOpen,
+  active = false,
+  tone,
+}: {
+  children: ReactNode;
+  onOpen?: () => void;
+  active?: boolean;
+  tone?: "warn" | "danger";
+}) {
+  const bg =
+    active ? "bg-blue-pale"
+    : tone === "danger" ? "bg-danger/6"
+    : tone === "warn" ? "bg-warn/6"
+    : "";
+
+  if (!onOpen) return <tr className={bg}>{children}</tr>;
+
+  return (
+    <tr
+      role="button"
+      tabIndex={0}
+      aria-current={active ? "true" : undefined}
+      onClick={onOpen}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onOpen();
+        }
+      }}
+      className={`cursor-pointer outline-none transition-colors hover:bg-mist focus-visible:bg-blue-pale focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-ink ${bg}`}
+    >
+      {children}
+    </tr>
+  );
+}
+
+/**
+ * 右から出す板。一覧を離れずに、1件の中身を見て、操作まで終える。
+ *
+ * ═══════════════════════════════════════════════
+ * ★別ページに飛ばさない理由
+ * ═══════════════════════════════════════════════
+ *
+ *   発送も問い合わせも「次の1件、その次の1件」と続く仕事です。
+ *   1件ごとに別ページへ行くと、戻るたびに一覧が先頭に戻り、
+ *   どこまで見たか分からなくなります。
+ *   一覧を残したまま中身を出せば、続きから再開できます。
+ *
+ * ★Esc で閉じられること。
+ *   閉じ方が「×を押す」しか無い画面は、毎日使うと必ず嫌われます。
+ *
+ * ★背景を押しても閉じること。ただし、閉じる以外は起こさないこと。
+ *   誤って背景の行を押して、別の件を開いてしまうと、
+ *   「さっき見ていた件がどれか分からない」が起きます。
+ */
+export function Drawer({
+  open,
+  title,
+  note,
+  onClose,
+  foot,
+  children,
+}: {
+  open: boolean;
+  title: string;
+  note?: string;
+  onClose: () => void;
+  foot?: ReactNode;
+  children: ReactNode;
+}) {
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, onClose]);
+
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 z-[80]">
+      <button
+        type="button"
+        aria-label="閉じる"
+        onClick={onClose}
+        className="absolute inset-0 cursor-default bg-navy/35"
+      />
+      <aside
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+        className="absolute inset-y-0 right-0 flex w-full max-w-[30rem] flex-col border-l border-edge bg-paper shadow-float"
+      >
+        <header className="flex flex-none items-start justify-between gap-3 border-b border-edge2 px-5 py-4">
+          <div className="min-w-0">
+            <h2 className="text-[1.0625rem] font-bold tracking-tight text-slate">
+              {title}
+            </h2>
+            {note && <p className="mt-1 text-note text-slate3">{note}</p>}
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="nb shrink-0 rounded-lg border border-edge bg-paper2 px-3 py-1.5 text-note font-bold text-slate2 transition-colors hover:bg-mist"
+          >
+            閉じる
+          </button>
+        </header>
+
+        {/* ★高さを数字で見積もらないこと。
+              上下の帯を flex-none にして、真ん中に残りを配ります。 */}
+        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-5">
+          {children}
+        </div>
+
+        {foot && (
+          <footer className="flex flex-none flex-wrap gap-2 border-t border-edge2 bg-paper2 px-5 py-4">
+            {foot}
+          </footer>
+        )}
+      </aside>
+    </div>
   );
 }
 

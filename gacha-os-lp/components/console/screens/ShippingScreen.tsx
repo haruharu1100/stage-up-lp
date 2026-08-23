@@ -23,9 +23,24 @@
 
 "use client";
 
+import { useState } from "react";
 import type { ConsoleState, ConsoleAction, Order } from "@/lib/console/state";
 import { ORDER_TODO, can } from "@/lib/console/state";
-import { Badge, Btn, Card, DemoNote, KV, RowCard, Rows, Stat, Table, Td, WhatIsThis } from "../ui";
+import {
+  Badge,
+  Btn,
+  Card,
+  DemoNote,
+  Drawer,
+  KV,
+  RowCard,
+  Rows,
+  Stat,
+  Table,
+  Td,
+  Tr,
+  WhatIsThis,
+} from "../ui";
 
 const STATUS: Record<Order["status"], { label: string; tone: "warn" | "blue" | "ok" }> = {
   UNSHIPPED: { label: "未発送", tone: "warn" },
@@ -62,6 +77,18 @@ export default function ShippingScreen({
     .sort((a, b) => a.requestedAt.localeCompare(b.requestedAt));
   const done = s.orders.filter((o) => !TODO_STATUS.includes(o.status));
 
+  /**
+   * いま開いている1件。
+   *
+   * ★件そのものではなく、番号だけを持つこと。
+   *   件をそのまま持つと、発送済みにしたあとも
+   *   板の中は「未発送」のまま残ります。押した手応えが消えます。
+   *   番号だけを持って、毎回いまの一覧から引き直せば、
+   *   処理した瞬間に板の中身も追いつきます。
+   */
+  const [openId, setOpenId] = useState<string | null>(null);
+  const open = openId ? (s.orders.find((o) => o.id === openId) ?? null) : null;
+
   return (
     <>
       <WhatIsThis>
@@ -82,75 +109,129 @@ export default function ShippingScreen({
       {/* ── やること ── */}
       <Card
         title="発送するもの"
-        note={todo.length > 0 ? `${todo.length}件。上から順に片づけてください。` : undefined}
+        note={
+          todo.length > 0
+            ? `${todo.length}件。上ほど長くお待たせしています。行を押すと、宛先と操作が右に出ます。`
+            : undefined
+        }
       >
         {todo.length === 0 ? (
           <p className="rounded-xl border border-ok/30 bg-ok/10 px-4 py-4 text-note font-bold text-ok-ink">
             未発送はありません。すべて処理済みです。
           </p>
         ) : (
-          <ul className="space-y-4">
-            {todo.map((o) => (
-              <li key={o.id} className="rounded-xl border border-edge bg-paper2 px-4 py-4 sm:px-5">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="text-note font-bold text-slate">{o.prize}</p>
-                    <p className="num mt-0.5 text-note text-slate3">
-                      {o.userName} ／ 依頼 {o.requestedAt}
-                    </p>
+          <>
+            <Table head={["依頼日", "会員", "景品", "お届け先", "状態"]}>
+              {todo.map((o) => (
+                <Tr key={o.id} onOpen={() => setOpenId(o.id)} active={openId === o.id} tone="warn">
+                  <Td className="num whitespace-nowrap">{o.requestedAt}</Td>
+                  <Td className="whitespace-nowrap">{o.userName}</Td>
+                  <Td className="font-medium text-slate">{o.prize}</Td>
+                  {/* ★住所は一覧では折りたたむこと。
+                        全文を出すと1行が3行になり、表にした意味が消えます。
+                        全文は右の板で読みます。 */}
+                  <Td className="num text-slate3">
+                    {o.address ? `〒${o.address.zip}` : "—"}
+                  </Td>
+                  <Td>
+                    <Badge tone={STATUS[o.status].tone}>{STATUS[o.status].label}</Badge>
+                  </Td>
+                </Tr>
+              ))}
+            </Table>
+
+            <Rows>
+              {todo.map((o) => (
+                <RowCard key={o.id}>
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="text-note font-bold text-slate">{o.prize}</span>
+                    <Badge tone={STATUS[o.status].tone}>{STATUS[o.status].label}</Badge>
                   </div>
-                  <Badge tone={STATUS[o.status].tone}>{STATUS[o.status].label}</Badge>
-                </div>
-
-                {/* ★お届け先は、お客様が依頼したときのものを写して持っています。
-                    会員情報の住所を後から直しても、この宛先は変わりません */}
-                {o.address && (
-                  <div className="mt-3 rounded-lg border border-edge bg-paper px-3 py-2">
-                    <p className="text-note font-bold text-slate">お届け先</p>
-                    <p className="num mt-0.5 text-note leading-[1.85] text-slate3">
-                      〒{o.address.zip}　{o.address.addr}
-                      <br />
-                      {o.address.name}　{o.address.tel}
-                    </p>
+                  <div className="mt-2 border-t border-edge pt-2">
+                    <KV k="会員" v={o.userName} />
+                    <KV k="依頼日" v={<span className="num">{o.requestedAt}</span>} />
                   </div>
-                )}
-
-                <div className="mt-4 flex flex-wrap gap-2">
-                  {mayShip ? (
-                    <>
-                      <Btn kind="primary" onClick={() => dispatch({ type: "SHIP", orderId: o.id })}>
-                        発送済みにする
-                      </Btn>
-                      <Btn
-                        onClick={() => {
-                          /* ★デモでは外部サイトへ飛ばしません。本番では景品マスターに
-                             登録した購入URLを開きます */
-                        }}
-                        title="デモでは開きません"
-                        disabled
-                      >
-                        仕入れ先を開く
-                      </Btn>
-                    </>
-                  ) : (
-                    <p className="text-note text-slate3">
-                      ★いまの担当には、発送処理の権限がありません。
-                      上の担当の切り替えから「サポート 三郎」または「運営 太郎」に変えると押せます。
-                    </p>
-                  )}
-                </div>
-
-                {mayShip && (
-                  <p className="mt-3 text-note leading-[1.85] text-slate3">
-                    押すと、伝票を作り、追跡番号をお客様にお知らせし、記録を1件残します。
-                    3つが1回で終わります。
-                  </p>
-                )}
-              </li>
-            ))}
-          </ul>
+                  <div className="mt-3">
+                    <Btn onClick={() => setOpenId(o.id)}>宛先と操作を開く</Btn>
+                  </div>
+                </RowCard>
+              ))}
+            </Rows>
+          </>
         )}
       </Card>
+
+      {/* ── 1件の中身と、操作 ── */}
+      <Drawer
+        open={open !== null}
+        onClose={() => setOpenId(null)}
+        title={open?.prize ?? ""}
+        note={open ? `${open.userName} ／ 依頼 ${open.requestedAt}` : undefined}
+        foot={
+          open && TODO_STATUS.includes(open.status) && mayShip ? (
+            <>
+              <Btn
+                kind="primary"
+                onClick={() => dispatch({ type: "SHIP", orderId: open.id })}
+              >
+                発送済みにする
+              </Btn>
+              <Btn
+                onClick={() => {
+                  /* ★デモでは外部サイトへ飛ばしません。本番では景品マスターに
+                     登録した購入URLを開きます */
+                }}
+                title="デモでは開きません"
+                disabled
+              >
+                仕入れ先を開く
+              </Btn>
+            </>
+          ) : undefined
+        }
+      >
+        {open && (
+          <>
+            <div className="flex items-center gap-2">
+              <Badge tone={STATUS[open.status].tone}>{STATUS[open.status].label}</Badge>
+            </div>
+
+            {/* ★お届け先は、お客様が依頼したときのものを写して持っています。
+                会員情報の住所を後から直しても、この宛先は変わりません */}
+            {open.address && (
+              <div className="rounded-xl border border-edge bg-paper2 px-4 py-3">
+                <p className="text-note font-bold text-slate">お届け先</p>
+                <p className="num mt-1 text-note leading-[1.85] text-slate3">
+                  〒{open.address.zip}　{open.address.addr}
+                  <br />
+                  {open.address.name}　{open.address.tel}
+                </p>
+              </div>
+            )}
+
+            {open.tracking && (
+              <div className="rounded-xl border border-edge bg-paper2 px-4 py-3">
+                <KV k="配送業者" v={open.carrier ?? "-"} />
+                <KV k="追跡番号" v={<span className="num">{open.tracking}</span>} />
+              </div>
+            )}
+
+            {TODO_STATUS.includes(open.status) &&
+              (mayShip ? (
+                <p className="text-note leading-[1.85] text-slate3">
+                  「発送済みにする」を押すと、伝票を作り、追跡番号をお客様にお知らせし、
+                  記録を1件残します。3つが1回で終わります。
+                </p>
+              ) : (
+                <p className="rounded-xl border border-warn/30 bg-warn/8 px-4 py-3 text-note leading-[1.85] text-warn-ink">
+                  いまの担当には、発送処理の権限がありません。
+                  上の「デモ：担当を切り替える」から「サポート 三郎」または「運営 太郎」に
+                  変えると押せます。
+                </p>
+              ))}
+          </>
+        )}
+      </Drawer>
 
       {/* ── 済んだもの ── */}
       <Card title="発送済み" note="追跡番号はここから確認できます。">

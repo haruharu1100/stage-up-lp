@@ -22,7 +22,7 @@
 
 "use client";
 
-import { Badge, Btn, Card, DemoNote, KV, RowCard, Rows, Stat, Table, Td, WhatIsThis } from "../ui";
+import { Badge, Card, DemoNote, KV, RowCard, Rows, Stat, Table, Td, Tr, WhatIsThis } from "../ui";
 
 type Item = {
   id: string;
@@ -76,53 +76,49 @@ export default function ProductsScreen() {
         </div>
       </Card>
 
-      {/* ── 在庫が足りない ── */}
-      {short.length > 0 && (
-        <Card
-          title="在庫より多く当たる設定になっています"
-          note="このまま当たると、お渡しできません。"
-        >
-          <ul className="space-y-3">
-            {short.map((i) => (
-              <li key={i.id} className="rounded-xl border border-danger/30 bg-danger/8 px-4 py-4">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <p className="text-note font-bold text-slate">{i.name}</p>
-                  <Badge tone="danger">在庫不足</Badge>
-                </div>
-                <p className="mt-2 text-note leading-[1.9] text-danger-ink">
-                  手元に <span className="num font-bold">{i.stock}本</span> しかありませんが、
-                  <span className="num font-bold"> {i.assigned}本 </span>
-                  が当たる設定になっています。
-                  <br />
-                  先に仕入れるか、当たる本数を減らしてください。
-                </p>
-                <div className="mt-3">
-                  <Btn disabled title="デモでは外部サイトを開きません">
-                    仕入れ先を開く
-                  </Btn>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </Card>
-      )}
+      {/* ── 先に直すこと ──
 
-      {/* ── 仕入れ値が未入力 ── */}
-      {noCost.length > 0 && (
-        <Card title="仕入れ値が入っていない景品" note="この景品は、ガチャに入れられません。">
-          <ul className="space-y-3">
+          ★ここに景品を「もう一度並べ直さない」こと。
+            もとは、在庫不足と仕入れ値未入力で、それぞれ1枚ずつ
+            景品カードを積んでいました。同じ景品が、この画面に
+            2回も3回も出ていたということです。
+            しかも1枚ごとに4行の説明が付いていて、
+            2件あるだけで画面1つ分が説明文で埋まりました。
+
+            直すべきものは「名前と、一言の理由」で足ります。
+            細かい数字は、下の一覧の同じ行に、色付きで出ています。 */}
+      {(short.length > 0 || noCost.length > 0) && (
+        <Card title="先に直すこと" note="ここが残っている間は、ガチャを公開できません。">
+          <ul className="space-y-2">
+            {short.map((i) => (
+              <li
+                key={i.id}
+                className="flex flex-wrap items-baseline gap-x-3 gap-y-1 rounded-xl border border-danger/30 bg-danger/8 px-4 py-2.5"
+              >
+                <Badge tone="danger">在庫不足</Badge>
+                <span className="text-note font-bold text-slate">{i.name}</span>
+                <span className="num text-note text-danger-ink">
+                  手元 {i.stock}本 ／ 当たる設定 {i.assigned}本
+                </span>
+              </li>
+            ))}
             {noCost.map((i) => (
-              <li key={i.id} className="rounded-xl border border-warn/35 bg-warn/8 px-4 py-4">
-                <p className="text-note font-bold text-slate">{i.name}</p>
-                <p className="mt-2 text-note leading-[1.9] text-warn-ink">
-                  仕入れ値が空のままです。このまま入れると、還元率の計算からこの分が抜け、
-                  数字だけ「安全」に見える状態になります。
-                  <br />
-                  ★仕組みとして、仕入れ値が空の景品はガチャに割り当てられません。
-                </p>
+              <li
+                key={i.id}
+                className="flex flex-wrap items-baseline gap-x-3 gap-y-1 rounded-xl border border-warn/35 bg-warn/8 px-4 py-2.5"
+              >
+                <Badge tone="warn">仕入れ値が未入力</Badge>
+                <span className="text-note font-bold text-slate">{i.name}</span>
+                <span className="text-note text-warn-ink">ガチャに割り当てられません</span>
               </li>
             ))}
           </ul>
+
+          <p className="mt-4 text-note leading-[1.85] text-slate3">
+            在庫より多く当たる設定のままだと、当たってもお渡しできません。
+            仕入れ値が空のままだと、還元率の計算からその分が抜け、数字だけ「安全」に見えます。
+            どちらも、仕組みとして公開前に止まります。
+          </p>
         </Card>
       )}
 
@@ -130,7 +126,13 @@ export default function ProductsScreen() {
       <Card title="景品一覧" note="すべて架空の景品です。">
         <Table head={["景品", "仕入れ値", "在庫", "割り当て", "使っているガチャ", "状態"]}>
           {ITEMS.map((i) => (
-            <tr key={i.id}>
+            /* ★問題のある行に色を付けること。
+                 上の「先に直すこと」で名前を見た人が、
+                 一覧の中からその行を目で探し直さずに済みます。 */
+            <Tr
+              key={i.id}
+              tone={i.assigned > i.stock ? "danger" : i.cost === null ? "warn" : undefined}
+            >
               <Td className="font-bold text-slate">{i.name}</Td>
               <Td className="num whitespace-nowrap">
                 {i.cost === null ? <span className="text-warn-ink">未入力</span> : `${i.cost.toLocaleString()}円`}
@@ -151,7 +153,7 @@ export default function ProductsScreen() {
                   <Badge tone="ok">問題なし</Badge>
                 )}
               </Td>
-            </tr>
+            </Tr>
           ))}
         </Table>
 

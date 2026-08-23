@@ -85,6 +85,16 @@ async function press(page, selector, until) {
 }
 
 async function enter(page) {
+  /* ★はじめての方への案内を、先に「見たこと」にしておくこと。
+     案内は画面の手前に出ます。左メニューを撮りたいのに
+     案内がかぶっていては、確かめようがありません。 */
+  await page.addInitScript(() => {
+    try {
+      window.localStorage.setItem("gachaos.admin.tour.v1", "done");
+    } catch {
+      /* 保存が使えない環境。そのときは案内も出ません */
+    }
+  });
   await page.goto(URL, { waitUntil: "domcontentloaded" });
   /* ★ログイン画面から担当者の一覧を外しました。
        デモの入口は「デモ管理者としてログイン」の1つだけです。 */

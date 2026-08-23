@@ -326,3 +326,154 @@ test("名前の一部が他の項目に含まれても、取り違えない", ()
     "名前の一部一致で押す相手を探しています。説明文にも当たって取り違えます。",
   );
 });
+
+/* ───────────────────────────────────────────────
+   5) 初回だけの案内と、デモ専用の機能
+   ─────────────────────────────────────────────── */
+
+const TOUR = code(read("components/console/Tour.tsx"));
+const TOUR_KEY = "gachaos.admin.tour.v1";
+
+test("はじめての方への案内は、一度閉じたら二度と出ない", () => {
+  assert.ok(
+    TOUR.includes(TOUR_KEY),
+    "見たことを覚えておく目印がありません。毎回出る案内は、ただの邪魔物です。",
+  );
+  assert.ok(
+    /localStorage\.setItem/.test(TOUR),
+    "閉じたことを保存していません。次に開いたとき、また出てきます。",
+  );
+});
+
+test("案内の出口が、2つ以上ある", () => {
+  assert.ok(TOUR.includes("あとで見る"), "閉じるボタンがありません。");
+  assert.ok(/Escape/.test(TOUR), "Esc で閉じられません。");
+  assert.ok(
+    TOUR.includes("案内を閉じる"),
+    "背景を押しても閉じられません。出口が1つの案内は、通せんぼです。",
+  );
+});
+
+test("案内は、管理画面の入れ物の中から呼ばれている", () => {
+  assert.ok(
+    /<Tour\b/.test(SHELL),
+    "Shell から案内を出していません。ログインした人にだけ出す形になっていません。",
+  );
+});
+
+test("画面を撮る・押して回る道具が、案内に邪魔されない", () => {
+  const files = [
+    "scripts/check-admin-reach.mjs",
+    "scripts/shoot-admin-shell.mjs",
+    "scripts/shoot-two-sides.mjs",
+    "scripts/shoot-day-in-life.mjs",
+  ];
+  for (const f of files) {
+    assert.ok(
+      read(f).includes(TOUR_KEY),
+      `${f} が、案内を先に「見たこと」にしていません。` +
+        "案内は画面の手前に出るので、出たままだと何も押せません。",
+    );
+  }
+});
+
+test("「1日、運営してみる」は、デモのときだけ出す", () => {
+  assert.ok(
+    /IS_DEMO/.test(CONSOLE),
+    "デモかどうかの判断を使っていません。本番の管理画面に練習用の進行が残ります。",
+  );
+  const demo = code(read("lib/console/demo.ts"));
+  assert.ok(
+    /NEXT_PUBLIC_GACHA_OS_DEMO/.test(demo),
+    "デモかどうかを外から切り替えられません。",
+  );
+  assert.ok(
+    /!==\s*"off"/.test(demo),
+    "既定が「本番」になっています。設定を入れ忘れたデモが、本番の顔で公開されます。",
+  );
+});
+
+/* ══════════════════════════════════════════════
+   6. 一覧 → 板（Drawer）と、キーボードだけの操作
+   ══════════════════════════════════════════════
+
+   ★「表にした」で終わらせないこと。
+
+     表は情報を削って一覧性を出す仕組みです。
+     削った先が無ければ、ただ情報が消えただけになります。
+     行を押したら中身が出る、までが1組です。
+
+   ★なぜテストで縛るのか。
+
+     画面はこれからも足されます。
+     新しい一覧を作った人が板を付け忘れても、
+     見た目は立派なので、誰も気づけません。
+     ここで落ちれば、その場で気づけます。
+*/
+
+test("毎日さわる一覧は、行を押すと右の板が開く", () => {
+  /* ガチャ・発送・問い合わせ・顧客。
+     どれも「次の1件、その次の1件」と続く仕事です。 */
+  const screens = [
+    "components/console/screens/GachaList.tsx",
+    "components/console/screens/ShippingScreen.tsx",
+    "components/console/screens/SupportScreen.tsx",
+    "components/console/screens/CustomersScreen.tsx",
+  ];
+  for (const f of screens) {
+    const src = code(read(f));
+    assert.ok(
+      /<Drawer\b/.test(src),
+      `${f}：右の板がありません。表から情報を削った意味がなくなります。`,
+    );
+    assert.ok(
+      /onOpen=/.test(src),
+      `${f}：行を押しても何も起きません。押せない表は、ただの紙です。`,
+    );
+  }
+});
+
+test("行は、マウスが無くても開ける", () => {
+  const ui = code(read("components/console/ui.tsx"));
+  assert.ok(
+    /tabIndex=\{0\}/.test(ui),
+    "行にキーボードの順番が回ってきません。Tab で行まで進めません。",
+  );
+  assert.ok(
+    /e\.key === "Enter"/.test(ui),
+    "行の上で Enter を押しても開きません。",
+  );
+});
+
+test("板は、Esc で閉じられる", () => {
+  const ui = code(read("components/console/ui.tsx"));
+  const drawer = ui.slice(ui.indexOf("export function Drawer"));
+  assert.ok(
+    /"Escape"/.test(drawer),
+    "板の閉じ方が「×を押す」しかありません。毎日使うと必ず嫌われます。",
+  );
+});
+
+test("操作回数の上限が、道具として残っている", () => {
+  /* ★上限を文章で約束しないこと。
+       文章は、画面が変わっても書き換わりません。
+       実際に押して数える道具を残し、そこに上限を書きます。 */
+  const ux = read("scripts/check-admin-ux.mjs");
+  for (const label of ["発送", "実還元率", "AI ガチャ作成", "問い合わせ"]) {
+    assert.ok(
+      ux.includes(label),
+      `操作回数の確認に「${label}」がありません。`,
+    );
+  }
+  assert.ok(
+    /Meta\+k/.test(ux),
+    "⌘K で画面を探せることを、誰も確かめていません。",
+  );
+  const pkg = JSON.parse(read("package.json")) as {
+    scripts: Record<string, string>;
+  };
+  assert.ok(
+    pkg.scripts["check:ux"],
+    "package.json に check:ux がありません。誰も呼ばない道具は、いつか腐ります。",
+  );
+});

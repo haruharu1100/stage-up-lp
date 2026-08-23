@@ -126,6 +126,19 @@ for (const size of SIZES) {
     'nav[aria-label="管理メニュー"]',
   );
   await page.waitForTimeout(700);
+
+  /* ── ③-1 はじめての方への案内（初回だけ出る） ──
+     ★撮ったら必ず閉じること。
+       案内は画面の手前に出ます。閉じずに進めると、
+       以降の全カットに案内がかぶり、中身が1枚も確認できません。 */
+  const tour = page.locator('div[role="dialog"][aria-label="はじめての方への案内"]');
+  if (await tour.count()) {
+    await shot("03a-tour", `${size.name}：初回だけ出る案内（閉じると二度と出ません）`);
+    await page.locator('button:has-text("あとで見る")').click();
+    await tour.waitFor({ state: "detached" });
+    await page.waitForTimeout(250);
+  }
+
   await shot("03-dashboard", `${size.name}：ダッシュボード（あいさつ・今日やること・数字）`);
 
   const nav = page.locator('nav[aria-label="管理メニュー"]').first();

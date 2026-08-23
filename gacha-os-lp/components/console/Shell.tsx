@@ -86,6 +86,7 @@ import {
 } from "./menu";
 import Icon from "./Icon";
 import DemoRoleSwitch from "./DemoRoleSwitch";
+import Tour from "./Tour";
 import { Badge, Btn } from "./ui";
 
 export default function Shell({
@@ -310,6 +311,9 @@ export default function Shell({
 
       {/* ── 画面を探す（⌘K） ── */}
       {finder && <Finder onGo={go} onClose={() => setFinder(false)} me={s.me!} />}
+
+      {/* ── はじめての方への案内。初回だけ出て、閉じたら二度と出ません ── */}
+      <Tour onGo={go} />
     </div>
   );
 }

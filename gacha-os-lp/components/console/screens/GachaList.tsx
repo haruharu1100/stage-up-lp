@@ -12,10 +12,11 @@
 
 "use client";
 
+import { useState } from "react";
 import type { ConsoleState, ConsoleAction, ConsoleGacha } from "@/lib/console/state";
 import { can } from "@/lib/console/state";
 import type { MenuKey } from "../menu";
-import { Badge, Btn, Card, KV, RowCard, Rows, Table, Td, WhatIsThis } from "../ui";
+import { Badge, Btn, Card, Drawer, KV, RowCard, Rows, Table, Td, Tr, WhatIsThis } from "../ui";
 
 const STATUS: Record<
   ConsoleGacha["status"],
@@ -49,6 +50,16 @@ export default function GachaList({
   const mayPublish = can(me.role, "gacha.publish");
   const mayEdit = can(me.role, "gacha.edit");
 
+  /**
+   * いま開いている1件。
+   *
+   * ★件そのものではなく、番号だけを持つこと。
+   *   公開・停止を押した瞬間に状態が変わります。件を写して持つと、
+   *   板の中だけ古い状態のまま残り、押しても何も起きていないように見えます。
+   */
+  const [openId, setOpenId] = useState<string | null>(null);
+  const open = openId ? (s.gachas.find((g) => g.id === openId) ?? null) : null;
+
   const alerts = s.gachas.filter(
     (g) => g.status === "PUBLISHED" && (g.realRtp >= 105 || g.marketRtp >= 110),
   );
@@ -61,32 +72,39 @@ export default function GachaList({
         <strong className="font-bold text-slate">検証を通していないガチャは公開できません。</strong>
       </WhatIsThis>
 
-      {/* ── 止まっているガチャ ── */}
+      {/* ── 止まっているガチャ ──
+
+          ★1件を5行で書かないこと。
+            もとは、止まった理由を1件ごとに3行の文章で説明していました。
+            止まっているガチャが3つあれば、それだけで画面の半分が
+            ほぼ同じ文章で埋まります。
+            違うのは「どれが」「何%で」の2つだけなので、
+            1行に並べて、詳しくはボタンの先で読みます。 */}
       {paused.length > 0 && (
-        <Card title="いま止まっているガチャ" note="システムが自動で止めたものも含みます。">
-          {paused.map((g) => (
-            <div
-              key={g.id}
-              className="rounded-xl border border-danger/30 bg-danger/8 px-4 py-4"
-            >
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <p className="text-note font-bold text-slate">{g.title}</p>
-                <Badge tone="danger">販売停止中</Badge>
-              </div>
-              <p className="mt-2 text-note leading-[1.9] text-danger-ink">
-                景品の相場が上がり、実際にお返ししている割合が
-                <span className="num font-bold"> {g.realRtp}% </span>
-                になっています。このまま売り続けると、1口ごとに赤字が増えます。
-                <br />
-                いまの粗利：
-                <span className="num font-bold">{g.profit.toLocaleString()}円</span>
-              </p>
-              <div className="mt-3 flex flex-wrap gap-2">
-                <Btn onClick={() => onNav("rtp")}>くわしく見る</Btn>
-                <Btn onClick={() => onNav("market")}>相場を見る</Btn>
-              </div>
-            </div>
-          ))}
+        <Card
+          title="いま止まっているガチャ"
+          note="システムが自動で止めたものも含みます。このまま売り続けると、1口ごとに赤字が増えます。"
+        >
+          <ul className="space-y-2">
+            {paused.map((g) => (
+              <li
+                key={g.id}
+                className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 rounded-xl border border-danger/30 bg-danger/8 px-4 py-2.5"
+              >
+                <span className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                  <Badge tone="danger">販売停止中</Badge>
+                  <span className="text-note font-bold text-slate">{g.title}</span>
+                  <span className="num text-note text-danger-ink">
+                    実還元率 {g.realRtp}% ／ 粗利 {g.profit.toLocaleString()}円
+                  </span>
+                </span>
+                <span className="flex flex-wrap gap-2">
+                  <Btn onClick={() => onNav("rtp")}>くわしく見る</Btn>
+                  <Btn onClick={() => onNav("market")}>相場を見る</Btn>
+                </span>
+              </li>
+            ))}
+          </ul>
         </Card>
       )}
 
@@ -135,9 +153,28 @@ export default function GachaList({
           ) : undefined
         }
       >
-        <Table head={["ガチャ", "状態", "価格", "残り", "設計還元率", "実還元率", "粗利", ""]}>
+        {/* ★操作ボタンを表の中に並べないこと。
+              ボタンを1列足すと、それだけで数字の列が押し潰されます。
+              しかも行そのものが押せるので、行を開くつもりで
+              「公開する」を押してしまう事故が起きます。
+              操作は、行を押して開いた右の板の中だけに置きます。 */}
+        <Table head={["ガチャ", "状態", "価格", "残り", "設計還元率", "実還元率", "粗利"]}>
           {s.gachas.map((g) => (
-            <tr key={g.id}>
+            /* ★危ない行に色を付けること。
+                 上の警告で名前を見た人が、一覧の中からその行を
+                 目で探し直さずに済みます。 */
+            <Tr
+              key={g.id}
+              onOpen={() => setOpenId(g.id)}
+              active={openId === g.id}
+              tone={
+                g.status === "PAUSED" || rtpTone(g) === "danger"
+                  ? "danger"
+                  : rtpTone(g) === "warn"
+                    ? "warn"
+                    : undefined
+              }
+            >
               <Td className="font-bold text-slate">{g.title}</Td>
               <Td>
                 <Badge tone={STATUS[g.status].tone}>{STATUS[g.status].label}</Badge>
@@ -169,10 +206,7 @@ export default function GachaList({
                   {g.profit.toLocaleString()}円
                 </span>
               </Td>
-              <Td>
-                <Actions g={g} mayPublish={mayPublish} mayEdit={mayEdit} dispatch={dispatch} />
-              </Td>
-            </tr>
+            </Tr>
           ))}
         </Table>
 
@@ -197,7 +231,7 @@ export default function GachaList({
                 <KV k="粗利" v={<span className="num">{g.profit.toLocaleString()}円</span>} />
               </div>
               <div className="mt-3">
-                <Actions g={g} mayPublish={mayPublish} mayEdit={mayEdit} dispatch={dispatch} />
+                <Btn onClick={() => setOpenId(g.id)}>中身と操作を開く</Btn>
               </div>
             </RowCard>
           ))}
@@ -210,6 +244,73 @@ export default function GachaList({
           </p>
         )}
       </Card>
+
+      {/* ── 1件の中身と、操作 ── */}
+      <Drawer
+        open={open !== null}
+        onClose={() => setOpenId(null)}
+        title={open?.title ?? ""}
+        note={open ? `1回 ${open.price.toLocaleString()}円` : undefined}
+        foot={
+          open ? (
+            <Actions g={open} mayPublish={mayPublish} mayEdit={mayEdit} dispatch={dispatch} />
+          ) : undefined
+        }
+      >
+        {open && (
+          <>
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge tone={STATUS[open.status].tone}>{STATUS[open.status].label}</Badge>
+              {open.backtest === null ? (
+                <Badge tone="neutral">公開前の検証がまだ</Badge>
+              ) : (
+                <Badge
+                  tone={
+                    open.backtest === "DANGER"
+                      ? "danger"
+                      : open.backtest === "CAUTION"
+                        ? "warn"
+                        : "ok"
+                  }
+                >
+                  検証 {open.backtest}
+                </Badge>
+              )}
+            </div>
+
+            <div className="rounded-xl border border-edge bg-paper2 px-4 py-3">
+              <KV
+                k="残り口数"
+                v={
+                  <span className="num">
+                    {open.left.toLocaleString()} / {open.total.toLocaleString()}
+                  </span>
+                }
+              />
+              <KV k="設計還元率" v={<span className="num">{open.designedRtp ? `${open.designedRtp}%` : "-"}</span>} />
+              <KV k="実還元率" v={<span className="num">{open.realRtp ? `${open.realRtp}%` : "-"}</span>} />
+              <KV k="相場基準の還元率" v={<span className="num">{open.marketRtp ? `${open.marketRtp}%` : "-"}</span>} />
+              <KV k="粗利" v={<span className="num">{open.profit.toLocaleString()}円</span>} />
+            </div>
+
+            {/* ★止まっているなら、そのままにしないこと。
+                  「販売停止中」だけ見せて放置すると、
+                  何を直せば再開できるのかが分かりません */}
+            {open.status === "PAUSED" && (
+              <p className="rounded-xl border border-danger/30 bg-danger/8 px-4 py-3 text-note leading-[1.9] text-danger-ink">
+                販売を止めています。実還元率か、相場の値上がりが原因です。
+                下の「実還元率を見る」「相場を見る」で、どちらなのかが分かります。
+              </p>
+            )}
+
+            <div className="flex flex-wrap gap-2">
+              <Btn onClick={() => onNav("rtp")}>実還元率を見る</Btn>
+              <Btn onClick={() => onNav("market")}>相場を見る</Btn>
+              <Btn onClick={() => onNav("preview")}>お客様の画面で見る</Btn>
+            </div>
+          </>
+        )}
+      </Drawer>
     </>
   );
 }

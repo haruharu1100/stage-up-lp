@@ -87,6 +87,7 @@
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import { initialState, reducer } from "@/lib/console/state";
 import { daySnapshot } from "@/lib/console/dayInLife";
+import { IS_DEMO } from "@/lib/console/demo";
 import { Login, Mfa } from "./Gate";
 import Shell from "./Shell";
 import DayInLife, { type DayRun } from "./DayInLife";
@@ -259,7 +260,10 @@ export default function ClientConsole() {
         />
       )}
 
-      {run && (
+      {/* ★ここにも IS_DEMO を掛けること。
+          入口のボタンを消しただけでは、すでに始めている人の画面には
+          案内が残ります。出口も塞いで、はじめて「本番には無い」と言えます */}
+      {IS_DEMO && run && (
         <DayInLife
           dock={adminShell ? "flow" : "fixed"}
           boxRef={dayRef}
@@ -280,7 +284,7 @@ export default function ClientConsole() {
       {/* ★お客様側だけ、案内が下に居座るぶんの隙間を空ける。
           高さは必ず実測すること。「だいたい208px」と書くと、
           文章が1行増えただけで、いちばん下のボタンが案内の裏に隠れます。 */}
-      {run && !adminShell && <div style={{ height: dayH }} aria-hidden />}
+      {IS_DEMO && run && !adminShell && <div style={{ height: dayH }} aria-hidden />}
     </div>
   );
 }
@@ -363,14 +367,24 @@ function SideSwitch({
 
         {/* ★「機能を1つずつ見る」の隣に、これを置くこと。
             機能一覧は、すでに使っている人にしか読めません。
-            初めての方が知りたいのは「1日、これで回るのか」だけです */}
-        {!dayRunning && (
+            初めての方が知りたいのは「1日、これで回るのか」だけです。
+
+            ★これはデモ専用です。本番の管理画面には出しません。
+              本物の売上を見ている画面に、練習用の進行が並んでいると、
+              どちらの数字を見ているのか分からなくなります。
+              出す・出さないを決めるのは lib/console/demo.ts の1か所だけです。 */}
+        {IS_DEMO && !dayRunning && (
           <button
             type="button"
             onClick={onStartDay}
-            className="nb shrink-0 rounded-xl bg-white px-4 py-2.5 text-[0.78rem] font-bold text-[#0F1B33] shadow-sm transition hover:bg-[#E8EDF7]"
+            className="shrink-0 rounded-xl bg-white px-4 py-2 text-left shadow-sm transition hover:bg-[#E8EDF7]"
           >
-            1日、運営してみる
+            <span className="nb block text-[0.78rem] font-bold leading-tight text-[#0F1B33]">
+              1日、運営してみる
+            </span>
+            <span className="nb block text-[0.66rem] leading-tight text-[#5E636B]">
+              デモ専用
+            </span>
           </button>
         )}
       </div>
