@@ -112,6 +112,7 @@ import ProductsScreen from "./screens/ProductsScreen";
 import MarketScreen from "./screens/MarketScreen";
 import AnalyticsScreen from "./screens/AnalyticsScreen";
 import MyPage from "./customer/MyPage";
+import { SHOP_BG } from "./customer/Storefront";
 
 /** いま、どちら側を見ているか */
 type Side = "admin" | "customer";
@@ -217,7 +218,16 @@ export default function ClientConsole() {
 
   return (
     <div
-      style={{ "--switch-h": `${switchH}px` } as React.CSSProperties}
+      style={
+        {
+          "--switch-h": `${switchH}px`,
+          /* ★お客様側の下タブは、この値のぶん上へ逃がすこと。
+             案内パネルは下に貼り付いています。タブを bottom-0 で置くと、
+             案内の裏に入って押せなくなります。しかも「押しても反応しない」
+             ようにしか見えないので、壊れていると思われます */
+          "--day-h": `${!adminShell ? dayH : 0}px`,
+        } as React.CSSProperties
+      }
       className={adminShell ? "flex h-[100dvh] flex-col overflow-hidden" : ""}
     >
       <SideSwitch
@@ -233,7 +243,11 @@ export default function ClientConsole() {
            ログインが要ります。止めるかどうかを決めるのは MyPage ではなく、
            state.ts の CUSTOMER_GATES です。
            見ているデータは、管理側とまったく同じ1つです */
-        <div className="bg-[#F4F5F7] pt-4">
+        /* ★ここを白のままにしないこと。
+           お客様側は暗い売り場です。外枠だけ白いと、
+           スクロールで行き止まったときに下から白が出てきて、
+           「読み込みに失敗した画面」に見えます */
+        <div className="min-h-[100dvh]" style={{ background: SHOP_BG }}>
           <MyPage s={s} dispatch={dispatch} />
         </div>
       ) : (

@@ -57,7 +57,32 @@ export type DrawOutcome = {
   needsShipping: boolean;
   /** ポイントでお返しする分（円ではなく pt） */
   points: number;
+  /**
+   * ラストワン賞として出たか。
+   *
+   * ★これは「おまけを1本足す」ことではありません。
+   *   足すと、その分だけ還元率が上がります。
+   *   公開前バックテストは足す前の構成で通っているので、
+   *   検証した構成と、実際に配る構成が別物になります。
+   *
+   *   ここでやっているのは、A賞のうち1本を
+   *   「最後の1口を引いた方のために取り置く」ことだけです。
+   *   箱の中身は1本も増えていないので、還元率は動きません。
+   */
+  lastOne?: boolean;
 };
+
+/**
+ * ラストワン賞に取り置く等級。
+ *
+ * ★S賞を取り置かないこと。
+ *   S賞は箱に1本しか入っていません。それを取り置くと、
+ *   S賞は「最後の1口を引いた人だけが当たるもの」になります。
+ *   途中で引く方にとっては、S賞が箱に無いのと同じです。
+ *   A賞は必ず2本以上あるので、1本取り置いても
+ *   途中で当たる可能性は残ります。
+ */
+export const LAST_ONE_GRADE: Grade = "A";
 
 /**
  * 抽選の記録（DRAW LOG）。
@@ -175,18 +200,47 @@ export function drawOnce(
 ): DrawOutcome {
   const pool = poolOf(args.title, args.price, args.total, args.designedRtp);
 
+  /* 取り置いてあるラストワン賞が、まだ箱に残っているか */
+  const keep = pool.find((p) => p.grade === LAST_ONE_GRADE);
+  const kept = keep && (drawn[LAST_ONE_GRADE] ?? 0) < keep.count ? 1 : 0;
+
+  /* ── ラストワン賞 ──
+     最後の1口なら、取り置いてあるA賞をお渡しします。
+     箱の中身は増えていません。渡す順番を決めているだけです */
+  if (args.left <= 1 && keep && kept === 1) {
+    const needsShipping = SHIPPED.includes(keep.grade);
+    return {
+      grade: keep.grade,
+      name: `${keep.name}（ラストワン賞）`,
+      value: keep.value,
+      needsShipping,
+      points: needsShipping ? 0 : keep.value,
+      lastOne: true,
+    };
+  }
+
   /* 箱に残っている札を数える。
      景品が入っていない札（はずれ）も、ちゃんと1枚として数えます。
      ここを数え忘れると、残りが少なくなるほど当選率が跳ね上がります */
   const remainPrize = pool.map((p) => ({
     ...p,
-    remain: Math.max(0, p.count - (drawn[p.grade] ?? 0)),
+    /* ★ラストワン用の1本を、通常の抽選から外しておくこと。
+       外し忘れると、途中で全部出てしまい、
+       最後の1口を引いた方に渡すものが残りません */
+    remain: Math.max(
+      0,
+      p.count - (drawn[p.grade] ?? 0) - (p.grade === LAST_ONE_GRADE ? kept : 0),
+    ),
   }));
   const prizeLeft = remainPrize.reduce((a, p) => a + p.remain, 0);
-  const blankLeft = Math.max(0, args.left - prizeLeft);
+  const blankLeft = Math.max(0, args.left - kept - prizeLeft);
 
+  /* ★取り置いた1口を、抽選の分母から必ず外すこと。
+     外さないと「どの札にも当たらなかった」場合が生まれ、
+     そこへ落ちた方は、設計に無い参加ポイントを受け取ります。
+     1口ぶんとはいえ、還元率は検証した値からずれます */
   const r = rng(seed + nth * 2654435761)();
-  let pick = r * Math.max(1, args.left);
+  let pick = r * Math.max(1, args.left - kept);
 
   for (const p of remainPrize) {
     if (pick < p.remain) {

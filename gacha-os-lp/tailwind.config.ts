@@ -141,6 +141,31 @@ const config: Config = {
           "0%,100%": { transform: "scale(1)", opacity: "0.55" },
           "50%": { transform: "scale(1.06)", opacity: "0.9" },
         },
+        /* ── ガチャ演出 ──
+           ★演出の中で結果を決めないこと。
+             結果は引いた瞬間にもう決まっていて、ここは再生しているだけです。
+             だから途中で止めても（SKIP）、結果は1文字も変わりません。 */
+        shakebox: {
+          "0%,100%": { transform: "translate3d(0,0,0) rotate(0deg)" },
+          "20%": { transform: "translate3d(-7px,0,0) rotate(-5deg)" },
+          "40%": { transform: "translate3d(7px,0,0) rotate(5deg)" },
+          "60%": { transform: "translate3d(-5px,0,0) rotate(-3deg)" },
+          "80%": { transform: "translate3d(5px,0,0) rotate(3deg)" },
+        },
+        burst: {
+          "0%": { transform: "scale(0.2)", opacity: "0" },
+          "35%": { opacity: "1" },
+          "100%": { transform: "scale(2.8)", opacity: "0" },
+        },
+        revealIn: {
+          "0%": { opacity: "0", transform: "scale(0.7) rotate(-7deg)" },
+          "62%": { opacity: "1", transform: "scale(1.06) rotate(2deg)" },
+          "100%": { opacity: "1", transform: "scale(1) rotate(0deg)" },
+        },
+        rayspin: {
+          "0%": { transform: "rotate(0deg)" },
+          "100%": { transform: "rotate(360deg)" },
+        },
       },
       animation: {
         float: "float 7s ease-in-out infinite",
@@ -149,6 +174,10 @@ const config: Config = {
         trail: "trail 2.2s linear infinite",
         riseIn: "riseIn 0.7s cubic-bezier(0.22,1,0.36,1) both",
         breathe: "breathe 5.5s ease-in-out infinite",
+        shakebox: "shakebox 0.5s ease-in-out infinite",
+        burst: "burst 0.9s ease-out both",
+        revealIn: "revealIn 0.62s cubic-bezier(0.22,1,0.36,1) both",
+        rayspin: "rayspin 16s linear infinite",
       },
     },
   },
