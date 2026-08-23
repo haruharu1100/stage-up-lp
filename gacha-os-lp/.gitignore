@@ -36,8 +36,14 @@ yarn-error.log*
 next-env.d.ts
 
 # 本番確認用のビルド出力
+#
+# ★新しく作るときは、名前を「.next」で始めないこと。
+#   Vercel は「.next」で始まる名前を自分の作業場所として特別に扱うので、
+#   .vercelignore に書いても公開のときに外れず、216MB を送ろうとして
+#   途中で止まります（2026-08-24 実測）。理由は .vercelignore に書いてあります。
 .next-prod/
 .next-verify/
+_next-verify-local/
 
 # 検証用のスクリーンショット・録画（容量が大きいのでgitに入れない）
 /_verify/

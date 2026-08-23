@@ -14,6 +14,7 @@
     "check:reach": "node scripts/check-admin-reach.mjs",
     "check:ux": "node scripts/check-admin-ux.mjs",
     "check:flash": "node scripts/check-flash.mjs",
+    "deploy:preview": "node scripts/deploy-preview.mjs",
     "verify": "tsc --noEmit && npm test && npm run check:urls && npm run build"
   },
   "dependencies": {
