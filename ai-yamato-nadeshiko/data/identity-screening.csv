@@ -1,0 +1,11 @@
+id,registry,status,checked_at,source_url,note
+JP_TRADEMARK,日本 特許庁 J-PlatPat 商標検索,CLEAR,2026-08-23,https://www.j-platpat.inpit.go.jp/,"[NAME_LOCK]「粟野鈴穂」「Suzuho Awano」のフルネーム一致は無し。★ただし登録6081973「鈴穂」第30類（菓子）が存続中＝食品・菓子の商品ブランド名には使えない（恒久ルール／lib/identity.ts の FOOD_BRAND_RESTRICTION）。称呼「スズホ」の類似検索は未実施（要弁理士）"
+US_TRADEMARK,米国 USPTO TESS 商標検索,CLEAR,2026-08-23,https://tmsearch.uspto.gov/,"[NAME_LOCK]「SUZUHO AWANO」「AWANO」「SUZUHO」の登録・出願は該当なし。検索機能そのものは別語（suzuki→128件）で事前確認済み"
+WEB_SEARCH_EN,英語での一般Web検索（同名の実在人物・ブランド）,CLEAR,2026-08-23,https://www.google.com/search?q=%22Suzuho+Awano%22,"[NAME_LOCK]“Suzuho Awano” 完全一致の実在人物・ブランド・AIインフルエンサーは検出されず。Hana と違い先客が居ない"
+WEB_SEARCH_JA,日本語での一般Web検索（同名の実在人物・ブランド）,CLEAR,2026-08-23,https://www.google.com/search?q=%22%E7%B2%9F%E9%87%8E%E9%88%B4%E7%A9%82%22,"[NAME_LOCK]「粟野鈴穂」完全一致の実在人物は検出されず。姓「粟野」名「鈴穂」は単独では実在するが組み合わせの先客は無い"
+X_HANDLE,X（旧Twitter）の同名アカウント,UNKNOWN,,,"[ACCOUNT]★機械では確認できない（スクレイピング禁止・X公式APIのみ・ブラウザ自動操作禁止）。人が @suzuho_awano → @suzuhoawano → @awano_suzuho の順で空きを見て、取得できたIDをここに書く"
+INSTAGRAM_HANDLE,Instagram の同名アカウント,UNKNOWN,,,[ACCOUNT]★機械では確認できない（同上）。Xと同じIDを優先。任意項目なので取れなくても止めない
+TIKTOK_HANDLE,TikTok の同名アカウント,UNKNOWN,,,[ACCOUNT]★機械では確認できない（同上）。Xと同じIDを優先。任意項目なので取れなくても止めない
+EU_TRADEMARK,EUIPO eSearch 商標検索,UNKNOWN,,,[EXPANSION]未確認。EU圏へ販売・広告を広げる段階になったら人が調べる。今はEU向け販売の予定が無いので名前の確定もアカウント作成も止めない
+DOMAIN,独自ドメインの取得可否,CLEAR,2026-08-23,https://rdap.verisign.com/com/v1/domain/slowjapanguide.com,"[EXPANSION]slowjapanguide.com は未登録（Verisign RDAP が404＝取得可能）。suzuhoawano.com も未登録。運営ブランド用に slowjapanguide.com を取る"
+OPERATOR_BRAND_SEARCH,運営ブランド「Slow Japan Guide」の衝突確認,CLEAR,2026-08-23,https://www.google.com/search?q=%22Slow+Japan+Guide%22,"[NAME_LOCK]完全一致の企業・日本旅行サービス・AIインフルエンサー・成人向け・VPN/eSIMブランドは検出されず。★注意: 「slow travel Japan」は楽天トラベル・JNTO・Japan Experience等が使う一般的な説明語のため、商標としての識別力は弱い。独占できる名前とは考えない。米国商標の機械照会は USPTO のBot対策(AWS WAF)により到達できず未実施"

@@ -1,0 +1,15 @@
+node_modules/
+
+# DBの実データは入れない。ただし商標・同名調査の台帳だけは追跡する
+# （これが今の最大のボトルネックで、人が埋める対象。秘密情報も個人情報も含まない）
+data/*
+!data/identity-screening.csv
+
+.env
+.env.*
+!.env.example
+output/
+*.db
+*.db-shm
+*.db-wal
+*.db.old-*

@@ -1,0 +1,33 @@
+{
+  "name": "ai-yamato-nadeshiko",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "gate": "tsx scripts/gate.ts",
+    "cost": "node scripts/cost-simulator.mjs",
+    "db:init": "tsx scripts/init-db.ts",
+    "db:laws": "tsx scripts/seed-laws.ts",
+    "check:compliance": "tsx scripts/test-compliance.ts",
+    "identity:check": "tsx scripts/identity-check.ts",
+    "identity:record": "tsx scripts/record-name-policy.ts",
+    "gate:record": "tsx scripts/record-phase-gate.ts",
+    "offers:import": "tsx scripts/import-offers.ts",
+    "offers:rank": "tsx scripts/rank-offers.ts",
+    "apply:check": "tsx scripts/apply-check.ts",
+    "apply:record": "tsx scripts/apply-record.ts",
+    "plan:slots": "tsx scripts/plan-slots.ts",
+    "plan:week": "tsx scripts/plan-week.ts",
+    "metrics:daily": "tsx scripts/metrics-daily.ts",
+    "learn:attributes": "tsx scripts/analyze-attributes.ts",
+    "faces:prompts": "tsx scripts/generate-faces.ts",
+    "test": "tsx scripts/test-all.ts"
+  },
+  "dependencies": {
+    "@libsql/client": "^0.14.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.9.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3"
+  }
+}
