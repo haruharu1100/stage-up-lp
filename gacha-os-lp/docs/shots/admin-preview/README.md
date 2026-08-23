@@ -1,7 +1,7 @@
 # 管理サイト：ログイン／左メニュー／ダッシュボード
 
-撮影日時：2026-08-23T17:47:34.079Z
-対象：http://localhost:3210/client-demo
+撮影日時：2026-08-23T18:12:48.005Z
+対象：https://gacha-os-ll59s5t7p-haruharu1100s-projects.vercel.app/client-demo
 
 ## いちばん下の操作に、手が届いているか（実測）
 
