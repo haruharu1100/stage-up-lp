@@ -87,6 +87,7 @@ import {
 import Icon from "./Icon";
 import DemoRoleSwitch from "./DemoRoleSwitch";
 import Tour from "./Tour";
+import { useFlash } from "./useFlash";
 import { Badge, Btn } from "./ui";
 
 export default function Shell({
@@ -115,6 +116,13 @@ export default function Shell({
   const me = s.me!;
   const sum = summary(s);
   const item = menuItem(page);
+
+  /* ── お知らせ帯を、置き去りにしない ──────────────
+     ★知らせは、いま見ている画面の話だと読まれます。
+       ガチャの結果が発送の画面の上に残っていたら、
+       発送で何かが起きたのだと読み違えます。
+       数秒たつか、画面を移ったら消します（useFlash.ts）。 */
+  useFlash(s.flash, page, onClearFlash);
 
   /* ── ⌘K / Ctrl+K で検索を開く ────────────────────
      ★入力欄に文字を打っているときは開かないこと。
@@ -227,6 +235,11 @@ export default function Shell({
       {/* ══ お知らせ帯 ══ */}
       {s.flash && (
         <div
+          /* ★この印を消さないこと。
+               scripts/check-flash.mjs が、実物の画面で
+               「帯が出ているか／消えたか」を見るための目印です。
+               見た目には何も影響しません。 */
+          data-flash="1"
           className={`flex-none px-4 py-2 sm:px-5 ${
             s.flash.kind === "error"
               ? "bg-danger/10 text-danger-ink"

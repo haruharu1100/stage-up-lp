@@ -79,6 +79,7 @@ import { Shop, GachaDetail, DrawTheater } from "./Storefront";
 import { artKindOf } from "./art";
 import { maxDraws } from "./catalog";
 import { noticesOf, todoCount } from "./notices";
+import { useFlash } from "../useFlash";
 import {
   Back,
   BigBtn,
@@ -137,6 +138,12 @@ export default function MyPage({
     setRawView(v);
     if (typeof window !== "undefined") window.scrollTo({ top: 0 });
   };
+
+  /* ── お知らせを、次の画面まで連れて行かない ──────────
+     ★「C賞でした」が受取や交換の画面の上に残っていると、
+       そこで何かが確定したのだと読まれます。
+       数秒たつか、画面を移ったら消します（useFlash.ts）。 */
+  useFlash(s.flash, view.name, () => dispatch({ type: "CLEAR_FLASH" }));
 
   /**
    * ログインの前に見ていたガチャ。
@@ -358,6 +365,11 @@ export default function MyPage({
       {s.flash?.to === "customer" && (
         <div className="px-4 pt-3">
           <div
+            /* ★この印を消さないこと。
+                 scripts/check-flash.mjs が、実物の画面で
+                 「帯が出ているか／消えたか」を見るための目印です。
+                 見た目には何も影響しません。 */
+            data-flash="1"
             className="rounded-xl px-4 py-3 text-[0.83rem] leading-[1.85]"
             style={(() => {
               const t =

@@ -45,7 +45,7 @@
 
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
-import { existsSync, mkdirSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, rmSync } from "node:fs";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
@@ -181,8 +181,14 @@ async function drawer(page, menu, shotName) {
 /* ══════════════════════════════════════════════
    実行
    ══════════════════════════════════════════════ */
-rmSync(OUT, { recursive: true, force: true });
+/* ★フォルダごと消さないこと。
+     ここには、撮った画像のほかに、結果をまとめた README.md も置いています。
+     フォルダごと消すと、手で書いた説明まで毎回消えます。
+     消すのは、自分が撮った画像（.png）だけにします。 */
 mkdirSync(OUT, { recursive: true });
+for (const f of readdirSync(OUT)) {
+  if (f.endsWith(".png")) rmSync(join(OUT, f), { force: true });
+}
 
 const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
