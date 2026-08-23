@@ -397,45 +397,82 @@ function SideNav({
         ))}
       </div>
 
-      {/* 下：絶対にスクロールしない場所 */}
-      <div className="flex-none border-t border-edge2 bg-paper px-2.5 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-        {onToggleCollapse && (
-          <button
-            type="button"
-            onClick={onToggleCollapse}
-            aria-label={collapsed ? "メニューを広げる" : "メニューを畳む"}
-            className="nb mb-2 flex w-full items-center justify-center gap-2 rounded-xl border border-edge px-3 py-2 text-note font-bold text-slate3 hover:bg-mist"
-          >
-            <span aria-hidden>{collapsed ? "»" : "«"}</span>
-            {!collapsed && "畳む"}
-          </button>
-        )}
+      {/* ══ 下：絶対にスクロールしない場所 ══
 
+          ★ここを大きくしないこと。
+            ここが厚くなった分だけ、上の一覧が薄くなります。
+            以前は「畳む」「デモを最初に戻す」「ログアウト」
+            「販売サイトへ戻る」を縦4段に積んでいて、
+            それだけで約190px を常に使っていました。
+            900pxの画面では、メニュー一覧に残るのが
+            半分以下になってしまいます。
+
+            使う回数の少ないものほど、小さく置きます。
+            ログアウトは1日1回、販売サイトへ戻るはもっと少ない。
+            毎日何十回も使う一覧のほうに、場所を渡します。 */}
+      <div className="flex-none border-t border-edge2 bg-paper px-2.5 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
         {collapsed ? (
-          <button
-            type="button"
-            onClick={onLogout}
-            title="ログアウト"
-            aria-label="ログアウト"
-            className="flex w-full items-center justify-center rounded-xl px-3 py-2.5 text-slate2 hover:bg-mist"
-          >
-            <Icon name="lock" />
-          </button>
-        ) : (
-          <div className="space-y-2">
-            <Btn full onClick={onReset}>
-              デモを最初に戻す
-            </Btn>
-            <Btn full kind="ghost" onClick={onLogout}>
-              ログアウト
-            </Btn>
-            <Link
-              href="/"
-              className="nb block rounded-xl px-4 py-2 text-center text-note font-bold text-slate3 underline underline-offset-4 hover:text-blue-ink"
+          <div className="space-y-1">
+            {onToggleCollapse && (
+              <button
+                type="button"
+                onClick={onToggleCollapse}
+                aria-label="メニューを広げる"
+                title="メニューを広げる"
+                className="nb flex w-full items-center justify-center rounded-xl border border-edge px-3 py-2 text-note font-bold text-slate3 hover:bg-mist"
+              >
+                <span aria-hidden>»</span>
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={onLogout}
+              title="ログアウト"
+              aria-label="ログアウト"
+              className="flex w-full items-center justify-center rounded-xl px-3 py-2 text-slate2 hover:bg-mist"
             >
-              販売サイトへ戻る
-            </Link>
+              <Icon name="lock" />
+            </button>
           </div>
+        ) : (
+          <>
+            {/* 上の段：いちばん使うものと、畳む */}
+            <div className="flex items-stretch gap-1.5">
+              <div className="min-w-0 flex-1">
+                <Btn full onClick={onReset}>
+                  デモを最初に戻す
+                </Btn>
+              </div>
+              {onToggleCollapse && (
+                <button
+                  type="button"
+                  onClick={onToggleCollapse}
+                  aria-label="メニューを畳む"
+                  title="メニューを畳む"
+                  className="nb shrink-0 rounded-xl border border-edge px-2.5 text-note font-bold text-slate3 hover:bg-mist"
+                >
+                  <span aria-hidden>«</span>
+                </button>
+              )}
+            </div>
+
+            {/* 下の段：1日に1回あるかどうかの2つ */}
+            <div className="mt-1 flex items-center gap-1">
+              <button
+                type="button"
+                onClick={onLogout}
+                className="nb min-w-0 flex-1 rounded-lg px-1 py-1.5 text-note font-bold text-slate3 hover:bg-mist hover:text-slate2"
+              >
+                ログアウト
+              </button>
+              <Link
+                href="/"
+                className="nb min-w-0 flex-1 rounded-lg px-1 py-1.5 text-center text-note font-bold text-slate3 hover:bg-mist hover:text-blue-ink"
+              >
+                販売サイトへ戻る
+              </Link>
+            </div>
+          </>
         )}
       </div>
     </nav>
@@ -470,6 +507,29 @@ function Group({
  *
  * ★畳んでいるときも、名前が出る仕掛けを残すこと（title 属性）。
  *   印だけのメニューは、覚えるまでのあいだ使えません。
+ *
+ * ★説明文を、全部の項目に出しっぱなしにしないこと。
+ *
+ *   以前は21項目すべてに2行（名前＋説明）を出していました。
+ *   1項目が56pxになり、全部で1176px。
+ *   画面に入るのは4〜5項目だけで、
+ *   目当ての項目を探すのに毎回スクロールが要りました。
+ *   毎日8時間使う方には、この往復がそのまま疲れになります。
+ *
+ *   いまは、ふだんは名前だけ（1行）にして、
+ *   説明はいま開いている項目にだけ出します。
+ *   説明が要るのは「これから行く先を選ぶとき」ではなく
+ *   「いまどこにいるか確かめるとき」だからです。
+ *
+ *   ★説明を消したわけではないこと。
+ *     マウスを乗せれば title で出ます。
+ *     ⌘K の検索一覧では、全項目の説明が出ます。
+ *     初めての方が説明を読む道は、必ず残してあります。
+ *
+ * ★aria-label に名前を必ず入れること。
+ *   見た目を変えるたびに、機械が名前を取れなくなると、
+ *   到達確認（check-admin-reach.mjs）が壊れます。
+ *   名前の置き場所を1つに決めておきます。
  */
 function Row({
   m,
@@ -512,23 +572,30 @@ function Row({
       <button
         type="button"
         onClick={() => onGo(m.key)}
+        aria-label={m.label}
+        title={`${m.label}｜${m.note}`}
         aria-current={active ? "page" : undefined}
-        className={`flex w-full items-start gap-2.5 rounded-xl py-2.5 pl-3 pr-9 text-left transition-colors ${
-          active ? "bg-blue-pale text-blue-ink" : "text-slate2 hover:bg-mist"
+        className={`flex w-full items-start gap-2.5 rounded-xl py-2 pl-3 pr-9 text-left transition-colors ${
+          active
+            ? "bg-blue-pale text-blue-ink"
+            : "text-slate2 hover:bg-mist"
         }`}
       >
         <Icon
           name={m.icon}
-          className={`mt-0.5 ${active ? "text-blue-ink" : "text-slate3"}`}
+          className={`mt-px ${active ? "text-blue-ink" : "text-slate3"}`}
         />
-        <span className="min-w-0">
+        <span className="min-w-0 flex-1">
           <span className="flex items-center gap-2">
             <span className="nb text-note font-bold">{m.label}</span>
             {!allowed && <Badge>権限なし</Badge>}
           </span>
-          <span className="mt-0.5 block text-note leading-[1.6] text-slate3">
-            {m.note}
-          </span>
+          {/* 説明は、いま開いている項目にだけ */}
+          {active && (
+            <span className="mt-0.5 block text-note leading-[1.6] text-blue-ink/70">
+              {m.note}
+            </span>
+          )}
         </span>
       </button>
 

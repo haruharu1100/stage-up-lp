@@ -148,9 +148,16 @@ test("ログアウトなど下の操作が、スクロールしない場所に�
 });
 
 test("いちばん下の操作が、iPhone の下の帯に隠れない", () => {
+  /* ★余白の数値まで固定しないこと。
+       見張りたいのは「ホームバーの高さを見ているか」であって、
+       余白が 0.5rem か 0.75rem かではありません。
+       数値まで縛ると、余白を詰めただけでテストが落ちて、
+       直す側が「テストが煩いから」と外す方向に向かいます。 */
+  const nav = SHELL.slice(SHELL.indexOf('aria-label="管理メニュー"'));
   assert.ok(
-    /pb-\[max\(0\.75rem,env\(safe-area-inset-bottom\)\)\]/.test(SHELL),
-    "safe-area-inset-bottom を見ていません。ホームバーの下に潜り込みます。",
+    /pb-\[max\([^\]]*env\(safe-area-inset-bottom\)\)\]/.test(nav),
+    "左メニューの最下部が safe-area-inset-bottom を見ていません。" +
+      "ホームバーの下に潜り込みます。",
   );
 });
 

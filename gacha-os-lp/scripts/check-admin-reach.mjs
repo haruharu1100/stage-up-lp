@@ -193,10 +193,14 @@ for (const size of SIZES) {
    */
   const items = await page.evaluate(() => {
     const n = document.querySelector('nav[aria-label="管理メニュー"]');
+    /* ★名前は aria-label から取ること。
+         見た目（説明文を出す・出さない、1行・2行）は今後も変わります。
+         そのたびに名前の取り方が壊れると、
+         直したつもりで確認が動いていない、が起きます。 */
     return [...n.querySelectorAll("li > button:nth-of-type(1)")].map(
       (b) =>
-        b.querySelector("span > span > span")?.textContent?.trim() ||
         b.getAttribute("aria-label") ||
+        b.querySelector("span > span > span")?.textContent?.trim() ||
         "",
     );
   });

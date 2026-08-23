@@ -159,7 +159,10 @@ for (const size of SIZES) {
   }
 
   /* ── 畳んだ状態 ── */
-  await page.locator('nav[aria-label="管理メニュー"] button:has-text("畳む")').first().click();
+  await page
+    .locator('nav[aria-label="管理メニュー"] button[aria-label="メニューを畳む"]')
+    .first()
+    .click();
   await page.waitForTimeout(300);
   await shot("03-collapsed", `${size.name}：左メニューを畳んだ状態`);
 
