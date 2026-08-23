@@ -172,18 +172,21 @@ export default function ClientConsole() {
   }, []);
 
   /**
-   * 下の案内パネルの高さも、同じやり方で測る。
+   * 下の案内パネルの高さを測る（お客様側でだけ使う）。
    *
    * ★このパネルは手順ごとに文章の長さが変わり、高さも変わります。
    *   固定値で逃げると、ある手順だけボタンが隠れて押せなくなり、
    *   「案内どおりにやったのに進まない」という状態になります。
+   *
+   * ★管理サイト側では、そもそも重ねません（下の dock を参照）。
+   *   重ねない作りにすれば、高さを測る必要も、ずれる余地も消えます。
    */
   const dayRef = useRef<HTMLDivElement>(null);
   const [dayH, setDayH] = useState(0);
 
   useEffect(() => {
     const el = dayRef.current;
-    if (!el) {
+    if (!el || side === "admin") {
       setDayH(0);
       return;
     }
@@ -191,10 +194,32 @@ export default function ClientConsole() {
     ro.observe(el);
     setDayH(el.offsetHeight + 16);
     return () => ro.disconnect();
-  }, [run]);
+  }, [run, side]);
+
+  /**
+   * 案内パネルの置き方。
+   *
+   *   管理サイト … 画面の中に「区画」として置く（flow）
+   *   お客様側   … 下に貼り付ける（fixed）
+   *
+   * ★管理サイトで fixed を使わないこと。
+   *   管理サイトは画面の高さぴったりの作りで、中身が自分の中で
+   *   スクロールします。そこへ下から板をかぶせると、
+   *   中身のいちばん下が板の裏に入り、スクロールしても出てきません。
+   *   区画として置けば、場所が最初から分かれているので、
+   *   何をどう伸ばしても重なりようがありません。
+   *
+   * ★お客様側は逆に fixed のままにすること。
+   *   こちらはスマホ前提で、ページ全体が普通に縦スクロールします。
+   *   区画にすると、画面の外へ流れていって見えなくなります。
+   */
+  const adminShell = side === "admin";
 
   return (
-    <div style={{ "--switch-h": `${switchH}px` } as React.CSSProperties}>
+    <div
+      style={{ "--switch-h": `${switchH}px` } as React.CSSProperties}
+      className={adminShell ? "flex h-[100dvh] flex-col overflow-hidden" : ""}
+    >
       <SideSwitch
         boxRef={switchRef}
         side={side}
@@ -220,10 +245,9 @@ export default function ClientConsole() {
         />
       )}
 
-      {/* ★案内は、いちばん上に重ねること。
-          下に置くと、スマホでは画面の外へ流れて見えなくなります */}
       {run && (
         <DayInLife
+          dock={adminShell ? "flow" : "fixed"}
           boxRef={dayRef}
           s={s}
           run={run}
@@ -239,12 +263,10 @@ export default function ClientConsole() {
         />
       )}
 
-      {/* ★案内が下に居座るぶん、いちばん下の中身が隠れないようにする。
+      {/* ★お客様側だけ、案内が下に居座るぶんの隙間を空ける。
           高さは必ず実測すること。「だいたい208px」と書くと、
-          文章が1行増えただけで、いちばん下のボタンが案内の裏に隠れます。
-          隠れたボタンは押せません。押せないボタンがあると、
-          手順どおりに進めているのに、進めなくなります。 */}
-      {run && <div style={{ height: dayH }} aria-hidden />}
+          文章が1行増えただけで、いちばん下のボタンが案内の裏に隠れます。 */}
+      {run && !adminShell && <div style={{ height: dayH }} aria-hidden />}
     </div>
   );
 }

@@ -37,6 +37,7 @@ export type DayRun = { base: DayBase; seen: Set<string> };
 export default function DayInLife({
   s,
   boxRef,
+  dock = "fixed",
   run,
   side,
   page,
@@ -45,6 +46,23 @@ export default function DayInLife({
   onFinish,
   onReset,
 }: {
+  /**
+   * 置き方。
+   *
+   *   flow  … 画面の中の1区画として置く（管理サイト）
+   *   fixed … 画面の下に貼り付ける（お客様側）
+   *
+   * ★管理サイトで fixed を使わないこと。
+   *   管理サイトは画面の高さちょうどの作りで、中身が自分の中で
+   *   スクロールします。そこへ下から板をかぶせると、
+   *   中身のいちばん下が板の裏に入り、スクロールしても出てきません。
+   *   一度これで、いちばん下のボタンが押せなくなりました。
+   *
+   * ★お客様側で flow にしないこと。
+   *   こちらはページ全体が普通に縦スクロールするので、
+   *   区画にすると画面の外へ流れていき、案内が見えなくなります。
+   */
+  dock?: "flow" | "fixed";
   /**
    * このパネルの高さを、呼び出し元が実測するための取っ手。
    *
@@ -94,8 +112,15 @@ export default function DayInLife({
   const atGate = !!st && st.side === "admin" && side === "admin" && !adminReady;
 
   return (
-    <div ref={boxRef} className="fixed inset-x-0 bottom-0 z-50 px-3 pb-3 sm:px-4 sm:pb-4">
-      <div className="mx-auto w-full max-w-[1400px] overflow-hidden rounded-2xl border border-[#1E2B49] bg-[#0F1B33] shadow-lift2">
+    <div
+      ref={boxRef}
+      className={
+        dock === "fixed"
+          ? "fixed inset-x-0 bottom-0 z-50 px-3 pb-3 sm:px-4 sm:pb-4"
+          : "flex-none border-t border-[#1E2B49] bg-[#0B1526] px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 sm:px-4"
+      }
+    >
+      <div className="mx-auto w-full max-w-[1500px] overflow-hidden rounded-2xl border border-[#1E2B49] bg-[#0F1B33] shadow-lift2">
         {/* ── 見出しの帯。畳んでもここは残す ── */}
         <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-2.5">
           <span className="nb rounded-lg bg-white/10 px-2 py-1 text-[0.68rem] font-bold text-white">
@@ -122,8 +147,16 @@ export default function DayInLife({
           </button>
         </div>
 
+        {/* ★区画として置くときは、高さに上限を付けること。
+            上限が無いと、文章の長い手順で案内だけが画面の半分以上を占め、
+            肝心の管理画面が細長い隙間になります。
+            触っていただきたいのは案内ではなく管理画面のほうです */}
         {open && (
-          <div className="border-t border-white/10 px-4 py-4">
+          <div
+            className={`border-t border-white/10 px-4 py-4 ${
+              dock === "flow" ? "max-h-[38dvh] overflow-y-auto overscroll-contain" : ""
+            }`}
+          >
             {finished ? <Finished onReset={onReset} onFinish={onFinish} /> : null}
 
             {st && (
