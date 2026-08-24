@@ -401,6 +401,34 @@ export function describePriceAnomalies(
 }
 
 /**
+ * 「全件が同じ理由で弾かれた」項目を洗い出す。
+ *
+ * ★なぜ止める材料になるのか（2026-08-25 ユーザー指示・確定）
+ *   「『全件同じ特殊値』の場合は商品データ異常ではなく、
+ *     API仕様の読み違い候補として止める」
+ *
+ *   1件だけ -1 なら、その商品の在庫が本当に不明なだけ、はありうる。
+ *   だが20件が20件とも -1 なら、商品側の問題ではありえない。
+ *   ほぼ確実に **こちらが見に行く項目名か単位を間違えている**。
+ *   ここで止めずに先へ進むと、間違った読み方のまま件数だけ増える。
+ *
+ * @returns 止めるべき項目の一覧（空なら止める理由なし）
+ */
+export function findAllSameRejections(
+  tallies: ValueGuardTally[],
+): { field: string; reason: ValueRejectReason; count: number; samples: string[] }[] {
+  const out: { field: string; reason: ValueRejectReason; count: number; samples: string[] }[] = [];
+  for (const t of tallies) {
+    // 1件でも取れていれば「全件同じ」ではない
+    if (t.accepted !== 0 || t.rejected < 2) continue;
+    const reasons = Object.keys(t.byReason) as ValueRejectReason[];
+    if (reasons.length !== 1) continue;
+    out.push({ field: t.field, reason: reasons[0], count: t.rejected, samples: t.samples });
+  }
+  return out;
+}
+
+/**
  * 監査結果を日本語のレポートにする（`npm run aliexpress:audit` が使う）。
  */
 export function describeGuardReport(tallies: ValueGuardTally[]): string[] {

@@ -22,6 +22,8 @@
  *   6. ★STEP2で本物の商品を1件取れた瞬間に必ず止まる（2026-08-22 追加）。
  *      人がChatGPTで監査するまで、STEP3以降は1回も呼ばない。
  */
+import fs from 'node:fs';
+import path from 'node:path';
 import {
   AliExpressClient,
   AliExpressDiscoveryProvider,
@@ -43,7 +45,17 @@ import {
   rawDiffers,
   describeGuardReport,
   describePriceAnomalies,
+  findAllSameRejections,
+  VALUE_REJECT_LABEL,
 } from '../lib/providers/aliexpressValues';
+import {
+  traceField,
+  renderFieldTrace,
+  traceProblems,
+  isFullyCaptured,
+  FIELD_STATE_LABEL,
+  type FieldTrace,
+} from '../lib/providers/fieldTrace';
 import { classifyError, OUTCOME_LABEL, logDiscoveryCall, type DiscoveryOutcome } from '../lib/research/discoveryOutcome';
 import {
   LIVE_TEST_STEPS,
@@ -55,6 +67,7 @@ import {
   AUDIT_PAUSE_FLAG,
   FIRST_PRODUCT_AUDIT_FIELDS,
   FIRST_PRODUCT_RAW_AUDIT_FIELDS,
+  FIRST_PRODUCT_TRACE_AUDIT_FIELDS,
   type VerifyChecklist,
   type TwentyGate,
 } from '../lib/research/liveTestPlan';
@@ -109,6 +122,73 @@ function safeRaw(text: string | null): string | null {
  *   別々に書くと、いつか片方だけ直されて「RAWと解釈後が別の項目を指す」状態になる。
  *   そうなると並べて見せる意味が消える。
  */
+/**
+ * ★検証結果を Obsidian へ保存する（2026-08-25 ユーザー指示・確定）。
+ *   「検証結果は必ずObsidianへ保存し、次回AIが先に読む」
+ *
+ *   保存先は 事業Vault/Amazon AI Seller OS/検証結果/。
+ *   そのフォルダが無い環境（別PC・CI）では data/live-audit/ に落とす。
+ *   ★どちらにも書けなかった場合は「保存できなかった」と表示する。黙って成功にしない。
+ */
+function saveToObsidian(fileName: string, body: string): string | null {
+  const candidates = [
+    path.resolve(process.cwd(), '..', '事業Vault', 'Amazon AI Seller OS', '検証結果'),
+    path.resolve(process.cwd(), 'data', 'live-audit'),
+  ];
+  for (const dir of candidates) {
+    try {
+      fs.mkdirSync(dir, { recursive: true });
+      const full = path.join(dir, fileName);
+      fs.writeFileSync(full, body, 'utf8');
+      return full;
+    } catch {
+      /* 次の候補へ */
+    }
+  }
+  return null;
+}
+
+/** 3段トレースを Markdown の表にする（Obsidianで開いてそのまま読めるように） */
+function traceMarkdown(title: string, traces: FieldTrace[]): string[] {
+  const out = [`### ${title}`, '', '| 項目 | ① 元レスポンス（無加工） | 状態 | 変換ルール | ② 正規化後 | ③ 画面表示値 |', '|---|---|---|---|---|---|'];
+  for (const t of traces) {
+    const cell = (s: string | null) => (s ?? '（なし）').replace(/\|/g, '\\|').slice(0, 120);
+    out.push(
+      `| ${t.label} | \`${t.rawField ?? '項目なし'}\` = ${cell(t.raw)} | ${FIELD_STATE_LABEL[t.state]} |` +
+        ` ${cell(t.transform)} | ${cell(t.normalized)} | ${cell(t.displayed)} |`,
+    );
+  }
+  out.push('');
+  return out;
+}
+
+/**
+ * ★「全件が同じ理由で弾かれた」なら止める（2026-08-25 ユーザー指示・確定）。
+ *
+ *   「『全件同じ特殊値』の場合は商品データ異常ではなく、
+ *     API仕様の読み違い候補として止める」
+ *
+ *   1件だけ -1 なら、その商品が本当に不明なだけ、はありうる。
+ *   だが全件が -1 なら、商品側の問題ではありえない。
+ *   ほぼ確実に **こちらが見に行く項目名か単位を間違えている**。
+ *
+ * @returns true = 止めるべき
+ */
+function haltIfAllSame(guardToCheck: ValueGuard, stageLabel: string): boolean {
+  const hits = findAllSameRejections(guardToCheck.report());
+  if (!hits.length) return false;
+  console.log(`\n★${stageLabel}テストを、ここで止めます。`);
+  console.log('  理由：下の項目が「全件とも同じ理由」で弾かれています。');
+  console.log('        商品データの異常ではなく、API仕様の読み違いの可能性が高い状態です。');
+  for (const h of hits) {
+    console.log(`    ・${h.field}：${h.count}件すべて「${VALUE_REJECT_LABEL[h.reason]}」`);
+    console.log(`        弾いた値そのもの（無加工）：${h.samples.join(' , ')}`);
+  }
+  console.log('  → 項目名・単位・特殊値の読み方を直してから、1件だけ取り直してください。');
+  console.log('  ★これは「0件だった」ではありません。「読み方が違う疑いがあるので止めた」です。');
+  return true;
+}
+
 const PRICE_KEYS = ['targetSalePrice', 'salePrice'] as const;
 const CURRENCY_KEYS = ['targetSalePriceCurrency', 'salePriceCurrency'] as const;
 
@@ -413,6 +493,73 @@ async function main() {
     console.log(`        ${f.field.padEnd(28)} = ${f.raw.slice(0, 60)}${chosen}`);
   }
 
+  // ==================================================================
+  // ★3段トレース（2026-08-25 ユーザー指示で確定）
+  // ------------------------------------------------------------------
+  //   「1商品取得時は、APIから返った元レスポンス → 正規化後 → 画面表示値を
+  //     3段で並べて比較する」
+  //   「価格だけでなく、送料・在庫・通貨・画像・URL・商品IDも同じ1件について追跡する」
+  //   「UNKNOWN / NULL / NOT_AVAILABLE / 特殊値 / 0 / 実数 を別状態として扱う」
+  //
+  // ★必須群と参考群を分ける理由
+  //   送料・在庫・MOQ・重量は、検索API（STEP2）の応答には元々入らないことがある。
+  //   入らないものを「不整合」に数えると、STEP2 が永久に合格せず先へ進めなくなる。
+  //   なので **追跡はするが、STEP2の合否には使わない**。
+  //   その代わり STEP3（詳細）・STEP4（送料）で必ず同じ1件を追跡し直す。
+  //   ＝「見ていないから合格」ではなく「どのSTEPで見るかを決めてある」。
+  // ==================================================================
+  const coreTraces: FieldTrace[] = [
+    traceField({ label: '商品ID', item: raw, keys: ['itemId', 'item_id', 'product_id'], normalized: shown.商品ID }),
+    traceField({ label: '商品名', item: raw, keys: ['title', 'product_title'], normalized: shown.商品名 }),
+    traceField({ label: '価格', item: raw, keys: [...PRICE_KEYS], normalized: shown.価格 }),
+    traceField({ label: '通貨', item: raw, keys: [...CURRENCY_KEYS], normalized: shown.通貨 }),
+    traceField({ label: '商品画像', item: raw, keys: ['itemMainPic', 'product_main_image_url'], normalized: shown.商品画像 }),
+    traceField({ label: '商品URL', item: raw, keys: ['itemUrl', 'product_detail_url'], normalized: shown.商品URL }),
+  ];
+
+  // 参考群：この1件について「今どうなっているか」だけ記録する（STEP2の合否には使わない）
+  const refGuard = new ValueGuard(3);
+  const SHIP_KEYS = ['shippingFee', 'freight', 'logisticsCost', 'shipping_cost'];
+  const STOCK_KEYS = ['stock', 'itemStock', 'availableQuantity', 'inventory'];
+  const MOQ_KEYS = ['minOrderQuantity', 'moq', 'min_order_quantity'];
+  const WEIGHT_KEYS = ['packageWeight', 'itemWeight', 'weight'];
+  const refTraces: FieldTrace[] = [
+    traceField({ label: '送料', item: raw, keys: SHIP_KEYS, normalized: refGuard.num('shippingFee', firstOf(raw, SHIP_KEYS), { allowZero: true }) }),
+    traceField({ label: '在庫', item: raw, keys: STOCK_KEYS, normalized: refGuard.stock('stock', firstOf(raw, STOCK_KEYS)) }),
+    traceField({ label: 'MOQ', item: raw, keys: MOQ_KEYS, normalized: refGuard.moq('moq', firstOf(raw, MOQ_KEYS)) }),
+    traceField({ label: '重量', item: raw, keys: WEIGHT_KEYS, normalized: refGuard.weightG('weight', firstOf(raw, WEIGHT_KEYS)) }),
+  ];
+
+  console.log('\n    ★3段トレース（① 元レスポンス → ② 正規化後 → ③ 画面表示値）');
+  console.log('      ①は無加工です。引用符の有無で「文字列で来たのか数値で来たのか」まで判ります。');
+  for (const l of renderFieldTrace(coreTraces)) console.log(l);
+
+  console.log('\n    ［参考］この1件の 送料・在庫・MOQ・重量（STEP2の合否には使いません）');
+  console.log('      検索APIの応答には元々入らないことがあります。STEP3・STEP4で同じ1件を追跡し直します。');
+  for (const t of refTraces) {
+    console.log(
+      `      ${t.label.padEnd(6)} ${(t.rawField ?? '項目なし').padEnd(20)} = ${(t.raw ?? '（値なし）').slice(0, 40)}` +
+        `  → ${FIELD_STATE_LABEL[t.state]}`,
+    );
+  }
+
+  // ★不整合。1件でもあるうちは5件テストへ進まない（ユーザー指示・確定）
+  const traceIssues = traceProblems(coreTraces);
+  // 参考群からは「取れなかった」を除き、構造の異常だけを拾う
+  const refIssues = traceProblems(refTraces).filter((s) => !s.includes('推測で埋めず'));
+  const mismatches = [...traceIssues, ...refIssues];
+  const fullyCaptured = isFullyCaptured(coreTraces);
+
+  console.log('');
+  if (fullyCaptured && !mismatches.length) {
+    console.log('    この商品は「正常取得」です（追跡した必須6項目がすべてそろい、不整合0件）。');
+  } else {
+    console.log('    ★この商品は「正常取得」ではありません。');
+    console.log('      取れなかった項目があるので、商品全体を「正常取得」と表示しません。');
+    for (const m of mismatches) console.log(`      ・${m}`);
+    console.log('      → この状態のまま5件テストへは進みません（不整合が0件になるまで止めます）。');
+  }
+
   const unknown2 = Object.entries(shown).filter(([, v]) => v === null).map(([k]) => k);
   if (unknown2.length) {
     console.log(`\n    ★取れなかった項目：${unknown2.join(' / ')} → UNKNOWN のまま扱います（推測で埋めません）`);
@@ -468,14 +615,24 @@ async function main() {
     currency_raw: safeRaw(currencyRaw.raw),
     currency_raw_field: currencyRaw.field,
     price_fields_raw: priceLike.length ? safeRaw(JSON.stringify(priceLike)) : null,
+    // ★3段トレース（2026-08-25 確定）
+    field_trace: safeRaw(JSON.stringify({ core: coreTraces, reference: refTraces })),
+    incomplete_fields: (() => {
+      const ng = coreTraces.filter((t) => !t.ok).map((t) => `${t.label}(${t.state})`);
+      return ng.length ? JSON.stringify(ng) : null;
+    })(),
+    mismatch_count: mismatches.length,
+    fully_captured: fullyCaptured ? 1 : 0,
     verdict: null,          // ← ChatGPT監査の結論を、人が後から入れる欄（勝手に埋めない）
     chatgpt_report: null,
     created_at: nowIso(),
   }).catch(() => {});
-  console.log(`\n    監査ログを保存しました（13項目＋価格RAW5項目 / id=${auditId}）`);
+  console.log(`\n    監査ログを保存しました（13項目＋価格RAW5項目＋3段トレース4項目 / id=${auditId}）`);
   for (const f of FIRST_PRODUCT_AUDIT_FIELDS) console.log(`      ・${f}`);
   console.log('      ---- ここから価格RAW監査（2026-08-24 追加）----');
   for (const f of FIRST_PRODUCT_RAW_AUDIT_FIELDS) console.log(`      ・${f}`);
+  console.log('      ---- ここから3段トレース（2026-08-25 追加）----');
+  for (const f of FIRST_PRODUCT_TRACE_AUDIT_FIELDS) console.log(`      ・${f}`);
 
   const pass2 = canVerify(r2.check);
   console.log(`\n  STEP2 判定：${pass2 ? '合格' : '不合格'}`);
@@ -535,6 +692,8 @@ async function main() {
           `${priceLike.map((f) => f.field).join(' / ')}。拾う項目名そのものが違う可能性`,
       );
     }
+    // ★3段トレースで見つかった不整合も、そのまま監査へ出す（2026-08-25 追加）
+    for (const m of mismatches) surprises.push(m);
     if (!surprises.length) console.log('       ・特になし（想定どおりの形で返ってきた）');
     for (const s of surprises) console.log(`       ・${s}`);
   }
@@ -559,10 +718,68 @@ async function main() {
   if (!priceLike.length) console.log('         （該当なし＝項目名が想定と違う可能性）');
   for (const f of priceLike) console.log(`         ${f.field} = ${f.raw.slice(0, 60)}`);
   console.log(`  8. 画像取得結果           ： ${shown.商品画像 ?? '取れませんでした＝UNKNOWN'}`);
+  // ★3段トレースの結論。「正常取得」と言ってよいかは、ここだけで判断する（2026-08-25 追加）
+  console.log('  8-2. 3段トレース（元レスポンス→正規化後→画面表示値）：');
+  for (const l of renderFieldTrace(coreTraces)) console.log(`  ${l}`);
+  console.log(
+    `       結論：${fullyCaptured && !mismatches.length
+      ? '正常取得（必須6項目すべて取得・不整合0件）'
+      : `★正常取得ではない（不整合 ${mismatches.length}件）→ 5件テストへは進めない`}`,
+  );
   console.log('  9. VERIFIEDにしてよいか   ： システム側の5項目（送信/応答/解析/表示/業務コード）は全て合格。');
   console.log('       ただし最終判断は人が行う。監査で仕様の読み違いが見つかったら差し戻すこと。');
   console.log('  10. 次のSTEP3へ進めてよいか： ★未判定。人が決めるまで進みません。');
   console.log('==================================================================');
+
+  // ==================================================================
+  // ★検証結果を Obsidian へ保存する（2026-08-25 ユーザー指示・確定）
+  //   「検証結果は必ずObsidianへ保存し、次回AIが先に読む」
+  //   画面のログは流れて消えるが、ここに残しておけば次のセッションのAIが先に読める。
+  // ==================================================================
+  {
+    const day = fetchedAt.slice(0, 10);
+    const md = [
+      `# AliExpress 1商品目の実データ検証（${day}）`,
+      '',
+      `- 監査ログID： \`${auditId}\``,
+      `- 使用API： \`${s2.apiName}\``,
+      `- 検索キーワード： ${keyword}`,
+      `- 取得日時： ${fetchedAt}`,
+      `- 結論： ${fullyCaptured && !mismatches.length ? '**正常取得**（必須6項目すべて取得・不整合0件）' : `**正常取得ではない**（不整合 ${mismatches.length}件）→ 5件テストへ進まない`}`,
+      '',
+      '## 不整合（1件でもあるうちは5件テストへ進まない）',
+      '',
+      ...(mismatches.length ? mismatches.map((m) => `- ${m}`) : ['- なし']),
+      '',
+      '## 3段トレース（① 元レスポンス → ② 正規化後 → ③ 画面表示値）',
+      '',
+      '> ①は無加工です。丸め・換算・大文字化・カンマ除去を一切していません。',
+      '> 引用符の有無で「文字列で来たのか数値で来たのか」まで判ります。',
+      '',
+      ...traceMarkdown('必須項目（STEP2の合否に使う）', coreTraces),
+      ...traceMarkdown('参考項目（STEP3・STEP4で確認し直す）', refTraces),
+      '## 応答に含まれていた価格・通貨らしき項目（選ばなかったものも含め全部）',
+      '',
+      ...(priceLike.length
+        ? priceLike.map((f) => `- \`${f.field}\` = ${f.raw.slice(0, 100)}${f.field === priceRaw.field || f.field === currencyRaw.field ? ' ← これを採用' : ''}`)
+        : ['- （該当なし＝項目名が想定と全く違う可能性）']),
+      '',
+      '## 次にやること',
+      '',
+      '1. この内容をそのまま ChatGPT に貼って監査を受ける',
+      '2. 監査で問題が無ければ `npm run aliexpress:live:continue`',
+      '3. **不整合が1件でも残っているうちは、5件テストへ進まない**',
+      '',
+    ].join('\n');
+    const saved = saveToObsidian(`AliExpress実データ検証_1商品目_${day}.md`, md);
+    if (saved) {
+      console.log(`\n  検証結果をObsidianへ保存しました： ${saved}`);
+      console.log('  （次回このプロジェクトを触るAIは、まずここを読みます）');
+    } else {
+      console.log('\n  ★検証結果をObsidianへ保存できませんでした（保存先に書き込めません）。');
+      console.log('    DBの監査ログには残っています： live_first_product_audit / id=' + auditId);
+    }
+  }
 
   if (!HAS(AUDIT_PAUSE_FLAG)) {
     console.log('\n★ここで止めました。STEP3（商品詳細）以降はまだ1回も呼んでいません。');
@@ -704,6 +921,35 @@ async function main() {
   // 段階を上げる：5件 → （関門）→ 20件
   // ==================================================================
   console.log('\n=== 段階を上げる（1件 → 5件 → 20件）===');
+
+  // ==================================================================
+  // ★関門：1商品で不整合が1つでもあれば、5件テストへ進まない
+  // ------------------------------------------------------------------
+  // ユーザー指示（2026-08-25・確定）：
+  //   「取得できなかった項目があれば、商品全体を『正常取得』と表示しない」
+  //   「1商品で不整合が1つでも見つかったら、5件テストへ進まない」
+  //   「1商品が完全一致した後に、5件 → 20件の順で広げる」
+  //
+  // ★なぜ件数を増やす前に止めるのか
+  //   読み方が間違ったまま件数だけ増やすと、間違いが5倍・20倍になるだけで、
+  //   「たくさん取れた」という見かけの安心だけが増える。
+  //   1件を完全に理解できていない状態で広げても、得られる情報は増えない。
+  // ==================================================================
+  if (!fullyCaptured || mismatches.length) {
+    console.log('\n★5件テストへは進みません。');
+    console.log(`  理由：1商品目に不整合が ${mismatches.length}件 残っています。`);
+    for (const m of mismatches) console.log(`    ・${m}`);
+    console.log('  1件を完全に理解できていない状態で件数を増やしても、間違いが増えるだけです。');
+    console.log('  項目名・単位・特殊値の読み方を直してから、もう一度1件だけ取り直してください。');
+    console.log(`\n  監査ログ： live_first_product_audit / id=${auditId}`);
+    await recordStep({
+      no: 6, key: 'SCALE_5', apiName: s2.apiName, outcome: 'OK', passed: false,
+      note: `1商品目の不整合 ${mismatches.length}件のため、5件テストを実行していない（0件だったのではない）`,
+      aliexpressCalls: 0,
+    });
+    return;
+  }
+
   console.log('\n--- 5件 ---');
   takeSupplierApiCallCount();
   const r5 = await callApi(
@@ -753,6 +999,16 @@ async function main() {
     field_report: JSON.stringify(g5.report()),
     created_at: nowIso(),
   }).catch(() => {});
+
+  // ★全件が同じ理由で弾かれていたら、ここで止める（2026-08-25 追加）
+  if (haltIfAllSame(g5, '5件')) {
+    await recordStep({
+      no: 7, key: 'SCALE_20', apiName: s2.apiName, outcome: 'OK', passed: false,
+      note: '5件で「全件同じ理由」を検出したため、20件を実行していない（0件だったのではない）',
+      aliexpressCalls: 0,
+    });
+    return;
+  }
 
   const gate: TwentyGate = {
     oneItemPassed: pass2,
@@ -834,6 +1090,9 @@ async function main() {
       : undefined,
     elapsedMs: r20.elapsed, aliexpressCalls: calls20,
   });
+
+  // ★20件でも「全件同じ理由」を検査する。ここは先へ進む経路が無いので警告として出す。
+  haltIfAllSame(g20, '20件');
 
   console.log('\n=== ここまでの使用量（COST GUARD）===');
   console.log('  ★API が無料でも、回数は必ず数えます（無料＝無制限ではないため）。');
