@@ -66,6 +66,26 @@ const SUBDIR = "gacha-os-lp";
 const run = (cmd, args, opts = {}) =>
   execFileSync(cmd, args, { encoding: "utf8", ...opts });
 
+/**
+ * リポジトリのいちばん上のフォルダ。
+ *
+ * ★書き出しは、必ずここから実行すること。
+ *
+ *   git は「HEAD:名前」の"名前"を、いま居るフォルダから数えます。
+ *   このフォルダ（gacha-os-lp）の中で
+ *
+ *       git archive HEAD:gacha-os-lp
+ *
+ *   と打つと、gacha-os-lp の中の gacha-os-lp を探しにいきます。
+ *   そんなものは無いので、中身ゼロの箱ができます。
+ *   しかも git は、これを失敗として扱いません（2026-08-24 実測）。
+ *
+ *   その結果、空っぽのまま公開まで進み、Vercel 側で
+ *   「app フォルダが見つからない」と言われて失敗しました。
+ *   何も入っていない箱を送っていた、と分かるまで時間がかかりました。
+ */
+const GIT_TOP = run("git", ["rev-parse", "--show-toplevel"], { cwd: ROOT }).trim();
+
 /* ── ① 未commitの変更が無いか確かめる ──
    ここを飛ばすと、直した内容が公開されないまま
    「公開しました」と言うことになります。 */
@@ -87,8 +107,25 @@ mkdirSync(WORK, { recursive: true });
 console.log(`\n  公開用の写しを作っています： ${WORK}`);
 run("bash", [
   "-c",
-  `git archive HEAD:${SUBDIR} | tar -x -C ${JSON.stringify(WORK)}`,
-], { cwd: ROOT });
+  /* set -o pipefail ＝ 前half（git）が失敗したら、全体を失敗にする。
+     これが無いと、tar が「空っぽを受け取って正常終了」したことになり、
+     git の失敗が握りつぶされます。 */
+  `set -o pipefail; git archive HEAD:${SUBDIR} | tar -x -C ${JSON.stringify(WORK)}`,
+], { cwd: GIT_TOP });
+
+/* ── ②-2 中身が入っているか、送る前に確かめる ──
+   ★この確認を消さないこと。
+     空っぽのまま送ると、Vercel 側のビルドで初めて失敗が分かります。
+     そこまで数分かかるうえ、出るのは
+     「app フォルダが見つからない」という、原因から遠い言葉です。
+     ここで止めれば、理由がその場で分かります。 */
+if (!existsSync(join(WORK, "app")) || !existsSync(join(WORK, "package.json"))) {
+  console.error("\n✗ 公開用の写しが空でした。中身を書き出せていません。");
+  console.error(`  写しの場所： ${WORK}`);
+  console.error(`  リポジトリの上： ${GIT_TOP}`);
+  console.error(`  取り出そうとした場所： HEAD:${SUBDIR}\n`);
+  process.exit(1);
+}
 
 /* 公開先の情報。gitには入れていないので、手で持っていく */
 const LINK = join(ROOT, ".vercel");
