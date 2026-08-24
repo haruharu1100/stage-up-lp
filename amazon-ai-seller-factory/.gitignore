@@ -1,0 +1,17 @@
+node_modules/
+.next/
+.env
+.env.local
+data/*.db
+data/*.db-*
+storage/
+output/
+logs/
+*.log
+.DS_Store
+next-env.d.ts
+tsconfig.tsbuildinfo
+backups/
+
+# 検証スクリプトの一時ビルド出力
+.verify/

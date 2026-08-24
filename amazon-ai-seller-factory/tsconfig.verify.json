@@ -1,0 +1,25 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022"],
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "strict": false,
+    "noEmit": false,
+    "outDir": ".verify",
+    "resolveJsonModule": true,
+    "types": ["node"]
+  },
+  "include": [
+    "scripts/verify-discovery.ts",
+    "scripts/api-registry.ts",
+    "scripts/aliexpress-probe.ts",
+    "scripts/aliexpress-audit.ts",
+    "scripts/aliexpress-live.ts",
+    "scripts/discovery-kpi.ts",
+    "lib/**/*.ts"
+  ],
+  "exclude": ["node_modules", ".next"]
+}

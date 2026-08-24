@@ -1,0 +1,6 @@
+jan,asin,keyword,title,supplier,channel,currency,price,moq,shipping_per_unit,duty_rate,lead_time_days,url,note
+4901234567890,,米びつ,米びつ 5kg 密閉,山田物産,問屋,JPY,1180,12,0,0,3,,国内問屋。追加発注は3営業日
+,,シリコン 蓋,シリコン鍋蓋 3枚セット,Shenzhen Homeware,alibaba,CNY,18,50,140,0.03,18,https://example.com/alibaba-item,海外。関税3%・船便18日
+,,キャンプ ランタン,LEDランタン 充電式,US Outdoor Store,ebay,USD,12.5,1,900,0.04,12,https://example.com/ebay-item,海外。PSE要確認（充電式）
+4909876543210,,弁当箱,2段 弁当箱 800ml,大阪キッチン卸,wholesale,JPY,760,24,0,0,4,,国内卸
+,,珪藻土 マット,珪藻土バスマット,メーカー直販,maker,JPY,1450,6,0,0,5,,メーカー直。画像データ提供あり

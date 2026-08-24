@@ -1,0 +1,49 @@
+{
+  "name": "amazon-ai-seller-factory",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Amazon AI Seller Factory — 7人のAI社員が商品選定〜出品データ作成までを自動化する工場",
+  "scripts": {
+    "dev": "next dev -p 3900",
+    "build": "next build",
+    "start": "next start -p 3900",
+    "run:once": "node scripts/run-once.mjs",
+    "discover": "node scripts/discover-once.mjs",
+    "research": "node scripts/research-once.mjs",
+    "scheduler": "node scripts/scheduler.mjs",
+    "scheduler:loop": "node scripts/scheduler.mjs --loop",
+    "scheduler:install": "node scripts/scheduler-service.mjs install",
+    "scheduler:status": "node scripts/scheduler-service.mjs status",
+    "scheduler:uninstall": "node scripts/scheduler-service.mjs uninstall",
+    "supplier:import": "node scripts/supplier-import.mjs",
+    "supplier:audit": "node scripts/supplier-audit.mjs",
+    "discover:supplier": "node scripts/discover-supplier.mjs",
+    "discovery:verify": "tsc -p tsconfig.verify.json && node --env-file=.env .verify/scripts/verify-discovery.js",
+    "api:registry": "tsc -p tsconfig.verify.json && node --env-file=.env .verify/scripts/api-registry.js",
+    "aliexpress:probe": "tsc -p tsconfig.verify.json && node --env-file=.env .verify/scripts/aliexpress-probe.js",
+    "aliexpress:audit": "tsc -p tsconfig.verify.json && node --env-file=.env .verify/scripts/aliexpress-audit.js",
+    "aliexpress:live": "tsc -p tsconfig.verify.json && node --env-file=.env .verify/scripts/aliexpress-live.js",
+    "aliexpress:live:continue": "tsc -p tsconfig.verify.json && node --env-file=.env .verify/scripts/aliexpress-live.js --after-audit",
+    "aliexpress:plan": "tsc -p tsconfig.verify.json && node --env-file=.env .verify/scripts/aliexpress-live.js --plan",
+    "discovery:kpi": "tsc -p tsconfig.verify.json && node --env-file=.env .verify/scripts/discovery-kpi.js",
+    "prelive": "node scripts/prelive-check.mjs",
+    "prelive:clean": "node scripts/prelive-check.mjs --clean",
+    "report:test": "node scripts/report-live-test.mjs",
+    "keepa:audit": "node scripts/keepa-audit.mjs",
+    "fee:check": "node scripts/fee-check.mjs",
+    "doctor": "node scripts/doctor.mjs"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.30.1",
+    "@libsql/client": "^0.14.0",
+    "jimp": "^0.22.12",
+    "next": "14.2.35",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "@types/react": "^18.3.3",
+    "typescript": "^5.5.4"
+  }
+}
