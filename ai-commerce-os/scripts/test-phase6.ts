@@ -63,9 +63,16 @@ import {
   EBAY_CONTENT_MAY_BE_MIXED_WITH_OTHER_VENUES,
   EBAY_CONTENT_MAY_ENTER_AI_LEARNING,
   EBAY_JAPAN_MARKETPLACE_EXISTS,
+  ANSWER_STATES,
+  effectiveAnswer,
   effectiveValue,
   evaluateLegalGate,
+  firstLiveSupplier,
+  FIRST_LIVE_SUPPLIER_READ_ONLY,
+  FIRST_LIVE_SUPPLIER_STAGES,
   HUMAN_TODOS,
+  supplierGateBoard,
+  SUPPLIER_GATE_WAITING,
   isLiveFetchAllowed,
   LEGAL_CHECK_DEFAULT,
   LEGAL_CHECK_KEYS,
@@ -1053,6 +1060,55 @@ function main(): void {
     const connector = codeOnly(readFile('lib/phase5/connector.ts'));
     check('無許可収集は取り方の選択肢に無いまま', /SCRAPING_IS_NOT_AN_ACCESS_TIER\s*=\s*true/.test(connector));
     check('Yahooはまだ候補のままで登録していない', /YAHOO_SHOPPING/.test(connector));
+  }
+
+  // ================================================================
+  section('17. 仕入先の門の待ち状況ボード（Phase 6.5）');
+  // ================================================================
+  {
+    const board = supplierGateBoard();
+    check('待っている相手は5件', board.length === 5);
+    check('順番どおりに並ぶ', board.map((b) => b.waiting.order).join(',') === '1,2,3,4,5');
+    check(
+      '5件の中身がNETSEA・バリューコマース・orosy・Yahoo!・楽天',
+      board.map((b) => b.waiting.supplierCode).join(',') ===
+        'NETSEA,VALUECOMMERCE,OROSY,YAHOO_SHOPPING,RAKUTEN',
+    );
+    check('回答はまだ1件も入っていない', SUPPLIER_GATE_WAITING.every((w) => w.answers.length === 0));
+    check('全員が止まっている', board.every((b) => b.gate === 'BLOCKED'));
+    check('未回答は不明として数える', board.every((b) => b.unknown === b.waiting.requiredCount));
+    check('可が0件のまま', board.every((b) => b.yes === 0));
+
+    check('回答の種類は4つ', ANSWER_STATES.length === 4);
+    check('条件付きで可がある', ANSWER_STATES.includes('CONDITIONAL'));
+
+    // 出典3点がそろわない「可」は、可として通さない（ルール144）
+    const noEvidence = effectiveAnswer({
+      key: 'Q1', questionJa: '保存してよいか', value: 'YES',
+      conditionJa: null, quoteJa: null, sourceJa: null, checkedAt: null,
+    });
+    check('原文・出典・確認日が無い「可」は不明に落ちる', noEvidence === 'UNKNOWN');
+
+    const withEvidence = effectiveAnswer({
+      key: 'Q1', questionJa: '保存してよいか', value: 'YES',
+      conditionJa: null, quoteJa: '保存して差し支えありません', sourceJa: '回答メール', checkedAt: '2026-08-26',
+    });
+    check('3点そろえば可として数える', withEvidence === 'YES');
+
+    check('最初の接続先はまだ決まっていない', firstLiveSupplier() === null);
+    check('通過しても、まず読むだけ', FIRST_LIVE_SUPPLIER_READ_ONLY === true);
+    check('広げる順は1→5→10→47', FIRST_LIVE_SUPPLIER_STAGES.join(',') === '1,5,10,47');
+
+    // 情報源（バリューコマース・Yahoo!・楽天）は、門を通っても仕入先にはならない
+    const gate = codeOnly(readFile('lib/phase6/legalgate.ts'));
+    check(
+      '仕入先候補はNETSEAとorosyだけ',
+      /PURCHASABLE_CANDIDATE_CODES\s*=\s*\['NETSEA',\s*'OROSY'\]/.test(gate),
+    );
+    check('AIは外部へ連絡しないまま', /CONTACT_VENUE_BY_AI_ALLOWED\s*=\s*false/.test(gate));
+
+    const venuesPage = readFile('app/venues/page.tsx');
+    check('管理画面に待ち状況が出る', /supplierGateBoard\(\)/.test(venuesPage));
   }
 
   // ================================================================

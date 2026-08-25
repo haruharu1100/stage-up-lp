@@ -10,6 +10,11 @@ import {
   type ConnectorState,
   type UsageVerdict,
 } from '@/lib/venuepermissions';
+import {
+  SUPPLIER_GATE_WAY_JA,
+  firstLiveSupplier,
+  supplierGateBoard,
+} from '@/lib/phase6/legalgate';
 import { num, pct } from '@/lib/format';
 
 export const dynamic = 'force-dynamic';
@@ -54,6 +59,10 @@ export default async function VenuesPage() {
   const verified = fees.length - estimated;
   const withUrl = fees.filter((f) => f.source_url).length;
 
+  // 仕入先の門（Phase 6.5）。通信はしない。誰の返事を待っているかを見せるだけ。
+  const gateBoard = supplierGateBoard();
+  const firstLive = firstLiveSupplier();
+
   return (
     <main>
       <h1>市場（VENUE）一覧</h1>
@@ -87,6 +96,63 @@ export default async function VenuesPage() {
         自動購入・自動出品ができる市場は <strong>1つもありません</strong>。
         公式APIが使えることを確認できていない市場は、システム側が実行を拒否します。
         {estimated > 0 && <> 手数料が概算のままの設定が {num(estimated)} 件あります（公式の料金ページで実額の確認が必要です）。</>}
+      </div>
+
+      <h2>仕入先の門（LEGAL GATE）— いま誰の返事を待っているか</h2>
+      <p className="lead">
+        正式に接続してよいかを確かめている相手の一覧です。<strong>問い合わせを送るのも、規約を読むのも人間が行います</strong>（システムは連絡しません）。
+        必要な質問がすべて「可」になった相手だけが門を通ります。1つでも「不明」が残る間は接続しません。
+        <strong>最初に門を通過した仕入先が、最初の接続先（FIRST_LIVE_SUPPLIER）</strong>になります。順位や点数では決めません。
+      </p>
+      <div className="note" style={{ marginTop: 10 }}>
+        {firstLive
+          ? `最初の接続先：${firstLive.labelJa}（まず読むだけ。1件 → 5件 → 10件 → 47件の順に広げます）`
+          : '最初の接続先は、まだ決まっていません。門を通過した仕入先が1件もないためです。この間、新しい外部通信は追加しません。'}
+      </div>
+      <div className="scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>順</th>
+              <th>相手</th>
+              <th>役割</th>
+              <th>確認の方法</th>
+              <th>いまの状態</th>
+              <th>可</th>
+              <th>条件付き</th>
+              <th>不可</th>
+              <th>不明</th>
+              <th>門</th>
+              <th>文案・チェックリストの場所</th>
+            </tr>
+          </thead>
+          <tbody>
+            {gateBoard.map((s) => (
+              <tr key={s.waiting.supplierCode}>
+                <td className="small">{s.waiting.order}</td>
+                <td><strong>{s.waiting.labelJa}</strong></td>
+                <td className="small">{s.waiting.roleJa}</td>
+                <td className="small">{SUPPLIER_GATE_WAY_JA[s.waiting.way]}</td>
+                <td className="small">{s.statusJa}</td>
+                <td className="small">{num(s.yes)}</td>
+                <td className="small">{num(s.conditional)}</td>
+                <td className="small">{num(s.no)}</td>
+                <td className="small">{num(s.unknown)}</td>
+                <td>
+                  <span className={s.gate === 'ALLOWED' ? 'badge strong' : 'badge skip'}>
+                    {s.gate === 'ALLOWED' ? '通過' : '止めている'}
+                  </span>
+                </td>
+                <td className="small muted">{s.waiting.docJa}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div className="note" style={{ marginTop: 10 }}>
+        返事が届いたら、1問ずつ「可 / 不可 / 条件付きで可 / 不明」に分けて記録します。
+        条件付きの場合は<strong>条件の原文</strong>も残し、その条件を安全装置として実装しきってから通過にします。
+        あわせて<strong>回答メール・規約を確認した日・出典</strong>を必ず保存します。原文・出典・確認日のどれかが欠けている回答は、自動的に「不明」に戻します。
       </div>
 
       <h2>どの市場から自動でデータを取るか（CONNECTOR PRIORITY SCORE）</h2>

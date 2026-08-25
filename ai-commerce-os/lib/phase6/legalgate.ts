@@ -876,3 +876,208 @@ export const HUMAN_TODOS: HumanTodo[] = [
     whereJa: `${EBAY_LICENSE}（eBay Content の利用制限）`,
   },
 ];
+
+/* ================================================================
+ * Phase 6.5：仕入先の門（Legal Gate）の待ち状況ボード
+ * ================================================================
+ *
+ * ここは「誰の返事を待っているか」を1枚で見せるだけの板。
+ * 通信もしないし、判定を勝手に動かすこともしない。
+ *
+ * ★ 最初に門を完全通過した仕入先が FIRST_LIVE_SUPPLIER になる。
+ *   順位でも過去のスコアでもなく、通過が最優先条件（ユーザー指示 2026-08-26）。
+ */
+
+/** 返事の分類。CONDITIONAL は「条件付きで可」。条件を実装しきるまでは通過にしない。 */
+export const ANSWER_STATES = ['YES', 'NO', 'CONDITIONAL', 'UNKNOWN'] as const;
+export type AnswerState = (typeof ANSWER_STATES)[number];
+
+export const ANSWER_STATE_JA: Record<AnswerState, string> = {
+  YES: '可',
+  NO: '不可',
+  CONDITIONAL: '条件付きで可',
+  UNKNOWN: '不明',
+};
+
+/** 1問ぶんの回答記録。出典が無い YES は採用しない（ルール144）。 */
+export type GateAnswer = {
+  /** 質問の識別子（問い合わせ文の Q1〜Q8 / チェックリストの #1〜#13 に対応） */
+  key: string;
+  /** 何を聞いたか */
+  questionJa: string;
+  value: AnswerState;
+  /** CONDITIONAL のときの条件。原文のまま入れる。 */
+  conditionJa: string | null;
+  /** 回答メールの原文引用、または規約の原文引用 */
+  quoteJa: string | null;
+  /** 出典（メールの件名・受信日、または規約ページのURL） */
+  sourceJa: string | null;
+  /** 規約を確認した日 / メールを受け取った日（YYYY-MM-DD） */
+  checkedAt: string | null;
+};
+
+/** 出典3点（原文・出典・確認日）が揃っていない回答は UNKNOWN に落とす。 */
+export function effectiveAnswer(a: GateAnswer): AnswerState {
+  if (a.value === 'UNKNOWN') return 'UNKNOWN';
+  if (a.value === 'NO') return 'NO';
+  if (!a.quoteJa || !a.sourceJa || !a.checkedAt) return 'UNKNOWN';
+  return a.value;
+}
+
+export const SUPPLIER_GATE_WAY = ['MAIL_INQUIRY', 'HUMAN_READ_TERMS'] as const;
+export type SupplierGateWay = (typeof SUPPLIER_GATE_WAY)[number];
+
+export const SUPPLIER_GATE_WAY_JA: Record<SupplierGateWay, string> = {
+  MAIL_INQUIRY: '人がメールで問い合わせる',
+  HUMAN_READ_TERMS: '人がブラウザで規約を読む',
+};
+
+export type SupplierGateWaiting = {
+  /** 突破に取り組む順番（1が先） */
+  order: number;
+  supplierCode: string;
+  labelJa: string;
+  /** この相手が仕入先候補か、価格比較用の情報源か */
+  roleJa: string;
+  way: SupplierGateWay;
+  /** 待っている理由を1行で */
+  waitingForJa: string;
+  /** 必要な質問の数（すべて可になって初めて通過） */
+  requiredCount: number;
+  /** 人が書き込んだ回答。空配列＝まだ何も返ってきていない。 */
+  answers: GateAnswer[];
+  /** 文案・チェックリストの置き場所 */
+  docJa: string;
+};
+
+/**
+ * 待ち行列（2026-08-26 時点）。
+ * ★ answers はすべて空。回答が来ていないものを「来た」ことにしない。
+ */
+export const SUPPLIER_GATE_WAITING: SupplierGateWaiting[] = [
+  {
+    order: 1,
+    supplierCode: 'NETSEA',
+    labelJa: 'NETSEA（SynaBiz）',
+    roleJa: '仕入先候補（FIRST_SUPPLIER_CANDIDATE）',
+    way: 'MAIL_INQUIRY',
+    waitingForJa: '必須8問（保存・加工・比較・分析結果の保存・終了時の扱い・Amazon個別確認・商品URL・AI利用）の回答待ち',
+    requiredCount: 8,
+    answers: [],
+    docJa: '事業Vault/AI Commerce OS/32_問い合わせ文案_YahooとRakuten.md §3',
+  },
+  {
+    order: 2,
+    supplierCode: 'VALUECOMMERCE',
+    labelJa: 'バリューコマース（商品API）',
+    roleJa: '価格比較の情報源（仕入先ではない）',
+    way: 'MAIL_INQUIRY',
+    waitingForJa: '5問（社内利用・保存・比較分析・非公開画面・購入目的での参照）の回答待ち',
+    requiredCount: 5,
+    answers: [],
+    docJa: '事業Vault/AI Commerce OS/32_問い合わせ文案_YahooとRakuten.md §4',
+  },
+  {
+    order: 3,
+    supplierCode: 'OROSY',
+    labelJa: 'orosy',
+    roleJa: '仕入先候補',
+    way: 'HUMAN_READ_TERMS',
+    waitingForJa: '人が規約を読んで13項目に可／不可／不明を入れるのを待っている（所要20分・費用0円）',
+    requiredCount: 13,
+    answers: [],
+    docJa: '事業Vault/AI Commerce OS/35_orosy規約チェックリスト_人間確認用.md',
+  },
+  {
+    order: 4,
+    supplierCode: 'YAHOO_SHOPPING',
+    labelJa: 'Yahoo!ショッピング（商品検索v3）',
+    roleJa: '価格比較の情報源',
+    way: 'MAIL_INQUIRY',
+    waitingForJa: '4問（社内商用利用・保存・他市場比較・クレジット表示）の回答待ち',
+    requiredCount: 4,
+    answers: [],
+    docJa: '事業Vault/AI Commerce OS/32_問い合わせ文案_YahooとRakuten.md §1',
+  },
+  {
+    order: 5,
+    supplierCode: 'RAKUTEN',
+    labelJa: '楽天ウェブサービス',
+    roleJa: '価格比較の情報源',
+    way: 'MAIL_INQUIRY',
+    waitingForJa: '個別許諾の可否（第10条(7)(9)・第8条4項との関係を含む6問）の回答待ち',
+    requiredCount: 6,
+    answers: [],
+    docJa: '事業Vault/AI Commerce OS/32_問い合わせ文案_YahooとRakuten.md §2',
+  },
+];
+
+export type SupplierGateStatus = {
+  waiting: SupplierGateWaiting;
+  answered: number;
+  yes: number;
+  conditional: number;
+  no: number;
+  unknown: number;
+  /** ALLOWED になるのは、必要な質問がすべて可（条件付きなら条件を実装済み）になったときだけ。 */
+  gate: LegalUsageGate;
+  statusJa: string;
+};
+
+/**
+ * 待ち状況を1件ぶん集計する。
+ * 未回答は UNKNOWN として数える（無返信を許可の根拠にしない・ルール58）。
+ */
+export function supplierGateStatus(w: SupplierGateWaiting): SupplierGateStatus {
+  const eff = w.answers.map(effectiveAnswer);
+  const yes = eff.filter((v) => v === 'YES').length;
+  const conditional = eff.filter((v) => v === 'CONDITIONAL').length;
+  const no = eff.filter((v) => v === 'NO').length;
+  const answeredUnknown = eff.filter((v) => v === 'UNKNOWN').length;
+  const missing = Math.max(0, w.requiredCount - eff.length);
+  const unknown = answeredUnknown + missing;
+
+  let gate: LegalUsageGate = 'BLOCKED';
+  let statusJa: string;
+  if (no > 0) {
+    statusJa = `不可の回答が${no}件。この相手では接続しない`;
+  } else if (unknown > 0) {
+    statusJa =
+      w.way === 'HUMAN_READ_TERMS'
+        ? `人間確認待ち（未確定 ${unknown}/${w.requiredCount}）`
+        : `回答待ち（未回答 ${unknown}/${w.requiredCount}）`;
+  } else if (conditional > 0) {
+    statusJa = `条件付きで可が${conditional}件。条件を安全装置として実装してから通過にする`;
+  } else {
+    gate = 'ALLOWED';
+    statusJa = `必要な${w.requiredCount}件すべて可。門を通過`;
+  }
+
+  return { waiting: w, answered: eff.length, yes, conditional, no, unknown, gate, statusJa };
+}
+
+export function supplierGateBoard(): SupplierGateStatus[] {
+  return [...SUPPLIER_GATE_WAITING]
+    .sort((a, b) => a.order - b.order)
+    .map(supplierGateStatus);
+}
+
+/**
+ * 最初に門を完全通過した仕入先。まだ誰も通っていなければ null。
+ * ★ 順位や過去のスコアでは決めない。通過した順だけで決まる。
+ * ★ 価格比較の情報源は仕入先ではないので、ここには入らない。
+ */
+export const PURCHASABLE_CANDIDATE_CODES = ['NETSEA', 'OROSY'] as const;
+
+export function firstLiveSupplier(): { code: string; labelJa: string } | null {
+  for (const s of supplierGateBoard()) {
+    if (s.gate !== 'ALLOWED') continue;
+    if (!PURCHASABLE_CANDIDATE_CODES.includes(s.waiting.supplierCode as never)) continue;
+    return { code: s.waiting.supplierCode, labelJa: s.waiting.labelJa };
+  }
+  return null;
+}
+
+/** 通過しても、まず読むだけ。1件 → 5件 → 10件 → 47件の順で広げる。 */
+export const FIRST_LIVE_SUPPLIER_READ_ONLY = true;
+export const FIRST_LIVE_SUPPLIER_STAGES = [1, 5, 10, 47] as const;
