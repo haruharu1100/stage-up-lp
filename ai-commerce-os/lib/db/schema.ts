@@ -1849,3 +1849,332 @@ export const SCHEMA_KEEPA: string[] = [
   )`,
   `CREATE INDEX IF NOT EXISTS idx_asin_match_local ON asin_match_candidates(local_product_key)`,
 ];
+
+/* ================================================================
+ * Phase 4：仕入価格 → Amazon販売 のルート検証（2026-08-25）
+ *
+ * ご本人の指示（原文・§1）：
+ *   「KOMEHYO仕入価格42,800円 → JAN/型番/商品名 → Amazon ASIN Matching → Keepa →
+ *    Amazon需要確認 → Amazon販売価格 → Amazon手数料 → 送料等 → 保守純利益 → 保守ROI →
+ *    BUY/WATCH/SKIP → [仕入先の商品ページを開く] まで一本につないでください。」
+ *
+ * 【この3つの表を分けている理由】
+ *   ① supplier_offers        … 仕入先から来た事実。**こちらの計算を1つも混ぜない。**
+ *   ② supplier_offer_routes  … その事実に対して、そのとき機械が出した答え。**凍結する。**
+ *   ③ real_trade_results     … 実際に売れたあとの事実。**受け皿だけ作る（§33）。**
+ *
+ * ①と②を同じ表にすると、仕入価格が変わったときに過去の判断も書き換わってしまい、
+ * 「あのときAIは何と言ったか」が消える（ルール60と同じ考え方）。
+ * ================================================================ */
+export const SCHEMA_PHASE4: string[] = [
+  /*
+   * 【仕入先から来た商品】（§4の16項目）
+   *
+   * ご本人の指示（原文・§4）：「分からないものはNULL。推測禁止。」
+   * だから NOT NULL を付けているのは、無ければそもそも商品として成立しない4つだけ。
+   *
+   * ★ jan / ean / upc を1つの列にまとめない。
+   *   同じバーコードに見えて、桁数も発行地域も違う。まとめると照合の精度が落ちる。
+   *
+   * ★ source_product_url は必須ではない（§5）。
+   *   「分析自体は、URLが無くても可能にしてください。」
+   *   URLが無くても利益計算まで進み、[購入ページを開く] だけが出ない。
+   */
+  `CREATE TABLE IF NOT EXISTS supplier_offers (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    supplier_name TEXT NOT NULL,
+    supplier_product_id TEXT NOT NULL,
+    product_name TEXT NOT NULL,
+    brand TEXT,
+    jan TEXT,
+    ean TEXT,
+    upc TEXT,
+    model_number TEXT,
+    color TEXT,
+    size TEXT,
+    condition TEXT,
+    purchase_price INTEGER NOT NULL,
+    shipping_cost_to_us INTEGER,
+    stock INTEGER,
+    source_product_url TEXT,
+    observed_at TEXT NOT NULL,
+
+    /* どの取得手段で入ってきたか（MANUAL_SUPPLIER_INPUT / CSV_SUPPLIER_IMPORT など） */
+    connector_kind TEXT NOT NULL,
+    /*
+     * 見本用の行かどうか。
+     * ★1にした行は、購入ページを開けない・KPIの分母に入れない。
+     *   見本と本物を同じ表に置くのは、混ざる危険がある。それでも分けないのは、
+     *   「別の表にすると、本番の表だけ空のまま画面を作ってしまう」ほうが危ないため。
+     *   混ざらないよう、この1列で必ず区別する（ルール33と同じ考え方）。
+     */
+    is_sample INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL,
+    UNIQUE(supplier_name, supplier_product_id, observed_at)
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_supplier_offers_supplier ON supplier_offers(supplier_name)`,
+  `CREATE INDEX IF NOT EXISTS idx_supplier_offers_jan ON supplier_offers(jan)`,
+  `CREATE INDEX IF NOT EXISTS idx_supplier_offers_sample ON supplier_offers(is_sample)`,
+
+  /*
+   * 【そのとき機械が出した答え】（§11〜§17・§23）
+   *
+   * ★追記専用。同じ商品を計算し直したら、新しい行を積む。上書きしない。
+   *   上書きすると、相場が動いたあとに「最初からそう言っていた」ことになり、
+   *   当たり外れを永久に測れなくなる（ルール19・60と同じ）。
+   *
+   * ★決めた値段は2本とも残す（§9）。
+   *   raw_expected_sell_price … 表示用
+   *   conservative_sell_price … 判定に使ったほう
+   *   calibrated_sell_price   … 実成約データが貯まるまで必ず NULL
+   *
+   * ★手数料は出どころで分ける（§10）。
+   *   amazon_referral_fee / amazon_fba_fee … Amazonが決めている額
+   *   own_cost_total                        … 当社が決めている額
+   *   1つにまとめると、利益が外れたときに原因を切り分けられなくなる。
+   */
+  `CREATE TABLE IF NOT EXISTS supplier_offer_routes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    offer_id INTEGER NOT NULL,
+    asin TEXT,
+
+    /* ① 同じ商品か */
+    match_score INTEGER,
+    match_gate TEXT NOT NULL,
+    match_candidate_count INTEGER NOT NULL DEFAULT 0,
+
+    /* ② 売れているか */
+    demand_confidence TEXT,
+    rank_drops_30 INTEGER,
+    keepa_monthly_sold_at_least INTEGER,
+    offer_count_new INTEGER,
+    amazon_retail_risk TEXT,
+
+    /* ③ いくらで売れそうか */
+    raw_expected_sell_price INTEGER,
+    conservative_sell_price INTEGER,
+    calibrated_sell_price INTEGER,
+    sell_price_source TEXT,
+    sell_price_confidence TEXT,
+
+    /* ④ いくら引かれるか（出どころ別） */
+    amazon_referral_fee INTEGER,
+    amazon_referral_fee_percentage REAL,
+    amazon_fba_fee INTEGER,
+    fee_confidence TEXT,
+    own_cost_total INTEGER,
+    own_cost_json TEXT,
+
+    /* ⑤ 利益（§11の8項目） */
+    total_acquisition_cost INTEGER,
+    expected_net_receipt INTEGER,
+    expected_net_profit INTEGER,
+    conservative_net_profit INTEGER,
+    expected_roi REAL,
+    conservative_roi REAL,
+    break_even_sell_price INTEGER,
+    max_buy_price INTEGER,
+    price_gap_to_buyable INTEGER,
+
+    /* ⑥ 判定 */
+    decision TEXT NOT NULL,
+    stopped_at TEXT,
+    drop_reason TEXT,
+    reason_ja TEXT,
+    checks_json TEXT,
+
+    /* 出どころの鮮度と、使ったしきい値の版 */
+    keepa_last_update TEXT,
+    data_age_hours REAL,
+    rule_version TEXT NOT NULL,
+    computed_at TEXT NOT NULL,
+    UNIQUE(offer_id, computed_at)
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_offer_routes_offer ON supplier_offer_routes(offer_id, computed_at)`,
+  `CREATE INDEX IF NOT EXISTS idx_offer_routes_decision ON supplier_offer_routes(decision)`,
+  `CREATE INDEX IF NOT EXISTS idx_offer_routes_drop ON supplier_offer_routes(drop_reason)`,
+
+  /*
+   * 【実際に売れたあとの事実】（§33）
+   *
+   * ご本人の指示（原文・§33）：
+   *   「購入価格 / Amazon出品価格 / 実販売価格 / 販売日数 / 実手数料 / 実送料 / 実純利益 を
+   *    記録できる受け皿だけ準備してください。」
+   *
+   * ★いまは受け皿だけ。**書き込む機能はまだ作らない。**
+   *   実購入・実出品はコードごと存在しないので、ここに行が入るのは
+   *   人が自分で売買したあと、手で報告したときだけになる。
+   *
+   * ★ここが埋まって初めて calibrated_sell_price を作れる。
+   *   逆に言えば、ここが空のうちに「実績で補正した価格」を名乗ってはいけない。
+   */
+  `CREATE TABLE IF NOT EXISTS real_trade_results (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    offer_id INTEGER,
+    route_id INTEGER,
+    asin TEXT,
+
+    actual_purchase_price INTEGER NOT NULL,
+    actual_listing_price INTEGER,
+    actual_sold_price INTEGER,
+    days_to_sell INTEGER,
+    actual_amazon_fee INTEGER,
+    actual_shipping_cost INTEGER,
+    actual_net_profit INTEGER,
+
+    purchased_at TEXT NOT NULL,
+    sold_at TEXT,
+    /* 人が手で報告した内容であることを明示する。機械が埋めた行と混ぜない。 */
+    reported_by TEXT NOT NULL DEFAULT 'HUMAN_INPUT',
+    note TEXT,
+    created_at TEXT NOT NULL
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_real_trade_results_offer ON real_trade_results(offer_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_real_trade_results_asin ON real_trade_results(asin)`,
+];
+
+/* ================================================================
+ * Phase 5（AUTO RESEARCH・2026-08-25）
+ *
+ * ご本人の指示（原文・§54）：
+ *   「今後は『人間が商品を入力する』ことを主経路にしない。
+ *     主経路：AI Research ／ Fallback：Human Input です。」
+ *
+ * 【この3つの表で何をするのか】
+ *   ① research_runs        … いつ・どの向きで・どこまで進んで・いくらかかったか
+ *   ② research_candidates  … 見つけた候補と、その状態（8状態）
+ *   ③ supplier_search_pending … 「売れるのは分かったが、仕入先が無い」商品の置き場
+ *
+ * ★③が Phase 5 のいまの終点である（§40）。
+ *   仕入側で正式に自動取得できる市場が0件なので、
+ *   自動でできるのは「売れる商品を選んで、ここへ貯める」ところまで。
+ *   貯めずに捨てると、仕入先の口がついた日にまた全部調べ直しになる。
+ *
+ * ★ここに「購入」「出品」「決済」「発送」の表は1つも作らない（§53）。
+ * ================================================================ */
+export const SCHEMA_PHASE5: string[] = [
+  /*
+   * 【1回の自動リサーチの記録】
+   *
+   * ★費用と件数を必ず同じ行に持つ。別の表にすると
+   *   「調べた件数」だけが報告され、費用が見えなくなる（§48）。
+   */
+  `CREATE TABLE IF NOT EXISTS research_runs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    /* DEMAND_FIRST / SUPPLY_FIRST */
+    direction TEXT NOT NULL,
+    /* どこまで進めたか。進めなかった段と理由も残す。 */
+    reached_stage TEXT,
+    stopped_stage TEXT,
+    stopped_reason_ja TEXT,
+
+    /* ファネル。分からない段は NULL（0で埋めない＝ルール115）。 */
+    researched_products INTEGER,
+    matched_products INTEGER,
+    profitable_routes INTEGER,
+    buy_opportunities INTEGER,
+
+    /* かかったもの。Keepaの枠と、円換算の費用は別に持つ。 */
+    tokens_used INTEGER NOT NULL DEFAULT 0,
+    api_cost_jpy INTEGER NOT NULL DEFAULT 0,
+    human_minutes REAL NOT NULL DEFAULT 0,
+
+    /* 通信したかどうか。0枠で回した回と、実際に取りに行った回を区別する。 */
+    network_used INTEGER NOT NULL DEFAULT 0,
+
+    rule_version TEXT NOT NULL,
+    started_at TEXT NOT NULL,
+    finished_at TEXT,
+    note_ja TEXT
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_research_runs_started ON research_runs(started_at)`,
+
+  /*
+   * 【候補と、その状態】（§43・§44）
+   *
+   * ★鍵は「市場 ＋ その市場での出品番号」（candidateKey）。
+   *   商品名で作ると、1文字違うだけで別物になり重複が素通りする。
+   *   だから UNIQUE はここに置く。
+   */
+  `CREATE TABLE IF NOT EXISTS research_candidates (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    run_id INTEGER,
+
+    /* 市場コードと、その市場での出品番号（ASINなど）。 */
+    venue_code TEXT NOT NULL,
+    external_id TEXT NOT NULL,
+    candidate_key TEXT NOT NULL,
+    title TEXT,
+
+    /* NEW / FILTERED / MATCHING / ANALYZING / ROUTE_READY / OPPORTUNITY / REJECTED / WATCHING */
+    state TEXT NOT NULL DEFAULT 'NEW',
+    state_reason_ja TEXT,
+
+    /* 調べる順番の点数。買ってよい点数ではない。 */
+    priority_score INTEGER,
+    /* 何割の材料がそろっていたか。低い点数を信用しないための数字。 */
+    score_coverage REAL,
+
+    /* 値と在庫。再解析の判定に使う（§45）。分からなければ NULL。 */
+    last_price INTEGER,
+    last_stock INTEGER,
+    last_analyzed_at TEXT,
+    last_rule_version TEXT,
+
+    /* NEW_LISTING / KNOWN_LISTING / UNKNOWN */
+    novelty TEXT NOT NULL DEFAULT 'UNKNOWN',
+    /* 相場より極端に安いか。安いほど一致の基準を上げる（§17）。 */
+    price_anomaly INTEGER NOT NULL DEFAULT 0,
+    extra_match_points INTEGER NOT NULL DEFAULT 0,
+
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    UNIQUE(candidate_key)
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_research_candidates_state ON research_candidates(state)`,
+  `CREATE INDEX IF NOT EXISTS idx_research_candidates_run ON research_candidates(run_id)`,
+
+  /*
+   * 【仕入先探し待ち】（§40）
+   *
+   * ご本人の指示（原文・§40）：
+   *   「他市場に正式Connectorが無い場合、そのASINを SUPPLIER_SEARCH_PENDING として保存。
+   *     無断でWebを巡回しないこと。」
+   *
+   * ★この表が空でないこと自体は、失敗ではない。
+   *   「売れる商品は選べているが、買える場所がまだ無い」という状態を
+   *   正直に置いておく場所である。
+   */
+  `CREATE TABLE IF NOT EXISTS supplier_search_pending (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    run_id INTEGER,
+
+    /* 販売側で見つけた商品（いまは Keepa 経由の ASIN）。 */
+    sell_side_venue TEXT NOT NULL,
+    sell_side_id TEXT NOT NULL,
+    title TEXT,
+
+    /* 仕入先を探すための手がかり。無ければ NULL。★推測で作らない。 */
+    jan TEXT,
+    model_number TEXT,
+    brand TEXT,
+
+    /* NO_BUY_SIDE_CONNECTOR / NO_IDENTIFIER / MATCH_UNCONFIRMED / PRICE_UNKNOWN */
+    reason TEXT NOT NULL,
+    next_step_ja TEXT,
+
+    /* 需要の強さ（並べ替え用）。判定ではない（ルール124）。 */
+    demand_rank INTEGER,
+    /* Amazon側の想定販売価格。仕入価格は入らない（まだ分からないため）。 */
+    sell_side_price INTEGER,
+
+    /* いつの Keepa データから作ったか。古くなったら作り直す。 */
+    source_data_at TEXT,
+    rule_version TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    UNIQUE(sell_side_venue, sell_side_id)
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_supplier_search_pending_reason ON supplier_search_pending(reason)`,
+  `CREATE INDEX IF NOT EXISTS idx_supplier_search_pending_rank ON supplier_search_pending(demand_rank)`,
+];

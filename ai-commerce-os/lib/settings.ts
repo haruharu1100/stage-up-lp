@@ -491,6 +491,176 @@ export const SETTING_DEFS: SettingDef[] = [
       '「100件登録した」ではなく「100件のうち何件が実際に検証できたか」を見る。'
       + 'この数字だけを追いかけないこと。',
   },
+
+  // --- 仕入→Amazonのルート（Phase 4） ---
+  // ご本人の指示（原文・§14）：「閾値は既存設定から管理可能にしてください。」
+  // ★頭に SUPPLIER_ROUTE_ を付けているのは、既存の PHASE4_UNLOCKED（卒業条件のほう）と
+  //   紛らわしくならないようにするため。同じ「Phase 4」でも別の話である。
+  {
+    key: 'SUPPLIER_ROUTE_MIN_NET_PROFIT',
+    value: '3000',
+    value_type: 'int',
+    label: '買う候補にする最低の純利益（保守）',
+    group_key: '仕入ルート',
+    hint:
+      '保守で見た純利益がこの額に届かなければ買う候補にしない。'
+      + '★候補を増やしたいときに、この数字を下げないこと（ルール13）。下げれば必ず増えるが、'
+      + '増えたぶんは「基準を満たした商品」ではない。仕入先を増やす方で増やす。',
+  },
+  {
+    key: 'SUPPLIER_ROUTE_MIN_ROI',
+    value: '0.15',
+    value_type: 'rate',
+    label: '買う候補にする最低のROI（保守）',
+    group_key: '仕入ルート',
+    hint: '仕入総額に対する純利益の割合。0.15＝15%。保守で見た値だけを使う。',
+  },
+  {
+    key: 'SUPPLIER_ROUTE_MIN_RANK_DROPS_30',
+    value: '3',
+    value_type: 'int',
+    label: '売れている証拠とみなす30日の順位下がり回数',
+    group_key: '仕入ルート',
+    hint:
+      '直近30日で売れ筋順位が下がった回数。これ未満なら「売れている証拠が弱い」とする。'
+      + '★順位の下がり回数は販売数そのものではない（ルール78）。1回の注文で2個売れても1回のことがある。',
+  },
+  {
+    key: 'SUPPLIER_ROUTE_MAX_DATA_AGE_HOURS',
+    value: '168',
+    value_type: 'int',
+    label: 'Amazon側データを新しいとみなす上限（時間）',
+    group_key: '仕入ルート',
+    hint: 'これより古いデータで買う判断をしない。既定は168時間（7日）。',
+  },
+  {
+    key: 'SUPPLIER_ROUTE_WATCH_MAX_GAP',
+    value: '20000',
+    value_type: 'int',
+    label: '値下がりを待つと判断する差額の上限（円）',
+    group_key: '仕入ルート',
+    hint:
+      '「買ってよい上限」まであといくらなら待つ価値があるか。'
+      + 'これを超えて離れているものは見送りにする。見送りにしたものは画面に出なくなるので、'
+      + '大きくしすぎると、いつまでも下がらない商品が一覧に溜まる。',
+  },
+  {
+    key: 'SUPPLIER_ROUTE_INBOUND_SHIPPING',
+    value: '500',
+    value_type: 'int',
+    label: 'Amazonへ送る送料（1商品あたり・円）',
+    group_key: '仕入ルート',
+    hint: '実測が出るまでの仮置き。★安く見積もると必ず買いすぎるので、やや厚めに置いてある。',
+  },
+  {
+    key: 'SUPPLIER_ROUTE_SUPPLIER_SHIPPING',
+    value: '0',
+    value_type: 'int',
+    label: '仕入先から届く送料の既定値（円）',
+    group_key: '仕入ルート',
+    hint:
+      '仕入先データに送料が入っていればそちらが優先される。ここは入っていなかった場合の値。'
+      + '★0のまま使うと送料ぶん利益が多く見えるので、画面には「仮置き」と表示される。',
+  },
+  {
+    key: 'SUPPLIER_ROUTE_PACKAGING',
+    value: '150',
+    value_type: 'int',
+    label: '梱包代（1商品あたり・円）',
+    group_key: '仕入ルート',
+    hint: '実測が出るまでの仮置き。',
+  },
+  {
+    key: 'SUPPLIER_ROUTE_STORAGE',
+    value: '100',
+    value_type: 'int',
+    label: '保管代（1商品あたり・円）',
+    group_key: '仕入ルート',
+    hint: '実測が出るまでの仮置き。長く売れ残るほど実際は増える。',
+  },
+  {
+    key: 'SUPPLIER_ROUTE_OTHER_COST',
+    value: '0',
+    value_type: 'int',
+    label: 'その他の費用（1商品あたり・円）',
+    group_key: '仕入ルート',
+    hint: '上のどれにも入らない費用。',
+  },
+  {
+    key: 'SUPPLIER_ROUTE_RETURN_LOSS_RATE',
+    value: '0.02',
+    value_type: 'rate',
+    label: '返品で失う見込みの割合',
+    group_key: '仕入ルート',
+    hint:
+      '販売価格に対する割合。0.02＝2%。額ではなく率で置くのは、高い商品ほど損も大きいため。'
+      + '★実測ではない。実際に売買した記録が貯まったら差し替える。',
+  },
+  {
+    key: 'SUPPLIER_ROUTE_OFFER_LIMIT',
+    value: '10',
+    value_type: 'int',
+    label: '仕入先商品の登録上限（件）',
+    group_key: '仕入ルート',
+    hint:
+      'ご本人の指示：「いきなり100商品を入れないでください。」'
+      + 'まず10件でファネルを一度通し、どこで落ちるかを見てから増やす。'
+      + '★この数字はAIが自分で書き換えない。増やすのは人。',
+  },
+
+  /* --- 自動リサーチ（Phase 5・2026-08-25）---
+   *
+   * ご本人の指示（原文・§12）：「需要強い / 競合少ない / 価格安定 / Amazon本体なし 商品を抽出。」
+   *
+   * ★ここは「買ってよい条件」ではない（ルール124）。
+   *   選ぶのは **先に仕入先を探す価値がある商品** であって、買ってよい商品ではない。
+   *   買ってよいかは、仕入価格が入ってから Phase 4 の判定が決める。
+   */
+  {
+    key: 'RESEARCH_DEMAND_MIN_RANK_DROPS_30',
+    value: '10',
+    value_type: 'int',
+    label: '自動リサーチ：30日の値下がり回数の下限',
+    group_key: '自動リサーチ',
+    hint:
+      '売れ筋順位が30日で何回下がったか。多いほどよく売れている合図。★これは販売数ではない（ルール78）。'
+      + '仕入ルート判定の同名設定（既定3回）より厳しくしてあるのは、'
+      + 'ここが「これから費用をかけて調べる相手を選ぶ」段だから。',
+  },
+  {
+    key: 'RESEARCH_DEMAND_MAX_OFFER_COUNT',
+    value: '15',
+    value_type: 'int',
+    label: '自動リサーチ：出品者数の上限（人）',
+    group_key: '自動リサーチ',
+    hint: '競合が多い商品は、売れても値下げ合戦になりやすいので後回しにする。人数が分からない商品は選ばない。',
+  },
+  {
+    key: 'RESEARCH_DEMAND_MAX_DATA_AGE_HOURS',
+    value: '720',
+    value_type: 'int',
+    label: '自動リサーチ：使ってよいデータの古さ（時間）',
+    group_key: '自動リサーチ',
+    hint: '720時間＝30日。これより古いデータからは候補を選ばない。',
+  },
+  {
+    key: 'RESEARCH_AI_DAILY_LIMIT_JPY',
+    value: '500',
+    value_type: 'int',
+    label: '自動リサーチ：1日のAI・API費用の上限（円）',
+    group_key: '自動リサーチ',
+    hint:
+      'ここに達したらその日は止まる。★止まったときに勝手に上げないこと。'
+      + '上げてよいのは「1件あたりの費用に見合っている」と数字で確かめられたときだけ。',
+  },
+  {
+    key: 'RESEARCH_AI_PER_PRODUCT_LIMIT_JPY',
+    value: '20',
+    value_type: 'int',
+    label: '自動リサーチ：商品1件あたりの費用上限（円）',
+    group_key: '自動リサーチ',
+    hint: '1件にこれ以上かかる調べ方はしない。高い調べ方は、見込み利益の大きい候補だけに使う。',
+  },
 ];
 
 let cache: Map<string, string> | null = null;
@@ -655,9 +825,125 @@ export async function getCostSettings(): Promise<CostSettings> {
   };
 }
 
+/**
+ * 【仕入→Amazonルートの設定】（Phase 4）
+ *
+ * ★既存の `isPhase4Unlocked()`（卒業条件のほう）とは別物。
+ *   同じ「Phase 4」という言葉だが、あちらは「実運用へ進んでよいか」、
+ *   こちらは「仕入価格からAmazon販売までの採算をどう見るか」である。
+ *   紛らわしいので、キー名にも関数名にも SupplierRoute を付けている。
+ */
+export type SupplierRouteSettings = {
+  minNetProfit: number;
+  minRoi: number;
+  minRankDrops30: number;
+  maxDataAgeHours: number;
+  watchMaxGap: number;
+  inboundShipping: number;
+  supplierShipping: number;
+  packaging: number;
+  storage: number;
+  otherCost: number;
+  returnLossRate: number;
+  offerLimit: number;
+};
+
+export async function getSupplierRouteSettings(): Promise<SupplierRouteSettings> {
+  const s = await loadSettings();
+  // ★見つからない設定を0で埋めない。既定値に落とす（0にすると費用が消えて利益が増える）。
+  const int = (k: string, fallback: number) => {
+    const v = Number(s.get(k));
+    return Number.isFinite(v) && v >= 0 ? Math.floor(v) : fallback;
+  };
+  const rate = (k: string, fallback: number) => {
+    const v = Number(s.get(k));
+    return Number.isFinite(v) && v >= 0 && v < 1 ? v : fallback;
+  };
+  return {
+    minNetProfit: int('SUPPLIER_ROUTE_MIN_NET_PROFIT', 3000),
+    minRoi: rate('SUPPLIER_ROUTE_MIN_ROI', 0.15),
+    minRankDrops30: int('SUPPLIER_ROUTE_MIN_RANK_DROPS_30', 3),
+    maxDataAgeHours: int('SUPPLIER_ROUTE_MAX_DATA_AGE_HOURS', 168),
+    watchMaxGap: int('SUPPLIER_ROUTE_WATCH_MAX_GAP', 20000),
+    inboundShipping: int('SUPPLIER_ROUTE_INBOUND_SHIPPING', 500),
+    supplierShipping: int('SUPPLIER_ROUTE_SUPPLIER_SHIPPING', 0),
+    packaging: int('SUPPLIER_ROUTE_PACKAGING', 150),
+    storage: int('SUPPLIER_ROUTE_STORAGE', 100),
+    otherCost: int('SUPPLIER_ROUTE_OTHER_COST', 0),
+    returnLossRate: rate('SUPPLIER_ROUTE_RETURN_LOSS_RATE', 0.02),
+    offerLimit: int('SUPPLIER_ROUTE_OFFER_LIMIT', 10),
+  };
+}
+
+/**
+ * 仕入ルート判定の版。Phase 1（`v1-`）・Phase 3（`r2-`）とは別に `s1-` を使う。
+ * 混ぜると、ルート用のしきい値を触っただけで過去の仕入判断の版まで変わる（ルール24）。
+ */
+export async function supplierRouteRuleVersion(): Promise<string> {
+  const t = await getSupplierRouteSettings();
+  const sig = [
+    t.minNetProfit,
+    t.minRoi,
+    t.minRankDrops30,
+    t.maxDataAgeHours,
+    t.watchMaxGap,
+    t.inboundShipping,
+    t.packaging,
+    t.storage,
+    t.otherCost,
+    t.returnLossRate,
+  ].join('|');
+  let h = 0;
+  for (let i = 0; i < sig.length; i++) h = (h * 31 + sig.charCodeAt(i)) >>> 0;
+  return `s1-${h.toString(16)}`;
+}
+
 export async function isPhase4Unlocked(): Promise<boolean> {
   const s = await loadSettings();
   return String(s.get('PHASE4_UNLOCKED') ?? 'false').toLowerCase() === 'true';
+}
+
+/* ================================================================
+ * 自動リサーチ（Phase 5）
+ * ================================================================ */
+
+export type ResearchSettings = {
+  minRankDrops30: number;
+  maxOfferCount: number;
+  maxDataAgeHours: number;
+  aiDailyLimitJpy: number;
+  aiPerProductLimitJpy: number;
+};
+
+export async function getResearchSettings(): Promise<ResearchSettings> {
+  const s = await loadSettings();
+  // ★見つからない設定を0で埋めない（0にすると上限が消えて、費用が止まらなくなる）。
+  const int = (k: string, fallback: number) => {
+    const v = Number(s.get(k));
+    return Number.isFinite(v) && v >= 0 ? Math.floor(v) : fallback;
+  };
+  return {
+    minRankDrops30: int('RESEARCH_DEMAND_MIN_RANK_DROPS_30', 10),
+    maxOfferCount: int('RESEARCH_DEMAND_MAX_OFFER_COUNT', 15),
+    maxDataAgeHours: int('RESEARCH_DEMAND_MAX_DATA_AGE_HOURS', 720),
+    aiDailyLimitJpy: int('RESEARCH_AI_DAILY_LIMIT_JPY', 500),
+    aiPerProductLimitJpy: int('RESEARCH_AI_PER_PRODUCT_LIMIT_JPY', 20),
+  };
+}
+
+/**
+ * 自動リサーチの版。`a1-` を使う。
+ *
+ * ★Phase 1（`v1-`）・Phase 3（`r2-`）・Phase 4（`s1-`）と分けるのは、
+ *   リサーチのしきい値を触っただけで、過去の仕入判断の版まで変わってしまうのを防ぐため。
+ *   版が変わると、その版で出した候補は全部見直す決まりになっている（§45）。
+ */
+export async function researchRuleVersion(): Promise<string> {
+  const t = await getResearchSettings();
+  const sig = [t.minRankDrops30, t.maxOfferCount, t.maxDataAgeHours].join('|');
+  let h = 0;
+  for (let i = 0; i < sig.length; i++) h = (h * 31 + sig.charCodeAt(i)) >>> 0;
+  return `a1-${h.toString(16)}`;
 }
 
 export async function getThresholds(): Promise<Thresholds> {

@@ -17,6 +17,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <span className="brand">AI Commerce OS</span>
             <nav>
               <Link href="/">経営ダッシュボード</Link>
+              <Link href="/research">自動リサーチ</Link>
               <Link href="/buy">仕入候補</Link>
               <Link href="/sellability">売れるかテスト</Link>
               <Link href="/keepa">Keepa取得</Link>
@@ -34,7 +35,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <Link href="/settings">設定</Link>
             </nav>
             <span className="mode">
-              Phase 3.10 ／ モード <strong>{config.autoMode}</strong> ／ 自動購入 <strong>未実装</strong>
+              Phase 5 ／ 主経路 <strong>自動リサーチ</strong> ／ モード <strong>{config.autoMode}</strong> ／ 自動購入{' '}
+              <strong>未実装</strong>
             </span>
           </div>
         </header>

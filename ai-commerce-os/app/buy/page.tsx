@@ -7,6 +7,7 @@ import {
 import { buyOpportunities, openWithoutOutcome, purchaseLinkSummary } from '@/lib/purchaselink';
 import OpenPurchaseLink from './OpenPurchaseLink';
 import OutcomeForm from './OutcomeForm';
+import SupplierRouteTable from './SupplierRouteTable';
 import UrlStatusForm from './UrlStatusForm';
 
 export const dynamic = 'force-dynamic';
@@ -92,11 +93,16 @@ export default async function BuyOpportunitiesPage() {
 
       <div className="note warn">{autoPurchaseStatusJa()}</div>
 
-      <h2>仕入候補の一覧</h2>
+      {/* ★§17：仕入価格からAmazon販売までつながっている方を先に出す。 */}
+      <SupplierRouteTable />
+
+      <h2>実市場の出品からの仕入候補</h2>
       <p className="lead small">
-        利益額・ROI・Route Score はまだ出していません。
-        いまの計算は「仕入先の商品」を起点にしており、「この1件の出品を買ったらいくらになるか」の形になっていないためです。
-        <strong>根拠のない金額をここに並べない</strong>という方針です。実出品を仕入候補として扱う変換ができ次第、この列を追加します。
+        こちらは<strong>上の表とは別のもの</strong>です。実市場の出品1件を起点にしていて、
+        「この1件の出品を買ったらいくらになるか」という計算の形にまだなっていません。
+        そのため利益額・ROI・Route Score を出していません。
+        <strong>根拠のない金額をここに並べない</strong>という方針です。
+        金額を見たい場合は、上の「仕入価格 → Amazon販売」の表をご覧ください。
       </p>
 
       {rows.length === 0 ? (

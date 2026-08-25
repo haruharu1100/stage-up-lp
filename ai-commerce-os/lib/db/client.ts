@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { createClient, type Client, type InValue } from '@libsql/client';
-import { ADD_COLUMNS, SCHEMA, SCHEMA_COST, SCHEMA_KEEPA, SCHEMA_OBSERVATION, SCHEMA_PURCHASE_LINK, SCHEMA_SELLABILITY } from './schema';
+import { ADD_COLUMNS, SCHEMA, SCHEMA_COST, SCHEMA_KEEPA, SCHEMA_OBSERVATION, SCHEMA_PHASE4, SCHEMA_PHASE5, SCHEMA_PURCHASE_LINK, SCHEMA_SELLABILITY } from './schema';
 import { config, DATA_DIR } from '../env';
 
 let client: Client | null = null;
@@ -40,6 +40,12 @@ export async function migrate(): Promise<void> {
   for (const stmt of SCHEMA_SELLABILITY) await c.execute(stmt);
   // Phase 3.10（KEEPA_READ_ONLY）。読み取り専用。購入・出品・決済の表は含まない。
   for (const stmt of SCHEMA_KEEPA) await c.execute(stmt);
+  // Phase 4（仕入価格 → Amazon販売のルート検証）。
+  // 実購入・実出品の表は含まない。real_trade_results は「人が手で報告した結果」の受け皿のみ。
+  for (const stmt of SCHEMA_PHASE4) await c.execute(stmt);
+  // Phase 5（自動リサーチ）。調べた記録・候補の状態・仕入先探し待ちの3つだけ。
+  // 購入・出品・決済・発送の表は1つも含まない（§53）。
+  for (const stmt of SCHEMA_PHASE5) await c.execute(stmt);
   // 列追加は「既にある」だけを握りつぶす。それ以外のエラーは隠さない。
   for (const stmt of ADD_COLUMNS) {
     try {
