@@ -153,9 +153,13 @@ function runOne(file) {
     /* ★「--test」を付けないこと。
          付けると孫プロセスが増え、その終わり方が
          「1本の不合格」として数に混ざります（上の説明のとおり）。 */
+    /* ★報告の形（tap）も、こちらから指定すること。
+         Node 22 から、指定しないときの形が変わりました（tap → spec）。
+         下で読んでいる「# tests / # pass / # fail」が出なくなり、
+         全部のファイルが「合否が取れなかった」になります。 */
     const child = spawn(
       "npx",
-      ["tsx", join("tests", file)],
+      ["tsx", "--test-reporter=tap", join("tests", file)],
       { cwd: ROOT, env: process.env },
     );
 

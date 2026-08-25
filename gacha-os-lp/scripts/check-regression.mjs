@@ -203,7 +203,15 @@ if (!RUN_DIRECTLY) {
 let ng = 0;
 
 for (const t of FILES) {
-  const r = spawnSync("npx", ["tsx", "--test", t.file], {
+  /* ★報告の形（tap）を、こちらから指定すること。
+       Node 22 から、指定しないときの形が変わりました（tap → spec）。
+       下の readTap は「# pass 8」の形しか読めないので、
+       指定しないまま新しいNodeで動かすと、
+       「検査の報告が読めませんでした」で全部止まります。
+       実際、公開の一歩手前でこれに当たりました（2026-08-25）。
+       ★読めないときに素通りさせるのは絶対にしないこと。
+         ここは止まる側で正しく、直すのは指定の方です。 */
+  const r = spawnSync("npx", ["tsx", "--test", "--test-reporter=tap", t.file], {
     cwd: ROOT,
     encoding: "utf8",
     env: process.env,
