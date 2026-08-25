@@ -244,8 +244,18 @@ export function normalizeKeepaProduct(raw: any): KeepaNormalized {
       if (stats?.buyBoxIsAmazon === false) return 'NO';
       return 'UNKNOWN';
     })(),
-    outOfStockPercentage30: val(stats?.outOfStockPercentage30),
-    outOfStockPercentage90: val(stats?.outOfStockPercentage90),
+    // ★2026-08-25 訂正：ここは1つの数ではなく「配列」で来る。
+    //   1件目の実取得（B0978NB1VQ）で発覚した取り込み漏れ。
+    //   Keepa の応答は `outOfStockPercentage90: [100, 100, 100, -1, ...]` のように
+    //   `stats.current` と同じ添字（0=Amazon本体 / 1=新品 / 2=中古）の配列である。
+    //   これをそのまま `val()`（=`Number()`）に渡すと NaN になり、
+    //   **値があるのに毎回「不明」になっていた**。
+    //   実害：ライバルの多さの判定で「90日間の在庫切れ割合」が常に点に入らず、
+    //         品切れが多い（＝入り込む余地がある）商品を見落とす方向に効く。
+    //   どの添字を使うか：ここが効くのは「新品で出品する自分が入り込めるか」なので
+    //   **新品（NEW=1）** を採る。Amazon本体の在庫の有無は別の材料として持っている。
+    outOfStockPercentage30: val(arrAt(stats?.outOfStockPercentage30, KEEPA_CSV_INDEX.NEW)),
+    outOfStockPercentage90: val(arrAt(stats?.outOfStockPercentage90, KEEPA_CSV_INDEX.NEW)),
 
     fbaPickAndPackFee: yen(raw?.fbaFees?.pickAndPackFee),
     referralFeePercentage: val(raw?.referralFeePercentage),

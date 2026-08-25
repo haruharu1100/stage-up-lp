@@ -27,6 +27,7 @@
     "test:phase3-9": "tsx scripts/test-phase3-9.ts",
     "test:phase3-9b": "tsx scripts/test-phase3-9b.ts",
     "test:phase3-9d": "tsx scripts/test-phase3-9d.ts",
+    "keepa:token": "tsx scripts/keepa-token.ts",
     "keepa:one": "tsx scripts/keepa-one.ts",
     "test:phase3-10": "tsx scripts/test-phase3-10.ts"
   },

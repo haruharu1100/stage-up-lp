@@ -169,8 +169,16 @@ function fakeProduct(over: Record<string, any> = {}): any {
       salesRankDrops365: 90,
       offerCountFBA: 3,
       offerCountFBM: 5,
-      outOfStockPercentage30: 0,
-      outOfStockPercentage90: 4,
+      // ★2026-08-25 訂正（ルール64：テストの方が事実を取り違えていた）。
+      //   ここを 0 / 4 という「1つの数」で書いていたが、Keepa の実際の応答は
+      //   `stats.current` と同じ添字の**配列**（0=Amazon本体 / 1=新品 / 2=中古）である。
+      //   1件目の実取得（B0978NB1VQ）の生データで確認した：
+      //     outOfStockPercentage90: [100, 100, 100, -1, -1, ...]
+      //   偽物のデータが実物と違う形をしていたせいで、
+      //   「配列を数値に変換できず毎回 null になる」不具合をテストが通していた。
+      //   テストデータは、実物と同じ形にしないと、この種の抜けを一生見つけられない。
+      outOfStockPercentage30: [0, 0, 0, -1],
+      outOfStockPercentage90: [0, 4, 4, -1],
       buyBoxIsAmazon: false,
     },
     ...over,
@@ -394,6 +402,28 @@ async function main(): Promise<void> {
     check('販売手数料率が取れる', n.referralFeePercentage === 10);
     check('Keepaの分数を日時に直せる', (keepaMinutesToIso(keepaMinutesAgo(0)) ?? '').startsWith('20'));
     check('0以下の分数は null', keepaMinutesToIso(0) === null);
+
+    /* ★2026-08-25 追加：1件目の実取得で見つかった取り込み漏れの再発防止。
+       在庫切れ割合は配列（0=Amazon本体 / 1=新品 / 2=中古）で来る。
+       配列のまま Number() に通すと NaN になり、値があるのに毎回「不明」になっていた。
+       「不明」は安全側に見えるが、ここでは品切れの多い商品（＝入り込む余地がある）を
+       見落とす方向に効くので、静かに機会を捨てることになる。 */
+    check('在庫切れ割合は配列から新品の値を読む（30日）', n.outOfStockPercentage30 === 0);
+    check('在庫切れ割合は配列から新品の値を読む（90日）', n.outOfStockPercentage90 === 4);
+    check('配列を丸ごと数値化していない（NaN→nullにしていない）',
+      n.outOfStockPercentage90 !== null);
+    const oosAll = normalizeKeepaProduct(fakeProduct({
+      stats: { ...fakeProduct().stats, outOfStockPercentage90: [100, 100, 100, -1] },
+    }));
+    check('品切れ100%を読み取れる', oosAll.outOfStockPercentage90 === 100);
+    const oosAllScore = scoreCompetition(oosAll).score;
+    const oosBaseScore = scoreCompetition(normalizeKeepaProduct(fakeProduct())).score;
+    check('品切れが多いとライバルの多さが下がる',
+      oosAllScore !== null && oosBaseScore !== null && oosAllScore < oosBaseScore);
+    const oosNone = normalizeKeepaProduct(fakeProduct({
+      stats: { ...fakeProduct().stats, outOfStockPercentage90: [-1, -1, -1, -1] },
+    }));
+    check('値なし(-1)は0%ではなく不明', oosNone.outOfStockPercentage90 === null);
   }
 
   // ================================================================
