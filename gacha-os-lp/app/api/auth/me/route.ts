@@ -19,7 +19,10 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 export async function GET(req: NextRequest) {
-  const gate = await guard(req);
+  /* ★「自分が誰か」だけは、いつでも答えられること。
+       ここを止めると、パスワード変更の画面で
+       自分の名前すら出せなくなります。 */
+  const gate = await guard(req, { firstRun: true });
   if (!passed(gate)) return gate;
 
   try {
@@ -42,15 +45,20 @@ export async function GET(req: NextRequest) {
 
     let role = "CUSTOMER";
     let mfaEnabled = false;
+    let mfaRequired = false;
+    let mustChangePassword = false;
     if (gate.session.subjectKind === "ADMIN") {
       const a = await db().execute({
-        sql: `SELECT role, mfa_enabled FROM app_users
+        sql: `SELECT role, mfa_enabled, mfa_required, must_change_password
+                FROM app_users
                WHERE id = ? AND tenant_id = ? LIMIT 1`,
         args: [gate.session.subjectId, gate.session.tenantId],
       });
       const ar = a.rows[0] as Record<string, unknown> | undefined;
       role = String(ar?.role ?? "ADMIN");
       mfaEnabled = Number(ar?.mfa_enabled ?? 0) === 1;
+      mfaRequired = Number(ar?.mfa_required ?? 0) === 1;
+      mustChangePassword = Number(ar?.must_change_password ?? 0) === 1;
     }
 
     return NextResponse.json({
@@ -64,6 +72,8 @@ export async function GET(req: NextRequest) {
         kind: gate.session.subjectKind,
         role,
         mfaEnabled,
+        mfaRequired,
+        mustChangePassword,
         stepUpDone: gate.session.stepUpAt != null,
       },
       tenant: { code: String(t?.code ?? ""), name: String(t?.name ?? "") },

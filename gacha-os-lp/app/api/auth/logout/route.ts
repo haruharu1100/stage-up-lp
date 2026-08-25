@@ -25,7 +25,10 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
-  const gate = await guard(req);
+  /* ★仮パスワードのままの人でも、必ず出られるようにすること。
+       出られない作りにすると、変更画面から動けなくなった人が
+       ブラウザのクッキーを手で消すしかなくなります。 */
+  const gate = await guard(req, { firstRun: true });
 
   /* ★すでに切れていた場合も、手元のクッキーは消して返すこと。
        消さずに 401 だけ返すと、画面が「ログイン中」のまま止まります。 */

@@ -79,7 +79,22 @@ export type LoginFailure =
   | "SUSPENDED"
   | "MFA_REQUIRED"
   | "MFA_INVALID"
-  | "NO_TENANT";
+  | "NO_TENANT"
+  /*
+   * ★この2つだけは、はっきり理由を返します。
+   *
+   *   ここまで来た人は、仮パスワードそのものを正しく入れています。
+   *   つまり、この人に「その仮パスワードは実在する」と伝えても、
+   *   新しく漏れる情報はありません（もう持っています）。
+   *
+   *   逆に、ここで「メールアドレスまたはパスワードが違います」と
+   *   返してしまうと、正しく入力した本人が、
+   *   打ち間違いを疑って何度も試し、5回で締め出されます。
+   *   そのあと問い合わせが来ますが、記録には
+   *   「パスワード違い」としか残っていません。誰も原因に辿り着けません。
+   */
+  | "TEMP_PASSWORD_EXPIRED"
+  | "TEMP_PASSWORD_USED";
 
 export type LoginResult =
   | {
@@ -103,6 +118,10 @@ const MESSAGES: Record<LoginFailure, string> = {
   MFA_REQUIRED: "認証アプリの6桁の数字を入力してください。",
   MFA_INVALID: "6桁の数字が正しくありません。",
   NO_TENANT: "ログイン先が見つかりません。",
+  TEMP_PASSWORD_EXPIRED:
+    "仮パスワードの期限が切れています。社内の管理者（全権）の方に、再発行をご依頼ください。",
+  TEMP_PASSWORD_USED:
+    "仮パスワードは一度しか使えません。社内の管理者（全権）の方に、再発行をご依頼ください。",
 };
 
 /* ══════════════════════════════════════════════
@@ -303,6 +322,64 @@ async function login(
   const subjectId = String(row.id);
   const displayName = String(row.name ?? "");
   const role = kind === "ADMIN" ? String(row.role ?? "ADMIN") : "CUSTOMER";
+  const mustChange = Number(row.must_change_password ?? 0) === 1;
+
+  /*
+   * ── 仮パスワードの寿命 ──────────────────────
+   *
+   * ★仮パスワードは、必ず人の手を通って渡ります。
+   *   チャットに貼られ、口で読み上げられ、付箋に書かれます。
+   *   渡した先から漏れていく前提のものです。
+   *
+   *   ですから、強さではなく短さで守ります。
+   *
+   *       ① 期限を過ぎたら使えない
+   *       ② 一度使われたら、それきり使えない
+   *
+   *   ②を外さないこと。外すと、半年前のチャット履歴を
+   *   さかのぼって拾った仮パスワードが、まだ通ります。
+   *
+   * ★この確認を、パスワードが合っていた後に置くこと。
+   *   前に置くと、仮パスワードを知らない人にまで
+   *   「この人はまだ初期状態だ」と教えることになります。
+   */
+  if (kind === "ADMIN" && mustChange) {
+    const { expired } = await import("./passwordChange");
+
+    if (expired(row.temp_password_expires_at)) {
+      await recordAttempt({
+        tenantId: input.tenantId,
+        subjectKind: kind,
+        identifier,
+        ok: false,
+        reason: "TEMP_PASSWORD_EXPIRED",
+        ip: input.ip,
+        userAgent: input.userAgent,
+      });
+      return {
+        ok: false,
+        why: "TEMP_PASSWORD_EXPIRED",
+        message: MESSAGES.TEMP_PASSWORD_EXPIRED,
+      };
+    }
+
+    if (row.temp_password_used_at != null) {
+      await recordAttempt({
+        tenantId: input.tenantId,
+        subjectKind: kind,
+        identifier,
+        ok: false,
+        reason: "TEMP_PASSWORD_USED",
+        ip: input.ip,
+        userAgent: input.userAgent,
+      });
+      return {
+        ok: false,
+        why: "TEMP_PASSWORD_USED",
+        message: MESSAGES.TEMP_PASSWORD_USED,
+      };
+    }
+  }
 
   /* ── 管理者の二段階認証 ── */
   let stepUpDone = kind === "CUSTOMER";
@@ -361,6 +438,26 @@ async function login(
     await db().execute({
       sql: `UPDATE app_users SET mfa_last_counter = ? WHERE id = ? AND tenant_id = ?`,
       args: [mfaCounter, subjectId, input.tenantId],
+    });
+  }
+
+  /*
+   * ★仮パスワードを、ここで使い切ること。
+   *
+   *   「パスワードを変え終わってから使い切る」ほうが
+   *   親切に見えますが、それでは1回きりになりません。
+   *   変えずに閉じた人の仮パスワードが、そのまま生き続けます。
+   *
+   *   ここで使い切ると、変えずに閉じた人は入れなくなります。
+   *   その人には再発行が必要です。それでよい、と決めています。
+   *   面倒さと引き換えに、出回った仮パスワードの寿命を
+   *   「1回」に固定できます。
+   */
+  if (kind === "ADMIN" && mustChange && row.temp_password_used_at == null) {
+    await db().execute({
+      sql: `UPDATE app_users SET temp_password_used_at = ?
+             WHERE id = ? AND tenant_id = ? AND temp_password_used_at IS NULL`,
+      args: [now, subjectId, input.tenantId],
     });
   }
 
@@ -426,7 +523,7 @@ async function login(
     session,
     subjectId,
     needsMfa: false,
-    mustChangePassword: Number(row.must_change_password ?? 0) === 1,
+    mustChangePassword: mustChange,
     displayName,
     role,
   };

@@ -57,6 +57,34 @@ export type PageAuth = {
 };
 
 /**
+ * 入る前に済ませてもらう画面。
+ *
+ * ★住所を、この1か所にまとめること。
+ *   送り先と、その画面自身の場所が別々に書いてあると、
+ *   片方だけ直した日に、無限に往復するようになります
+ *   （送られた先が、また送り返す）。
+ */
+export const FIRST_RUN = {
+  changePassword: "/change-password",
+  mfaSetup: "/mfa-setup",
+} as const;
+
+/**
+ * 「入る前に済ませてもらう画面」そのものを出すときに使う。
+ *
+ * ★requireAdmin を使わないこと。
+ *   requireAdmin は、その画面へ送り返します。
+ *   自分自身へ送り返し続けることになります。
+ */
+export async function requireAdminForFirstRun(
+  returnTo: string,
+): Promise<PageAuth> {
+  const auth = await currentAdmin();
+  if (auth) return auth;
+  redirect(`/login?next=${encodeURIComponent(returnTo)}`);
+}
+
+/**
  * いまログインしている管理者を返す。していなければ null。
  *
  * ★null を「ログインしていない」以外の意味に使わないこと。
@@ -77,7 +105,8 @@ export async function currentAdmin(): Promise<PageAuth | null> {
   const { db } = await import("./db");
 
   const res = await db().execute({
-    sql: `SELECT display_id, name, email, role, mfa_enabled
+    sql: `SELECT display_id, name, email, role, mfa_enabled,
+                 mfa_required, must_change_password
             FROM app_users WHERE id = ? AND tenant_id = ? LIMIT 1`,
     args: [session.subjectId, session.tenantId],
   });
@@ -101,6 +130,8 @@ export async function currentAdmin(): Promise<PageAuth | null> {
       email: String(row.email ?? ""),
       role: asRole(row.role),
       mfaEnabled: Number(row.mfa_enabled ?? 0) === 1,
+      mfaRequired: Number(row.mfa_required ?? 0) === 1,
+      mustChangePassword: Number(row.must_change_password ?? 0) === 1,
       stepUpDone: session.stepUpAt != null,
       tenantCode: String(tr?.code ?? ""),
       tenantName: String(tr?.name ?? ""),
@@ -119,7 +150,32 @@ export async function currentAdmin(): Promise<PageAuth | null> {
  */
 export async function requireAdmin(returnTo: string): Promise<PageAuth> {
   const auth = await currentAdmin();
-  if (auth) return auth;
+
+  if (auth) {
+    /*
+     * ═══════════════════════════════════════════════
+     * ★入る前に済ませてもらうことが、2つあります
+     * ═══════════════════════════════════════════════
+     *
+     *   ① 仮パスワードのままなら、変えてもらう
+     *   ② 二段階認証が必須の人なら、登録してもらう
+     *
+     *   ★これを画面の中の「お知らせ帯」で済ませないこと。
+     *     帯は読まれません。読まれても、閉じられます。
+     *     そして、仮パスワードのままの管理者が
+     *     半年後もそのまま残ります。
+     *     仮パスワードは、渡した先から漏れている前提のものです。
+     *
+     *   ★ここで通してしまうと、入口（API）側だけで断る形になり、
+     *     「画面は開くのにボタンが全部エラーになる」という
+     *     いちばん分かりにくい状態になります。
+     */
+    if (auth.user.mustChangePassword) redirect(FIRST_RUN.changePassword);
+    if (auth.user.mfaRequired && !auth.user.mfaEnabled) {
+      redirect(FIRST_RUN.mfaSetup);
+    }
+    return auth;
+  }
 
   /*
    * ★戻り先は、必ず encodeURIComponent を通すこと。

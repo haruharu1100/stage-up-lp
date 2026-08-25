@@ -39,6 +39,17 @@ export type PageUser = {
   /** ★必ずサーバーがDBから読んだ値。画面側で作らないこと */
   role: Role;
   mfaEnabled: boolean;
+  /**
+   * この人は、二段階認証の登録を済ませないと先へ進めないか。
+   *
+   * ★mfaEnabled と別に持つ理由。
+   *   「管理者は全員必須」をある日いっせいに効かせると、
+   *   その日から全員が入れなくなります。
+   *   だから「この人からは必須」を1人ずつ立てられるようにしています。
+   */
+  mfaRequired: boolean;
+  /** 仮パスワードのままか（true なら、変更するまで何もできません） */
+  mustChangePassword: boolean;
   /** 追加の本人確認（2段階認証）を、このセッションで済ませたか */
   stepUpDone: boolean;
   tenantCode: string;

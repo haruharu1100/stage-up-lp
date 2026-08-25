@@ -65,6 +65,16 @@ const ACTION_LABEL: Record<AuditAction, string> = {
   MFA_ENABLED: "2段階認証を有効化",
   MFA_DISABLED: "2段階認証を解除",
 
+  /* パスワードまわり。
+     ★仮パスワードの発行は、いちばん強い操作のひとつです。
+       その人のパスワードを、こちらが知っている値に置き換える、
+       つまり「その人として入れる」ということだからです。
+       誰が・誰に・なぜ発行したかが残ってはじめて、
+       あとから確かめられます */
+  TEMP_PASSWORD_ISSUED: "仮パスワードの発行",
+  PASSWORD_CHANGED: "パスワードの変更",
+  PASSWORD_RESET: "パスワードの再設定",
+
   ADDRESS_UPDATE: "お届け先の変更",
   SET_CUSTOMER_AUTH: "お客様の認証方式の変更",
 

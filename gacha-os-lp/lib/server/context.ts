@@ -98,6 +98,28 @@ export type Guard = {
    *     「画面では消えているのに入口は受け付ける」が起きません。
    */
   permission?: Permission;
+  /**
+   * 「入る前に済ませてもらうこと」が終わっていなくても通す入口か。
+   *
+   * ═══════════════════════════════════════════════════════
+   * ★既定は false（＝終わるまで通さない）にしてあります
+   * ═══════════════════════════════════════════════════════
+   *
+   *   仮パスワードのままの人を、画面だけ止めても意味がありません。
+   *   入口の住所を知っていれば、画面を開かずに直接叩けます。
+   *
+   *   ですから、入口の側でも止めます。
+   *   例外は、止める原因そのものを解消する入口だけです。
+   *
+   *       ・パスワードを変える入口
+   *       ・二段階認証を登録する入口
+   *       ・ログアウトする入口
+   *
+   *   ★ここに true を書き足すときは、必ず立ち止まること。
+   *     「仮パスワードのままの人に、この操作をさせてよいか」を
+   *     一度だけ自分に聞いてください。だいたいの答えは「よくない」です。
+   */
+  firstRun?: boolean;
 };
 
 /** 断ったときの返し方。理由は分けるが、中身は明かさない */
@@ -184,10 +206,37 @@ export async function guard(
   if (session.subjectKind === "ADMIN") {
     const { db } = await import("./db");
     const res = await db().execute({
-      sql: `SELECT role FROM app_users WHERE id = ? AND tenant_id = ? LIMIT 1`,
+      sql: `SELECT role, must_change_password, mfa_required, mfa_enabled
+              FROM app_users WHERE id = ? AND tenant_id = ? LIMIT 1`,
       args: [session.subjectId, session.tenantId],
     });
-    role = asRole((res.rows[0] as Record<string, unknown> | undefined)?.role);
+    const me = res.rows[0] as Record<string, unknown> | undefined;
+    role = asRole(me?.role);
+
+    /* ── 入る前に済ませてもらうこと ─────────────
+         ★画面で止めるだけにしないこと。
+           画面を開かずに、この入口を直接叩く道が残ります。 */
+    if (!need.firstRun) {
+      if (Number(me?.must_change_password ?? 0) === 1) {
+        return deny(
+          requestId,
+          "PASSWORD_CHANGE_REQUIRED",
+          "先に、パスワードの変更をお願いします。",
+          403,
+        );
+      }
+      if (
+        Number(me?.mfa_required ?? 0) === 1 &&
+        Number(me?.mfa_enabled ?? 0) !== 1
+      ) {
+        return deny(
+          requestId,
+          "MFA_SETUP_REQUIRED",
+          "先に、認証アプリの登録をお願いします。",
+          403,
+        );
+      }
+    }
   }
 
   if (need.roles && need.roles.length > 0) {

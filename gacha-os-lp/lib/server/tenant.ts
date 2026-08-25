@@ -87,6 +87,7 @@ export const TENANT_TABLES = [
   "products",
   "fraud_flags",
   "login_attempts",
+  "password_resets",
 ] as const;
 
 export type TenantTable = (typeof TENANT_TABLES)[number];

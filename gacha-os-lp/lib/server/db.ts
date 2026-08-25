@@ -578,6 +578,60 @@ const M006: string[] = [
      ON point_adjustments (tenant_id, status, requested_at)`,
 ];
 
+/* ── 007：仮パスワードと、パスワードの作り直し ──
+
+   ★仮パスワードを、ふつうのパスワードと同じ扱いにしないこと。
+
+     仮パスワードは、たいてい人の手を通って渡されます。
+     チャットに貼られ、口で伝えられ、付箋に書かれます。
+     つまり「渡した先から漏れていく前提」のものです。
+
+     だから、次の2つを、覚えておく必要があります。
+
+         ① いつまで使えるか（temp_password_expires_at）
+         ② もう使われたか　（temp_password_used_at）
+
+     ②が大事です。期限内でも、一度使われたなら、
+     二度目はもう本人ではない可能性があります。
+     半年前のチャット履歴から拾われた仮パスワードが、
+     まだ通る仕組みにしないこと。
+
+   ★mfa_required を、mfa_enabled と別に持つ理由。
+
+     「管理者は全員、二段階認証を必須にする」を、
+     ある日いっせいに効かせると、その日から全員が入れなくなります。
+     認証アプリの登録は、その場ですぐ終わる作業ではありません。
+
+     だから「この人からは必須」を1人ずつ立てられるようにします。
+     新しく仮パスワードを発行した人は、その時点で必須になります。
+
+   ★パスワードの作り直し（reset）は、表だけ先に作ります。
+     合言葉そのものは保存しません（token_hash だけ）。
+     保存すると、この表を見た人が、誰にでも成りすませます。 */
+const M007: string[] = [
+  `ALTER TABLE app_users ADD COLUMN password_changed_at TEXT`,
+  `ALTER TABLE app_users ADD COLUMN temp_password_expires_at TEXT`,
+  `ALTER TABLE app_users ADD COLUMN temp_password_used_at TEXT`,
+  `ALTER TABLE app_users ADD COLUMN mfa_required INTEGER NOT NULL DEFAULT 0`,
+  `ALTER TABLE customers ADD COLUMN password_changed_at TEXT`,
+
+  `CREATE TABLE IF NOT EXISTS password_resets (
+     id           TEXT PRIMARY KEY,
+     tenant_id    TEXT NOT NULL,
+     subject_kind TEXT NOT NULL,
+     subject_id   TEXT NOT NULL,
+     /* ★合言葉そのものは入れない。照合できる形だけを入れる */
+     token_hash   TEXT NOT NULL UNIQUE,
+     expires_at   TEXT NOT NULL,
+     used_at      TEXT,
+     created_at   TEXT NOT NULL,
+     created_ip   TEXT
+   )`,
+
+  `CREATE INDEX IF NOT EXISTS ix_password_resets_subject
+     ON password_resets (tenant_id, subject_kind, subject_id, created_at)`,
+];
+
 const MIGRATIONS: Migration[] = [
   { name: "001_initial", sql: M001 },
   { name: "002_tenant_tables", sql: M002 },
@@ -585,6 +639,7 @@ const MIGRATIONS: Migration[] = [
   { name: "004_support_shipping", sql: M004 },
   { name: "005_mfa_replay", sql: M005 },
   { name: "006_point_adjustments", sql: M006 },
+  { name: "007_password_change", sql: M007 },
 ];
 
 /** どの段まで済んだかを覚えておく表 */
