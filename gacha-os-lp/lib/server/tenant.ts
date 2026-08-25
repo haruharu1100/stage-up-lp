@@ -77,8 +77,18 @@ export const TENANT_TABLES = [
   "point_ledger",
   "point_adjustments",
   "orders",
+  "order_items",
   "shipments",
+  "shipment_items",
   "support_tickets",
+
+  /* お客様へのお知らせ（発送しました 等）。
+     ★会社の壁を必ずかけること。
+       ここを一覧から外すと、見張りが「この表は見なくてよい」と
+       覚えてしまいます。お知らせの本文には、お荷物番号・
+       追跡番号・商品名まで書いてあります。 */
+  "notifications",
+
   "audit_events",
   "idempotency",
   "roles",
@@ -88,6 +98,19 @@ export const TENANT_TABLES = [
   "fraud_flags",
   "login_attempts",
   "password_resets",
+
+  /* 採番の控え（注文番号・発送番号の次の数）。
+     ★数しか入っていませんが、会社ごとに分かれています。
+       ここを一覧から外すと、会社の壁の見張りが
+       「この表は見なくてよい」と覚えてしまいます。 */
+  "number_series",
+
+  /* 旧い形の注文・発送（008で改名したもの）。
+     ★消さずに残しています。Previewで入れた行を、
+       新しい形と見比べられるようにするためです。
+     ★新しく書かないこと。読むだけです。 */
+  "orders_v1",
+  "shipments_v1",
 ] as const;
 
 export type TenantTable = (typeof TENANT_TABLES)[number];

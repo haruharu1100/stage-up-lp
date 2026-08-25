@@ -263,10 +263,7 @@ export default function Backtest() {
       </div>
 
       <div className="mt-10 flex flex-col gap-3.5 sm:mt-14 sm:flex-row sm:justify-center">
-        <Link href="/demo" className="btn-primary btn-lg w-full sm:w-auto">
-          バックテストの全画面を見る
-        </Link>
-        <Link href="#contact" className="btn-ghost btn-lg w-full sm:w-auto">
+        <Link href="#contact" className="btn-primary btn-lg w-full sm:w-auto">
           自社の構成で試したい
         </Link>
       </div>

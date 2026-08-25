@@ -50,6 +50,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import type { ConsoleState } from "@/lib/console/state";
 import { summary, todayTodos } from "@/lib/console/state";
+import { liveTodos, useLiveCounts } from "@/lib/console/liveCounts";
 import type { MenuKey } from "../menu";
 import Icon from "../Icon";
 
@@ -61,7 +62,25 @@ export default function Dashboard({
   onNav: (k: MenuKey) => void;
 }) {
   const sum = summary(s);
-  const todos = todayTodos(s);
+
+  /**
+   * 発送と注文の件数だけは、サーバーの実データから取る（#27・#28）。
+   *
+   * ★ここを見本の数に戻さないこと。
+   *   「未発送 6件」と出ているのに、発送画面を開くと0件、
+   *   という日が必ず来ます。そうなると、運営者はこの画面を
+   *   二度と信じません。数えるのは1か所（/api/console/summary）です。
+   *
+   * ★読めなかったときに0を出さないこと。
+   *   片づいたのだと思って、画面を閉じてしまいます。
+   *   読めていないなら、読めていないと書きます。
+   */
+  const live = useLiveCounts();
+
+  /* ★注文と発送の用件は、liveTodos が1か所で作る。
+       ここで組み立て直さないこと。AIオペレーターと数がずれます。 */
+  const todos = [...todayTodos(s), ...liveTodos(live)];
+
   const must = todos.filter((t) => t.urgency === "MUST");
   const should = todos.filter((t) => t.urgency === "SHOULD");
 
@@ -156,14 +175,24 @@ export default function Dashboard({
           />
           <StatusCard
             icon="truck"
-            title="未発送"
-            value={sum.unshipped}
+            title="発送待ち"
+            value={live.phase === "ok" ? live.counts.unshippedShipments : null}
             unit="件"
-            tone={sum.unshipped > 0 ? "warn" : "ok"}
+            tone={
+              live.phase !== "ok"
+                ? "unknown"
+                : live.counts.unshippedShipments > 0
+                  ? "warn"
+                  : "ok"
+            }
             say={
-              sum.unshipped > 0
-                ? "お客様が待っています。溜めるほど問い合わせが増えます。"
-                : "発送待ちはありません。"
+              live.phase === "loading"
+                ? "数えています。"
+                : live.phase === "ng"
+                  ? `${live.why} 数えられていないので、0件とは書きません。`
+                  : live.counts.unshippedShipments > 0
+                    ? "お客様が待っています。溜めるほど問い合わせが増えます。"
+                    : "出荷を待っている箱はありません。"
             }
             to="shipping"
             cta="発送管理へ"
@@ -566,9 +595,10 @@ function StatusCard({
 }: {
   icon: "gauge" | "truck" | "chat";
   title: string;
-  value: number;
+  /** ★null は「数えられていない」。0 と同じ扱いにしないこと */
+  value: number | null;
   unit: string;
-  tone: "ok" | "warn" | "danger";
+  tone: "ok" | "warn" | "danger" | "unknown";
   say: string;
   to: MenuKey;
   cta: string;
@@ -582,6 +612,8 @@ function StatusCard({
       ink: "text-danger-ink",
       dot: "bg-danger",
     },
+    /* 灰色＝分からない。緑（安全）にしないこと */
+    unknown: { face: "border-edge bg-mist", ink: "text-slate3", dot: "bg-silver" },
   }[tone];
 
   return (
@@ -598,9 +630,9 @@ function StatusCard({
 
       <span className={`mt-2 flex items-baseline gap-1 ${conf.ink}`}>
         <span className="num text-[2.05rem] font-bold leading-none tracking-tight tabular-nums">
-          {value.toLocaleString()}
+          {value === null ? "—" : value.toLocaleString()}
         </span>
-        <span className="nb text-note font-bold">{unit}</span>
+        {value !== null && <span className="nb text-note font-bold">{unit}</span>}
       </span>
 
       <span className="mt-2 block text-note leading-[1.75] text-slate2">{say}</span>

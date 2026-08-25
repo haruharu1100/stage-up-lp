@@ -146,7 +146,23 @@ export default function LoginForm({
 
       /* ★念のため、こちらでも戻り先を確かめ直します。
            サーバーで確かめてありますが、ここは最後の分かれ道です。 */
-      router.replace(safeReturnTo(next));
+      /*
+       * ★お客様を、管理画面へ送らないこと。
+       *
+       *   戻り先の初期値は管理画面（/client-demo/dashboard）です。
+       *   お客様としてログインした方をそこへ送ると、
+       *   管理画面は当然お断りし、ログイン画面へ戻します。
+       *   お客様から見れば「合っているのに入れない」だけです。
+       *
+       *   行き先を持っていない、または管理画面を指しているときだけ、
+       *   お客様の入口へ向け直します。
+       *   （ご自身で /mypage/shipping を開いた方は、そのまま戻します）
+       */
+      const asked = safeReturnTo(next);
+      const goto =
+        kind === "CUSTOMER" && asked.startsWith("/client-demo") ? "/mypage" : asked;
+
+      router.replace(goto);
       router.refresh();
     } catch {
       setError(

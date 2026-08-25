@@ -128,23 +128,23 @@ export default function SalesPage() {
 
             <div className="flex flex-col gap-2.5">
               <Link
-                href="/demo"
+                href="/#contact"
                 className="rounded-2xl border border-blue/35 bg-gradient-to-b from-blue/[0.12] to-transparent p-6 transition hover:border-blue/60"
               >
                 <span className="num text-[10px] tracking-[0.2em] text-blue-bright">
-                  LIVE DEMO
+                  SCREEN SHARE
                 </span>
                 <p className="mt-3 text-[17px] font-bold leading-snug">
                   管理画面を
                   <br />
-                  その場で操作する
+                  画面共有でご案内する
                 </p>
                 <p className="mt-3 text-[12px] leading-[1.9] text-white/50">
                   ダッシュボード・還元率モニタ・市場価格・発送管理・監査ログ・AI
-                  OPERATOR。すべて触っていただけます。
+                  OPERATOR。担当者が実物をお見せしながらご説明します。
                 </p>
                 <span className="mt-4 inline-flex items-center gap-2 text-[12px] text-blue-bright">
-                  デモを開く
+                  相談する
                   <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden>
                     <path
                       d="M3 8h10M9 4l4 4-4 4"
@@ -319,15 +319,15 @@ export default function SalesPage() {
         >
           <div className="grid gap-2.5 md:grid-cols-3">
             <Link
-              href="/demo"
+              href="/#contact"
               className="rounded-2xl border border-blue/35 bg-gradient-to-b from-blue/[0.11] to-transparent p-6 transition hover:border-blue/60"
             >
               <span className="num text-[10px] tracking-[0.2em] text-blue-bright">
                 01
               </span>
-              <p className="mt-3.5 text-[16px] font-bold">無料デモを見る</p>
+              <p className="mt-3.5 text-[16px] font-bold">管理画面を見せてもらう</p>
               <p className="mt-2.5 text-[12px] leading-[1.9] text-white/50">
-                登録不要。実際の管理画面とAI OPERATORをその場で。
+                オンラインの画面共有で、管理画面とAI OPERATORをご案内します。
               </p>
             </Link>
             <Link

@@ -38,6 +38,9 @@ import { useMemo, useState } from "react";
 import type { Address, ConsoleState, Prize } from "@/lib/console/state";
 import { POINT_KIND_LABEL } from "@/lib/console/state";
 import { ORDER_STATUS_LABEL } from "@/lib/console/support";
+/* ★お客様の発送状況は、ここから読むこと。
+     デモの state から作り直すと、運営者の画面と数が合わなくなります */
+import { movingCount, useCustomerOrders } from "@/lib/console/liveOrders";
 import {
   Back,
   BigBtn,
@@ -96,7 +99,6 @@ export function AccountHome({
   userName,
   balance,
   prizes,
-  orders,
   tickets,
   todo,
   hasAddress,
@@ -106,7 +108,6 @@ export function AccountHome({
   userName: string;
   balance: number;
   prizes: Prize[];
-  orders: ConsoleState["orders"];
   tickets: ConsoleState["tickets"];
   /** まだ手を動かしていないお知らせの件数 */
   todo: number;
@@ -117,7 +118,12 @@ export function AccountHome({
   const unchosen = prizes.filter((p) => p.status === "UNCHOSEN").length;
   const shipping = prizes.filter((p) => p.status === "SHIP_REQUESTED").length;
   const exchanged = prizes.filter((p) => p.status === "EXCHANGED").length;
-  const moving = orders.filter((o) => o.status !== "DELIVERED").length;
+  /* ★ここを orders（デモ）から数えないこと。
+       発送状況の画面が本物を出しているのに、入口の件数だけデモだと、
+       押す前と押した後で数が変わります。
+       読めていないときは null＝「—」を出します。0 とは書きません。 */
+  const { state: liveOrders } = useCustomerOrders();
+  const moving = movingCount(liveOrders);
   const openTickets = tickets.filter((t) => t.status !== "DONE").length;
 
   return (
@@ -188,7 +194,13 @@ export function AccountHome({
         />
         <TapRow
           label="発送状況"
-          note={moving > 0 ? "お届けまでの状況と追跡番号をご確認いただけます" : "お届け中のお荷物はありません"}
+          note={
+            moving === null
+              ? "お届け状況を確認しています。押すと詳しく表示します"
+              : moving > 0
+                ? "お届けまでの状況と追跡番号をご確認いただけます"
+                : "お届け中のお荷物はありません"
+          }
           value={moving}
           unit="件"
           onClick={() => go({ name: "orders" })}
@@ -1071,106 +1083,306 @@ export function ExchangeConfirm({
    ⑧ 発送状況
    ══════════════════════════════════════════════ */
 
-/** 発送の進み具合を、目で追える形にする */
-const STEPS: { key: string; label: string }[] = [
-  { key: "UNSHIPPED", label: "受付" },
-  { key: "PREPARING", label: "準備中" },
-  { key: "SHIPPED", label: "発送済み" },
-  { key: "IN_TRANSIT", label: "配送中" },
-  { key: "DELIVERED", label: "お届け完了" },
+/**
+ * 発送の進み具合を、目で追える形にする。
+ *
+ * ★サーバーの状態（REQUESTED/PREPARING/READY/SHIPPED/IN_TRANSIT/DELIVERED）を
+ *   そのまま出さないこと。「READY」はお客様には意味がありません。
+ *   ここでは、お客様から見て変化が分かる3段だけに畳みます。
+ */
+const STEPS: { label: string; hits: string[] }[] = [
+  { label: "準備中", hits: ["REQUESTED", "PREPARING", "READY"] },
+  { label: "発送済み", hits: ["SHIPPED"] },
+  { label: "配送中", hits: ["IN_TRANSIT"] },
+  { label: "お届け完了", hits: ["DELIVERED"] },
 ];
 
+function stepIndex(status: string): number {
+  const i = STEPS.findIndex((s) => s.hits.includes(status));
+  return i < 0 ? 0 : i;
+}
+
+/**
+ * 日時を、お客様が読める形にする。
+ *
+ * ═══════════════════════════════════════════════
+ * ★2026-08-25T08:22:25.889Z のまま出さないこと
+ * ═══════════════════════════════════════════════
+ *
+ *   これは機械の書き方です。しかも末尾の Z は
+ *   「世界標準時」という意味なので、日本の方が読むと
+ *   9時間ずれた時刻を信じることになります。
+ *
+ *   「発送は17時だったはずなのに、8時と書いてある」
+ *   と思われた時点で、この画面は疑われます。
+ *
+ * ★読めなかったときは、元の文字をそのまま出すこと。
+ *   ここで空にすると、日付が消えたように見えます。
+ */
+function nichiji(iso: string | null): string {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleString("ja-JP", {
+    timeZone: "Asia/Tokyo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+/** 進み具合の帯。1つの荷物につき1本 */
+function Progress({ at }: { at: number }) {
+  return (
+    <ol className="mt-3.5 flex items-start">
+      {STEPS.map((s, i) => {
+        const done = i <= at;
+        return (
+          <li key={s.label} className="flex min-w-0 flex-1 flex-col items-center">
+            <div className="flex w-full items-center">
+              <span
+                className="h-[2px] flex-1"
+                style={{ background: i === 0 ? "transparent" : done ? SHOP_ACCENT : SHOP_EDGE }}
+              />
+              <span
+                className="h-2.5 w-2.5 shrink-0 rounded-full"
+                style={{ background: done ? SHOP_ACCENT : SHOP_EDGE }}
+              />
+              <span
+                className="h-[2px] flex-1"
+                style={{
+                  background:
+                    i === STEPS.length - 1 ? "transparent" : i < at ? SHOP_ACCENT : SHOP_EDGE,
+                }}
+              />
+            </div>
+            <span
+              className="nb mt-1.5 text-[0.63rem] font-bold"
+              style={{ color: done ? "#BFD4FF" : "rgba(255,255,255,0.35)" }}
+            >
+              {s.label}
+            </span>
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
+
+/**
+ * 発送状況（お客様側）。
+ *
+ * ═══════════════════════════════════════════════════════
+ * ★ここは、運営者が見ている発送と「同じ1件」を出すこと
+ * ═══════════════════════════════════════════════════════
+ *
+ *   運営者が追跡番号を入れた瞬間、この画面にも同じ番号が出ます。
+ *   別々に持つと、片方だけ直した日から、
+ *   「聞いた番号と画面の番号が違う」が始まります。
+ *
+ * ═══════════════════════════════════════════════════════
+ * ★1回の注文が、2つの荷物に分かれることがある
+ * ═══════════════════════════════════════════════════════
+ *
+ *   3点のうち2点だけ先に出したとき、
+ *   「発送済み」とだけ書くと、残り1点が届かない理由が分かりません。
+ *   だから、点数の1行（progress）を必ず先に出します。
+ *   その文言はサーバーが作ります。ここでは組み立て直しません。
+ */
 export function OrderList({
   orders,
   back,
 }: {
+  /** 見本表示のときだけ使う、デモの発送依頼 */
   orders: ConsoleState["orders"];
   back: () => void;
 }) {
-  const sorted = useMemo(
+  const { state } = useCustomerOrders();
+
+  const demo = useMemo(
     () => [...orders].sort((a, b) => b.requestedAt.localeCompare(a.requestedAt)),
     [orders],
   );
 
+  /* ── ① まだ読んでいる ────────────────────── */
+  if (state.phase === "loading") {
+    return (
+      <>
+        <Back onClick={back} label="マイページ" />
+        <H sub="お届けの状況です。">発送状況</H>
+        <Empty>お届け状況を確認しています。</Empty>
+      </>
+    );
+  }
+
+  /* ── ② 読めなかった ──────────────────────
+     ★ここで「ご依頼はありません」と書かないこと。
+       依頼が消えたと思われます。 */
+  if (state.phase === "ng") {
+    return (
+      <>
+        <Back onClick={back} label="マイページ" />
+        <H sub="お届けの状況です。">発送状況</H>
+        <Note tone="warn">
+          {state.why}
+          いまお届け状況をお見せできないだけで、ご依頼が取り消されたわけではありません。
+          しばらくしてから、もう一度お開きください。
+        </Note>
+      </>
+    );
+  }
+
+  /* ── ③ ログインしていない ────────────────
+     見本のデータを、本物のように見せない。 */
+  if (state.phase === "anon") {
+    return (
+      <>
+        <Back onClick={back} label="マイページ" />
+        <H sub="ログインいただくと、実際のお届け状況を表示します。">発送状況</H>
+        <div className="space-y-3">
+          <Note tone="info">
+            以下は、画面の見本です。実際のお届け状況ではありません。
+            ご自身の状況は、ログイン後にこの画面へ表示されます。
+          </Note>
+          {demo.length === 0 ? (
+            <Empty>見本にできる発送のご依頼がありません。</Empty>
+          ) : (
+            <ul className="space-y-3">
+              {demo.map((o) => (
+                <li key={o.id}>
+                  <Panel>
+                    <p className="text-[0.9rem] font-bold text-white">{o.prize}</p>
+                    <Progress at={stepIndex(o.status === "UNSHIPPED" ? "REQUESTED" : o.status)} />
+                    <dl
+                      className="mt-4 space-y-1.5 border-t pt-3 text-[0.79rem]"
+                      style={{ borderColor: SHOP_EDGE }}
+                    >
+                      <Row k="発送依頼日" v={o.requestedAt} />
+                      <Row k="現在の状態" v={ORDER_STATUS_LABEL[o.status]} />
+                      <Row k="配送会社" v={o.carrier ?? "発送時にお知らせします"} />
+                      <Row k="追跡番号" v={o.tracking ?? "発送時にお知らせします"} />
+                    </dl>
+                  </Panel>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </>
+    );
+  }
+
+  /* ── ④ 読めた（本物） ────────────────────── */
+  const real = state.orders;
+
   return (
     <>
       <Back onClick={back} label="マイページ" />
-      <H sub="お届けの状況です。追跡番号は、発送時にお知らせします。">発送状況</H>
+      <H sub="お届けの状況です。追跡番号は、発送時にこちらへ表示します。">発送状況</H>
 
-      {sorted.length === 0 ? (
+      {real.length === 0 ? (
         <Empty>現在、発送のご依頼はありません。</Empty>
       ) : (
         <ul className="space-y-3">
-          {sorted.map((o) => {
-            const at = STEPS.findIndex((s) => s.key === o.status);
-            return (
-              <li key={o.id}>
-                <Panel>
-                  <p className="text-[0.9rem] font-bold text-white">{o.prize}</p>
+          {real.map((o) => (
+            <li key={o.orderId}>
+              <Panel>
+                <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+                  <p className="nb text-[0.78rem] font-bold text-white/55">
+                    ご注文番号 {o.orderNumber}
+                  </p>
+                  <p className="nb text-[0.73rem] text-white/40">
+                    {nichiji(o.orderedAt)}
+                  </p>
+                </div>
 
-                  {/* ── 進み具合 ──
-                      ★「準備中」の一言で済ませないこと。
-                        どこまで進んだのかが見えないと、
-                        同じ方から3日おきに同じ問い合わせが来ます */}
-                  <ol className="mt-3.5 flex items-start">
-                    {STEPS.map((s, i) => {
-                      const done = i <= at;
-                      return (
-                        <li key={s.key} className="flex min-w-0 flex-1 flex-col items-center">
-                          <div className="flex w-full items-center">
-                            <span
-                              className="h-[2px] flex-1"
-                              style={{ background: i === 0 ? "transparent" : done ? SHOP_ACCENT : SHOP_EDGE }}
-                            />
-                            <span
-                              className="h-2.5 w-2.5 shrink-0 rounded-full"
-                              style={{ background: done ? SHOP_ACCENT : SHOP_EDGE }}
-                            />
-                            <span
-                              className="h-[2px] flex-1"
-                              style={{
-                                background:
-                                  i === STEPS.length - 1 ? "transparent" : i < at ? SHOP_ACCENT : SHOP_EDGE,
-                              }}
-                            />
-                          </div>
-                          <span
-                            className="nb mt-1.5 text-[0.63rem] font-bold"
-                            style={{ color: done ? "#BFD4FF" : "rgba(255,255,255,0.35)" }}
-                          >
-                            {s.label}
-                          </span>
-                        </li>
-                      );
-                    })}
-                  </ol>
+                {/* ★この1行を消さないこと。
+                     「3点中2点発送済み、残り1点準備中です。」
+                     これが無いと、届かない1点の理由が分かりません（#17） */}
+                <p className="mt-2 text-[0.92rem] font-bold leading-[1.8] text-white">
+                  {o.progress}
+                </p>
 
-                  <dl className="mt-4 space-y-1.5 border-t pt-3 text-[0.79rem]" style={{ borderColor: SHOP_EDGE }}>
-                    <Row k="発送依頼日" v={o.requestedAt} />
-                    <Row k="現在の状態" v={ORDER_STATUS_LABEL[o.status]} />
-                    <Row k="配送会社" v={o.carrier ?? "発送時にお知らせします"} />
-                    <Row k="追跡番号" v={o.tracking ?? "発送時にお知らせします"} />
-                  </dl>
+                {/* ── 荷物ごと ──
+                    分けて送ったときは、荷物の数だけ並びます */}
+                {o.shipments.length === 0 ? (
+                  <p className="mt-3 text-[0.79rem] leading-[1.9] text-white/50">
+                    ただいま、お届けのご用意をしています。
+                    荷物のご用意ができましたら、この画面に追跡番号を表示します。
+                  </p>
+                ) : (
+                  <ul className="mt-3 space-y-3">
+                    {o.shipments.map((s) => (
+                      <li
+                        key={s.shipmentNumber}
+                        className="rounded-xl px-3.5 py-3.5"
+                        style={{
+                          background: "rgba(255,255,255,0.035)",
+                          border: `1px solid ${SHOP_EDGE}`,
+                        }}
+                      >
+                        <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+                          <p className="text-[0.85rem] font-bold text-white">
+                            {s.statusLabel}
+                          </p>
+                          <p className="nb text-[0.72rem] text-white/40">
+                            お荷物番号 {s.shipmentNumber}
+                          </p>
+                        </div>
 
-                  {o.tracking ? (
-                    <button
-                      type="button"
-                      disabled
-                      title="デモのため、配送会社のサイトへは移動しません"
-                      className="mt-3 min-h-[48px] w-full cursor-not-allowed rounded-xl px-4 text-[0.83rem] font-bold text-white/40"
-                      style={{ border: `1px solid ${SHOP_EDGE}` }}
-                    >
-                      配送状況を見る（デモでは移動しません）
-                    </button>
-                  ) : (
-                    <p className="mt-3 text-[0.76rem] leading-[1.85] text-white/45">
-                      発送が完了しますと、追跡番号をこちらに表示します。
-                    </p>
-                  )}
-                </Panel>
-              </li>
-            );
-          })}
+                        <Progress at={stepIndex(s.status)} />
+
+                        <p className="mt-3 text-[0.79rem] leading-[1.9] text-white/70">
+                          {s.itemNames.length === 0
+                            ? "中身をご用意しています。"
+                            : `この荷物の中身：${s.itemNames.join("、")}`}
+                        </p>
+
+                        <dl
+                          className="mt-3 space-y-1.5 border-t pt-3 text-[0.79rem]"
+                          style={{ borderColor: SHOP_EDGE }}
+                        >
+                          <Row k="配送会社" v={s.carrier ?? "発送時にお知らせします"} />
+                          <Row
+                            k="追跡番号"
+                            v={s.trackingNumber ?? "発送時にお知らせします"}
+                          />
+                          {s.shippedAt && <Row k="発送日" v={nichiji(s.shippedAt)} />}
+                          {s.deliveredAt && (
+                            <Row k="お届け日" v={nichiji(s.deliveredAt)} />
+                          )}
+                        </dl>
+
+                        {/* ★ここを「配送会社のサイトへ」と書かないこと。
+                             まだ配送会社とはつながっていません。
+                             つながっているように見せた分だけ、
+                             押して何も起きなかったときの落胆が大きくなります */}
+                        {!s.trackingNumber && (
+                          <p className="mt-3 text-[0.76rem] leading-[1.85] text-white/45">
+                            発送が完了しますと、追跡番号をこちらに表示します。
+                          </p>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+
+                {/* ── まだ荷物に入っていない商品 ──
+                    「準備中」がどれなのかを、商品名で示す */}
+                {o.items.some((i) => i.shipmentNumber === null) && (
+                  <p className="mt-3 text-[0.78rem] leading-[1.9] text-white/50">
+                    ご用意中：
+                    {o.items
+                      .filter((i) => i.shipmentNumber === null)
+                      .map((i) => i.name)
+                      .join("、")}
+                  </p>
+                )}
+              </Panel>
+            </li>
+          ))}
         </ul>
       )}
     </>

@@ -7,7 +7,7 @@
     "build": "node scripts/check-draw-rng.mjs && node scripts/check-regression.mjs && node scripts/check-launch.mjs && next build",
     "start": "next start",
     "lint": "next lint",
-    "test": "tsx --test tests/*.test.ts",
+    "test": "node scripts/run-tests.mjs",
     "check:launch": "node scripts/check-launch.mjs",
     "check:urls": "node scripts/check-urls.mjs",
     "check:design": "node scripts/check-design.mjs",

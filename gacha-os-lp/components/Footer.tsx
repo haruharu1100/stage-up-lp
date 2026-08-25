@@ -43,8 +43,6 @@ export default function Footer() {
               { label: "実還元率", href: "/#rtp" },
               { label: "導入効果の試算", href: "/#roi" },
               { label: "お客様の画面", href: "/#play" },
-              { label: "管理画面デモ", href: "/demo" },
-              { label: "お客様デモ", href: "/demo?side=customer" },
               { label: "セキュリティ", href: "/#security" },
               { label: "導入の入り方", href: "/#scope" },
               { label: "料金", href: "/#pricing" },

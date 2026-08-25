@@ -20,16 +20,16 @@ const pick = (envValue: string | undefined, fallback: string) => {
 
 export const operator = {
   /** 事業者名（法人名または屋号） */
-  name: pick(process.env.NEXT_PUBLIC_OPERATOR_NAME, "REMERCI株式会社"),
+  name: pick(process.env.NEXT_PUBLIC_OPERATOR_NAME, "株式会社MORIKA"),
   /** 代表者名 */
   representative: pick(
     process.env.NEXT_PUBLIC_OPERATOR_REPRESENTATIVE,
-    "代表取締役　横田 明樹"
+    "代表取締役　森安 真理奈"
   ),
   /** 所在地 */
   address: pick(
     process.env.NEXT_PUBLIC_OPERATOR_ADDRESS,
-    "大阪府和泉市阪本町376-161"
+    "奈良県北葛城郡王寺町畠田8丁目1505-1"
   ),
   /**
    * 個人情報についての問い合わせ窓口。

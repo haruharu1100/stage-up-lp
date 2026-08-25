@@ -40,8 +40,8 @@ import { readSession, verifyCsrf } from "../lib/server/session";
 import { verifyAuditOfTenant } from "../lib/server/audit";
 import { createTenant, createCustomer, createAdmin } from "../lib/server/seed";
 
-after(() => {
-  resetDbForTests();
+after(async () => {
+  await resetDbForTests();
 });
 
 const PW = "tadashii-aikotoba-2026";

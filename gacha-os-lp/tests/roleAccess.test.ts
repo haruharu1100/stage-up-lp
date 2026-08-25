@@ -48,8 +48,8 @@ import { createTenant, createCustomer, createAdmin } from "../lib/server/seed";
 import { ROLE_PERMISSIONS, can } from "../lib/permissions";
 import { MENU } from "../components/console/menu";
 
-after(() => {
-  resetDbForTests();
+after(async () => {
+  await resetDbForTests();
 });
 
 const PW = "tadashii-aikotoba-2026";

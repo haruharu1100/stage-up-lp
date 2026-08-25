@@ -118,17 +118,17 @@ export default function ClosingMessage() {
               </p>
 
               <div className="mt-12 flex flex-wrap justify-center gap-3">
-                <Link href="/demo" className="btn-primary">
-                  無料デモを体験する
+                <Link href="#contact" className="btn-primary">
+                  導入について相談する
                 </Link>
                 {/* 既存事業者向けの入口。文言を「導入相談」に戻さないこと（項目37） */}
-                <Link href="#contact" className="btn-ghost">
-                  既存サイトの移行を相談する
+                <Link href="#migration" className="btn-ghost">
+                  既存サイトの移行を見る
                 </Link>
               </div>
 
               <p className="mt-7 text-note text-white/45">
-                デモは登録不要です。本番を模したサンプルデータでご覧いただけます。
+                管理画面は、オンラインの画面共有で実物をご覧いただきながらご説明します。
               </p>
             </div>
           </div>

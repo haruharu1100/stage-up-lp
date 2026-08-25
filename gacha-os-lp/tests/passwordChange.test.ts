@@ -68,8 +68,8 @@ import { POST as stepUpPost } from "../app/api/auth/step-up/route";
 import { GET as adminsGet } from "../app/api/console/admins/route";
 import { GET as auditGet } from "../app/api/console/audit/route";
 
-after(() => {
-  resetDbForTests();
+after(async () => {
+  await resetDbForTests();
 });
 
 const PW = "tadashii-aikotoba-2026";

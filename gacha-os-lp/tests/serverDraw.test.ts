@@ -40,8 +40,8 @@ import { createTenant, createCustomer, createGacha } from "../lib/server/seed";
  *   まとめだけが「失敗」と表示されます。
  *   原因が試験の中身にあるように見えるので、いちばん時間を取られます。
  */
-after(() => {
-  resetDbForTests();
+after(async () => {
+  await resetDbForTests();
 });
 
 const n = (v: unknown) => Number(v ?? 0);
@@ -235,9 +235,19 @@ for (const count of [10, 50, 100, 500, 1000]) {
       assert.ok(spendRefs.has(String(d.id)), "抽選に対応する支払いが無い");
     }
 
-    /* ── 残高は台帳の合計と一致すること ── */
+    /* ── 残高は台帳の合計と一致すること ──
+
+         ★「始める前の残高＋増減」ではなく、「台帳の合計そのもの」と比べます。
+           開始時の残高も台帳に1行入っているので、
+           台帳を全部足した数が、そのまま今の残高になるはずです。
+           これが崩れていたら、どこかで台帳を通さずに残高を書いています。 */
     const delta = s.ledger.reduce((a, e) => a + n(e.delta), 0);
-    assert.equal(s.points, before.points + delta, "残高と台帳が合っていない");
+    assert.equal(s.points, delta, "残高と台帳が合っていない");
+    assert.equal(
+      before.points,
+      before.ledger.reduce((a, e) => a + n(e.delta), 0),
+      "始める前から、残高と台帳がずれている",
+    );
 
     /* ── 抽選は全部、監査ログに残っていること ── */
     assert.equal(
@@ -295,7 +305,12 @@ test("在庫より多く同時に送っても、在庫の数までしか成立�
   assert.equal(s.draws.length, total);
   assert.equal(s.spent, total * price, "失敗した分でポイントが減っていないこと");
   const delta = s.ledger.reduce((a, e) => a + n(e.delta), 0);
-  assert.equal(s.points, before.points + delta);
+  assert.equal(s.points, delta, "残高と台帳が合っていない");
+  assert.equal(
+    before.points,
+    before.ledger.reduce((a, e) => a + n(e.delta), 0),
+    "始める前から、残高と台帳がずれている",
+  );
 });
 
 test("残高が足りないときは、1ポイントも減らないし記録も残らない", async () => {
@@ -315,7 +330,15 @@ test("残高が足りないときは、1ポイントも減らないし記録も�
   assert.equal(s.points, 100);
   assert.equal(s.draws.length, 0);
   assert.equal(s.left, 100);
-  assert.equal(s.ledger.length, 0);
+  /* ★「台帳が空」ではなく「増減が1行も足されていない」を見ます。
+       開始時の残高の行は、最初からあります。
+       これを空だと決めつけると、開始残高を台帳に残す作りに変えた瞬間、
+       試験だけが落ちて、中身は何も壊れていない、という誤報になります。 */
+  assert.equal(
+    s.ledger.filter((e) => String(e.kind) !== "OPENING").length,
+    0,
+    "断られたのに、ポイントの動きが記録されています",
+  );
   assert.equal(s.audits.length, 0);
 });
 

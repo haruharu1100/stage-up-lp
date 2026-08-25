@@ -3230,8 +3230,11 @@ export function todayTodos(s: ConsoleState): TodoItem[] {
   const approve = s.pointRequests.filter((r) => r.status === "PENDING").length;
   if (approve > 0) out.push({ urgency: "MUST", label: "承認待ちのポイント変更", count: approve, to: "points" });
 
-  const unship = s.orders.filter((o) => ORDER_TODO.includes(o.status)).length;
-  if (unship > 0) out.push({ urgency: "SHOULD", label: "未発送", count: unship, to: "shipping" });
+  /* ★発送と注文の件数は、ここでは数えません。
+       サーバーの実データ（/api/console/summary）から
+       lib/console/liveCounts.ts の liveTodos が作ります。
+       ここでも数えると、同じ「未発送」が2種類できて、
+       画面ごとに違う件数が出ます。 */
 
   /* ★お客様が受け取り方法を選ぶのを待っている商品は、
      運営の「やること」ではありません。ここには入れません。

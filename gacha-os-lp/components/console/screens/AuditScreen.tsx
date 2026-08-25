@@ -64,6 +64,15 @@ const ACTION_LABEL: Record<AuditAction, string> = {
   USER_ASK: "お客様からの問い合わせ",
   SUPPORT_REPLY: "問い合わせ返信",
 
+  /* 通知。
+     ★「送信」ではなく「作成」と書くこと。
+       いまの送り先は Mock（練習用の受け皿）で、
+       実際のメールもSMSも出ていません。
+       ここで「送信」と書くと、記録を読んだ人が
+       お客様に届いたものと思い込みます。
+       本物の送信会社につないだ日に、言い方を変えます */
+  NOTIFICATION_CREATE: "お知らせを作成",
+
   /* 抽選。
      ★いちばんお金が動く操作なので、必ず同じ鎖に残すこと。
        残高がどう動いたか・何が出たか・残数がいくつになったかまで、
@@ -112,6 +121,26 @@ const ACTION_LABEL: Record<AuditAction, string> = {
   ROLE_CHANGE: "権限の変更",
   SETTINGS_CHANGE: "設定の変更",
   DEMO_RESET: "デモの初期化",
+
+  /* 注文と発送。
+     ★注文と発送を、別の名前で残すこと。
+       ひとつの「発送処理」にまとめると、
+       「頼まれた」のか「箱に入れた」のか「家を出た」のかが、
+       あとから見分けられません。
+       お客様から「まだ届かない」と言われたとき、
+       どこで止まっているかを答えられるのは、この区別だけです。
+     ★お届け先の変更は、赤で出します。
+       乗っ取りは、最後にかならずここを通ります。 */
+  ORDER_CREATE: "注文の受付",
+  ORDER_UPDATE: "注文の変更",
+  ORDER_CANCEL: "注文の取り消し",
+  SHIPMENT_CREATE: "発送の作成",
+  SHIPMENT_SPLIT: "分割発送の作成",
+  SHIPMENT_TRACKING_SET: "追跡番号の登録",
+  SHIPMENT_SHIPPED: "発送の確定（出荷）",
+  SHIPMENT_STATUS: "発送状態の更新",
+  SHIPMENT_ADDRESS_CHANGE: "発送先の変更",
+  SHIPMENT_CANCEL: "発送の取り消し",
 };
 
 /**
@@ -155,6 +184,11 @@ const TSUYOI: string[] = [
   "ROLE_CHANGE",
   "MFA_DISABLED",
   "PASSWORD_RESET",
+
+  /* ★発送先の変更を、ここに入れること。
+       金額は動きませんが、品物の行き先が変わります。
+       乗っ取りの被害が実際に出るのは、この1行のあとです。 */
+  "SHIPMENT_ADDRESS_CHANGE",
 ];
 
 function tone(a: string): "neutral" | "warn" | "danger" {

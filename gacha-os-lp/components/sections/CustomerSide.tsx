@@ -290,8 +290,8 @@ export default function CustomerSide() {
             </div>
 
             <div className="mt-7 flex flex-col gap-3 sm:flex-row">
-              <Link href="/demo" className="btn-primary w-full sm:w-auto">
-                管理画面のほうを触ってみる
+              <Link href="#os" className="btn-primary w-full sm:w-auto">
+                管理画面のほうを見る
                 <svg
                   width="17"
                   height="17"

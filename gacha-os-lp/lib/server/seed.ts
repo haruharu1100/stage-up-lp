@@ -26,6 +26,30 @@ export async function createTenant(input: {
   return tenantId;
 }
 
+/**
+ * 会員を1人作る。
+ *
+ * ═══════════════════════════════════════════════
+ * ★最初の残高も、必ず台帳に1行残すこと
+ * ═══════════════════════════════════════════════
+ *
+ *   会員の行に残高だけ書いて、台帳（point_ledger）に何も残さないと、
+ *   こうなります。
+ *
+ *       残高      486,061pt
+ *       履歴の合計 −13,939pt
+ *
+ *   お客様のポイント画面は、この2つが合わないことを見つけて
+ *   「履歴の合計と残高が一致していません」と赤く出します。
+ *   これは正しい動きです。おかしいのは、
+ *   最初の残高がどこから来たのか、どこにも書いていないことです。
+ *
+ *   ですので、開始時の残高も「開始時の残高」という1行にして
+ *   台帳へ入れます。こうすると、残高は必ず履歴で説明できます。
+ *
+ *   ★この行を消して、代わりに画面側の照合をゆるめないこと。
+ *     合わないものを合っていることにするのが、いちばん危ないです。
+ */
 export async function createCustomer(input: {
   tenantId: string;
   no: number;
@@ -35,20 +59,58 @@ export async function createCustomer(input: {
 }): Promise<string> {
   await migrate();
   const customerId = id("cus");
-  await db().execute({
-    sql: `INSERT INTO customers
-            (id, tenant_id, display_id, email, name, points, spent, status, created_at)
-          VALUES (?,?,?,?,?,?,0,'ACTIVE',?)`,
-    args: [
-      customerId,
-      input.tenantId,
-      displayNo("GD", input.no),
-      input.email ?? null,
-      input.name,
-      input.points,
-      new Date().toISOString(),
-    ],
-  });
+  const now = new Date().toISOString();
+
+  /* ★2つの書き込みは、まとめて1回で通すこと（batch）。
+       会員の行だけ入って台帳の行が入らないと、
+       その人の残高は、最初から説明できない数になります。
+
+     ★ここで長く開く取引（transaction）を使わないこと。
+       この関数は、同時に1000件を流す試験の下ごしらえでも呼ばれます。
+       そこで取引を開け閉めすると、DBの部品（ネイティブ側）が
+       終了処理の途中で異常終了することがありました（SIGSEGV）。
+       中の試験は全部「ok」なのに、まとめだけ「失敗」と出る壊れ方です。
+       batch は1回の呼び出しで、中身はまとめて確定します。 */
+  const shori = [
+    {
+      sql: `INSERT INTO customers
+              (id, tenant_id, display_id, email, name, points, spent, status, created_at)
+            VALUES (?,?,?,?,?,?,0,'ACTIVE',?)`,
+      args: [
+        customerId,
+        input.tenantId,
+        displayNo("GD", input.no),
+        input.email ?? null,
+        input.name,
+        input.points,
+        now,
+      ],
+    },
+  ];
+
+  /* 残高が0の人には、0の行を作りません。
+     0 と 0 は、行が無くても一致します。 */
+  if (input.points !== 0) {
+    shori.push({
+      sql: `INSERT INTO point_ledger
+              (id, tenant_id, user_id, kind, delta, memo, ref, created_at)
+            VALUES (?,?,?, 'OPENING', ?, ?, NULL, ?)`,
+      args: [
+        id("pl"),
+        input.tenantId,
+        customerId,
+        input.points,
+        /* ★見出しと同じ言葉を、説明にも書かないこと。
+             「開始時の残高／開始時の残高」と2行並ぶだけで、
+             お客様は何も分かりません。 */
+        "ご登録時点のポイント",
+        now,
+      ],
+    });
+  }
+
+  for (const q of shori) await db().execute(q);
+
   return customerId;
 }
 
@@ -183,57 +245,160 @@ export async function createPrize(input: {
   return prizeId;
 }
 
-/** 発送依頼を1件作る */
+/**
+ * 注文を1件作る（明細つき）。
+ *
+ * ★注文だけを作って、明細を作らないこと。
+ *   明細が無い注文は「頼まれた物が無い注文」です。
+ *   発送側は明細を数えて残数を出しているので、
+ *   そこが空だと、いきなり「全部発送済み」に見えます。
+ */
 export async function createOrder(input: {
   tenantId: string;
   userId: string;
   prizeId: string;
-  status?: string;
-  address?: string;
+  itemName?: string;
+  unitValue?: number;
+  orderNumber?: string;
+  paymentStatus?: string;
+  orderStatus?: string;
 }): Promise<string> {
   await migrate();
   const orderId = id("ord");
   const now = new Date().toISOString();
-  await db().execute({
-    sql: `INSERT INTO orders
-            (id, tenant_id, user_id, prize_id, status, address, created_at, requested_at)
-          VALUES (?,?,?,?,?,?,?,?)`,
-    args: [
-      orderId,
-      input.tenantId,
-      input.userId,
-      input.prizeId,
-      input.status ?? "REQUESTED",
-      input.address ?? "検証用の住所（実在しません）",
-      now,
-      now,
-    ],
+  const value = input.unitValue ?? 5000;
+
+  await withWriteTx(async (tx) => {
+    await tx.execute({
+      sql: `INSERT INTO orders
+              (id, tenant_id, user_id, order_number, ordered_at, order_type,
+               subtotal, discount, point_used, total,
+               payment_status, order_status, created_at, updated_at)
+            VALUES (?,?,?,?,?,?,?,0,0,?,?,?,?,?)`,
+      args: [
+        orderId,
+        input.tenantId,
+        input.userId,
+        input.orderNumber ?? `ORD-${orderId.slice(-8).toUpperCase()}`,
+        now,
+        "PRIZE_SHIPPING",
+        value,
+        value,
+        input.paymentStatus ?? "POINT_ONLY",
+        input.orderStatus ?? "PAID",
+        now,
+        now,
+      ],
+    });
+
+    await tx.execute({
+      sql: `INSERT INTO order_items
+              (id, tenant_id, order_id, prize_id, product_id, item_name_snapshot,
+               quantity, unit_value, assigned_quantity, shipped_quantity,
+               status, created_at, updated_at)
+            VALUES (?,?,?,?,NULL,?,1,?,0,0,'UNSHIPPED',?,?)`,
+      args: [
+        id("oit"),
+        input.tenantId,
+        orderId,
+        input.prizeId,
+        input.itemName ?? "検証用の景品",
+        value,
+        now,
+        now,
+      ],
+    });
   });
+
   return orderId;
 }
 
-/** 発送を1件作る */
+/**
+ * 発送を1件作る（注文の明細をすべて入れる）。
+ *
+ * ★住所は、この時点の写しとして固定します。
+ *   あとで会員が住所を変えても、この箱の宛先は動きません。
+ */
 export async function createShipment(input: {
   tenantId: string;
   orderId: string;
   status?: string;
+  shipmentNumber?: string;
+  address?: { name: string; zip: string; addr: string; tel: string };
 }): Promise<string> {
   await migrate();
   const shipmentId = id("shp");
-  await db().execute({
-    sql: `INSERT INTO shipments
-            (id, tenant_id, order_id, carrier, tracking_no, status, created_at)
-          VALUES (?,?,?,?,?,?,?)`,
-    args: [
-      shipmentId,
-      input.tenantId,
-      input.orderId,
-      "MOCK-CARRIER",
-      null,
-      input.status ?? "PREPARING",
-      new Date().toISOString(),
-    ],
+  const now = new Date().toISOString();
+  const addr =
+    input.address ?? {
+      name: "検証用のお名前",
+      zip: "000-0000",
+      addr: "検証用の住所（実在しません）",
+      tel: "000-0000-0000",
+    };
+
+  await withWriteTx(async (tx) => {
+    const order = await tx.execute({
+      sql: `SELECT user_id FROM orders WHERE tenant_id = ? AND id = ? LIMIT 1`,
+      args: [input.tenantId, input.orderId],
+    });
+    const userId = String(
+      (order.rows[0] as Record<string, unknown> | undefined)?.user_id ?? "",
+    );
+
+    await tx.execute({
+      sql: `INSERT INTO shipments
+              (id, tenant_id, order_id, user_id, shipment_number,
+               shipping_address_snapshot, carrier, tracking_number,
+               shipment_status, requested_at, packed_at, shipped_at,
+               delivered_at, cancelled_at, note, created_at, updated_at)
+            VALUES (?,?,?,?,?,?,?,NULL,?,?,NULL,NULL,NULL,NULL,NULL,?,?)`,
+      args: [
+        shipmentId,
+        input.tenantId,
+        input.orderId,
+        userId,
+        input.shipmentNumber ?? `SHP-${shipmentId.slice(-8).toUpperCase()}`,
+        JSON.stringify(addr),
+        "MOCK-CARRIER",
+        input.status ?? "PREPARING",
+        now,
+        now,
+        now,
+      ],
+    });
+
+    const items = await tx.execute({
+      sql: `SELECT id, item_name_snapshot FROM order_items
+             WHERE tenant_id = ? AND order_id = ?`,
+      args: [input.tenantId, input.orderId],
+    });
+
+    for (const r of items.rows as Record<string, unknown>[]) {
+      await tx.execute({
+        sql: `INSERT INTO shipment_items
+                (id, tenant_id, shipment_id, order_id, order_item_id,
+                 quantity, name_snapshot, created_at, released_at)
+              VALUES (?,?,?,?,?,1,?,?,NULL)`,
+        args: [
+          id("sit"),
+          input.tenantId,
+          shipmentId,
+          input.orderId,
+          String(r.id ?? ""),
+          String(r.item_name_snapshot ?? ""),
+          now,
+        ],
+      });
+      await tx.execute({
+        sql: `UPDATE order_items
+                 SET assigned_quantity = 1, updated_at = ?
+               WHERE tenant_id = ? AND id = ?`,
+        args: [now, input.tenantId, String(r.id ?? "")],
+      });
+    }
   });
+
   return shipmentId;
 }
 

@@ -75,8 +75,23 @@ export type Permission =
  */
 export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
   VIEWER: ["gacha.view", "point.view", "shipping.view", "support.view"],
+  /**
+   * サポートは、発送を「見る」だけ。
+   *
+   * ★shipping.act を持たせないこと。
+   *   サポートが発送を見たい理由は、
+   *   「まだ届きません」に答えるためです。答えるのに必要なのは、
+   *   今どこにあるかを読むことだけで、箱を作る力ではありません。
+   *
+   *   ここに shipping.act を足すと、
+   *   お客様と電話でつながっている最中の人が、
+   *   その場で宛先を変えたり、出荷を確定したりできるようになります。
+   *   なりすましの電話は、まさにその瞬間を狙ってきます。
+   *
+   *   発送を動かすのは、運営（OPERATOR）の仕事です。
+   */
   SUPPORT: [
-    "gacha.view", "point.view", "shipping.view", "shipping.act",
+    "gacha.view", "point.view", "shipping.view",
     "support.view", "support.reply",
   ],
   OPERATOR: [

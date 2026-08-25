@@ -174,13 +174,13 @@ export default function ProductVideo() {
         <Reveal delay={0.12}>
           {/*
             ★2つの行き先の順番を入れ替えないこと。
-              動画を見終わった直後の人が次にしたいのは、
-              「相談する」ではなく「本当に動くのか自分で確かめる」です。
-              先に触ってもらってから、相談へ進んでもらいます。
+              動画を見終わった直後の人が知りたいのは、
+              まず「いくらかかるのか」です。
+              料金を見てから、相談へ進んでもらいます。
           */}
           <div className="mt-10 flex flex-col items-center gap-3.5 sm:flex-row sm:justify-center">
-            <Link href="/demo" className="btn-primary btn-lg w-full sm:w-auto">
-              自分で触ってみる
+            <Link href="#pricing" className="btn-primary btn-lg w-full sm:w-auto">
+              料金を見る
             </Link>
             <Link href="#contact" className="btn-outline btn-lg w-full sm:w-auto">
               導入について相談する

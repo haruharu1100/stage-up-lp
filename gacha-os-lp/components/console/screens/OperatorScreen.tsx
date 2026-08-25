@@ -28,6 +28,7 @@
 
 import type { ConsoleState } from "@/lib/console/state";
 import { NOW, summary, todayTodos } from "@/lib/console/state";
+import { liveTodos, useLiveCounts } from "@/lib/console/liveCounts";
 import type { MenuKey } from "../menu";
 import { Badge, Btn, Card, DemoNote, WhatIsThis } from "../ui";
 
@@ -39,7 +40,19 @@ export default function OperatorScreen({
   onNav: (k: MenuKey) => void;
 }) {
   const sm = summary(s);
-  const todos = todayTodos(s);
+
+  /**
+   * 「未発送は何件？」「今日の注文は？」に、実データで答える（#29）。
+   *
+   * ★ここを見本の数で答えないこと。
+   *   人は、AIが言った数を確かめずに使います。
+   *   確かめられない数を自信たっぷりに言うのが、いちばん危険です。
+   *
+   * ★数えられなかったときは「分かりません」と言うこと。
+   *   0件と答えてしまうと、放置が起きます。
+   */
+  const live = useLiveCounts();
+  const todos = [...todayTodos(s), ...liveTodos(live)];
   const must = todos.filter((t) => t.urgency === "MUST");
   const should = todos.filter((t) => t.urgency === "SHOULD");
 
@@ -63,6 +76,27 @@ export default function OperatorScreen({
             <span className="num font-bold text-slate"> {sm.playsToday.toLocaleString()}回</span>
             でした。
           </p>
+
+          {/* ★注文と発送は、実データの数をそのまま読み上げる */}
+          {live.phase === "ok" ? (
+            <p className="text-note leading-[2] text-slate2">
+              本日の注文は
+              <span className="num font-bold text-slate"> {live.counts.ordersToday.toLocaleString()}件</span>
+              （これまでの合計
+              <span className="num font-bold text-slate"> {live.counts.ordersTotal.toLocaleString()}件</span>
+              ）です。出荷がまだの発送は
+              <span className="num font-bold text-slate"> {live.counts.unshippedShipments.toLocaleString()}件</span>
+              、まだ箱に入れていない商品は
+              <span className="num font-bold text-slate"> {live.counts.unassignedItems.toLocaleString()}点</span>
+              あります。
+            </p>
+          ) : (
+            <p className="rounded-xl border border-edge2 bg-paper2 px-4 py-3 text-note leading-[1.9] text-slate3">
+              {live.phase === "loading"
+                ? "注文と発送の件数を数えています。"
+                : `注文と発送の件数は分かりません（${live.why}）。数えられていないので、0件とは申しません。`}
+            </p>
+          )}
 
           {must.length === 0 ? (
             <p className="rounded-xl border border-ok/30 bg-ok/10 px-4 py-4 text-note font-bold leading-[1.9] text-ok-ink">
@@ -180,7 +214,9 @@ function why(to: string): string {
     case "points":
       return "ポイントの変更が承認待ちです。承認されるまで1ptも動きません。止まったままになります。";
     case "shipping":
-      return "お客様をお待たせしています。件数が多いので、まとめて片づけるのが早いです。";
+      return "箱はできていますが、まだ出ていません。お客様をお待たせしています。まとめて片づけるのが早いです。";
+    case "orders":
+      return "頼まれたのに、まだ箱に入れていない商品があります。ここを溜めると「注文したのに何も来ない」の問い合わせになります。支払の確認待ちも、この画面です。";
     case "market":
       return "相場が取れていない景品があります。還元率を古い値で計算しているので、いまの数字は当てになりません。先に取り直してください。";
     default:

@@ -1,0 +1,41 @@
+{
+  "base": "http://localhost:3218",
+  "shots": [
+    {
+      "file": "01-orders-list.png",
+      "note": "注文管理（一覧）"
+    },
+    {
+      "file": "02-order-detail.png",
+      "note": "注文の詳細（明細ごとの発送済／未発送）"
+    },
+    {
+      "file": "03-shipment-create.png",
+      "note": "発送をつくる（分割発送の選択画面）"
+    },
+    {
+      "file": "04-shipments-list.png",
+      "note": "発送管理（一覧・全部）"
+    },
+    {
+      "file": "05-shipment-detail.png",
+      "note": "発送の詳細（宛先・追跡番号・記録）"
+    },
+    {
+      "file": "09-dashboard.png",
+      "note": "ダッシュボード（実データの集計・今日やること）"
+    },
+    {
+      "file": "06-customer-mypage.png",
+      "note": "お客様側（マイページ入口）"
+    },
+    {
+      "file": "07-customer-shipping.png",
+      "note": "お客様側の発送状況（分割発送の見え方）"
+    },
+    {
+      "file": "08-customer-tracking.png",
+      "note": "お客様側（追跡番号・荷物ごとの進み方）"
+    }
+  ]
+}

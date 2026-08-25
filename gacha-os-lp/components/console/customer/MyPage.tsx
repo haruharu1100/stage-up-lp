@@ -506,7 +506,6 @@ export default function MyPage({
             userName={me.name}
             balance={me.points}
             prizes={prizes}
-            orders={orders}
             tickets={tickets}
             todo={todo}
             hasAddress={Boolean(me.address)}

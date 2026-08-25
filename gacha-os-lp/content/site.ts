@@ -10,13 +10,13 @@ import { OS, OPERATOR } from "@/lib/text";
 export const site = {
   brand: "AI GACHA OS",
   brandJa: "AIガチャ運営OS",
-  company: "REMERCI株式会社",
+  company: "株式会社MORIKA",
   domain: "https://gacha-os.jp",
   hero: {
     headline: ["オンラインガチャ運営を、", "仕入れ以外ほぼ自動化。"],
     sub: "ガチャ作成、景品設計、還元率管理、市場価格更新、発送、顧客対応まで。\nAIと自動化システムで、オンラインガチャ運営を次のステージへ。",
-    ctaPrimary: { label: "無料デモを体験する", href: "/demo" },
-    ctaSecondary: { label: "導入について相談する", href: "#contact" },
+    ctaPrimary: { label: "導入について相談する", href: "#contact" },
+    ctaSecondary: { label: "料金を見る", href: "#pricing" },
     modules: [
       "AIガチャ設計",
       "REAL TIME RTP",
@@ -121,14 +121,14 @@ export const mobileCtaVariants: Record<
   }
 > = {
   A: {
-    primary: { label: "無料デモを試す", href: "/demo", target: "demo" },
-    secondary: { label: "導入を相談", href: "/#contact", target: "contact" },
-    note: "まず触ってもらう案",
+    primary: { label: "導入を相談する", href: "/#contact", target: "contact" },
+    secondary: { label: "料金を見る", href: "/#pricing", target: "pricing" },
+    note: "先に商談へつなぐ案",
   },
   B: {
     primary: { label: "導入を相談する", href: "/#contact", target: "contact" },
-    secondary: { label: "無料デモ", href: "/demo", target: "demo" },
-    note: "先に商談へつなぐ案",
+    secondary: { label: "機能を見る", href: "/#os", target: "os" },
+    note: "機能一覧へ降ろす案",
   },
 };
 
@@ -714,9 +714,9 @@ export const ctaTrio = [
   {
     key: "demo",
     code: "01",
-    label: "無料デモを体験する",
-    body: `本番を模したサンプル管理画面と${OPERATOR}を、その場で触っていただけます。登録不要です。`,
-    href: "/demo",
+    label: "実際の管理画面をご案内",
+    body: `オンライン画面共有で、管理画面と${OPERATOR}の実物をご覧いただきながらご説明します。`,
+    href: "#contact",
     primary: true,
   },
   {

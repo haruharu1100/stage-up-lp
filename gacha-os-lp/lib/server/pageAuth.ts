@@ -57,6 +57,78 @@ export type PageAuth = {
 };
 
 /**
+ * いまログインしている「お客様」を返す。していなければ null。
+ *
+ * ═══════════════════════════════════════════════
+ * ★管理者用と分けてある理由
+ * ═══════════════════════════════════════════════
+ *
+ *   クッキーは1つ（gos_session）しかありません。
+ *   その中に「担当者か、お客様か」が書いてあります。
+ *
+ *   ここで種類を見ないと、担当者のクッキーで
+ *   お客様の画面が開いてしまいます。
+ *   逆も同じです。currentAdmin が ADMIN を確かめているのと、
+ *   まったく同じ理由です。
+ */
+export type CustomerAuth = {
+  session: Session;
+  customer: { displayId: string; name: string; email: string; tenantCode: string };
+};
+
+export async function currentCustomer(): Promise<CustomerAuth | null> {
+  const token = cookies().get(SESSION_COOKIE)?.value;
+  const session = await readSession(token);
+  if (!session) return null;
+
+  /* ★ここを外さないこと。担当者のクッキーで
+       お客様の画面に入れてしまいます */
+  if (session.subjectKind !== "CUSTOMER") return null;
+
+  const { db } = await import("./db");
+
+  const res = await db().execute({
+    sql: `SELECT display_id, name, email FROM customers
+           WHERE id = ? AND tenant_id = ? LIMIT 1`,
+    args: [session.subjectId, session.tenantId],
+  });
+  const row = res.rows[0] as Record<string, unknown> | undefined;
+
+  /* 退会済みなど、行が消えている。中へは入れません */
+  if (!row) return null;
+
+  const t = await db().execute({
+    sql: `SELECT code FROM tenants WHERE id = ? LIMIT 1`,
+    args: [session.tenantId],
+  });
+
+  return {
+    session,
+    customer: {
+      displayId: String(row.display_id ?? ""),
+      name: String(row.name ?? ""),
+      email: String(row.email ?? ""),
+      tenantCode: String(
+        (t.rows[0] as Record<string, unknown> | undefined)?.code ?? "",
+      ),
+    },
+  };
+}
+
+/**
+ * お客様がログインしていなければ、ログイン画面へ送る。
+ *
+ * ★戻り先を必ず渡すこと。
+ *   お届け状況を見に来た方を、ログイン後に
+ *   別の場所へ落とすと、もう一度探すことになります。
+ */
+export async function requireCustomer(returnTo: string): Promise<CustomerAuth> {
+  const auth = await currentCustomer();
+  if (auth) return auth;
+  redirect(`/login?next=${encodeURIComponent(returnTo)}`);
+}
+
+/**
  * 入る前に済ませてもらう画面。
  *
  * ★住所を、この1か所にまとめること。

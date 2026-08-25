@@ -137,13 +137,23 @@ async function main() {
     });
   }
 
+  /* ★お客様にも合言葉を入れること。
+       入れないと、お客様としてログインできません。
+       ログインできないと、発送状況の画面が本物を出しているのかを
+       誰も確かめられません。「画面はある」で終わってしまいます。 */
   for (const c of CUSTOMERS) {
-    await seed.createCustomer({
+    const cid = await seed.createCustomer({
       tenantId,
       no: c.no,
       name: c.name,
       points: c.points,
       email: `user${c.no}@demo.example`,
+    });
+    await setPassword({
+      tenantId,
+      subjectKind: "CUSTOMER",
+      subjectId: cid,
+      password: PASSWORD,
     });
   }
 
@@ -157,6 +167,10 @@ async function main() {
   console.log("  担当者：");
   for (const a of ADMINS) {
     console.log(`    ${a.role.padEnd(12)} ${a.email}`);
+  }
+  console.log("  お客様（発送状況の確認用）：");
+  for (const c of CUSTOMERS) {
+    console.log(`    ${c.name.padEnd(8)} user${c.no}@demo.example`);
   }
   console.log(
     "\n★この合言葉は、確認用のものです。本番では必ず別のものに変えてください。\n",

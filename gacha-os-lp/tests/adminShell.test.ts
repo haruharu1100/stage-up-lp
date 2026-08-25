@@ -412,11 +412,16 @@ test("「1日、運営してみる」は、デモのときだけ出す", () => {
 */
 
 test("毎日さわる一覧は、行を押すと右の板が開く", () => {
-  /* ガチャ・発送・問い合わせ・顧客。
-     どれも「次の1件、その次の1件」と続く仕事です。 */
+  /* ガチャ・注文・発送・問い合わせ・顧客。
+     どれも「次の1件、その次の1件」と続く仕事です。
+
+     ★注文と発送は、別の画面として両方ここに載せること。
+       片方だけにすると、もう片方の板を外した日に、
+       誰も気づけません。 */
   const screens = [
     "components/console/screens/GachaList.tsx",
-    "components/console/screens/ShippingScreen.tsx",
+    "components/console/screens/OrdersScreen.tsx",
+    "components/console/screens/ShipmentsScreen.tsx",
     "components/console/screens/SupportScreen.tsx",
     "components/console/screens/CustomersScreen.tsx",
   ];

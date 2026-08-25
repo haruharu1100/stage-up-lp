@@ -55,8 +55,8 @@ import {
   createTicket,
 } from "../lib/server/seed";
 
-after(() => {
-  resetDbForTests();
+after(async () => {
+  await resetDbForTests();
 });
 
 /** 会社を1社ぶん、ひととおり作る */
@@ -209,7 +209,7 @@ test("一覧・件数・合計に、他社のものが1件も混ざらない", a
   assert.equal(await b.sum("customers", "points"), 10_000);
 
   /* 条件つきの絞り込みでも、会社の壁は外れない */
-  const found = await a.findOne("orders", "status = ?", ["REQUESTED"]);
+  const found = await a.findOne("orders", "order_status = ?", ["PAID"]);
   assert.ok(found);
   assert.equal((found as { id: string }).id, A.orderId);
 
@@ -273,7 +273,7 @@ test("並び順の指定に、危ないものは通らない", async () => {
 
   /* まともな指定は通ること */
   await a.list("orders", { orderBy: "created_at DESC" });
-  await a.list("orders", { orderBy: "status ASC, created_at DESC" });
+  await a.list("orders", { orderBy: "order_status ASC, created_at DESC" });
 
   const bad = [
     "created_at; DROP TABLE orders",

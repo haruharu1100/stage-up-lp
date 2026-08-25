@@ -146,13 +146,12 @@ export default function CoreToScreen() {
         {/* ── 補足と導線 ── */}
         <div className="mx-auto mt-10 flex max-w-3xl flex-col items-center gap-5 text-center">
           <p className="text-note leading-[1.95] text-slate3">
-            この管理画面は、ブラウザ上でそのまま操作できます。
-            お申し込みや登録は必要ありません。
+            この管理画面は、導入後に運営会社さまへお渡しするものです。
             <br className="hidden sm:block" />
             画面の数値はすべて運営例です。実績値ではありません。
           </p>
-          <Link href="/demo" className="btn-primary btn-lg w-full sm:w-auto">
-            この画面を触ってみる
+          <Link href="#contact" className="btn-primary btn-lg w-full sm:w-auto">
+            この画面について相談する
             <svg width="17" height="17" viewBox="0 0 16 16" fill="none" aria-hidden>
               <path
                 d="M3 8h10M9 4l4 4-4 4"

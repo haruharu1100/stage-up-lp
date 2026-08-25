@@ -81,10 +81,10 @@ export default function Header() {
 
           <div className="hidden shrink-0 items-center gap-4 sm:flex">
             <Link
-              href="/demo"
+              href="/#pricing"
               className="whitespace-nowrap text-[15px] font-medium text-slate2 transition-colors hover:text-blue-ink"
             >
-              無料デモを体験する
+              料金を見る
             </Link>
             <Link
               href="/#contact"
@@ -139,11 +139,11 @@ export default function Header() {
         </nav>
         <div className="mt-9 flex flex-col gap-3.5">
           <Link
-            href="/demo"
+            href="/#pricing"
             onClick={() => setOpen(false)}
             className="btn-outline btn-lg"
           >
-            無料デモを体験する
+            料金を見る
           </Link>
           <Link
             href="/#contact"

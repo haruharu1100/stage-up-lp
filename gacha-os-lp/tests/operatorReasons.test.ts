@@ -37,12 +37,20 @@ const ROOT = join(__dirname, "..");
 
 const read = (rel: string) => readFileSync(join(ROOT, rel), "utf8");
 
-/** todayTodos が出す行き先を、全部そのまま取り出す */
-function destinationsInTodos(): string[] {
-  const src = read("lib/console/state.ts");
+/**
+ * 「やること」を作る関数の中から、行き先を全部取り出す。
+ *
+ * ★見る場所は1つではありません。
+ *   見本のデータから作るもの（state.ts の todayTodos）と、
+ *   サーバーの実データから作るもの（liveCounts.ts の liveTodos）が
+ *   あります。片方だけ見張ると、もう片方に足した行き先の
+ *   説明が抜けたまま気づけません。
+ */
+function destinationsIn(file: string, fn: string): string[] {
+  const src = read(file);
 
-  const head = src.indexOf("export function todayTodos(");
-  assert.notEqual(head, -1, "todayTodos が見つかりません（名前が変わった？）");
+  const head = src.indexOf(fn);
+  assert.notEqual(head, -1, `${fn} が見つかりません（名前が変わった？）`);
 
   const open = src.indexOf("{", head);
   let depth = 0;
@@ -60,7 +68,7 @@ function destinationsInTodos(): string[] {
     }
   }
 
-  assert.notEqual(body, "", "todayTodos の中かっこが閉じていません");
+  assert.notEqual(body, "", `${fn} の中かっこが閉じていません`);
 
   const found = new Set<string>();
   const re = /\bto:\s*"([^"]+)"/g;
@@ -68,6 +76,16 @@ function destinationsInTodos(): string[] {
   while ((m = re.exec(body)) !== null) found.add(m[1]);
 
   return Array.from(found);
+}
+
+/** 画面に並びうる行き先を、全部あわせて取り出す */
+function destinationsInTodos(): string[] {
+  return Array.from(
+    new Set([
+      ...destinationsIn("lib/console/state.ts", "export function todayTodos("),
+      ...destinationsIn("lib/console/liveCounts.ts", "export function liveTodos("),
+    ]),
+  );
 }
 
 /** why() が答えを持っている行き先を取り出す */

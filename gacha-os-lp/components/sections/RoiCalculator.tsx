@@ -416,8 +416,8 @@ export default function RoiCalculator() {
             </MoreDetail>
 
             <div className="mt-auto flex flex-col gap-3 pt-1 sm:flex-row sm:gap-3.5 sm:pt-2">
-              <Link href="/demo" className="btn-primary btn-lg w-full sm:w-auto">
-                実際の管理画面を見る
+              <Link href="#contact" className="btn-primary btn-lg w-full sm:w-auto">
+                管理画面を案内してもらう
               </Link>
               <Link href="#contact" className="btn-outline btn-lg w-full sm:w-auto">
                 自社の場合の費用を聞く

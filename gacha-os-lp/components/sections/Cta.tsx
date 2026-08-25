@@ -53,7 +53,7 @@ const INPUT_CLS =
 */
 const CONTACT_HEADING = "まず、いまの運営を\n見せてください。";
 const CONTACT_LEAD =
-  "どこに時間が溶けているのかを一緒に整理します。デモ画面をお見せしながら、必要な機能範囲とお見積りの目安をその場でお伝えします。";
+  "どこに時間が溶けているのかを一緒に整理します。管理画面をお見せしながら、必要な機能範囲とお見積りの目安をその場でお伝えします。";
 const CONTACT_SUBMIT = "送信する";
 const CONTACT_NOTE =
   "その他の詳細は、ご相談の中でうかがいます。送信された内容は、ご相談への回答のみに使用します。営業目的での第三者提供は行いません。詳しくは";
@@ -273,7 +273,7 @@ export default function Cta() {
                     c.primary ? "text-blue-ink" : "text-slate2"
                   }`}
                 >
-                  {c.primary ? "デモを開く" : "この内容で送る"}
+                  {c.primary ? "相談する" : "この内容で送る"}
                   <svg
                     width="16"
                     height="16"
@@ -358,8 +358,8 @@ export default function Cta() {
                     内容を確認のうえ、担当者からご連絡します。
                     お急ぎの場合は、その旨をメールでお知らせください。
                   </p>
-                  <Link href="/demo" className="btn-outline mt-9">
-                    無料デモを体験する
+                  <Link href="/#pricing" className="btn-outline mt-9">
+                    料金の目安を見る
                   </Link>
                 </div>
               ) : (
@@ -658,12 +658,12 @@ export default function Cta() {
               </div>
 
               <Link
-                href="/demo"
+                href="/#tour"
                 className="group rounded-3xl border border-blue-ink/20 bg-gradient-to-b from-blue-pale/70 to-white p-6 shadow-lift transition-all duration-300 hover:-translate-y-1 hover:border-blue-ink/40 hover:shadow-blue-lift sm:p-8"
               >
-                <span className="num text-label text-blue-ink">LIVE DEMO</span>
+                <span className="num text-label text-blue-ink">3 MIN TOUR</span>
                 <p className="mt-4 text-h3 font-semibold text-slate">
-                  先に管理画面を触ってみる
+                  先に全体像を3分で見る
                 </p>
                 <p className="mt-3.5 text-note text-slate2">
                   {/*
@@ -672,8 +672,8 @@ export default function Cta() {
                       文字そのものは「AI OPERATOR」のまま。見えない文字は混ぜません。
                       実測で 375px〜1440px の全ての幅で「AI／OPERATOR」と割れていました。
                   */}
-                  登録不要です。本番を模したサンプルの運用ダッシュボードと
-                  <span className="nb">AI OPERATOR</span> を、その場でご覧いただけます。
+                  ガチャ作成から発送・問い合わせまで、運用ダッシュボードと
+                  <span className="nb">AI OPERATOR</span> が何をするのかを順に確認できます。
                 </p>
               </Link>
             </div>

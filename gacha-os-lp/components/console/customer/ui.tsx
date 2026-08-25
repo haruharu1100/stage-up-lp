@@ -286,7 +286,14 @@ export function Fld({
   );
 }
 
-/** 押せる大きな行（数字つき） */
+/**
+ * 押せる大きな行（数字つき）。
+ *
+ * ★value が null のときは「—」を出すこと。
+ *   null は「まだ数えられていない」です。0 とは違います。
+ *   数えられていないのに 0 と出すと、お客様は
+ *   「私の依頼は無かったことになっている」と受け取ります。
+ */
 export function TapRow({
   label,
   note,
@@ -297,7 +304,7 @@ export function TapRow({
 }: {
   label: string;
   note: string;
-  value: number;
+  value: number | null;
   unit: string;
   onClick: () => void;
   tone?: ToneKey;
@@ -321,9 +328,11 @@ export function TapRow({
       </span>
       <span className="flex shrink-0 items-baseline gap-1">
         <span className="num text-[1.5rem] font-bold leading-none text-white">
-          {value.toLocaleString()}
+          {value === null ? "—" : value.toLocaleString()}
         </span>
-        <span className="text-[0.73rem] font-bold text-white/50">{unit}</span>
+        {value !== null && (
+          <span className="text-[0.73rem] font-bold text-white/50">{unit}</span>
+        )}
         <span className="ml-1 text-[1.05rem]" style={{ color: SHOP_ACCENT }} aria-hidden>
           ›
         </span>

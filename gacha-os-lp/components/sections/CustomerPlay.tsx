@@ -754,28 +754,28 @@ export default function CustomerPlay() {
             </p>
             <div className="mt-7 flex flex-col gap-3 sm:flex-row">
               <Link
-                href="/demo?side=customer"
+                href="#contact"
                 className="btn-primary w-full sm:w-auto"
                 onClick={() =>
                   track(EV.ctaClick, {
                     place: "customer_play",
-                    target: "customer_demo",
+                    target: "contact",
                   })
                 }
               >
-                お客様側のガチャを体験する
+                導入について相談する
               </Link>
               <Link
-                href="/demo"
+                href="#os"
                 className="btn-outline w-full sm:w-auto"
                 onClick={() =>
                   track(EV.ctaClick, {
                     place: "customer_play",
-                    target: "operator_demo",
+                    target: "os",
                   })
                 }
               >
-                運営者側の管理画面を触る
+                運営者側の管理画面を見る
               </Link>
             </div>
           </div>

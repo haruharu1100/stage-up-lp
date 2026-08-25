@@ -29,10 +29,7 @@ export default function ContactThanks() {
           お急ぎの場合は、その旨をメールでお知らせください。
         </p>
         <div className="mt-8 flex flex-col gap-2.5 sm:flex-row sm:justify-center">
-          <Link href="/demo" className="btn btn-primary">
-            管理画面のデモを見る
-          </Link>
-          <Link href="/" className="btn btn-ghost">
+          <Link href="/" className="btn btn-primary">
             サイトへ戻る
           </Link>
         </div>

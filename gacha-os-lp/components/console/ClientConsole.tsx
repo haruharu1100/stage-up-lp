@@ -104,7 +104,8 @@ import PreviewScreen from "./screens/PreviewScreen";
 import RtpScreen from "./screens/RtpScreen";
 import FraudCenter from "./screens/FraudCenter";
 import PointScreen from "./screens/PointScreen";
-import ShippingScreen from "./screens/ShippingScreen";
+import OrdersScreen from "./screens/OrdersScreen";
+import ShipmentsScreen from "./screens/ShipmentsScreen";
 import SupportScreen from "./screens/SupportScreen";
 import SecurityCenter from "./screens/SecurityCenter";
 import AuditScreen from "./screens/AuditScreen";
@@ -119,6 +120,21 @@ import { SHOP_BG } from "./customer/Storefront";
 
 /** いま、どちら側を見ているか */
 type Side = "admin" | "customer";
+
+/**
+ * いまのURLに付いている「?あとの部分」を、そのまま読む。
+ *
+ * ★サーバー側では window がありません。空を返します。
+ *   ここで落とすと、画面が真っ白になります。
+ */
+function readQuery(): Record<string, string> {
+  if (typeof window === "undefined") return {};
+  const out: Record<string, string> = {};
+  new URLSearchParams(window.location.search).forEach((v, k) => {
+    out[k] = v;
+  });
+  return out;
+}
 
 /**
  * @param initialPage  URLから決まった画面。
@@ -167,6 +183,7 @@ export default function ClientConsole({
     });
   }, [me]);
   const [page, setPageState] = useState<MenuKey>(initialPage);
+  const [navQuery, setNavQuery] = useState<Record<string, string>>(() => readQuery());
   const [side, setSide] = useState<Side>("admin");
   const router = useRouter();
 
@@ -179,10 +196,19 @@ export default function ClientConsole({
    * ★replace ではなく push にすること。
    *   replace にすると履歴が残らないので、「戻る」で前の画面に戻れません。
    */
+  /**
+   * 画面を移るときに、行き先へ渡す目印（?order=... など）。
+   *
+   * ★これを React の中だけで持ち回さないこと。
+   *   「注文Aの発送を作る」画面を人に送れなくなります。
+   *   URLに出しておけば、送れる・戻れる・更新しても残ります。
+   */
   const setPage = useCallback(
-    (k: MenuKey) => {
+    (k: MenuKey, q?: Record<string, string>) => {
       setPageState(k);
-      router.push(hrefOf(k), { scroll: true });
+      setNavQuery(q ?? {});
+      const qs = q ? new URLSearchParams(q).toString() : "";
+      router.push(hrefOf(k) + (qs ? `?${qs}` : ""), { scroll: true });
     },
     [router],
   );
@@ -195,6 +221,7 @@ export default function ClientConsole({
    */
   useEffect(() => {
     setPageState(initialPage);
+    setNavQuery(readQuery());
   }, [initialPage]);
 
   /**
@@ -331,6 +358,7 @@ export default function ClientConsole({
           dispatch={dispatch}
           page={page}
           setPage={setPage}
+          navQuery={navQuery}
         />
       )}
 
@@ -474,11 +502,13 @@ function AdminSide({
   dispatch,
   page,
   setPage,
+  navQuery,
 }: {
   s: ReturnType<typeof initialState>;
   dispatch: React.Dispatch<Parameters<typeof reducer>[1]>;
   page: MenuKey;
-  setPage: (k: MenuKey) => void;
+  setPage: (k: MenuKey, q?: Record<string, string>) => void;
+  navQuery: Record<string, string>;
 }) {
   /* ① まだ誰としてログインするかを選んでいない */
   if (!s.me) {
@@ -511,7 +541,13 @@ function AdminSide({
       onSwitch={(adminId) => dispatch({ type: "SWITCH_ADMIN", adminId })}
       onClearFlash={() => dispatch({ type: "CLEAR_FLASH" })}
     >
-      <Screen page={page} s={s} dispatch={dispatch} onNav={setPage} />
+      <Screen
+        page={page}
+        s={s}
+        dispatch={dispatch}
+        onNav={setPage}
+        navQuery={navQuery}
+      />
     </Shell>
   );
 }
@@ -521,11 +557,13 @@ function Screen({
   s,
   dispatch,
   onNav,
+  navQuery,
 }: {
   page: MenuKey;
   s: ReturnType<typeof initialState>;
   dispatch: React.Dispatch<Parameters<typeof reducer>[1]>;
-  onNav: (k: MenuKey) => void;
+  onNav: (k: MenuKey, q?: Record<string, string>) => void;
+  navQuery: Record<string, string>;
 }) {
   const item = menuItem(page);
 
@@ -580,9 +618,14 @@ function Screen({
         return <PointScreen s={s} dispatch={dispatch} />;
       case "customers":
         return <CustomersScreen s={s} />;
+      /* ★注文と発送を、同じ画面に戻さないこと。
+           1つの注文を2回に分けて送った日に、書けなくなります。 */
       case "orders":
+        return <OrdersScreen onNav={onNav} query={navQuery} />;
       case "shipping":
-        return <ShippingScreen s={s} dispatch={dispatch} />;
+        return (
+          <ShipmentsScreen onNav={onNav} query={navQuery} />
+        );
       case "support":
         return <SupportScreen s={s} dispatch={dispatch} />;
       case "security":

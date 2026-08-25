@@ -288,7 +288,7 @@ export function buildChecklist(env: NodeJS.ProcessEnv): CheckItem[] {
         implemented: {
           auto: true,
           state: "ok",
-          detail: "営業URL→LP→デモ→バックテスト→ROI→料金→問い合わせの導線は実装済み。",
+          detail: "営業URL→LP→バックテスト→ROI→料金→問い合わせの導線は実装済み。",
         },
         connected: na("この項目に「接続」はありません。上の4項目がつながっていることが前提です。"),
         verified: {
@@ -301,7 +301,6 @@ export function buildChecklist(env: NodeJS.ProcessEnv): CheckItem[] {
       e2eSteps: [
         "営業URL（?ref=sales01）を開く",
         "LPが正しく表示される",
-        "デモを開く",
         "バックテストを見る",
         "ROIを計算する",
         "料金まで到達する",

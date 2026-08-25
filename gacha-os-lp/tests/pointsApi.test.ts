@@ -46,8 +46,8 @@ import { createTenant, createCustomer, createAdmin } from "../lib/server/seed";
 import { POST as requestPost } from "../app/api/console/points/request/route";
 import { POST as approvePost } from "../app/api/console/points/approve/route";
 
-after(() => {
-  resetDbForTests();
+after(async () => {
+  await resetDbForTests();
 });
 
 const PW = "tadashii-aikotoba-2026";
