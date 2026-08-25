@@ -1085,6 +1085,48 @@ export const ADD_COLUMNS: string[] = [
    *   PRODUCT_FETCH … 商品データを取るために使った分
    */
   `ALTER TABLE keepa_token_usage ADD COLUMN purpose TEXT NOT NULL DEFAULT 'PRODUCT_FETCH'`,
+
+  /*
+   * 【商品画像】（Phase 3.12b・2026-08-25）
+   *
+   * ★これまで画像は1枚も保存できていなかった。原因は「値が無かった」ことではなく、
+   *   当社が現在のKeepa公式仕様に**存在しない項目名**（imagesCSV）を見ていたこと。
+   *   画面では「不明」に見えるだけなので、静かに続いていた。
+   *
+   * image_status を必ず一緒に持つのが要点である。
+   *   IMAGE_DATA_NOT_AVAILABLE … Keepa側に画像が無い（当社にできることは無い）
+   *   IMAGE_PARSER_ERROR       … 画像はあるのに読めていない（**当社の不具合**）
+   * 枚数だけを保存すると、この2つがどちらも「0枚」に化けて区別できなくなる。
+   * だから枚数は 0 ではなく NULL のままにし、理由は image_status が持つ。
+   */
+  `ALTER TABLE keepa_products ADD COLUMN image_status TEXT NOT NULL DEFAULT 'IMAGE_DATA_NOT_AVAILABLE'`,
+  `ALTER TABLE keepa_products ADD COLUMN image_count INTEGER`,
+  `ALTER TABLE keepa_products ADD COLUMN image_main_file_name TEXT`,
+  `ALTER TABLE keepa_products ADD COLUMN image_main_url TEXT`,
+  `ALTER TABLE keepa_products ADD COLUMN image_file_names_json TEXT`,
+  /** 旧名 imagesCSV から読んだか。1 なら取得側の仕様が古い側に落ちている。 */
+  `ALTER TABLE keepa_products ADD COLUMN image_legacy_field_used INTEGER NOT NULL DEFAULT 0`,
+  `ALTER TABLE keepa_products ADD COLUMN image_reason_ja TEXT`,
+
+  /*
+   * 【需要の材料と、その食い違い】（Phase 3.12b・2026-08-25）
+   *
+   * ご本人の指示：「RANK_DROPS_30D / EQUAL_SHARE_OPPORTUNITY /
+   * KEEPA_MONTHLY_SALES_ESTIMATE の3つを一つの数字に統合しないでください。」
+   *
+   * ★列を分けているのは、出どころ（KEEPA か 当社の計算か）を消さないためである。
+   *   1つの「需要」列にまとめた瞬間に、外から来た値と当社が作った値の区別が消える。
+   *
+   * demand_signal_conflict は3状態を持つ。**「比べられない」を「食い違い無し」に混ぜない。**
+   *   CONFLICT / CONSISTENT / CANNOT_COMPARE
+   *
+   * demand_ratio_analysis_only は**分析専用**で、仕入判定には1つも使っていない。
+   * 目的は「どの売り場で当社の推定モデルが破綻するか」を後から数字で見るため。
+   */
+  `ALTER TABLE keepa_products ADD COLUMN demand_signal_conflict TEXT NOT NULL DEFAULT 'CANNOT_COMPARE'`,
+  `ALTER TABLE keepa_products ADD COLUMN demand_conflict_reason_ja TEXT`,
+  `ALTER TABLE keepa_products ADD COLUMN demand_ratio_analysis_only REAL`,
+  `ALTER TABLE keepa_products ADD COLUMN demand_evidence_json TEXT`,
 ];
 
 /**
@@ -1618,6 +1660,28 @@ export const SCHEMA_KEEPA: string[] = [
     estimated_monthly_sales REAL,
     per_seller_monthly REAL,
     estimated_turnover_days REAL,
+
+    /*
+     * 【商品画像】（2026-08-25 追加）
+     * 枚数を 0 で埋めないこと。0枚（本当に無い）と不明（読めていない）は別物で、
+     * 区別は image_status が持つ。詳細は上の ALTER 文の注釈を参照。
+     */
+    image_status TEXT NOT NULL DEFAULT 'IMAGE_DATA_NOT_AVAILABLE',
+    image_count INTEGER,
+    image_main_file_name TEXT,
+    image_main_url TEXT,
+    image_file_names_json TEXT,
+    image_legacy_field_used INTEGER NOT NULL DEFAULT 0,
+    image_reason_ja TEXT,
+
+    /*
+     * 【需要の材料の食い違い】（2026-08-25 追加）
+     * どちらが正しいかを決めずに、食い違いを食い違いのまま残すための列。
+     */
+    demand_signal_conflict TEXT NOT NULL DEFAULT 'CANNOT_COMPARE',
+    demand_conflict_reason_ja TEXT,
+    demand_ratio_analysis_only REAL,
+    demand_evidence_json TEXT,
 
     raw_response_id INTEGER,
     counts_as_real_market INTEGER NOT NULL DEFAULT 0,

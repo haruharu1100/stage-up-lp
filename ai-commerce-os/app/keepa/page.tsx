@@ -10,6 +10,16 @@ import {
   KEEPA_STAGES,
   KEEPA_USE_SCOPE_JA,
 } from '@/lib/keepa/policy';
+import {
+  DEMAND_CONFLICT_MESSAGE_JA,
+  KEEPA_MONTHLY_SOLD_ABSENT_NOTE_JA,
+  KEEPA_MONTHLY_SOLD_NOTE_JA,
+} from '@/lib/keepa/demand';
+import {
+  IMAGE_STATUS_JA,
+  KEEPA_IMAGE_NOTE_JA,
+  type ImageStatus,
+} from '@/lib/keepa/images';
 import { KEEPA_TOKEN_DESIGN_NOTE_JA } from '@/lib/keepa/tokens';
 import { keepaKeyStatus } from '@/lib/keepa/client';
 import { keepaDailyBudgetState, listKeepaProducts, listTokenUsage, tokenMonitor } from '@/lib/keepa/store';
@@ -152,6 +162,9 @@ export default async function KeepaPage() {
               <th>出品者(新品)</th>
               <th>90日の下落回数</th>
               <th>推定需要シグナル（月あたり相当）</th>
+              <th>Keepaの月間購入回数</th>
+              <th>需要指標の食い違い</th>
+              <th>画像</th>
               <th>売れるか</th>
               <th>取得日時</th>
             </tr>
@@ -169,6 +182,36 @@ export default async function KeepaPage() {
                   {p.estimated_monthly_sales === null || p.estimated_monthly_sales === undefined
                     ? '不明'
                     : `約${Number(p.estimated_monthly_sales).toFixed(0)}個相当（推定）`}
+                </td>
+                {/*
+                  ★出どころが違う数字を、隣どうしに並べても**1つにまとめない**。
+                    左は当社の計算、この列はKeepaが返した値。名前も単位も分けてある。
+                */}
+                <td>
+                  {p.monthly_sold === null || p.monthly_sold === undefined
+                    ? 'UNKNOWN'
+                    : `${n(p.monthly_sold)}個以上`}
+                </td>
+                {/*
+                  ★食い違いを見つけても、どちらかを採用しない。食い違いのまま出す。
+                    「比べられない」を「食い違い無し」と書かないことが肝心（別の表示にしてある）。
+                */}
+                <td>
+                  {String(p.demand_signal_conflict ?? 'CANNOT_COMPARE') === 'CONFLICT'
+                    ? DEMAND_CONFLICT_MESSAGE_JA
+                    : String(p.demand_signal_conflict ?? 'CANNOT_COMPARE') === 'CANNOT_COMPARE'
+                      ? '比べられません（Keepa側の値がありません）'
+                      : '大きな食い違いはありません'}
+                </td>
+                {/*
+                  ★「取れなかった」を1色で塗らない。
+                    Keepaに無いのか、当社が読めていないのかで、やることが正反対になる。
+                */}
+                <td>
+                  {String(p.image_status ?? '') === 'IMAGE_OK'
+                    ? `${n(p.image_count)}枚`
+                    : (IMAGE_STATUS_JA[String(p.image_status ?? 'IMAGE_DATA_NOT_AVAILABLE') as ImageStatus]
+                      ?? '不明')}
                 </td>
                 <td>
                   {p.sellability_verdict
@@ -189,6 +232,15 @@ export default async function KeepaPage() {
           画面ごとに書き写すと、直したつもりの場所だけ直って、他が古いまま残る。
       */}
       <p className="lead">{RANK_DROPS_NOT_SALES_NOTE}</p>
+      {/*
+        ★2026-08-25 追加。同じ「売れている量」を指す数字が2つあり、5件テストでは最大約100倍ずれた。
+          どちらが正しいかはまだ分かっていないので、片方へ寄せずに両方を並べる。
+      */}
+      <div className="note">
+        <p>{KEEPA_MONTHLY_SOLD_NOTE_JA}</p>
+        <p>{KEEPA_MONTHLY_SOLD_ABSENT_NOTE_JA}</p>
+        <p>{KEEPA_IMAGE_NOTE_JA}</p>
+      </div>
 
       {/* ---- 枠の使用記録 ----------------------------------------- */}
       <h2>枠の使用記録</h2>

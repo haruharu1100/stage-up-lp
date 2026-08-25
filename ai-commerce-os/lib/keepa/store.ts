@@ -34,9 +34,11 @@ import {
   type KeepaShape,
   type UnknownReason,
 } from './schema';
+import { buildDemandEvidence } from './demand';
 import {
   extractWindowSignals,
   judgeTrend,
+  keepaFreshness,
   normalizeKeepaProduct,
   scoreCompetition,
   type CompetitionResult,
@@ -215,6 +217,25 @@ export async function saveNormalizedProduct(
   const urlResolution = resolveAmazonProductUrl(provenance, variationRole);
   const gate = purchaseGate(urlResolution, extras.productMatchConfirmed === true);
 
+  /*
+   * 【需要の材料をまとめる】（Phase 3.12b・2026-08-25）
+   *
+   * ★ここは判定を1つも変えない。既存4判定（SELLS / TOO_COMPETITIVE / NOT_SELLING /
+   *   UNKNOWN）はそのままで、材料を分けて記録するだけである。
+   *   5件テストで、当社の推定とKeepaの月間購入回数が最大約100倍ずれていた。
+   *   どちらが正しいかはまだ分からないので、片方へ寄せずに両方を残す。
+   */
+  const demandEvidence = buildDemandEvidence({
+    asin: n.asin,
+    rankDrops30: n.salesRankDrops30,
+    keepaMonthlySoldAtLeast: n.keepaMonthlySoldAtLeast,
+    internalDemandSignal: extras.sellability.result?.estimatedDemandSignal ?? null,
+    estimatedEqualShareOpportunity: extras.sellability.result?.estimatedEqualShareOpportunity ?? null,
+    sellerCount: n.offerCountNew,
+    amazonRetail: n.amazonRetailPresent,
+    dataAgeDays: keepaFreshness(n).ageDays,
+  });
+
   const res = await run(
     `INSERT OR IGNORE INTO keepa_products (
       asin, domain_id, title, brand, model, part_number, ean_list, upc_list, color,
@@ -230,11 +251,15 @@ export async function saveNormalizedProduct(
       competition_score, competition_status, trend_verdict, trend_reason,
       sellability_window_days, sellability_verdict, sellability_reason,
       estimated_monthly_sales, per_seller_monthly, estimated_turnover_days,
+      image_status, image_count, image_main_file_name, image_main_url,
+      image_file_names_json, image_legacy_field_used, image_reason_ja,
+      demand_signal_conflict, demand_conflict_reason_ja, demand_ratio_analysis_only,
+      demand_evidence_json,
       raw_response_id, counts_as_real_market, use_scope, created_at,
       asin_source, asin_verified_at, asin_confidence, asin_verification_method_ja,
       variation_role, product_url, product_url_source,
       url_valid, product_match_confirmed, purchase_url_available
-    ) VALUES (${new Array(66).fill('?').join(', ')})`,
+    ) VALUES (${new Array(77).fill('?').join(', ')})`,
     [
       n.asin, KEEPA_DOMAIN_JP, n.title, n.brand, n.model, n.partNumber,
       n.eanList.length ? JSON.stringify(n.eanList) : null,
@@ -243,7 +268,7 @@ export async function saveNormalizedProduct(
       n.currentAmazonPrice, n.currentNewPrice, n.currentUsedPrice, n.currentBuyBoxPrice,
       n.currentSalesRank, n.listPrice, n.rating, n.reviewCount,
       n.avgNewPrice30, n.avgNewPrice90, n.avgNewPrice180, n.avgSalesRank30, n.avgSalesRank90,
-      n.salesRankDrops30, n.salesRankDrops90, n.salesRankDrops180, n.salesRankDrops365, n.monthlySold,
+      n.salesRankDrops30, n.salesRankDrops90, n.salesRankDrops180, n.salesRankDrops365, n.keepaMonthlySoldAtLeast,
       n.offerCountNew, n.offerCountUsed, n.offerCountFBA, n.offerCountFBM,
       n.amazonRetailPresent, n.buyBoxIsAmazon, n.outOfStockPercentage30, n.outOfStockPercentage90,
       n.fbaPickAndPackFee, n.referralFeePercentage,
@@ -256,6 +281,30 @@ export async function saveNormalizedProduct(
       extras.sellability.result?.estimatedDemandSignal ?? null,
       extras.sellability.result?.estimatedEqualShareOpportunity ?? null,
       extras.sellability.result?.estimatedEqualShareTurnoverDays ?? null,
+
+      /*
+       * 【画像】（2026-08-25 追加）
+       * ★枚数を 0 で埋めない。読めなければ null のまま。
+       *   「0枚」と「読めていない」は別物で、その区別は image_status が持つ。
+       */
+      n.imageStatus,
+      n.imageCount,
+      n.imageMainFileName,
+      n.imageMainUrl,
+      n.imageFileNames.length ? JSON.stringify(n.imageFileNames) : null,
+      n.imageLegacyFieldUsed ? 1 : 0,
+      n.imageReasonJa,
+
+      /*
+       * 【需要の材料の食い違い】（2026-08-25 追加）
+       * ★どちらが正しいかをここで決めない。食い違いを食い違いのまま残す。
+       *   倍率は分析専用で、仕入判定には1つも使っていない。
+       */
+      demandEvidence.conflict.status,
+      demandEvidence.conflict.reasonJa,
+      demandEvidence.keepaToInternalRatio,
+      JSON.stringify(demandEvidence),
+
       extras.rawResponseId ?? null,
       /*
        * 【0で固定】

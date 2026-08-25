@@ -1,7 +1,7 @@
 /**
  * 【Keepaの生データを、当社の形に直す】（Phase 3.10・2026-08-25）
  *
- * ★このファイルは `./policy`（依存ゼロ）以外を import しない（ルール37）。
+ * ★このファイルが import してよいのは、同じく依存ゼロの `./policy` `./schema` `./images` だけ（ルール37）。
  *   画面から読んでもビルドが落ちないようにするため。
  *
  * ------------------------------------------------------------------
@@ -22,6 +22,10 @@ import {
   KEEPA_JPY_DIVISOR,
   KEEPA_RANK_DROP_WINDOWS,
 } from './policy';
+import {
+  parseKeepaImages,
+  type ImageStatus,
+} from './images';
 import {
   auditKeepaSchema,
   briefValue,
@@ -149,11 +153,26 @@ export type KeepaNormalized = {
   salesRankDrops180: number | null;
   salesRankDrops365: number | null;
   /**
-   * Keepa が持つ「月間販売個数」。
-   * ★大半の商品では値が入っていない。入っていなければ null。
-   *   また、これを仕入判断に使ってよいかは未確認（U4）なので、いまは表示のみ。
+   * 【Keepa の `monthlySold`】＝「先月この商品が買われた回数」。
+   *
+   * ★2026-08-25、公式仕様書の本文を読み直して名前を付け直した。
+   *   以前は当社もこれを「実測販売数」のように扱いかけたが、それは誤り。
+   *   逆に「Keepaの推定」と呼ぶのも誤りである。公式説明は次のとおり：
+   *
+   *     ・Amazon の検索結果ページに出る「先月◯点購入されました」の値そのもの
+   *     ・"It is not an estimate."（推定値ではない）
+   *     ・ただし Amazon は "10+" "100+" のような**区切りの粗い段階**でしか出さない
+   *     ・"at least"＝**「その数以上」**という下限であって、ちょうどの数ではない
+   *     ・"Most ASINs do not have this value set."＝**大半の商品では空**
+   *
+   *   よって当社での正しい読み方は **「◯個以上」という区分値（出どころ＝Keepa）**。
+   *   実測でもなければ推定でもない、という一段目立たない位置づけなので、
+   *   名前に `AtLeast`（以上）を入れて、数として素直に割り算しないようにしてある。
+   *
+   * 値が無ければ null。**0 で代用しない。**（0＝1件も売れていない、とは意味が違う）
+   * 仕入判断に使ってよいかは未確認（U4）なので、いまも表示・記録のみ。
    */
-  monthlySold: number | null;
+  keepaMonthlySoldAtLeast: number | null;
 
   /* --- ライバル --- */
   offerCountNew: number | null;
@@ -169,6 +188,26 @@ export type KeepaNormalized = {
   /* --- 費用（Amazonが決める率・額） --- */
   fbaPickAndPackFee: number | null;
   referralFeePercentage: number | null;
+
+  /* --- 商品画像（2026-08-25 追加） --- */
+  /**
+   * ★これまで当社は画像を**一度も読み取っていなかった**。
+   *   見張っていた項目名 `imagesCSV` が現在の Keepa 公式仕様に存在せず、
+   *   5件すべてで「項目なし」になり、画面では静かに「不明」に見えていた。
+   *   これは市場にデータが無かったのではなく**当社の読み取りの不具合**なので、
+   *   `IMAGE_PARSER_ERROR` と `IMAGE_DATA_NOT_AVAILABLE` を必ず別物として持つ。
+   *   読み取りの中身は `./images` の1ファイルだけが持つ。
+   */
+  imageStatus: ImageStatus;
+  /** 読めた枚数。読めなければ 0 ではなく null（0枚と不明を混ぜない）。 */
+  imageCount: number | null;
+  imageMainFileName: string | null;
+  imageMainUrl: string | null;
+  imageFileNames: string[];
+  /** 旧名 imagesCSV から読んだか。true なら取得側の仕様が古い側に落ちている。 */
+  imageLegacyFieldUsed: boolean;
+  /** そう判定した理由（日本語・監査用）。 */
+  imageReasonJa: string;
 
   /* --- いつの情報か --- */
   lastUpdateIso: string | null;
@@ -245,6 +284,16 @@ export function normalizeKeepaProduct(raw: any): KeepaNormalized {
 
   const domainId = Number.isFinite(Number(raw?.domainId)) ? Number(raw.domainId) : null;
 
+  /*
+   * 画像。読み取りの中身は `./images` に閉じてある（ここでは呼ぶだけ）。
+   * ★重要：ここで返る `IMAGE_PARSER_ERROR` は**当社の不具合**であって、
+   *   「Keepaに画像が無い」（IMAGE_DATA_NOT_AVAILABLE）とは別物である。
+   *   だから下で、不具合のときだけ `PARSER_OR_SCHEMA_ERROR` として数え上げる。
+   *   ここを一緒くたに「不明」へ落としたことが、画像が1枚も取れないまま
+   *   誰も気づかなかった原因そのものである（ルール97の画像版）。
+   */
+  const img = parseKeepaImages(raw);
+
   const out: KeepaNormalized = {
     asin: str(raw?.asin) ?? '',
     domainId,
@@ -300,7 +349,10 @@ export function normalizeKeepaProduct(raw: any): KeepaNormalized {
     salesRankDrops90: mark(val(stats?.salesRankDrops90), '90日間の順位下落回数', 'stats.salesRankDrops90'),
     salesRankDrops180: watch(val(stats?.salesRankDrops180), '180日間の順位下落回数', 'stats.salesRankDrops180'),
     salesRankDrops365: watch(val(stats?.salesRankDrops365), '365日間の順位下落回数', 'stats.salesRankDrops365'),
-    monthlySold: watch(val(raw?.monthlySold), '月間販売個数（Keepa提供）', 'monthlySold'),
+    // ★呼び方に注意。「実測販売数」でも「推定」でもない。「◯個以上」の区分値である（型定義の説明を参照）。
+    keepaMonthlySoldAtLeast: watch(
+      val(raw?.monthlySold), 'Keepaの月間購入回数（「◯個以上」の区分値）', 'monthlySold',
+    ),
 
     offerCountNew: mark(
       val(arrAt(cur, KEEPA_CSV_INDEX.COUNT_NEW)), '新品の出品数',
@@ -350,6 +402,14 @@ export function normalizeKeepaProduct(raw: any): KeepaNormalized {
       val(raw?.referralFeePercentage), '販売手数料率', 'referralFeePercentage',
     ),
 
+    imageStatus: img.status,
+    imageCount: img.count,
+    imageMainFileName: img.mainFileName,
+    imageMainUrl: img.mainUrl,
+    imageFileNames: img.fileNames,
+    imageLegacyFieldUsed: img.legacyFieldUsed,
+    imageReasonJa: img.reasonJa,
+
     lastUpdateIso: watch(keepaMinutesToIso(raw?.lastUpdate), '最終更新日時', 'lastUpdate'),
     trackingSinceIso: watch(keepaMinutesToIso(raw?.trackingSince), '追跡開始日時', 'trackingSince'),
 
@@ -362,6 +422,24 @@ export function normalizeKeepaProduct(raw: any): KeepaNormalized {
   if (!out.asin) {
     unknownFields.unshift('ASIN');
     unknownDetails.unshift(classifyUnknown(raw, 'asin', 'ASIN'));
+  }
+
+  /*
+   * 画像の結果を、不明の帳簿へ**正しい理由で**載せる。
+   * ここが今回いちばん大事な分岐：
+   *   ・Keepa側に画像が無い     → DATA_NOT_AVAILABLE（当社にできることは無い）
+   *   ・画像はあるのに読めない   → PARSER_OR_SCHEMA_ERROR（**当社の不具合**。0件でなければ直す）
+   * 以前はどちらも同じ「不明」だったので、自分のバグが市場のせいに見えていた。
+   */
+  if (img.status !== 'IMAGE_OK') {
+    unknownFields.push('商品画像');
+    unknownDetails.push({
+      labelJa: '商品画像',
+      path: img.legacyFieldUsed ? 'imagesCSV' : 'images',
+      reason: img.status === 'IMAGE_PARSER_ERROR' ? 'PARSER_OR_SCHEMA_ERROR' : 'DATA_NOT_AVAILABLE',
+      rawShape: shapeOf(readPath(raw, img.legacyFieldUsed ? 'imagesCSV' : 'images')),
+      detailJa: img.reasonJa,
+    });
   }
 
   // ★「値はあるのに読めていない」ものだけを抜き出す。ここが0件でなければ、直す仕事が残っている。

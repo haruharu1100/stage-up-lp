@@ -466,8 +466,13 @@ export const KEEPA_SHAPE_WATCH_GROUPS: ShapeWatchGroup[] = [
   {
     group: 'images',
     labelJa: '画像',
-    paths: ['imagesCSV'],
-    whyJa: '判断には使わないが、形が変わったことに気づく手がかりになる。',
+    // ★2026-08-25 修正。ここは長らく `imagesCSV` だけを見ていたが、
+    //   その名前は現在の Keepa 公式仕様書に1回も出てこない（本文で確認済み）。
+    //   その結果5件すべてで「項目なし」になり、画像が1枚も取れない状態が静かに続いていた。
+    //   現在仕様（images）を先に置き、旧名は「まだ来ていないか」を確かめるためだけに後ろへ残す。
+    paths: ['images', 'imagesCSV'],
+    whyJa: '現在仕様は images（画像1枚ごとの入れ物が並んだ配列）。'
+      + '旧名 imagesCSV は現在仕様に存在しないため、来ていないことを確認する目的で並べて見張る。',
   },
   {
     group: 'identifiers',

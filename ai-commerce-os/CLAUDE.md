@@ -83,16 +83,18 @@
   → `20_Keepa公式API調査.md`
   → `21_Phase3.10実装記録_KEEPA_READ_ONLY.md`
   → `23_Phase3.11実装記録_ASINの出どころ管理.md`
-  → **`24_Phase3.12実測記録_Keepa5件テスト.md`**（`../事業Vault/AI Commerce OS/`）
+  → `24_Phase3.12実測記録_Keepa5件テスト.md`
+  → **`25_Phase3.13記録_画像の読み取りと需要指標の食い違い.md`**（`../事業Vault/AI Commerce OS/`）
 - 受け入れテスト：`npm run test:phase1`（66項目）／`npm run test:phase2`（50項目）／
   `npm run test:phase3`（113項目）／`npm run test:phase3-5`（112項目）／
   `npm run test:phase3-6`（107項目）／`npm run test:phase3-7`（122項目）／
   `npm run test:phase3-8`（128項目）／`npm run test:phase3-9`（113項目）／
   `npm run test:phase3-9b`（147項目）／`npm run test:phase3-9d`（86項目）／
-  `npm run test:phase3-10`（308項目）／`npm run test:phase3-11`（179項目）／
-  **`npm run test:phase3-12`（201項目）**。
-  **合計1,732項目。**
-  **仕様を変えたら13個とも通す。1つだけ通して満足しない。あわせて `npm run build` も通す**
+  `npm run test:phase3-10`（310項目）／`npm run test:phase3-11`（179項目）／
+  `npm run test:phase3-12`（201項目）／
+  **`npm run test:phase3-13`（131項目）**。
+  **合計1,865項目。**
+  **仕様を変えたら14個とも通す。1つだけ通して満足しない。あわせて `npm run build` も通す**
   （画面のバンドルエラーはテストでは見つからない）。
 - **受け入れテストが自分の安全装置を落としたときは、安全装置ではなくテストの方を直す。**
   ただし直してよいのは「**テストが事実を取り違えているとき**」だけ。
@@ -586,15 +588,81 @@ Phase 3.12（二段階取得・5件実測・2026-08-25）で追加。**ここも
      （`availabilityAmazonDelay` は1件だけ**項目そのものが無い**／`model` `partNumber` は null と文字列が混在）。
      配列の長さも一定ではない（`csv` `stats.*` は36で固定だが、`categories` は 6/4/2/1）。
      **固定長・項目が必ずある、を前提に書かない。**
-107. **★2026-08-25 実測で判明した2件。まだ直していない（ご本人の判断待ち）。**
+107. **★2026-08-25 実測で判明した2件。→ Phase 3.13（同日）で両方とも修正済み。**
      - **`imagesCSV` はもう返ってこない。** いまは `images` という別名で、文字列ではなく
        オブジェクトの配列（`{l, lH, lW, m, mH, mW, variant}`）。5件すべてで「項目なし」だった。
        **ルール95と同じ型の見落とし。「不明」に倒れるので一見安全に見えるが安全ではない。**
+       → **修正済み**（`lib/keepa/images.ts` を新設。保存済み7件すべてで画像が読めるようになった）。ルール109へ。
      - **Keepa は `monthlySold` を返している。** 当社の推定と**桁が違う**
-       （ポケモンごいた 推定32.7 ↔ 実測200／チェキ 推定44 ↔ 実測5,000）。
+       （ポケモンごいた 推定32.7 ↔ Keepa値200／チェキ 推定44 ↔ Keepa値5,000）。
        チェキの `CROWDED` 判定は、`monthlySold` を置くと結論が反対になる。
        **ただし5件中2件にしか無いので、これ1本に置き換えることもできない。**
-       → **推定と実測は別の欄で並べる。片方に寄せない。閾値・モデルはAIが勝手に動かさない**（ルール81）。
+       → **修正済み。** 呼び方をルール110で正し、食い違いは `DEMAND_SIGNAL_CONFLICT` として
+       残す形にした（ルール112）。**判定式は変えていない。**
+       **推定とKeepa値は別の欄で並べる。片方に寄せない。閾値・モデルはAIが勝手に動かさない**（ルール81）。
+
+Phase 3.13（画像の読み取り・需要指標の食い違い・2026-08-25）で追加。**ここも崩さない。**
+
+109. **旧フィールド名を黙ったまま「予備」として残さない。現在仕様を先に、旧名は後ろに。**
+     ご本人の言葉：「旧フィールド名を黙ってFallbackとして残さず、現在仕様 ↓ 必要ならLegacy互換 の順にしてください。」
+     公式仕様書（`keepa.com/api-docs/product-object.html`）の本文に **`imagesCSV` は1回も出てこない**。
+     現在は `images`（`{l, lH, lW, m, mH, mW, variant}` の配列）で、画像URLは
+     `https://m.media-amazon.com/images/I/` ＋ ファイル名で組み立てる。
+     読み取りは **`lib/keepa/images.ts` の1ファイルだけ**（依存ゼロ＝画面へバンドルできる・ルール37）。
+     旧名から読めたときは `imageLegacyFieldUsed = true` を立てて**必ず見えるようにする**。
+     **黙って旧名で拾うと、仕様が変わったこと自体が誰にも伝わらない。**
+     - **画像が無いことを1種類にまとめない。** ルール97の具体例。
+       `IMAGE_DATA_NOT_AVAILABLE`（Keepa にも本当に画像が無い＝市場データの問題）と
+       `IMAGE_PARSER_ERROR`（**Keepa にはあるのに当社が読めていない＝当社のバグ**）を
+       **絶対に混ぜない**。混ぜると自分のバグが市場のせいに見える。
+110. **外部サービスの「販売数」系フィールドを、実際の注文データと突き合わせない限り「実測」と呼ばない。**
+     ご本人の言葉：「`ACTUAL_MONTHLY_SALES` / 実測販売数 とは呼ばないでください。
+     正式名称を公式フィールド・公式説明に合わせて確認してください。」
+     → 公式本文を読んだ結果、**「推定」でもなかった**。`monthlySold` の公式説明は
+     **"It is not an estimate."**／値は **"10+" "100+" のような区切りの下限（"at least"）**／
+     **"Most ASINs do not have this value set."**。
+     よって当社の呼び方は **`keepaMonthlySoldAtLeast`（画面表示＝
+     「Keepaの月間購入回数（「◯個以上」の区分値）」）** に統一した。
+     `ACTUAL_MONTHLY_SALES` / 「実測販売数」の2語は **`FORBIDDEN_SALES_WORDS` として
+     受け入れテストが機械的に見張る**（`lib/` `app/` `scripts/` を走査。
+     **走査前に必ずコメントを除去する**＝ルール64）。
+     **ご本人が挙げた `KEEPA_MONTHLY_SALES_ESTIMATE` も採用していない**（公式が「推定ではない」と
+     書いているため。ご本人の「または公式名称に対応した名前」という許可の範囲で判断した）。
+111. **需要の材料を1つの数字に統合しない。数字には必ず出どころを付ける。**
+     ご本人の言葉：「この3つを一つの数字に統合しないでください。」
+     `DEMAND_EVIDENCE`（`lib/keepa/demand.ts`・依存ゼロ）に **7つの材料を別々のまま**持つ。
+     `RANK_DROPS_30D`(KEEPA) / `KEEPA_MONTHLY_SOLD_AT_LEAST`(KEEPA) /
+     `INTERNAL_DEMAND_SIGNAL`(INTERNAL_CALCULATION) /
+     `ESTIMATED_EQUAL_SHARE_OPPORTUNITY`(INTERNAL_CALCULATION) /
+     `SELLER_COUNT`(KEEPA) / `AMAZON_RETAIL`(KEEPA) / `DATA_FRESHNESS`(KEEPA)。
+     **表示と記録だけ。判定には使わない。**
+     取り分は **「自分が月◯個売れる」と書かない**（`ESTIMATED_EQUAL_SHARE_OPPORTUNITY`＝暫定モデル）。
+     **Keepa値が無い商品を自動的に低評価にしない**（`UNKNOWN` のまま他の材料で見る。
+     `keepaAbsenceDowngradesScore()` は常に false）。
+112. **需要指標が食い違ったら、どちらかへ寄せずに `CONFLICT` として残す。**
+     ご本人の言葉：「勝手にどちらかを採用しないこと。」
+     当社の推定と Keepa 値が **3倍以上**ずれたら `DEMAND_SIGNAL_CONFLICT`。画面には
+     **「需要指標が食い違っています。追加検証が必要です」**と出す。
+     どちらか片方が無いときは `CANNOT_COMPARE` で、**これは「食い違いが無い」という意味ではない**
+     （材料が足りないだけ。ルール97と同じ考え方）。
+     倍率（`KEEPA_ESTIMATE / RANK_DROPS_ESTIMATE`）は **分析専用**。
+     **`lib/sellability.ts` は `demand.ts` を1行も import しない**（受け入れテストが検査）。
+     こうしておかないと、食い違いや倍率が仕入判定へ染み出す。
+     - **既存4判定は変えていない。** 実際の定数名は
+       **`SELLS` / `CROWDED` / `DOES_NOT_SELL` / `UNKNOWN`**
+       （ご本人の指示文にある `TOO_COMPETITIVE` / `NOT_SELLING` は同じものを指す呼び名。
+       **コード側を指示文に合わせて改名しない**＝「まだ変更しない」の指示に従う）。
+     - `CALIBRATED_SELLABILITY_SCORE` は **予定として文章で持つだけ。まだ実装しない。**
+113. **AI Commerce OS のコミットに、別プロジェクトの変更を混ぜない。**
+     ご本人の言葉：「今後は commit 前に、`git diff --cached --name-only` 等で対象ファイル一覧を確認し、
+     AI Commerce OS以外が1件でも含まれたら停止してください。」「他プロジェクトの現在状態は勝手に変更しないこと。」
+     このリポジトリは**独立した多数のプロジェクトを束ねた作業場**なので、
+     `git add -A` / `git add .` は**絶対に使わない**（ルート直下に未追跡の巨大ファイルも多数ある）。
+     - 手順は **①ファイルを名指しで `git add` → ②`git diff --cached --name-only` を実行して目で確認
+       → ③`ai-commerce-os/` と `事業Vault/AI Commerce OS/` 以外が1件でもあれば、
+       その場で止まって人に報告**（`git restore --staged` で外すのも人の判断を待つ）。
+     - 実際に、別プロジェクトの変更を巻き込んでコミットする事故が起きている。
+       **消えたわけではないが、他人の作業中の状態を勝手に確定させた**ことに変わりはない。
 108. **候補探しの回数を増やして「ジャンルを散らす」を成立させない。**
      ご本人の言葉：「候補探しのために何百・何千ASINもKeepaへ投げないでください。」
      条件は5ジャンル全部（本 / 家電＆カメラ / ゲーム / ビューティー / おもちゃ）へ投げているが、

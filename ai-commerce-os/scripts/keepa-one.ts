@@ -218,7 +218,7 @@ async function main(): Promise<void> {
   console.log('  --- 売れ行きの手がかり（販売数ではありません） ---');
   console.log(`  順位の下落回数 30日：${num(n.salesRankDrops30, '回')} ／ 90日：${num(n.salesRankDrops90, '回')}`);
   console.log(`  　　　　　　　180日：${num(n.salesRankDrops180, '回')} ／ 365日：${num(n.salesRankDrops365, '回')}`);
-  console.log(`  Keepaの月間販売個数：${num(n.monthlySold, '個')}（大半の商品では入っていません）`);
+  console.log(`  Keepaの月間購入回数：${num(n.keepaMonthlySoldAtLeast, '個以上')}（「◯個以上」の区分値。大半の商品では入っていません）`);
   console.log('  --- ライバル ---');
   console.log(`  新品の出品数：${num(n.offerCountNew, '人')} ／ 中古：${num(n.offerCountUsed, '人')}`);
   console.log(`  FBA：${num(n.offerCountFBA, '人')} ／ FBM：${num(n.offerCountFBM, '人')}`);

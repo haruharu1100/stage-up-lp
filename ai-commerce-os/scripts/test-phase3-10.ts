@@ -984,8 +984,16 @@ async function main(): Promise<void> {
      *   新しく足した `./schema.ts` は何も import していない（この下で検査している）ので、
      *   画面へバンドルしても安全である。件数ではなく**中身**で判定する形に直した。
      */
-    const SAFE_KEEPA_MODULES = ['./policy', './schema'];
-    for (const f of ['lib/keepa/policy.ts', 'lib/keepa/tokens.ts', 'lib/keepa/match.ts', 'lib/keepa/schema.ts']) {
+    /*
+     * ★2026-08-25 追記。`./images`（画像の読み取り）を足した。
+     *   このファイルも何も import していないので、画面へバンドルしても安全である。
+     *   判定の基準は「件数」ではなく「読んだ先が依存ゼロかどうか」。
+     */
+    const SAFE_KEEPA_MODULES = ['./policy', './schema', './images'];
+    for (const f of [
+      'lib/keepa/policy.ts', 'lib/keepa/tokens.ts', 'lib/keepa/match.ts',
+      'lib/keepa/schema.ts', 'lib/keepa/images.ts', 'lib/keepa/demand.ts',
+    ]) {
       check(`${f} は他のファイルを import していない`, !/^\s*import\s/m.test(readFile(f)));
     }
     const normalize = readFile('lib/keepa/normalize.ts');
