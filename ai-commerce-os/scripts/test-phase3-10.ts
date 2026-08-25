@@ -71,13 +71,24 @@ import {
   selectAsinMatch,
 } from '../lib/keepa/match';
 import {
+  auditKeepaFields,
   extractWindowSignals,
   judgeTrend,
+  keepaFreshness,
   keepaMinutesToIso,
   normalizeKeepaProduct,
   scoreCompetition,
   TREND_VERDICTS,
 } from '../lib/keepa/normalize';
+import {
+  auditKeepaSchema,
+  classifyUnknown,
+  KEEPA_FIELD_SPECS,
+  KEEPA_SENTINEL,
+  readPath,
+  shapeOf,
+  UNKNOWN_REASON_JA,
+} from '../lib/keepa/schema';
 import { fetchKeepaProducts, isValidAsin, keepaKeyStatus } from '../lib/keepa/client';
 import type { KeepaFetchResult } from '../lib/keepa/client';
 import {
@@ -137,6 +148,21 @@ function fakeCurrent(over: Partial<Record<number, number>> = {}): number[] {
   return a;
 }
 
+/**
+ * 価格履歴（csv）の偽物。
+ *
+ * ★2026-08-25 追加（ルール95）。
+ *   実物の応答は `csv` が**36個の枠**を持ち、中身は「時刻,値,時刻,値,…」の配列か null である。
+ *   枠の数が足りない偽物を使っていると、添字で読む処理のズレを永久に見逃す。
+ */
+function fakeCsv(): (number[] | null)[] {
+  const a: (number[] | null)[] = new Array(36).fill(null);
+  const t = keepaMinutesAgo(60 * 24 * 30);
+  a[1] = [t, 5100, t + 60 * 24 * 10, 5050, t + 60 * 24 * 20, 4980];
+  a[3] = [t, 14000, t + 60 * 24 * 10, 13000, t + 60 * 24 * 20, 12000];
+  return a;
+}
+
 function fakeProduct(over: Record<string, any> = {}): any {
   const cur = fakeCurrent();
   const a30 = fakeCurrent({ 1: 5100, 3: 13000 });
@@ -158,8 +184,15 @@ function fakeProduct(over: Record<string, any> = {}): any {
     trackingSince: keepaMinutesAgo(60 * 24 * 400),
     referralFeePercentage: 10,
     fbaFees: { pickAndPackFee: 434 },
+    // ★2026-08-25 追加（ルール95）。実物の応答にあって偽物に無かった項目。
+    //   形が違うと「形の食い違い（SCHEMA_MISMATCH）」の検査そのものが働かない。
+    csv: fakeCsv(),
+    availabilityAmazon: -1, // Amazon本体の在庫なし（-1＝値なし。0個ではない）
     stats: {
       current: cur,
+      totalOfferCount: 11, // 本当に11人（0との違いを混ぜない＝ルール96）
+      retrievedOfferCount: -2, // 今回は offers を頼んでいない＝-2（不明）
+      buyBoxPrice: 5180,
       avg30: a30,
       avg90: a90,
       avg180: a180,
@@ -876,14 +909,26 @@ async function main(): Promise<void> {
   // ================================================================
   console.log('\n[19. 画面から読めるファイルがデータベース層を引きずっていない（ルール37）]');
   {
-    for (const f of ['lib/keepa/policy.ts', 'lib/keepa/tokens.ts', 'lib/keepa/match.ts']) {
+    /*
+     * ★2026-08-25 修正（ルール64：テストの方が事実を取り違えていた）。
+     *   ここは「normalize が読んでよいのは ./policy 1つだけ」と書いていた。
+     *   しかしルール37が禁じているのは**データベース層を引きずること**であって、
+     *   「読み込みが1つだけ」であることではない。
+     *   新しく足した `./schema.ts` は何も import していない（この下で検査している）ので、
+     *   画面へバンドルしても安全である。件数ではなく**中身**で判定する形に直した。
+     */
+    const SAFE_KEEPA_MODULES = ['./policy', './schema'];
+    for (const f of ['lib/keepa/policy.ts', 'lib/keepa/tokens.ts', 'lib/keepa/match.ts', 'lib/keepa/schema.ts']) {
       check(`${f} は他のファイルを import していない`, !/^\s*import\s/m.test(readFile(f)));
     }
     const normalize = readFile('lib/keepa/normalize.ts');
     const imports = (normalize.match(/^import[\s\S]*?from\s+'([^']+)'/gm) ?? [])
       .map((s) => (s.match(/from\s+'([^']+)'/) ?? [])[1]);
-    check('lib/keepa/normalize.ts は ./policy しか読んでいない',
-      imports.length === 1 && imports[0] === './policy', imports.join(', '));
+    check('lib/keepa/normalize.ts は依存ゼロのファイルしか読んでいない',
+      imports.length > 0 && imports.every((m) => SAFE_KEEPA_MODULES.includes(m as string)),
+      imports.join(', '));
+    check('normalize はDB層（lib/db）を読んでいない', !normalize.includes("lib/db") && !normalize.includes("../db"));
+    check('schema は node: を読んでいない', !readFile('lib/keepa/schema.ts').includes("from 'node:"));
     check('normalize は node: を読んでいない', !normalize.includes("from 'node:"));
     check('match は node: を読んでいない', !readFile('lib/keepa/match.ts').includes("from 'node:"));
   }
@@ -938,6 +983,133 @@ async function main(): Promise<void> {
     check('1件だけであることを画面に書いてある', page.includes('KEEPA_MAX_ASINS_PER_RUN'));
     const layout = readFile('app/layout.tsx');
     check('メニューから開ける', layout.includes('href="/keepa"'));
+  }
+
+  // ================================================================
+  console.log('\n[23. 「不明」を2種類に分ける（データが無い vs 当社が読めていない）]');
+  {
+    /*
+     * 【なぜこの検査が要るのか】
+     *
+     * 「不明（UNKNOWN）」で返しておけば安全、というのは間違いである。
+     * 2026-08-25 の初回取得で、在庫切れ割合が**値はあるのに読めていない**まま
+     * 「不明」になっていたのを見つけた。テストは267項目すべて通っていた。
+     *
+     * 不明には2つある。混ぜてはいけない。
+     *   DATA_NOT_AVAILABLE     … Keepa に値が無い（市場データの問題。当社にできることは無い）
+     *   PARSER_OR_SCHEMA_ERROR … 値はあるのに当社が読めていない（**当社のコードの不具合**）
+     */
+    const p = fakeProduct();
+
+    // --- 形の監査（SCHEMA_AUDIT）---------------------------------
+    const audit = auditKeepaSchema(p);
+    check('検査する項目が20個以上ある', KEEPA_FIELD_SPECS.length >= 20, `${KEEPA_FIELD_SPECS.length}項目`);
+    check(
+      '偽データは実物と同じ形（形の食い違いが0件）',
+      audit.mismatches.length === 0,
+      audit.mismatches.map((m) => `${m.path}:${m.actual}`).join(' / '),
+    );
+    check('監査結果に日本語の見出しがある', audit.headlineJa.length > 0);
+    check('形が正しければ ok = true', audit.ok === true);
+
+    // --- わざと形を壊すと必ず気づけるか ---------------------------
+    // ★ここが本題。壊したのに黙って「不明」で通るなら、この仕組みは役に立っていない。
+    const broken = fakeProduct({
+      stats: { ...p.stats, outOfStockPercentage90: 4 }, // 配列で来るはずが1つの数
+    });
+    const brokenAudit = auditKeepaSchema(broken);
+    check(
+      '在庫切れ割合が配列でなければ SCHEMA_MISMATCH として出る',
+      brokenAudit.mismatches.some((m) => m.path === 'stats.outOfStockPercentage90'),
+    );
+    check('形が壊れていれば ok = false', brokenAudit.ok === false);
+    // 静かに通さない＝人の目に触れる場所（異常一覧）にも必ず出す
+    const brokenAnomalies = findAnomalies(normalizeKeepaProduct(broken));
+    check(
+      '形の食い違いは異常一覧にも出る（黙って不明で通さない）',
+      brokenAnomalies.some((x) => x.includes('形の食い違い')),
+    );
+
+    // --- 不明の理由分け ------------------------------------------
+    const n = normalizeKeepaProduct(p);
+    check(
+      '健全なデータでは読み取り不具合が0件',
+      n.parserErrors.length === 0,
+      n.parserErrors.map((x) => `${x.path}`).join(' / '),
+    );
+    check('不明の内訳（unknownDetails）を持っている', Array.isArray(n.unknownDetails));
+    check('人へ見せる不明（unknownFields）は日本語の項目名', n.unknownFields.every((x) => typeof x === 'string'));
+
+    // -1（値なし）・-2（そもそも頼んでいない）・null・項目そのものが無い → データが無い
+    const c1 = classifyUnknown({ stats: { buyBoxPrice: KEEPA_SENTINEL.NO_VALUE } }, 'stats.buyBoxPrice', 'カート価格');
+    check('-1 は DATA_NOT_AVAILABLE', c1.reason === 'DATA_NOT_AVAILABLE', c1.reason);
+    const c2 = classifyUnknown({ stats: { offerCountFBA: KEEPA_SENTINEL.NOT_REQUESTED } }, 'stats.offerCountFBA', 'FBA出品数');
+    check('-2 は DATA_NOT_AVAILABLE', c2.reason === 'DATA_NOT_AVAILABLE', c2.reason);
+    check('-2 の説明に「頼んでいない」と書いてある', c2.detailJa.includes('頼んで'), c2.detailJa);
+    const c3 = classifyUnknown({ brand: null }, 'brand', 'ブランド');
+    check('null は DATA_NOT_AVAILABLE', c3.reason === 'DATA_NOT_AVAILABLE', c3.reason);
+    const c4 = classifyUnknown({}, 'monthlySold', '月間販売数');
+    check('項目が無いのは DATA_NOT_AVAILABLE', c4.reason === 'DATA_NOT_AVAILABLE', c4.reason);
+
+    // ★値があるのに読めていない → 当社の不具合
+    const c5 = classifyUnknown(
+      { stats: { outOfStockPercentage90: [0, 4, 4, -1] } },
+      'stats.outOfStockPercentage90',
+      '90日間の在庫切れ割合',
+    );
+    check(
+      '値があるのに読めていないのは PARSER_OR_SCHEMA_ERROR',
+      c5.reason === 'PARSER_OR_SCHEMA_ERROR',
+      c5.reason,
+    );
+    check(
+      '不具合側の説明に「システムの不具合」と書いてある',
+      UNKNOWN_REASON_JA.PARSER_OR_SCHEMA_ERROR.includes('不具合'),
+    );
+    check('2つの理由の説明文が別物である', UNKNOWN_REASON_JA.DATA_NOT_AVAILABLE !== UNKNOWN_REASON_JA.PARSER_OR_SCHEMA_ERROR);
+
+    // --- 0 を「不明」に混ぜない（ルール96）-------------------------
+    const zero = classifyUnknown({ stats: { totalOfferCount: 0 } }, 'stats.totalOfferCount', '出品者数');
+    check('0（本当に0人）は「値が無い」扱いにしない', zero.reason === 'PARSER_OR_SCHEMA_ERROR', zero.reason);
+    const sentinels: number[] = [KEEPA_SENTINEL.NO_VALUE, KEEPA_SENTINEL.NOT_REQUESTED];
+    check('0 は「値なし」の印に含まれていない', !sentinels.includes(0), sentinels.join(' / '));
+
+    // --- 場所の指定（添字つき）が読めるか --------------------------
+    const r1 = readPath(p, 'stats.current[1]');
+    check('stats.current[1] を読める', r1.exists && r1.value === 4980, String(r1.value));
+    const r2 = readPath(p, 'stats.current[99]');
+    check('無い添字は「無い」と返す（0にしない）', r2.exists === false && r2.value !== 0);
+    const r3 = readPath(p, 'stats.nothing.here');
+    check('途中で切れた場所はどこで切れたかを返す', r3.exists === false && r3.brokeAt !== null, String(r3.brokeAt));
+    check('形の判定：配列は array', shapeOf([1, 2]) === 'array');
+    check('形の判定：null は null（object にしない）', shapeOf(null) === 'null');
+
+    // --- 鮮度の線は動かさない（ルール11相当の約束）------------------
+    const fresh = keepaFreshness(n);
+    check('鮮度の上限は30日で固定', fresh.maxDays === 30, String(fresh.maxDays));
+    check('30分前の更新なら判定に使える', fresh.usable === true && fresh.ageDays === 0, String(fresh.ageDays));
+    const old = normalizeKeepaProduct(fakeProduct({ lastUpdate: keepaMinutesAgo(60 * 24 * 45) }));
+    const oldFresh = keepaFreshness(old);
+    check('45日前のデータは判定に使わない', oldFresh.usable === false, String(oldFresh.ageDays));
+    check('使わない理由が日本語で書いてある', oldFresh.reasonJa.length > 0);
+
+    // --- 突き合わせ表（監査用）------------------------------------
+    const rows = auditKeepaFields(p, n);
+    check('主要フィールドの突き合わせ表が20行以上出る', rows.length >= 20, `${rows.length}行`);
+    check('各行に Keepa 側の場所が書いてある', rows.every((r) => r.path.length > 0));
+    check('各行に変換ルールが書いてある', rows.every((r) => r.ruleJa.length > 0));
+    check('健全なデータでは不具合の行が無い', rows.every((r) => r.issue !== 'PARSER_OR_SCHEMA_ERROR'));
+    const yenRow = rows.find((r) => r.labelJa === '新品最安値');
+    check('円は100で割らずそのまま出す', /4,?980/.test(yenRow?.normalizedJa ?? ''), yenRow?.normalizedJa);
+    check('信用度は3段階のどれか', rows.every((r) => ['HIGH', 'MEDIUM', 'UNKNOWN'].includes(r.confidence)));
+
+    // --- 検算コマンドは通信しない --------------------------------
+    const auditScript = readFile('scripts/keepa-audit.ts');
+    check('検算コマンドは取得関数を呼ばない', !auditScript.includes('runOneAsin') && !auditScript.includes('fetchKeepaProducts'));
+    check('検算コマンドはAPIキーに触れない', !auditScript.includes('process.env'));
+    check('検算コマンドは保存済みの生データだけを読む', auditScript.includes('latestRawResponse'));
+    const pkg = JSON.parse(readFile('package.json'));
+    check('npm run keepa:audit が登録されている', typeof pkg.scripts['keepa:audit'] === 'string');
   }
 
   // 後片づけ（テスト専用の文字列だけを消す。ルール54）

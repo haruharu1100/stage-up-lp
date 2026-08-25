@@ -29,6 +29,7 @@
     "test:phase3-9d": "tsx scripts/test-phase3-9d.ts",
     "keepa:token": "tsx scripts/keepa-token.ts",
     "keepa:one": "tsx scripts/keepa-one.ts",
+    "keepa:audit": "tsx scripts/keepa-audit.ts",
     "test:phase3-10": "tsx scripts/test-phase3-10.ts"
   },
   "dependencies": {

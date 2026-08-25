@@ -15,6 +15,7 @@ import { judgeSellability, type SellabilityResult } from '../sellability';
 import {
   KEEPA_COUNTS_AS_REAL_MARKET,
   KEEPA_DOMAIN_JP,
+  KEEPA_FRESHNESS_MAX_DAYS,
   KEEPA_USE_SCOPE,
   redactKeepaKey,
 } from './policy';
@@ -341,6 +342,41 @@ export async function tooSoonToRefetch(asin: string): Promise<{ tooSoon: boolean
   return { tooSoon: false, messageJa: '' };
 }
 
+/**
+ * 【保存済みの生データを読み直す】（枠を1つも使わない）
+ *
+ * 当社の読み取り方を直したとき、直ったかどうかを確かめるのに、また取りにいく必要はない。
+ * 生の応答をそのまま残してあるのは、まさにこのためである。
+ * 取り直せば枠を使うし、そのあいだに相場が動けば「直ったから変わったのか」が分からなくなる。
+ */
+export async function latestRawResponse(
+  asin: string,
+): Promise<{ fetchedAt: string; raw: any } | null> {
+  const r = await one(
+    `SELECT fetched_at, response_json FROM keepa_raw_responses
+      WHERE asin = ? AND ok = 1 AND response_json IS NOT NULL
+      ORDER BY id DESC LIMIT 1`,
+    [String(asin ?? '').trim().toUpperCase()],
+  );
+  if (!r?.response_json) return null;
+  try {
+    return { fetchedAt: String(r.fetched_at ?? ''), raw: JSON.parse(String(r.response_json)) };
+  } catch {
+    return null;
+  }
+}
+
+/** 保存済みの生データがあるASINの一覧（新しい順）。 */
+export async function savedRawAsins(limit = 20): Promise<{ asin: string; fetchedAt: string }[]> {
+  const rows = await all(
+    `SELECT asin, MAX(fetched_at) AS fetched_at FROM keepa_raw_responses
+      WHERE ok = 1 AND response_json IS NOT NULL AND asin IS NOT NULL
+      GROUP BY asin ORDER BY fetched_at DESC LIMIT ?`,
+    [limit],
+  );
+  return rows.map((r) => ({ asin: String(r.asin), fetchedAt: String(r.fetched_at ?? '') }));
+}
+
 /* ================================================================
  * 6. 一致候補を保存する
  * ================================================================ */
@@ -380,6 +416,12 @@ export type OneAsinReport = {
   stoppedReasonJa: string | null;
   gateReasonJa: string;
   normalized: KeepaNormalized | null;
+  /**
+   * Keepa が返した商品1件の生データ。
+   * 突き合わせ表（項目 / 元の型 / 元の値 / 当社の値）を人が目で確認するために持つ。
+   * ★これを画面へそのまま出すことはしない（U1未確認のため用途は社内検証に限る）。
+   */
+  rawProduct: any | null;
   windows: WindowSignal[];
   trend: TrendResult | null;
   competition: CompetitionResult | null;
@@ -433,10 +475,21 @@ export function findAnomalies(n: KeepaNormalized): string[] {
   }
   if (n.lastUpdateIso) {
     const days = (Date.now() - Date.parse(n.lastUpdateIso)) / 86400000;
-    if (days > 30) a.push(`Keepa側の最終更新が${Math.floor(days)}日前です。新しい数字ではありません。`);
+    if (days > KEEPA_FRESHNESS_MAX_DAYS) {
+      a.push(`Keepa側の最終更新が${Math.floor(days)}日前です。新しい数字ではありません。`);
+    }
   }
   if (n.offerCountNew !== null && n.offerCountNew > 200) {
     a.push(`出品者が${n.offerCountNew}人と非常に多いです。`);
+  }
+
+  // ★「値はあるのに当社が読めていない」は、市場の異常ではなく**当社の不具合**である。
+  //   黙って「不明」にして通すと、判断材料が減っていることに誰も気づかない。
+  for (const p of n.parserErrors) {
+    a.push(`【当社の読み取り不具合】${p.labelJa}（${p.path}）：${p.detailJa}`);
+  }
+  for (const m of n.schema.mismatches) {
+    a.push(`【形の食い違い】${m.labelJa}（${m.path}）：${m.detailJa}`);
   }
   return a;
 }
@@ -464,6 +517,7 @@ export async function runOneAsin(
     stoppedReasonJa,
     gateReasonJa,
     normalized: null,
+    rawProduct: null,
     windows: [],
     trend: null,
     competition: null,
@@ -557,6 +611,7 @@ export async function runOneAsin(
     stoppedReasonJa: save.saved || save.duplicate ? null : save.messageJa,
     gateReasonJa: gate.reasonJa,
     normalized: n,
+    rawProduct: products[0],
     windows,
     trend,
     competition,

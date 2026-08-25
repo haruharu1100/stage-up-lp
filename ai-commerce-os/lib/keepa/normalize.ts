@@ -18,9 +18,22 @@
 import {
   KEEPA_DOMAIN_JP,
   KEEPA_EPOCH_MINUTES,
+  KEEPA_FRESHNESS_MAX_DAYS,
   KEEPA_JPY_DIVISOR,
   KEEPA_RANK_DROP_WINDOWS,
 } from './policy';
+import {
+  auditKeepaSchema,
+  briefValue,
+  classifyUnknown,
+  KEEPA_UNIT_JA,
+  readPath,
+  shapeOf,
+  type KeepaSchemaAudit,
+  type KeepaShape,
+  type KeepaUnit,
+  type UnknownField,
+} from './schema';
 
 /* ================================================================
  * Keepa の履歴データの並び順
@@ -162,8 +175,29 @@ export type KeepaNormalized = {
   trackingSinceIso: string | null;
 
   /* --- 取れなかったもの --- */
-  /** 値が入っていなかった項目の日本語名。画面に「不明」として出す。 */
+  /**
+   * 値が入っていなかった項目の日本語名。画面に「不明」として出す。
+   * **人へ見せるのはこれだけ。** 理由の区別は下の `unknownDetails` で内部だけが持つ。
+   */
   unknownFields: string[];
+
+  /**
+   * 【不明の理由を2つに分けたもの】（2026-08-25 追加）
+   *
+   *   DATA_NOT_AVAILABLE     … Keepaに値が無い。市場データの問題。直しようがない。
+   *   PARSER_OR_SCHEMA_ERROR … 値はあるのに当社が読めていない。**システムの不具合。**
+   *
+   * この2つを同じ「不明」に混ぜていたせいで、
+   * 在庫切れ割合の取り込み漏れ（配列を数値として読んでいた）が長く気づかれなかった。
+   * 混ぜない。
+   */
+  unknownDetails: UnknownField[];
+
+  /** 上のうち「当社の不具合」だけ。0件でなければ、直すべきものが残っている。 */
+  parserErrors: UnknownField[];
+
+  /** 応答の「形」が想定と違っていないかの監査結果（開発・監査用）。 */
+  schema: KeepaSchemaAudit;
 };
 
 /**
@@ -176,8 +210,30 @@ export type KeepaNormalized = {
  */
 export function normalizeKeepaProduct(raw: any): KeepaNormalized {
   const unknownFields: string[] = [];
-  const mark = <T>(v: T | null, labelJa: string): T | null => {
-    if (v === null || v === undefined) unknownFields.push(labelJa);
+  const unknownDetails: UnknownField[] = [];
+
+  /**
+   * 人へ「不明」と出す項目。
+   * 同時に、**なぜ不明になったのか**（Keepaに無い／当社が読めていない）を内部で記録する。
+   */
+  const mark = <T>(v: T | null, labelJa: string, path: string): T | null => {
+    if (v === null || v === undefined) {
+      unknownFields.push(labelJa);
+      unknownDetails.push(classifyUnknown(raw, path, labelJa));
+    }
+    return (v ?? null) as T | null;
+  };
+
+  /**
+   * 人へは出さないが、内部の監査では見張る項目。
+   *
+   * 画面の「不明」一覧をむやみに長くすると、本当に大事な不明が埋もれる。
+   * かといって見張らないと、また静かに読み落とす。だから表示と監査を分けた。
+   */
+  const watch = <T>(v: T | null, labelJa: string, path: string): T | null => {
+    if (v === null || v === undefined) {
+      unknownDetails.push(classifyUnknown(raw, path, labelJa));
+    }
     return (v ?? null) as T | null;
   };
 
@@ -193,22 +249,40 @@ export function normalizeKeepaProduct(raw: any): KeepaNormalized {
     asin: str(raw?.asin) ?? '',
     domainId,
     isJapan: domainId === KEEPA_DOMAIN_JP,
-    title: mark(str(raw?.title), '商品名'),
-    brand: mark(str(raw?.brand), 'ブランド'),
-    model: mark(str(raw?.model), '型番（model）'),
-    partNumber: mark(str(raw?.partNumber), '型番（partNumber）'),
+    title: mark(str(raw?.title), '商品名', 'title'),
+    brand: mark(str(raw?.brand), 'ブランド', 'brand'),
+    model: mark(str(raw?.model), '型番（model）', 'model'),
+    partNumber: mark(str(raw?.partNumber), '型番（partNumber）', 'partNumber'),
     eanList: strList(raw?.eanList),
     upcList: strList(raw?.upcList),
-    color: mark(str(raw?.color), '色'),
-    packageQuantity: mark(val(raw?.packageQuantity), '梱包内個数'),
-    numberOfItems: mark(val(raw?.numberOfItems), '入数'),
+    color: mark(str(raw?.color), '色', 'color'),
+    packageQuantity: mark(val(raw?.packageQuantity), '梱包内個数', 'packageQuantity'),
+    numberOfItems: mark(val(raw?.numberOfItems), '入数', 'numberOfItems'),
 
-    currentAmazonPrice: mark(yen(arrAt(cur, KEEPA_CSV_INDEX.AMAZON)), 'Amazon本体の価格'),
-    currentNewPrice: mark(yen(arrAt(cur, KEEPA_CSV_INDEX.NEW)), '新品の最安値'),
-    currentUsedPrice: mark(yen(arrAt(cur, KEEPA_CSV_INDEX.USED)), '中古の最安値'),
-    currentBuyBoxPrice: mark(yen(arrAt(cur, KEEPA_CSV_INDEX.BUY_BOX)), 'カート価格'),
-    currentSalesRank: mark(val(arrAt(cur, KEEPA_CSV_INDEX.SALES_RANK)), '売れ筋順位'),
-    listPrice: mark(yen(arrAt(cur, KEEPA_CSV_INDEX.LIST_PRICE)), '定価'),
+    currentAmazonPrice: mark(
+      yen(arrAt(cur, KEEPA_CSV_INDEX.AMAZON)), 'Amazon本体の価格',
+      `stats.current[${KEEPA_CSV_INDEX.AMAZON}]`,
+    ),
+    currentNewPrice: mark(
+      yen(arrAt(cur, KEEPA_CSV_INDEX.NEW)), '新品の最安値',
+      `stats.current[${KEEPA_CSV_INDEX.NEW}]`,
+    ),
+    currentUsedPrice: mark(
+      yen(arrAt(cur, KEEPA_CSV_INDEX.USED)), '中古の最安値',
+      `stats.current[${KEEPA_CSV_INDEX.USED}]`,
+    ),
+    currentBuyBoxPrice: mark(
+      yen(arrAt(cur, KEEPA_CSV_INDEX.BUY_BOX)), 'カート価格',
+      `stats.current[${KEEPA_CSV_INDEX.BUY_BOX}]`,
+    ),
+    currentSalesRank: mark(
+      val(arrAt(cur, KEEPA_CSV_INDEX.SALES_RANK)), '売れ筋順位',
+      `stats.current[${KEEPA_CSV_INDEX.SALES_RANK}]`,
+    ),
+    listPrice: mark(
+      yen(arrAt(cur, KEEPA_CSV_INDEX.LIST_PRICE)), '定価',
+      `stats.current[${KEEPA_CSV_INDEX.LIST_PRICE}]`,
+    ),
     // 評価は10倍で入っている（45 = 星4.5）
     rating: (() => {
       const r = val(arrAt(cur, KEEPA_CSV_INDEX.RATING));
@@ -222,16 +296,22 @@ export function normalizeKeepaProduct(raw: any): KeepaNormalized {
     avgSalesRank30: val(arrAt(avg30, KEEPA_CSV_INDEX.SALES_RANK)),
     avgSalesRank90: val(arrAt(avg90, KEEPA_CSV_INDEX.SALES_RANK)),
 
-    salesRankDrops30: mark(val(stats?.salesRankDrops30), '30日間の順位下落回数'),
-    salesRankDrops90: mark(val(stats?.salesRankDrops90), '90日間の順位下落回数'),
-    salesRankDrops180: val(stats?.salesRankDrops180),
-    salesRankDrops365: val(stats?.salesRankDrops365),
-    monthlySold: val(raw?.monthlySold),
+    salesRankDrops30: mark(val(stats?.salesRankDrops30), '30日間の順位下落回数', 'stats.salesRankDrops30'),
+    salesRankDrops90: mark(val(stats?.salesRankDrops90), '90日間の順位下落回数', 'stats.salesRankDrops90'),
+    salesRankDrops180: watch(val(stats?.salesRankDrops180), '180日間の順位下落回数', 'stats.salesRankDrops180'),
+    salesRankDrops365: watch(val(stats?.salesRankDrops365), '365日間の順位下落回数', 'stats.salesRankDrops365'),
+    monthlySold: watch(val(raw?.monthlySold), '月間販売個数（Keepa提供）', 'monthlySold'),
 
-    offerCountNew: mark(val(arrAt(cur, KEEPA_CSV_INDEX.COUNT_NEW)), '新品の出品数'),
-    offerCountUsed: val(arrAt(cur, KEEPA_CSV_INDEX.COUNT_USED)),
-    offerCountFBA: val(stats?.offerCountFBA),
-    offerCountFBM: val(stats?.offerCountFBM),
+    offerCountNew: mark(
+      val(arrAt(cur, KEEPA_CSV_INDEX.COUNT_NEW)), '新品の出品数',
+      `stats.current[${KEEPA_CSV_INDEX.COUNT_NEW}]`,
+    ),
+    offerCountUsed: watch(
+      val(arrAt(cur, KEEPA_CSV_INDEX.COUNT_USED)), '中古の出品数',
+      `stats.current[${KEEPA_CSV_INDEX.COUNT_USED}]`,
+    ),
+    offerCountFBA: watch(val(stats?.offerCountFBA), 'FBA出品者数', 'stats.offerCountFBA'),
+    offerCountFBM: watch(val(stats?.offerCountFBM), 'FBM出品者数', 'stats.offerCountFBM'),
 
     amazonRetailPresent: (() => {
       if (!cur) return 'UNKNOWN';
@@ -254,20 +334,276 @@ export function normalizeKeepaProduct(raw: any): KeepaNormalized {
     //         品切れが多い（＝入り込む余地がある）商品を見落とす方向に効く。
     //   どの添字を使うか：ここが効くのは「新品で出品する自分が入り込めるか」なので
     //   **新品（NEW=1）** を採る。Amazon本体の在庫の有無は別の材料として持っている。
-    outOfStockPercentage30: val(arrAt(stats?.outOfStockPercentage30, KEEPA_CSV_INDEX.NEW)),
-    outOfStockPercentage90: val(arrAt(stats?.outOfStockPercentage90, KEEPA_CSV_INDEX.NEW)),
+    outOfStockPercentage30: watch(
+      val(arrAt(stats?.outOfStockPercentage30, KEEPA_CSV_INDEX.NEW)), '30日間の在庫切れ割合',
+      `stats.outOfStockPercentage30[${KEEPA_CSV_INDEX.NEW}]`,
+    ),
+    outOfStockPercentage90: watch(
+      val(arrAt(stats?.outOfStockPercentage90, KEEPA_CSV_INDEX.NEW)), '90日間の在庫切れ割合',
+      `stats.outOfStockPercentage90[${KEEPA_CSV_INDEX.NEW}]`,
+    ),
 
-    fbaPickAndPackFee: yen(raw?.fbaFees?.pickAndPackFee),
-    referralFeePercentage: val(raw?.referralFeePercentage),
+    fbaPickAndPackFee: watch(
+      yen(raw?.fbaFees?.pickAndPackFee), 'FBA配送代行手数料', 'fbaFees.pickAndPackFee',
+    ),
+    referralFeePercentage: watch(
+      val(raw?.referralFeePercentage), '販売手数料率', 'referralFeePercentage',
+    ),
 
-    lastUpdateIso: keepaMinutesToIso(raw?.lastUpdate),
-    trackingSinceIso: keepaMinutesToIso(raw?.trackingSince),
+    lastUpdateIso: watch(keepaMinutesToIso(raw?.lastUpdate), '最終更新日時', 'lastUpdate'),
+    trackingSinceIso: watch(keepaMinutesToIso(raw?.trackingSince), '追跡開始日時', 'trackingSince'),
 
     unknownFields,
+    unknownDetails,
+    parserErrors: [],
+    schema: auditKeepaSchema(raw),
   };
 
-  if (!out.asin) unknownFields.unshift('ASIN');
+  if (!out.asin) {
+    unknownFields.unshift('ASIN');
+    unknownDetails.unshift(classifyUnknown(raw, 'asin', 'ASIN'));
+  }
+
+  // ★「値はあるのに読めていない」ものだけを抜き出す。ここが0件でなければ、直す仕事が残っている。
+  out.parserErrors = unknownDetails.filter((u) => u.reason === 'PARSER_OR_SCHEMA_ERROR');
   return out;
+}
+
+/* ================================================================
+ * データの鮮度（KEEPA_DATA_AGE_DAYS）
+ * ================================================================ */
+
+export type KeepaFreshness = {
+  /** Keepa側の最終更新から何日経ったか。分からなければ null。 */
+  ageDays: number | null;
+  /** 判定に使ってよいか。 */
+  usable: boolean;
+  maxDays: number;
+  reasonJa: string;
+};
+
+/**
+ * 「その数字は、いつの数字か」を出す。
+ *
+ * ★閾値（KEEPA_FRESHNESS_MAX_DAYS）は、目の前のデータが古いからといって動かさない。
+ *   緩めれば判定は出るが、それは古い相場で仕入れることを意味する。
+ */
+export function keepaFreshness(n: KeepaNormalized, now: Date = new Date()): KeepaFreshness {
+  const maxDays = KEEPA_FRESHNESS_MAX_DAYS;
+  if (!n.lastUpdateIso) {
+    return {
+      ageDays: null,
+      usable: false,
+      maxDays,
+      reasonJa: 'Keepa側の最終更新日時が取れていないため、いつの数字か分かりません。判定しません。',
+    };
+  }
+  const ms = now.getTime() - Date.parse(n.lastUpdateIso);
+  const ageDays = Math.floor(ms / 86400000);
+  if (ageDays > maxDays) {
+    return {
+      ageDays,
+      usable: false,
+      maxDays,
+      reasonJa:
+        `Keepa側の最終更新が${ageDays}日前です（${maxDays}日以内なら使う）。`
+        + '古い数字で仕入を決めないため、判定しません。',
+    };
+  }
+  return {
+    ageDays,
+    usable: true,
+    maxDays,
+    reasonJa: `Keepa側の最終更新は${ageDays}日前です（${maxDays}日以内）。判定に使えます。`,
+  };
+}
+
+/* ================================================================
+ * 項目ごとの監査表（人が1行ずつ追えるようにする）
+ * ================================================================ */
+
+export type KeepaAuditRow = {
+  /** 項目 */
+  labelJa: string;
+  /** Keepa上の元フィールド */
+  path: string;
+  /** RAWの型 */
+  rawShape: KeepaShape;
+  /** RAW値があったか（-1 / -2 / null / 空 は「無し」） */
+  hasRawValue: boolean;
+  /** RAWの値（短く） */
+  rawValueJa: string;
+  /** 当社の値 */
+  normalizedJa: string;
+  /** 変換ルール */
+  ruleJa: string;
+  /** どれくらい信用してよいか */
+  confidence: 'HIGH' | 'MEDIUM' | 'UNKNOWN';
+  /** 状態 */
+  issue: 'OK' | 'DATA_NOT_AVAILABLE' | 'PARSER_OR_SCHEMA_ERROR';
+};
+
+type AuditPlan = {
+  labelJa: string;
+  path: string;
+  unit: KeepaUnit;
+  value: number | string | string[] | null;
+  ruleJa: string;
+  /** HIGH にしてよいか。仕様が確認できていない項目は MEDIUM 止まり。 */
+  topConfidence?: 'HIGH' | 'MEDIUM';
+};
+
+function showValue(v: number | string | string[] | null): string {
+  if (v === null) return '不明';
+  if (Array.isArray(v)) return v.length === 0 ? '不明' : v.join(' / ');
+  return String(v);
+}
+
+/**
+ * 主要フィールドを1行ずつ並べた監査表を作る。
+ *
+ * ご本人の指示（原文）：
+ *   「項目 / Keepa上の元フィールド / RAW型 / RAW値の有無 / Normalized値 / 変換ルール / Confidence」
+ *
+ * 【なぜ表にするのか】
+ * 「不明でした」とだけ言われても、Keepaが持っていないのか、当社が読めていないのか分からない。
+ * 元の場所・元の型・元の値・当社の値を横に並べれば、人が自分の目で突き合わせられる。
+ */
+export function auditKeepaFields(raw: any, n: KeepaNormalized): KeepaAuditRow[] {
+  const idx = KEEPA_CSV_INDEX;
+  const plans: AuditPlan[] = [
+    { labelJa: '商品名', path: 'title', unit: 'TEXT', value: n.title, ruleJa: '文字をそのまま。空文字は「無し」。' },
+    { labelJa: 'ブランド', path: 'brand', unit: 'TEXT', value: n.brand, ruleJa: '文字をそのまま。' },
+    { labelJa: 'JAN/EAN', path: 'eanList', unit: 'TEXT', value: n.eanList, ruleJa: '配列。空の要素は捨てる。1つに丸めない。' },
+    { labelJa: 'UPC', path: 'upcList', unit: 'TEXT', value: n.upcList, ruleJa: '配列。空の要素は捨てる。' },
+    { labelJa: '型番（model）', path: 'model', unit: 'TEXT', value: n.model, ruleJa: '文字をそのまま。' },
+    { labelJa: '型番（partNumber）', path: 'partNumber', unit: 'TEXT', value: n.partNumber, ruleJa: '文字をそのまま。' },
+
+    {
+      labelJa: '現在価格（Amazon本体）', path: `stats.current[${idx.AMAZON}]`, unit: 'JPY',
+      value: n.currentAmazonPrice, ruleJa: '-1 は「Amazon本体の出品なし」で不明。0円ではない。',
+    },
+    {
+      labelJa: '新品最安値', path: `stats.current[${idx.NEW}]`, unit: 'JPY',
+      value: n.currentNewPrice, ruleJa: '送料は含まない。-1 は不明。',
+    },
+    {
+      labelJa: '中古最安値', path: `stats.current[${idx.USED}]`, unit: 'JPY',
+      value: n.currentUsedPrice, ruleJa: '-1 は不明。',
+    },
+    {
+      labelJa: 'Buy Box（カート価格）', path: `stats.current[${idx.BUY_BOX}]`, unit: 'JPY',
+      value: n.currentBuyBoxPrice, ruleJa: '送料込み。-1 は不明。',
+    },
+    {
+      labelJa: '売れ筋順位', path: `stats.current[${idx.SALES_RANK}]`, unit: 'RANK',
+      value: n.currentSalesRank, ruleJa: '-1 は不明。',
+    },
+
+    {
+      labelJa: '30日間の順位下落回数', path: 'stats.salesRankDrops30', unit: 'COUNT',
+      value: n.salesRankDrops30, ruleJa: '★販売個数ではない。0 は「1度も下がらなかった」＝本当に0回。',
+    },
+    {
+      labelJa: '90日間の順位下落回数', path: 'stats.salesRankDrops90', unit: 'COUNT',
+      value: n.salesRankDrops90, ruleJa: '★販売個数ではない。',
+    },
+    {
+      labelJa: '180日間の順位下落回数', path: 'stats.salesRankDrops180', unit: 'COUNT',
+      value: n.salesRankDrops180, ruleJa: '★販売個数ではない。',
+    },
+    {
+      labelJa: '365日間の順位下落回数', path: 'stats.salesRankDrops365', unit: 'COUNT',
+      value: n.salesRankDrops365, ruleJa: '★販売個数ではない。',
+    },
+
+    {
+      labelJa: '新品Offer数', path: `stats.current[${idx.COUNT_NEW}]`, unit: 'COUNT',
+      value: n.offerCountNew, ruleJa: '0 は「出品者ゼロ」。-1 は不明。混ぜない。',
+    },
+    {
+      labelJa: '中古Offer数', path: `stats.current[${idx.COUNT_USED}]`, unit: 'COUNT',
+      value: n.offerCountUsed, ruleJa: '0 は「出品者ゼロ」。-1 は不明。',
+    },
+    {
+      labelJa: 'FBA Offer数', path: 'stats.offerCountFBA', unit: 'COUNT',
+      value: n.offerCountFBA,
+      ruleJa: '★出品明細を頼まないと -2（＝不明）。0人という意味ではない。',
+      topConfidence: 'MEDIUM',
+    },
+    {
+      labelJa: 'FBM Offer数', path: 'stats.offerCountFBM', unit: 'COUNT',
+      value: n.offerCountFBM,
+      ruleJa: '★同上。-2 は不明。',
+      topConfidence: 'MEDIUM',
+    },
+    {
+      labelJa: 'Amazon本体の在庫', path: `stats.current[${idx.AMAZON}]`, unit: 'FLAG',
+      value: n.amazonRetailPresent === 'UNKNOWN' ? null : n.amazonRetailPresent,
+      ruleJa: 'Amazon本体の価格が0以上なら「あり」、-1 なら「なし」。項目自体が無ければ不明。',
+    },
+    {
+      labelJa: 'Buy Boxの保持者', path: 'stats.buyBoxIsAmazon', unit: 'FLAG',
+      value: n.buyBoxIsAmazon === 'UNKNOWN' ? null : n.buyBoxIsAmazon,
+      ruleJa: 'true/false のみ採用。null は不明（false と混ぜない）。',
+    },
+    {
+      labelJa: '30日間の在庫切れ割合', path: `stats.outOfStockPercentage30[${idx.NEW}]`, unit: 'PERCENT',
+      value: n.outOfStockPercentage30,
+      ruleJa: '★配列の「新品(1)」を読む。配列のまま数値化するとNaNになる（2026-08-25に修正）。',
+    },
+    {
+      labelJa: '90日間の在庫切れ割合', path: `stats.outOfStockPercentage90[${idx.NEW}]`, unit: 'PERCENT',
+      value: n.outOfStockPercentage90,
+      ruleJa: '★同上。',
+    },
+
+    {
+      labelJa: 'FBA手数料', path: 'fbaFees.pickAndPackFee', unit: 'JPY',
+      value: n.fbaPickAndPackFee,
+      ruleJa: 'そのまま円。fbaFees が丸ごと null のことがあり、その場合は0円ではなく不明。',
+      topConfidence: 'MEDIUM',
+    },
+    {
+      labelJa: '販売手数料率', path: 'referralFeePercentage', unit: 'PERCENT',
+      value: n.referralFeePercentage,
+      ruleJa: 'パーセント（15 = 15%）。項目が無いことがある。',
+      topConfidence: 'MEDIUM',
+    },
+
+    {
+      labelJa: '最終更新日時', path: 'lastUpdate', unit: 'MINUTES_FROM_2011',
+      value: n.lastUpdateIso, ruleJa: '2011-01-01からの分数に起点を足して日時にする。',
+    },
+  ];
+
+  return plans.map((p): KeepaAuditRow => {
+    const r = readPath(raw, p.path);
+    const cls = classifyUnknown(raw, p.path, p.labelJa);
+    const hasRawValue = cls.reason === 'PARSER_OR_SCHEMA_ERROR'
+      || (r.exists && r.value !== null && !(typeof r.value === 'number' && r.value < 0));
+
+    let issue: KeepaAuditRow['issue'] = 'OK';
+    let confidence: KeepaAuditRow['confidence'] = p.topConfidence ?? 'HIGH';
+
+    const missing = p.value === null || (Array.isArray(p.value) && p.value.length === 0);
+    if (missing) {
+      issue = cls.reason;
+      confidence = 'UNKNOWN';
+    }
+
+    return {
+      labelJa: p.labelJa,
+      path: p.path,
+      rawShape: r.exists ? shapeOf(r.value) : 'missing',
+      hasRawValue,
+      rawValueJa: briefValue(r.exists ? r.value : undefined),
+      normalizedJa: showValue(p.value),
+      ruleJa: `${KEEPA_UNIT_JA[p.unit]}。${p.ruleJa}`,
+      confidence,
+      issue,
+    };
+  });
 }
 
 /* ================================================================

@@ -37,7 +37,12 @@ import {
 } from '../lib/keepa/policy';
 import { KEEPA_TOKEN_DESIGN_NOTE_JA } from '../lib/keepa/tokens';
 import { ASIN_MATCH_VERDICT_JA } from '../lib/keepa/match';
-import { COMPETITION_SCORE_NOTE_JA, TREND_VERDICT_JA } from '../lib/keepa/normalize';
+import {
+  auditKeepaFields,
+  COMPETITION_SCORE_NOTE_JA,
+  keepaFreshness,
+  TREND_VERDICT_JA,
+} from '../lib/keepa/normalize';
 import { SELLABILITY_VERDICT_JA } from '../lib/sellability';
 import { runOneAsin, tokenMonitor } from '../lib/keepa/store';
 
@@ -159,6 +164,7 @@ async function main(): Promise<void> {
   }
 
   const n = r.normalized!;
+  const rawProduct = r.rawProduct;
 
   // ================================================================
   console.log(`\n${LINE}`);
@@ -210,6 +216,51 @@ async function main(): Promise<void> {
   }
   const seven = r.windows.find((w) => w.window === 'SELLABILITY_7D');
   if (seven) console.log(`  ・7日間の下落回数：${seven.status}（${seven.noteJa}）`);
+
+  // ★「不明」は1種類ではない。理由で分けて出す。
+  //   Keepaに値が無い（市場の問題）と、値はあるのに読めていない（当社の不具合）は、
+  //   同じ「不明」に見えても、やるべきことがまったく違う。
+  const notAvail = n.unknownDetails.filter((u) => u.reason === 'DATA_NOT_AVAILABLE');
+  console.log('\n  --- 内訳 ---');
+  console.log(`  ① Keepaに値がない（DATA_NOT_AVAILABLE）：${notAvail.length}件 … 市場データの問題です。`);
+  for (const u of notAvail) console.log(`      ・${u.labelJa}（${u.path}）：${u.detailJa}`);
+  console.log(`  ② 値はあるのに当社が読めていない（PARSER_OR_SCHEMA_ERROR）：${n.parserErrors.length}件`);
+  if (n.parserErrors.length === 0) {
+    console.log('      ありません。');
+  } else {
+    console.log('      ★これは市場の問題ではなく、当社のコードの不具合です。直す対象です。');
+    for (const u of n.parserErrors) console.log(`      ・${u.labelJa}（${u.path}）：${u.detailJa}`);
+  }
+
+  // ================================================================
+  console.log(`\n${LINE}`);
+  console.log('②-2 応答の「形」の監査（SCHEMA_AUDIT）');
+  console.log(LINE);
+  console.log(`  ${n.schema.headlineJa}`);
+  if (n.schema.mismatches.length > 0) {
+    console.log('  ★形の食い違い（SCHEMA_MISMATCH）：');
+    for (const m of n.schema.mismatches) {
+      console.log(`   ・${m.labelJa}（${m.path}）：${m.detailJa}`);
+    }
+    console.log('  ※ 人へ見せる判定は、これまで通り安全側（不明）のままです。止めてはいません。');
+  }
+  const fresh = keepaFreshness(n);
+  console.log(`  データの鮮度：${fresh.ageDays === null ? '不明' : `${fresh.ageDays}日前`}`
+    + `（${fresh.maxDays}日以内なら使う）→ ${fresh.usable ? '判定に使えます' : '判定しません'}`);
+  console.log(`    ${fresh.reasonJa}`);
+
+  // ================================================================
+  console.log(`\n${LINE}`);
+  console.log('②-3 主要フィールドの突き合わせ表');
+  console.log(LINE);
+  console.log('  項目 ｜ Keepaの場所 ｜ RAWの型 ｜ RAW値 ｜ 当社の値 ｜ 信用度 ｜ 状態');
+  for (const row of auditKeepaFields(rawProduct, n)) {
+    console.log(
+      `  ${row.labelJa} ｜ ${row.path} ｜ ${row.rawShape} ｜ ${row.rawValueJa} ｜ `
+      + `${row.normalizedJa} ｜ ${row.confidence} ｜ ${row.issue}`,
+    );
+    console.log(`      変換：${row.ruleJa}`);
+  }
 
   // ================================================================
   console.log(`\n${LINE}`);
