@@ -91,10 +91,45 @@ export default function Dashboard({
           <Kpi label="本日の売上" value={sum.revenueToday} unit="円" tone="ink" />
           <Kpi label="今月の売上" value={sum.revenueMonth} unit="円" tone="ink" />
           <Kpi label="今月の粗利益" value={grossProfit} unit="円" tone="ok" />
-          <Kpi label="本日のプレイ" value={sum.playsToday} unit="回" tone="ink" />
-          <Kpi label="公開中のガチャ" value={sum.publishedCount} unit="件" tone="ink" />
-          <Kpi label="会員数" value={sum.users} unit="人" tone="ink" />
+          <Kpi
+            label="本日のプレイ"
+            value={sum.playsToday}
+            unit="回"
+            tone="ink"
+            to="analytics"
+            onNav={onNav}
+          />
+          <Kpi
+            label="公開中のガチャ"
+            value={sum.publishedCount}
+            unit="件"
+            tone="ink"
+            to="gacha"
+            onNav={onNav}
+          />
+          <Kpi
+            label="会員数"
+            value={sum.users}
+            unit="人"
+            tone="ink"
+            to="customers"
+            onNav={onNav}
+          />
         </div>
+
+        {/* ★0 を、0 とだけ出して終わらせないこと。
+              「0回」だけを見た人は、壊れているのか、
+              まだ誰も引いていないのかを判断できません。
+              判断できない表示は、無いのと同じです。 */}
+        {sum.playsToday === 0 && (
+          <p className="mt-3 rounded-xl border border-edge2 bg-paper2 px-4 py-3 text-note leading-[1.85] text-slate3">
+            本日は、まだ1回も引かれていません。だから本日の売上は0円です。
+            <span className="mx-1 font-bold text-slate2">
+              上の「ユーザー側」から1回引くと、この数字がその場で動きます。
+            </span>
+            動かない見本の数字は、ここには置いていません。
+          </p>
+        )}
       </section>
 
       {/* ══ ③危険 ④発送 ⑤問い合わせ ══ */}
@@ -158,14 +193,43 @@ export default function Dashboard({
           title="システムの状態"
           note="分からないものを「正常」とは出しません。"
         />
+        {/* ★ここに「正常」と書き込まないこと。
+              以前は4つとも決め打ちで「正常」と出していました。
+              決済がつながっていない状態でも「決済：正常」と出ます。
+              確かめていないものを正常と言うのは、嘘と同じです。
+
+              ★分からないものは、灰色で「分かりません」と出すこと。
+                灰色が並ぶのは、かっこ悪いですが、正しい状態です。
+                かっこよく見せるために緑にした瞬間に、
+                この画面は誰の判断にも使えなくなります。 */}
         <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-          <Light label="お客様のサイト" state="ok" say="正常に表示できています" />
-          <Light label="抽選の処理" state="ok" say="遅れは出ていません" />
-          <Light label="決済" state="ok" say="正常" />
+          <Light
+            label="抽選の処理"
+            state={sum.blockedRequests > 0 ? "warn" : "ok"}
+            say={
+              sum.blockedRequests > 0
+                ? `安全のために止めた要求が ${sum.blockedRequests} 件あります`
+                : `今日 ${sum.playsToday} 回、止まらずに通っています`}
+          />
           <Light
             label="景品の相場データ"
+            state={sum.marketStale > 0 ? "warn" : "ok"}
+            say={
+              sum.marketStale > 0
+                ? `${sum.marketStale} 点が取れていません。古い値で計算しています`
+                : `見張っている ${sum.marketWatched} 点すべてが取れています`}
+          />
+          {/* ★この2つは、この画面からは確かめられません。
+                確かめる仕組みができるまで、灰色のままにします。 */}
+          <Light
+            label="お客様のサイト"
             state="unknown"
-            say="最終取得から時間が経っています"
+            say="外から見た表示の確認は、まだつないでいません"
+          />
+          <Light
+            label="決済"
+            state="unknown"
+            say="決済会社にはつないでいません（この環境では使えません）"
           />
         </div>
 
@@ -379,8 +443,12 @@ function TodoGroup({
       </p>
 
       {items.length === 0 ? (
-        <p className="mt-2 rounded-xl border border-edge2 bg-paper2 px-4 py-3 text-note text-slate3">
-          ありません。
+        /* ★「ありません。」だけにしないこと。
+             空なのが正常なのか、取れていないのかが分かれば、
+             確認の電話が1本減ります。 */
+        <p className="mt-2 rounded-xl border border-edge2 bg-paper2 px-4 py-3 text-note leading-[1.85] text-slate3">
+          この区分に、いま手を動かすものはありません。
+          新しく発生すると、ここに自動で並びます。
         </p>
       ) : (
         <ul className="mt-2 space-y-2">
@@ -425,11 +493,16 @@ function Kpi({
   value,
   unit,
   tone,
+  to,
+  onNav,
 }: {
   label: string;
   value: number;
   unit: string;
   tone: "ink" | "ok" | "warn" | "danger";
+  /** 中身を見に行ける画面。無いものは押せなくてよい */
+  to?: MenuKey;
+  onNav?: (k: MenuKey) => void;
 }) {
   const ink = {
     ink: "text-slate",
@@ -438,16 +511,41 @@ function Kpi({
     danger: "text-danger-ink",
   }[tone];
 
-  return (
-    <div className="rounded-2xl border border-edge bg-paper px-4 py-4 shadow-lift">
-      <p className="nb truncate text-note font-medium text-slate3">{label}</p>
-      <p className={`mt-1.5 flex items-baseline gap-1 ${ink}`}>
+  const body = (
+    <>
+      <span className="nb block truncate text-note font-medium text-slate3">
+        {label}
+      </span>
+      <span className={`mt-1.5 flex items-baseline gap-1 ${ink}`}>
         <span className="num text-[1.9rem] font-bold leading-none tracking-tight tabular-nums xl:text-[2.05rem]">
           {value.toLocaleString()}
         </span>
         <span className="nb text-note font-bold">{unit}</span>
-      </p>
-    </div>
+      </span>
+    </>
+  );
+
+  /* ★中身を見に行ける数字は、押せるようにすること。
+       押せないと、気になった数字を確かめるために
+       左のメニューから該当画面を探し直すことになります。
+       行き先が無い数字（売上・粗利益）は、押せないままにします。
+       押しても何も起きないボタンほど、信用を落とすものはありません。 */
+  if (!to || !onNav) {
+    return (
+      <div className="rounded-2xl border border-edge bg-paper px-4 py-4 shadow-lift">
+        {body}
+      </div>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => onNav(to)}
+      className="rounded-2xl border border-edge bg-paper px-4 py-4 text-left shadow-lift transition-colors hover:border-blue-ink/30 hover:bg-blue-pale/40"
+    >
+      {body}
+    </button>
   );
 }
 

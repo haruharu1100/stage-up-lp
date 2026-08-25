@@ -81,9 +81,14 @@ export default function CustomersScreen({ s }: { s: ConsoleState }) {
         。同じ回線・同じ端末は、会社や家庭でも普通に起きます。
       </WhatIsThis>
 
-      <Card title="会員の状況" note="デモでは5名分を表示しています。">
+      <Card title="会員の状況" note="いま持っている会員を、そのまま数えています。">
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          <Stat label="会員数（全体）" value={2_847} unit="名" />
+          {/* ★ここに「会員数 2,847名」のような数を直に書かないこと。
+                右の「確認中」「停止中」は、実際に持っている会員から数えています。
+                全体だけを別の大きな数字にすると、足し算の合わない表になります。
+                合わない表は、1回見つかった時点で、
+                この画面のすべての数字が疑われます。 */}
+          <Stat label="会員数（全体）" value={s.users.length} unit="名" />
           <Stat
             label="確認中"
             value={s.users.filter((u) => u.status === "REVIEW").length}
@@ -284,7 +289,11 @@ function Activity({ s, u }: { s: ConsoleState; u: ConsoleUser }) {
           )}
         </p>
         {prizes.length === 0 ? (
-          <p className="mt-1 text-note text-slate3">ありません。</p>
+          /* ★「ありません。」だけにしないこと。
+               なぜ空なのかが読めれば、問い合わせが1本減ります。 */
+          <p className="mt-1 text-note leading-[1.85] text-slate3">
+            まだ1点も当たっていません。ガチャで当たると、ここに並びます。
+          </p>
         ) : (
           <ul className="mt-2 space-y-1.5">
             {prizes.map((p) => (
@@ -320,7 +329,10 @@ function Activity({ s, u }: { s: ConsoleState; u: ConsoleUser }) {
           <span className="num ml-2 font-medium text-slate3">（{orders.length}件）</span>
         </p>
         {orders.length === 0 ? (
-          <p className="mt-1 text-note text-slate3">ありません。</p>
+          <p className="mt-1 text-note leading-[1.85] text-slate3">
+            発送の依頼は届いていません。お客様が獲得商品から「発送してもらう」を
+            選ぶと、ここに入ります。
+          </p>
         ) : (
           <ul className="mt-2 space-y-1.5">
             {orders.map((o) => (
@@ -348,7 +360,9 @@ function Activity({ s, u }: { s: ConsoleState; u: ConsoleUser }) {
           <span className="num ml-2 font-medium text-slate3">（{tickets.length}件）</span>
         </p>
         {tickets.length === 0 ? (
-          <p className="mt-1 text-note text-slate3">ありません。</p>
+          <p className="mt-1 text-note leading-[1.85] text-slate3">
+            この会員からの問い合わせは、まだ届いていません。
+          </p>
         ) : (
           <ul className="mt-2 space-y-1.5">
             {tickets.map((t) => (
@@ -368,7 +382,10 @@ function Activity({ s, u }: { s: ConsoleState; u: ConsoleUser }) {
           <span className="num ml-2 font-medium text-slate3">（{ledger.length}件・新しい順）</span>
         </p>
         {ledger.length === 0 ? (
-          <p className="mt-1 text-note text-slate3">ありません。</p>
+          <p className="mt-1 text-note leading-[1.85] text-slate3">
+            ポイントの増減は、まだ1件もありません。購入・抽選・付与のときに、
+            ここへ記録されます。
+          </p>
         ) : (
           <ul className="mt-2 space-y-1">
             {[...ledger].reverse().map((e) => (

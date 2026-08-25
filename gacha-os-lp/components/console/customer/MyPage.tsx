@@ -43,7 +43,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type {
   ConsoleAction,
   ConsoleState,
@@ -92,14 +92,79 @@ import {
 } from "./ui";
 
 /**
- * 二重処理を防ぐ鍵を作る。
+ * 二重処理を防ぐ鍵。
  *
- * ★1回の操作につき、1つの鍵を作ること。
- *   同じ鍵で2回届いても、受け取った側が2回目を捨てます。
- *   ボタンを連打しても、通信がやり直されても、処理は1回だけです。
+ * ═══════════════════════════════════════════════════════
+ * ★以前ここが壊れていたこと
+ * ═══════════════════════════════════════════════════════
+ *
+ *   前は、ボタンを押すたびに新しい鍵を作っていました。
+ *
+ *       押した → 鍵A で送る
+ *       もう一度押した → 鍵B で送る   ← 別の鍵なので、受け取った側は通す
+ *
+ *   受け取る側（reducer / サーバー）は正しく「同じ鍵は1回だけ」を守っていたのに、
+ *   送る側が毎回違う鍵を作っていたので、連打すると2回引けました。
+ *   守りが片側しか無い状態です。
+ *
+ * ═══════════════════════════════════════════════════════
+ * ★正しい考え方
+ * ═══════════════════════════════════════════════════════
+ *
+ *   鍵は「ボタンを押すたび」ではなく、
+ *   「1回の購入操作につき1つ」発行します。
+ *
+ *       購入操作が始まる  → 鍵を1つ作る（10連なら10個ぶん、まとめて1回だけ作る）
+ *       連打・再送・timeout → 同じ鍵をそのまま使う
+ *       結果を見て閉じた   → 鍵を捨てる。次はまた新しい操作
+ *
+ *   こうすると、通信がやり直されても、受け取った側が
+ *   「その鍵はもう処理済み」と分かり、前回の結果を返すだけで済みます。
+ *
+ * ═══════════════════════════════════════════════════════
+ * ★一生に一度しか起きない操作は、決め打ちの鍵でよい
+ * ═══════════════════════════════════════════════════════
+ *
+ *   発送依頼とポイント交換は、1つの景品につき一度きりです。
+ *   だから鍵を `ship-<景品ID>` のように決め打ちにします。
+ *   何度送っても、いつ送っても、成立するのは1回だけになります。
  */
-const newKey = (kind: string, id: string) =>
-  `${kind}-${id}-${Math.random().toString(36).slice(2, 10)}`;
+
+/** 推測できない鍵を作る。★抽選の乱数ではないが、ここでも Math.random は使わない */
+function randomKey(): string {
+  const g = typeof globalThis === "undefined" ? undefined : globalThis.crypto;
+  if (g?.randomUUID) return g.randomUUID();
+  const b = new Uint8Array(16);
+  g?.getRandomValues?.(b);
+  return Array.from(b, (x) => x.toString(16).padStart(2, "0")).join("");
+}
+
+/**
+ * いま進行中の操作の鍵を覚えておく入れ物。
+ *
+ * 同じ操作（opId）のあいだは、何度呼ばれても同じ鍵を返します。
+ * 別の操作が始まったら、前の鍵は捨てます。
+ */
+function useOpKeys() {
+  const held = useRef<{ opId: string; keys: string[] } | null>(null);
+
+  /** この操作の鍵をもらう。無ければ作る */
+  const keysFor = (opId: string, count = 1): string[] => {
+    if (held.current?.opId === opId && held.current.keys.length === count) {
+      return held.current.keys;
+    }
+    const keys = Array.from({ length: count }, () => randomKey());
+    held.current = { opId, keys };
+    return keys;
+  };
+
+  /** 操作が終わった（結果を見終わった）。次はまた新しい鍵にする */
+  const release = () => {
+    held.current = null;
+  };
+
+  return { keysFor, release };
+}
 
 /* ══════════════════════════════════════════════
    本体
@@ -164,6 +229,9 @@ export default function MyPage({
    *   中身は毎回、記録のほうから読み直します。
    */
   const [draw, setDraw] = useState<{ from: number; n: number } | null>(null);
+
+  /** 二重処理を防ぐ鍵の入れ物（このファイルの先頭の説明を参照） */
+  const { keysFor, release } = useOpKeys();
 
   /**
    * ★誰であるかは、ログイン情報からだけ決めること。
@@ -275,12 +343,27 @@ export default function MyPage({
   const gachaOnScreen =
     view.name === "gacha" ? s.gachas.find((x) => x.id === view.id) : undefined;
 
-  /** n回引く。★1回ずつ送ること。まとめて送ると、途中で残高が尽きた分を戻せません */
+  /**
+   * n回引く。
+   *
+   * ★1回ずつ送ること。まとめて送ると、途中で残高が尽きた分を戻せません。
+   *
+   * ★鍵は、この購入操作につき1組だけ作ること。
+   *   連打されても keysFor は同じ組を返すので、
+   *   2回目の依頼は受け取った側で「もう処理済み」と分かります。
+   */
   const runDraw = (gachaId: string, n: number) => {
+    const keys = keysFor(`draw:${gachaId}:${n}`, n);
     setDraw({ from: s.draws.length, n });
     for (let i = 0; i < n; i++) {
-      dispatch({ type: "DRAW", gachaId, key: newKey("draw", `${gachaId}-${i}`) });
+      dispatch({ type: "DRAW", gachaId, key: keys[i] });
     }
+  };
+
+  /** 結果を見終わった。ここで鍵を捨てる＝次は新しい購入として扱う */
+  const finishDraw = () => {
+    release();
+    setDraw(null);
   };
 
   return (
@@ -442,10 +525,19 @@ export default function MyPage({
             go={setView}
             back={() => setView({ name: "home" })}
             onBulkShip={(ids) =>
-              dispatch({ type: "PRIZE_SHIP_BULK", prizeIds: ids, key: newKey("bship", String(ids.length)) })
+              dispatch({
+                type: "PRIZE_SHIP_BULK",
+                prizeIds: ids,
+                /* ★同じ組み合わせへの依頼は、何度届いても1回だけ成立させる */
+                key: `bship-${[...ids].sort().join(",")}`,
+              })
             }
             onBulkExchange={(ids) =>
-              dispatch({ type: "PRIZE_EXCHANGE_BULK", prizeIds: ids, key: newKey("bex", String(ids.length)) })
+              dispatch({
+                type: "PRIZE_EXCHANGE_BULK",
+                prizeIds: ids,
+                key: `bex-${[...ids].sort().join(",")}`,
+              })
             }
           />
         )}
@@ -496,7 +588,9 @@ export default function MyPage({
                   dispatch({
                     type: "PRIZE_SHIP_REQUEST",
                     prizeId: p.id,
-                    key: newKey("ship", p.id),
+                    /* ★1つの景品の発送依頼は、一生に一度きり。
+                       だから鍵は決め打ちでよい。何度送っても1回しか成立しない */
+                    key: `ship-${p.id}`,
                   });
                   setView({ name: "orders" });
                 }}
@@ -528,7 +622,8 @@ export default function MyPage({
                   dispatch({
                     type: "PRIZE_EXCHANGE",
                     prizeId: p.id,
-                    key: newKey("ex", p.id),
+                    /* ★交換も一生に一度きり。決め打ちの鍵で二重交換を止める */
+                    key: `ex-${p.id}`,
                   });
                   setView({ name: "prizes" });
                 }}
@@ -545,7 +640,13 @@ export default function MyPage({
           <SupportView
             tickets={tickets}
             onAsk={(text) =>
-              dispatch({ type: "USER_ASK", text, key: newKey("ask", String(tickets.length)) })
+              dispatch({
+                type: "USER_ASK",
+                text,
+                /* ★同じ文面を続けて送るのは、ほぼ二重送信。
+                   文面が変われば新しい鍵になる */
+                key: keysFor(`ask:${text}`)[0],
+              })
             }
             back={() => setView({ name: "home" })}
           />
@@ -575,12 +676,18 @@ export default function MyPage({
           records={drawRecords}
           kind={artKindOf(gachaOnScreen.title)}
           canAgain={maxDraws(gachaOnScreen.price, me.points, gachaOnScreen.left) >= draw.n}
-          onAgain={() => runDraw(gachaOnScreen.id, draw.n)}
+          onAgain={() => {
+            /* ★「もう一度」は、別の購入です。
+               先に鍵を捨てないと、同じ鍵で送ることになり
+               「もう処理済み」と判定されて引けません */
+            release();
+            runDraw(gachaOnScreen.id, draw.n);
+          }}
           onPrizes={() => {
-            setDraw(null);
+            finishDraw();
             setView({ name: "prizes" });
           }}
-          onClose={() => setDraw(null)}
+          onClose={finishDraw}
         />
       )}
 

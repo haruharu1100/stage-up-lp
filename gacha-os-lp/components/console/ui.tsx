@@ -521,3 +521,152 @@ export function Planned({ children }: { children: ReactNode }) {
     </div>
   );
 }
+
+/* ══════════════════════════════════════════════
+   3つの状態（空 / 読み込み中 / 失敗）
+   ══════════════════════════════════════════════ */
+
+/**
+ * 何も無いときの表示。
+ *
+ * ═══════════════════════════════════════════════
+ * ★「0件」とだけ出すことを禁止します
+ * ═══════════════════════════════════════════════
+ *
+ *   画面に「0件」とだけ出ていると、見た人はこう思います。
+ *
+ *       ・まだ届いていないのか
+ *       ・絞り込みが効きすぎているのか
+ *       ・そもそも壊れているのか
+ *
+ *   この3つは、やることが全部ちがいます。
+ *   なのに画面は、どれなのかを教えてくれません。
+ *   結局その人は、人を呼びます。「これ、合ってます？」
+ *
+ *   だから、空のときは必ず2つ書きます。
+ *
+ *       why  … なぜ空なのか（正常なのか、異常なのか）
+ *       next … 次に何をすればいいのか
+ *
+ *   ★why は省略できません。型で必須にしてあります。
+ *     「あとで書く」は、永久に書かれません。
+ *     書く場所が無ければ、書かない言い訳ができてしまいます。
+ */
+export function Empty({
+  why,
+  next,
+}: {
+  why: string;
+  next?: ReactNode;
+}) {
+  return (
+    <div className="rounded-xl border border-dashed border-silver bg-paper2 px-5 py-8 text-center">
+      <p className="text-note font-bold leading-[1.85] text-slate">{why}</p>
+      {next && (
+        <div className="mt-3 text-note leading-[1.85] text-slate3">{next}</div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * 読み込み中の表示。
+ *
+ * ★真っ白にしないこと。
+ *   真っ白は「壊れた」と見分けがつきません。
+ *   これから何が出るのか、形だけ先に見せます。
+ *
+ * ★くるくる回すだけにしないこと。
+ *   回転は「動いている」ことしか伝えません。
+ *   出てくる形が先に見えていれば、
+ *   目は届く前から置き場所を覚えられます。
+ */
+export function Skeleton({
+  rows = 3,
+  label = "読み込んでいます",
+}: {
+  rows?: number;
+  label?: string;
+}) {
+  return (
+    <div
+      className="space-y-3"
+      role="status"
+      aria-live="polite"
+      aria-busy="true"
+    >
+      {/* 目が見えない方には、形ではなく言葉で伝える */}
+      <span className="sr-only">{label}</span>
+
+      {Array.from({ length: rows }, (_, i) => (
+        <div
+          key={i}
+          className="flex items-center gap-4 rounded-xl border border-edge2 bg-paper2 px-4 py-4"
+          aria-hidden="true"
+        >
+          <div className="h-4 w-4 shrink-0 animate-pulse rounded-full bg-silver" />
+          <div className="h-4 flex-1 animate-pulse rounded bg-silver" />
+          <div className="hidden h-4 w-24 animate-pulse rounded bg-silver sm:block" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/**
+ * 失敗したときの表示。
+ *
+ * ═══════════════════════════════════════════════
+ * ★「エラーが発生しました」だけで終わらせないこと
+ * ═══════════════════════════════════════════════
+ *
+ *   その1行は、受け取った人に何もできることを残しません。
+ *   必要なのは、次の3つです。
+ *
+ *       ・何をしようとして失敗したのか（what）
+ *       ・もう一度試せるのか（onRetry）
+ *       ・直らないとき、誰に何を伝えればいいのか（code）
+ *
+ *   ★code（識別子）を必ず出すこと。
+ *     電話口で「エラーが出ました」と言われても、調べようがありません。
+ *     短い記号が1つあれば、記録から一発で引けます。
+ */
+export function ErrorBox({
+  what,
+  code,
+  onRetry,
+}: {
+  what: string;
+  code?: string;
+  onRetry?: () => void;
+}) {
+  return (
+    <div
+      className="rounded-xl border border-danger/30 bg-danger/10 px-5 py-5"
+      role="alert"
+    >
+      <p className="text-note font-bold leading-[1.85] text-danger-ink">{what}</p>
+
+      <p className="mt-2 text-note leading-[1.85] text-slate3">
+        通信が途切れたか、こちら側で処理に失敗しました。
+        お客様側の画面や、保存されているデータは変わっていません。
+      </p>
+
+      <div className="mt-4 flex flex-wrap items-center gap-3">
+        {onRetry && (
+          <Btn onClick={onRetry} kind="primary">
+            もう一度ためす
+          </Btn>
+        )}
+        {code && (
+          <span className="text-note text-slate3">
+            直らないときは、この記号をお伝えください：
+            <code className="ml-1 rounded bg-paper2 px-2 py-1 font-mono text-slate">
+              {code}
+            </code>
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}

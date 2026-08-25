@@ -115,9 +115,47 @@ export type AuditAction =
   | "IDOR_BLOCKED"
   | "RBAC_DENIED"
 
+  /**
+   * 出ていった記録と、鍵まわりの記録。
+   *
+   * ★ログアウトも残すこと。
+   *   「いつまで入っていたか」が分からないと、
+   *   事故が起きた時刻に誰が中にいたのかを言えません。
+   *
+   * ★締め出し（ACCOUNT_LOCKED）は、攻撃を受けた証拠そのものです。
+   *   何回試されて止めたのかが残ってはじめて「守れている」と言えます。
+   *
+   * ★二段階認証の入切は、必ず両方残すこと。
+   *   乗っ取りは、まず「切る」ところから始まります。
+   */
+  | "LOGOUT"
+  | "CUSTOMER_LOGOUT"
+  | "CUSTOMER_SIGNUP"
+  | "ACCOUNT_LOCKED"
+  | "MFA_ENABLED"
+  | "MFA_DISABLED"
+
   | "ROLE_CHANGE"
   | "SETTINGS_CHANGE"
-  | "DEMO_RESET";
+  | "DEMO_RESET"
+
+  /**
+   * 抽選（ガチャを1回引いた）。
+   *
+   * ★いちばんお金が動く操作を、鎖の外に置かないこと。
+   *   これまで抽選だけが監査ログに入っていませんでした。
+   *   ポイントの手動調整は残るのに、
+   *   「そのポイントが何に使われ、何が出たか」は残らない状態です。
+   *
+   *   問い合わせが来たとき、答えられるのは
+   *   「残高がこう動きました」までで、
+   *   「その回は確かに1回だけ行われ、結果はこれでした」を示せません。
+   *   後から結果を書き換えられても気づけません。
+   *
+   *   だから抽選も同じ鎖に入れます。項目が多いので data（JSON）に入れ、
+   *   形式は v2 として扱います（下の canonical を参照）。
+   */
+  | "DRAW";
 
 export type AuditEntry = {
   /** 通し番号。1から始まる */
@@ -139,6 +177,23 @@ export type AuditEntry = {
   after?: string;
   /** なぜ（ポイント操作では必須にしている） */
   reason?: string;
+  /**
+   * 記録の形式。
+   *
+   * ★省略したものは v1。既に作られた鎖の計算方法を変えないための印です。
+   *   v1 の計算方法を書き換えると、過去の記録が全部
+   *   「改ざんされている」と判定されます。だから増やすときは、
+   *   古い方を触らずに新しい版を足します。
+   */
+  version?: "v2";
+  /**
+   * 追加の項目（JSON文字列）。v2 でだけ使う。
+   *
+   * 抽選のように残す項目が多いものを、決まった欄に押し込まずに済ませるため。
+   * ★ここも必ずハッシュの計算に入れること。
+   *   入れ忘れると、この中身だけは後から自由に書き換えられます。
+   */
+  data?: string;
   /** 前の1件のハッシュ。1件目は GENESIS */
   prevHash: string;
   /** この1件のハッシュ */
@@ -158,6 +213,27 @@ export const GENESIS = "0".repeat(64);
  *   画面から入力できない制御文字を区切りに使うことで、それを防ぎます。
  */
 function canonical(e: Omit<AuditEntry, "hash">): string {
+  /* v2 … data 欄を含む形式。抽選のように項目が多い記録で使う。
+     ★v1 の並びには一切触らないこと。触ると過去の鎖が全部壊れます。 */
+  if (e.version === "v2") {
+    return [
+      "v2",
+      e.seq,
+      e.at,
+      e.actorId,
+      e.actorName,
+      e.actorRole,
+      e.action,
+      e.target,
+      e.summary,
+      e.before ?? "",
+      e.after ?? "",
+      e.reason ?? "",
+      e.data ?? "",
+      e.prevHash,
+    ].join("");
+  }
+
   return [
     "v1",
     e.seq,
@@ -173,6 +249,21 @@ function canonical(e: Omit<AuditEntry, "hash">): string {
     e.reason ?? "",
     e.prevHash,
   ].join("");
+}
+
+/**
+ * data 欄に入れる中身を、いつも同じ並びのJSONにする。
+ *
+ * ★キーの順番を必ず揃えること。
+ *   JSON.stringify はオブジェクトに入れた順で書き出します。
+ *   作る場所ごとに順番が違うと、中身が同じでもハッシュが変わり、
+ *   「書き換えていないのに改ざん扱い」が起きます。
+ */
+export function canonicalData(v: Record<string, unknown>): string {
+  const keys = Object.keys(v).sort();
+  const out: Record<string, unknown> = {};
+  for (const k of keys) out[k] = v[k];
+  return JSON.stringify(out);
 }
 
 /** 監査ログ1件分のハッシュを計算する */

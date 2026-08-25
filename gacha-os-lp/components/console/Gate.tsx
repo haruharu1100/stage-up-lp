@@ -43,9 +43,37 @@
 
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
+import { usePathname } from "next/navigation";
+import Link from "next/link";
 import type { Admin } from "@/lib/console/state";
 import { ROLE_LABEL } from "@/lib/console/state";
+import { IS_DEMO } from "@/lib/console/demo";
+import { loginHrefFor } from "@/lib/returnTo";
+
+/**
+ * いま見ている場所を、そのままログイン画面へ渡す形にする。
+ *
+ * ★「?」の後ろも一緒に持っていくこと。
+ *   未発送だけを絞り込んで見ていた人を、
+ *   ログイン後に一覧の先頭へ戻すと、また絞り込み直しになります。
+ *
+ * ★ここで useSearchParams を使わないこと。
+ *   使うと、この画面を含むページ全部が「事前に作れないページ」になり、
+ *   21枚のURLを先に作っておけなくなります（表示が毎回遅くなります）。
+ *   「?」の後ろは、画面が出たあとに足します。
+ */
+function useLoginHref(): string {
+  const path = usePathname() ?? "";
+  const [href, setHref] = useState(() => loginHrefFor(path));
+
+  useEffect(() => {
+    const query = typeof window === "undefined" ? "" : window.location.search;
+    setHref(loginHrefFor(query ? `${path}${query}` : path));
+  }, [path]);
+
+  return href;
+}
 
 /** デモの2段階認証コード。本物は、お手元のアプリに出る6桁です */
 export const DEMO_MFA_CODE = "204815";
@@ -165,6 +193,7 @@ export function Login({
   const [pw, setPw] = useState("");
   const [msg, setMsg] = useState<string | null>(null);
   const [help, setHelp] = useState<"pw" | "mfa" | null>(null);
+  const loginHref = useLoginHref();
 
   /**
    * デモ管理者。
@@ -191,7 +220,9 @@ export function Login({
       return;
     }
     setMsg(
-      "このデモは、本番のアカウント基盤につながっていません。下の「デモ管理者としてログイン」からお進みください。",
+      IS_DEMO
+        ? "このデモは、本番のアカウント基盤につながっていません。下の「デモ管理者としてログイン」からお進みください。"
+        : "この入口では受け付けていません。下の「ログイン画面へ進む」からお入りください。",
     );
     setPw("");
   };
@@ -284,33 +315,63 @@ export function Login({
         </form>
       </Panel>
 
-      {/* ══ デモの入口。本番の枠とは、はっきり分けて置く ══ */}
+      {/* ══ デモの入口。本番の枠とは、はっきり分けて置く ══
+
+          ★ここは合言葉なしで中に入れるボタンです。
+            本番に1つでも残っていたら、鍵のかかっていない裏口です。
+            出す・出さないを決めるのは lib/console/demo.ts の1か所だけ。
+            ここに条件を書き足さないこと。 */}
       <div className="mt-6">
         <div className="flex items-center gap-3">
           <span className="h-px flex-1 bg-edge" />
-          <span className="nb text-label uppercase text-slate3">デモ</span>
+          <span className="nb text-label uppercase text-slate3">
+            {IS_DEMO ? "デモ" : "本番のログイン"}
+          </span>
           <span className="h-px flex-1 bg-edge" />
         </div>
 
-        <button
-          type="button"
-          onClick={() => onLogin(demoAdmin.id)}
-          className="nb mt-4 w-full rounded-xl border border-blue-ink/25 bg-white px-5 py-3.5 text-note font-bold text-blue-ink shadow-lift transition-colors hover:bg-blue-pale"
-        >
-          デモ管理者としてログイン
-        </button>
+        {IS_DEMO ? (
+          <>
+            <button
+              type="button"
+              onClick={() => onLogin(demoAdmin.id)}
+              className="nb mt-4 w-full rounded-xl border border-blue-ink/25 bg-white px-5 py-3.5 text-note font-bold text-blue-ink shadow-lift transition-colors hover:bg-blue-pale"
+            >
+              デモ管理者としてログイン
+            </button>
 
-        <p className="mt-3 text-center text-note leading-[1.8] text-slate3">
-          入力は要りません。{ROLE_LABEL[demoAdmin.role]}として、
-          本番と同じ画面に入ります。
-        </p>
+            <p className="mt-3 text-center text-note leading-[1.8] text-slate3">
+              入力は要りません。{ROLE_LABEL[demoAdmin.role]}として、
+              本番と同じ画面に入ります。
+            </p>
+          </>
+        ) : (
+          <>
+            {/* ★戻り先を付けて渡すこと。
+                  ログインしたあと、いま開いていた画面へ戻します。
+                  ダッシュボードへ送り返すと、
+                  毎朝もう一度メニューから探し直すことになります。 */}
+            <Link
+              href={loginHref}
+              className="nb mt-4 block w-full rounded-xl bg-blue-ink px-5 py-3.5 text-center text-note font-bold text-white shadow-blue-lift transition-colors hover:bg-blue-deep"
+            >
+              ログイン画面へ進む
+            </Link>
+
+            <p className="mt-3 text-center text-note leading-[1.8] text-slate3">
+              ご契約時にお渡ししたメールアドレスとパスワードでお入りいただけます。
+            </p>
+          </>
+        )}
       </div>
 
-      <p className="mt-7 rounded-xl border border-warn/30 bg-warn/8 px-4 py-3 text-note leading-[1.85] text-warn-ink">
-        <span className="mr-2 font-bold">ご案内</span>
-        これは動作確認用のデモです。決済・メール送信・SMS送信・配送業者・本番データベースには、
-        いっさいつながっていません。担当者も会員も、すべて架空です。
-      </p>
+      {IS_DEMO && (
+        <p className="mt-7 rounded-xl border border-warn/30 bg-warn/8 px-4 py-3 text-note leading-[1.85] text-warn-ink">
+          <span className="mr-2 font-bold">ご案内</span>
+          これは動作確認用のデモです。決済・メール送信・SMS送信・配送業者・本番データベースには、
+          いっさいつながっていません。担当者も会員も、すべて架空です。
+        </p>
+      )}
     </Stage>
   );
 }
@@ -441,7 +502,11 @@ export function Mfa({
 
         {ng && (
           <p role="alert" className="mt-2 text-note font-bold text-danger-ink">
-            数字が違います。デモのコードは {DEMO_MFA_CODE} です。
+            {/* ★本番では、正解を画面に出さないこと。
+                  「違います」だけにします。 */}
+            {IS_DEMO
+              ? `数字が違います。デモのコードは ${DEMO_MFA_CODE} です。`
+              : "数字が違います。もう一度お確かめください。"}
           </p>
         )}
 
@@ -451,38 +516,47 @@ export function Mfa({
           </Primary>
         </div>
 
-        <p className="mt-4 text-note leading-[1.8] text-slate3">
-          本番では、お手元の認証アプリに出る6桁を入れます。
-          このデモのコードは
-          <span className="num mx-1.5 font-bold text-blue-ink">{DEMO_MFA_CODE}</span>
-          です。
-        </p>
+        {IS_DEMO && (
+          <p className="mt-4 text-note leading-[1.8] text-slate3">
+            本番では、お手元の認証アプリに出る6桁を入れます。
+            このデモのコードは
+            <span className="num mx-1.5 font-bold text-blue-ink">
+              {DEMO_MFA_CODE}
+            </span>
+            です。
+          </p>
+        )}
       </Panel>
 
-      <div className="mt-6">
-        <div className="flex items-center gap-3">
-          <span className="h-px flex-1 bg-edge" />
-          <span className="nb text-label uppercase text-slate3">デモ</span>
-          <span className="h-px flex-1 bg-edge" />
-        </div>
+      {/* ★「デモ認証を通過」は、6桁を通さずに中へ入れるボタンです。
+            2段階認証を置いている意味が、これ1つで消えます。
+            本番では、絶対に出しません。 */}
+      {IS_DEMO && (
+        <div className="mt-6">
+          <div className="flex items-center gap-3">
+            <span className="h-px flex-1 bg-edge" />
+            <span className="nb text-label uppercase text-slate3">デモ</span>
+            <span className="h-px flex-1 bg-edge" />
+          </div>
 
-        <button
-          type="button"
-          onClick={onOk}
-          className="nb mt-4 w-full rounded-xl border border-blue-ink/25 bg-white px-5 py-3.5 text-note font-bold text-blue-ink shadow-lift transition-colors hover:bg-blue-pale"
-        >
-          デモ認証を通過
-        </button>
-
-        <div className="mt-3 text-center">
           <button
             type="button"
-            onClick={onBack}
-            className="nb text-note font-bold text-slate3 underline underline-offset-4 hover:text-slate2"
+            onClick={onOk}
+            className="nb mt-4 w-full rounded-xl border border-blue-ink/25 bg-white px-5 py-3.5 text-note font-bold text-blue-ink shadow-lift transition-colors hover:bg-blue-pale"
           >
-            ログイン画面へ戻る
+            デモ認証を通過
           </button>
         </div>
+      )}
+
+      <div className="mt-3 text-center">
+        <button
+          type="button"
+          onClick={onBack}
+          className="nb text-note font-bold text-slate3 underline underline-offset-4 hover:text-slate2"
+        >
+          ログイン画面へ戻る
+        </button>
       </div>
     </Stage>
   );

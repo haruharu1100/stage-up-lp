@@ -18,13 +18,28 @@
  * ★既定を「デモ」にしてあること。
  *   逆（既定を本番）にすると、設定を入れ忘れたデモが
  *   本番の顔で公開されます。安全な側に倒します。
- *   本番で消したいときは、環境変数に off を入れてください。
+ *   確認用の環境で消したいときは、環境変数に off を入れてください。
  *
  *     NEXT_PUBLIC_GACHA_OS_DEMO=off
+ *
+ * ★ただし、本番では値に関わらず閉じること。
+ *   「off を入れ忘れた」だけで、本番の管理画面に
+ *   練習用の機能が並ぶ作りにはしません。
+ *   本番かどうかは Vercel が教えてくれます。
+ *
+ *   ここは、サーバー側の lib/server/demo.ts と同じ考え方です。
+ *   （あちらは DEMO_MODE、こちらは画面から読める NEXT_PUBLIC_。
+ *     画面のコードからは、サーバー専用の環境変数を読めないので、
+ *     同じ判断を2か所に置いています。判断の形は必ずそろえること。）
  *
  * ★これで「デモです」の断り書きを消さないこと。
  *   断り書きは常に出します。ここで切り替えてよいのは、
  *   デモ専用の練習機能だけです。
  */
 
-export const IS_DEMO = process.env.NEXT_PUBLIC_GACHA_OS_DEMO !== "off";
+/** 本番として公開されている場所かどうか */
+const IS_PRODUCTION_DEPLOY =
+  process.env.NEXT_PUBLIC_VERCEL_ENV === "production";
+
+export const IS_DEMO =
+  !IS_PRODUCTION_DEPLOY && process.env.NEXT_PUBLIC_GACHA_OS_DEMO !== "off";

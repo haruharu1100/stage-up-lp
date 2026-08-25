@@ -78,6 +78,7 @@ import { ROLE_LABEL, can, summary } from "@/lib/console/state";
 import {
   MENU,
   MENU_GROUPS,
+  hrefOf,
   menuItem,
   searchMenu,
   type MenuGroup,
@@ -609,11 +610,26 @@ function Row({
   onGo: (k: MenuKey) => void;
   onTogglePin: (k: MenuKey) => void;
 }) {
+  /**
+   * ★メニューは button ではなく、本物のリンク（a）にすること。
+   *
+   *   button だと、次のことが全部できません。
+   *       マウスを乗せたときに行き先のURLが出る
+   *       右クリックして「新しいタブで開く」
+   *       ⌘（Ctrl）を押しながら別タブで開く
+   *       リンクをコピーして人に送る
+   *
+   *   毎日この画面で仕事をする人は、
+   *   発送の画面と問い合わせの画面を別タブで並べて使います。
+   *   button のままだと、その使い方ができません。
+   */
+  const href = hrefOf(m.key);
+
   if (collapsed) {
     return (
       <li className="group relative">
-        <button
-          type="button"
+        <Link
+          href={href}
           onClick={() => onGo(m.key)}
           title={`${m.label}｜${m.note}`}
           aria-label={m.label}
@@ -624,7 +640,7 @@ function Row({
         >
           {active && <Accent />}
           <Icon name={m.icon} />
-        </button>
+        </Link>
 
         {/* ★畳んだときも、名前が出ること。
             印だけのメニューは、覚えるまでのあいだ使えません。
@@ -641,8 +657,8 @@ function Row({
 
   return (
     <li className="group relative">
-      <button
-        type="button"
+      <Link
+        href={href}
         onClick={() => onGo(m.key)}
         aria-label={m.label}
         title={`${m.label}｜${m.note}`}
@@ -672,7 +688,7 @@ function Row({
             権限なし
           </span>
         )}
-      </button>
+      </Link>
 
       {/* ★「よく使う」への固定。
           常に見えていると賑やかになるので、触れたときだけ出します。

@@ -85,13 +85,14 @@
 "use client";
 
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { initialState, reducer } from "@/lib/console/state";
 import { daySnapshot } from "@/lib/console/dayInLife";
 import { IS_DEMO } from "@/lib/console/demo";
 import { Login, Mfa } from "./Gate";
 import Shell from "./Shell";
 import DayInLife, { type DayRun } from "./DayInLife";
-import { menuItem, type MenuKey } from "./menu";
+import { hrefOf, menuItem, type MenuKey } from "./menu";
 import { Card, Planned, WhatIsThis } from "./ui";
 
 import Dashboard from "./screens/Dashboard";
@@ -118,10 +119,49 @@ import { SHOP_BG } from "./customer/Storefront";
 /** いま、どちら側を見ているか */
 type Side = "admin" | "customer";
 
-export default function ClientConsole() {
+/**
+ * @param initialPage  URLから決まった画面。
+ *                     ★必ずURLから受け取ること。
+ *                       ここで "dashboard" に決め打ちすると、
+ *                       /client-demo/shipping を開いた人が
+ *                       毎回ダッシュボードに飛ばされます。
+ */
+export default function ClientConsole({
+  initialPage = "dashboard",
+}: {
+  initialPage?: MenuKey;
+} = {}) {
   const [s, dispatch] = useReducer(reducer, undefined, initialState);
-  const [page, setPage] = useState<MenuKey>("dashboard");
+  const [page, setPageState] = useState<MenuKey>(initialPage);
   const [side, setSide] = useState<Side>("admin");
+  const router = useRouter();
+
+  /**
+   * 画面を移るときは、必ずURLも変えること。
+   *
+   * ★変えないと、次のことが全部できません。
+   *     更新する／戻る／進む／ブックマークする／人に送る
+   *
+   * ★replace ではなく push にすること。
+   *   replace にすると履歴が残らないので、「戻る」で前の画面に戻れません。
+   */
+  const setPage = useCallback(
+    (k: MenuKey) => {
+      setPageState(k);
+      router.push(hrefOf(k), { scroll: true });
+    },
+    [router],
+  );
+
+  /**
+   * 戻る・進むで、URLだけが変わったときに、中身も合わせる。
+   *
+   * ★これが無いと、戻るボタンでURLは変わるのに画面が変わりません。
+   *   その状態は「壊れている」と見分けがつきません。
+   */
+  useEffect(() => {
+    setPageState(initialPage);
+  }, [initialPage]);
 
   /**
    * 「1日、運営してみる」の進行。

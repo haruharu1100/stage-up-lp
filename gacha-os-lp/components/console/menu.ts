@@ -305,6 +305,79 @@ export const MENU: MenuItem[] = [
   },
 ];
 
+/* ══════════════════════════════════════════════
+   画面ごとのURL
+   ══════════════════════════════════════════════
+
+   ★21画面すべてに、それぞれのURLを持たせること。
+
+     1本のURLで中身だけ差し替えると、次のことが全部できません。
+
+         URLを直接開く／更新する／戻る／進む／
+         ブックマークする／人に送る
+
+     毎日この画面で仕事をする人にとって、
+     「昨日見ていた発送の画面をブックマークしておく」ができないのは、
+     ただ不便なのではなく、毎朝どこを開くか探し直すということです。
+
+   ★ここは Record にしてあります。
+     画面を1つ足したのにURLを書き忘れると、
+     その場で型が合わなくなって気づけます。
+     配列だと、書き忘れても静かに通ってしまいます。
+
+   ★一度公開したURLは、変えないこと。
+     ブックマークと共有リンクが、全部切れます。 */
+export const SLUG: Record<MenuKey, string> = {
+  dashboard: "dashboard",
+  operator: "ai-operator",
+  gacha: "gachas",
+  builder: "ai-builder",
+  backtest: "backtest",
+  preview: "preview",
+  products: "products",
+  customers: "customers",
+  analytics: "analytics",
+  points: "points",
+  orders: "orders",
+  shipping: "shipping",
+  support: "support",
+  rtp: "rtp",
+  market: "market",
+  fraud: "fraud",
+  security: "security",
+  audit: "audit",
+  siteEditor: "site-editor",
+  migration: "migration",
+  settings: "settings",
+};
+
+/** 管理画面の入口。ここを変えると、全URLが変わります */
+export const CONSOLE_BASE = "/client-demo";
+
+/** 画面のキーから、そのURLを作る */
+export function hrefOf(key: MenuKey): string {
+  return `${CONSOLE_BASE}/${SLUG[key]}`;
+}
+
+const BY_SLUG: Record<string, MenuKey> = Object.fromEntries(
+  (Object.keys(SLUG) as MenuKey[]).map((k) => [SLUG[k], k]),
+);
+
+/**
+ * URLの文字列から、画面のキーに戻す。知らないURLなら null。
+ *
+ * ★知らないURLを、黙って先頭の画面にしないこと。
+ *   打ち間違えた人に、何も言わずに別の画面を出すことになります。
+ *   「そのURLはありません」と出して、行き先を示します。
+ */
+export function keyOfSlug(slug: string | undefined | null): MenuKey | null {
+  if (!slug) return null;
+  return BY_SLUG[slug] ?? null;
+}
+
+/** 全画面ぶんのURL一覧（提出物と、URLの見張りで使う） */
+export const ALL_CONSOLE_HREFS: string[] = MENU.map((m) => hrefOf(m.key));
+
 export const MENU_GROUPS: MenuGroup[] = [
   "ホーム",
   "ガチャ",

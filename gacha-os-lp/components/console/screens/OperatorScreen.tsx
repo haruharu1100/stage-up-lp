@@ -27,7 +27,7 @@
 "use client";
 
 import type { ConsoleState } from "@/lib/console/state";
-import { summary, todayTodos } from "@/lib/console/state";
+import { NOW, summary, todayTodos } from "@/lib/console/state";
 import type { MenuKey } from "../menu";
 import { Badge, Btn, Card, DemoNote, WhatIsThis } from "../ui";
 
@@ -52,7 +52,7 @@ export default function OperatorScreen({
       </WhatIsThis>
 
       {/* ── 今日のまとめ ── */}
-      <Card title="今日のご報告" note={`${s.me?.name ?? ""} さん向け。2026-08-22 12:00 時点。`}>
+      <Card title="今日のご報告" note={`${s.me?.name ?? ""} さん向け。${NOW} 時点。`}>
         <div className="space-y-4">
           <p className="text-note leading-[2] text-slate2">
             いま販売中のガチャは
@@ -81,7 +81,11 @@ export default function OperatorScreen({
       {/* ── 順番 ── */}
       <Card title="この順にやるのがおすすめです" note="上から片づけると、いちばん損が小さくなります。">
         {todos.length === 0 ? (
-          <p className="text-note text-slate3">やることはありません。</p>
+          <p className="text-note leading-[1.85] text-slate3">
+            いま手を動かすものはありません。未発送・問い合わせ・相場のずれを
+            すべて確認したうえで、1件も見つからなかった状態です。
+            新しく発生すると、ここに自動で並びます。
+          </p>
         ) : (
           <ol className="space-y-3">
             {[...must, ...should].map((t, i) => (
@@ -116,20 +120,43 @@ export default function OperatorScreen({
       </Card>
 
       {/* ── 分からないもの ── */}
+      {/*
+        ★ここを決め打ちで書かないこと。
+          以前ここは「相場の取得が止まっています」と、
+          実際に止まっているかどうかに関係なく、いつも出していました。
+          止まっていないときに「止まっています」と出すのは、
+          分からないことを隠すのと同じくらい、たちが悪いです。
+          数えた結果だけを出します。
+      */}
       <Card title="いま分かっていないこと" note="推測で埋めず、そのまま出しています。">
-        <ul className="space-y-3">
-          <li className="rounded-xl border border-edge2 bg-paper2 px-4 py-3">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-note font-bold text-slate">一部の景品の相場</span>
-              <Badge>分かりません</Badge>
-            </div>
-            <p className="mt-1 text-note leading-[1.85] text-slate3">
-              相場の取得が今朝から止まっている景品があります。
-              その分の還元率は、古い値のままです。
-              ★「問題なし」とは表示しません。分からないものは分からないと出します。
-            </p>
-          </li>
-        </ul>
+        {sm.marketStale === 0 ? (
+          <p className="text-note leading-[1.85] text-slate3">
+            いまは、取れていない項目はありません。
+            見張っている景品
+            <span className="num font-bold text-slate"> {sm.marketWatched}点 </span>
+            は、すべて相場が取れています。
+          </p>
+        ) : (
+          <ul className="space-y-3">
+            <li className="rounded-xl border border-edge2 bg-paper2 px-4 py-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-note font-bold text-slate">
+                  一部の景品の相場（{sm.marketStale}点）
+                </span>
+                <Badge>分かりません</Badge>
+              </div>
+              <p className="mt-1 text-note leading-[1.85] text-slate3">
+                見張っている{sm.marketWatched}点のうち
+                <span className="num font-bold text-slate"> {sm.marketStale}点 </span>
+                は、相場が取れていません。その分の還元率は、古い値のままです。
+                ★「問題なし」とは表示しません。分からないものは分からないと出します。
+              </p>
+              <div className="mt-3">
+                <Btn onClick={() => onNav("market" as MenuKey)}>相場の画面へ</Btn>
+              </div>
+            </li>
+          </ul>
+        )}
       </Card>
 
       <DemoNote>
@@ -154,7 +181,16 @@ function why(to: string): string {
       return "ポイントの変更が承認待ちです。承認されるまで1ptも動きません。止まったままになります。";
     case "shipping":
       return "お客様をお待たせしています。件数が多いので、まとめて片づけるのが早いです。";
+    case "market":
+      return "相場が取れていない景品があります。還元率を古い値で計算しているので、いまの数字は当てになりません。先に取り直してください。";
     default:
+      /*
+       * ★ここに落ちてきたら、それは書き忘れです。
+       *   「ご確認ください。」とだけ出すと、
+       *   なぜ先にやるのかが分からないまま並びます。
+       *   todayTodos に行き先を足したら、必ずここにも足すこと。
+       *   足し忘れは tests/operatorReasons.test.ts が見つけます。
+       */
       return "ご確認ください。";
   }
 }

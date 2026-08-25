@@ -126,7 +126,10 @@ export default function SupportScreen({
         note="AIが答えたものと、対応が終わったものです。行を押すと、やり取りが右に出ます。"
       >
         {rest.length === 0 ? (
-          <p className="text-note text-slate3">ありません。</p>
+          <p className="text-note leading-[1.85] text-slate3">
+            AIが答えたものと、対応が終わったものは、まだ1件もありません。
+            問い合わせが届いて処理が済むと、ここに移ります。
+          </p>
         ) : (
           <TicketList list={rest} openId={openId} onOpen={setOpenId} />
         )}

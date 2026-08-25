@@ -178,25 +178,41 @@ export function poolOf(
   }));
 }
 
+/** 箱の状態。どの等級が何本出たか、残り何口か */
+export type BoxArgs = {
+  title: string;
+  price: number;
+  total: number;
+  left: number;
+  designedRtp: number;
+};
+
 /**
- * 1回引く。
+ * 1回引く（乱数は外から渡す）。
  *
- * drawn には、等級ごとに「もう何本出たか」を渡します。
- * 箱から札を1枚抜く方式なので、出尽くした等級は二度と出ません。
+ * ═══════════════════════════════════════════════════════
+ * ★乱数を引数にしてある理由
+ * ═══════════════════════════════════════════════════════
  *
- * @param nth  何回目の抽選か（1から）
+ *   ここに乱数の作り方を直接書くと、
+ *   「本番の抽選」と「バックテストのやり直し」で同じものを使うことになります。
+ *   この2つに求めるものは正反対です。
+ *
+ *     本番の抽選     … 次に何が出るか、誰にも分かってはいけない（予測不能）
+ *     バックテスト   … 何度やっても同じ結果になってほしい（再現可能）
+ *
+ *   だから、箱から札を選ぶ規則（このファイル）と、
+ *   札の選び方を決める乱数（呼ぶ側）を分けています。
+ *
+ *     本番       lib/server/rng.ts の pickBelow（node:crypto）
+ *     バックテスト 下の drawOnce（種から作る簡易な乱数）
+ *
+ * @param pickBelow  0以上 n未満の整数を1つ返す関数
  */
-export function drawOnce(
-  args: {
-    title: string;
-    price: number;
-    total: number;
-    left: number;
-    designedRtp: number;
-  },
+export function drawWith(
+  args: BoxArgs,
   drawn: Record<string, number>,
-  seed: number,
-  nth: number,
+  pickBelow: (n: number) => number,
 ): DrawOutcome {
   const pool = poolOf(args.title, args.price, args.total, args.designedRtp);
 
@@ -239,8 +255,7 @@ export function drawOnce(
      外さないと「どの札にも当たらなかった」場合が生まれ、
      そこへ落ちた方は、設計に無い参加ポイントを受け取ります。
      1口ぶんとはいえ、還元率は検証した値からずれます */
-  const r = rng(seed + nth * 2654435761)();
-  let pick = r * Math.max(1, args.left - kept);
+  let pick = pickBelow(Math.max(1, args.left - kept));
 
   for (const p of remainPrize) {
     if (pick < p.remain) {
@@ -266,4 +281,25 @@ export function drawOnce(
     needsShipping: false,
     points: Math.round(args.price * 0.1),
   };
+}
+
+/**
+ * 1回引く（種から作る簡易な乱数を使う）。
+ *
+ * ★これはバックテスト専用です。本番の抽選に使わないこと。
+ *   同じ種なら同じ結果になる＝外から次の結果を計算できる、ということです。
+ *   本番は lib/server/draw.ts（node:crypto）を通してください。
+ *   scripts/check-draw-rng.mjs が、本番の通り道に
+ *   この関数が紛れ込んでいないかを毎回確かめます。
+ *
+ * @param nth  何回目の抽選か（1から）
+ */
+export function drawOnce(
+  args: BoxArgs,
+  drawn: Record<string, number>,
+  seed: number,
+  nth: number,
+): DrawOutcome {
+  const r = rng(seed + nth * 2654435761);
+  return drawWith(args, drawn, (n) => Math.floor(r() * n));
 }

@@ -40,6 +40,12 @@ const ACTION_LABEL: Record<AuditAction, string> = {
   USER_ASK: "お客様からの問い合わせ",
   SUPPORT_REPLY: "問い合わせ返信",
 
+  /* 抽選。
+     ★いちばんお金が動く操作なので、必ず同じ鎖に残すこと。
+       残高がどう動いたか・何が出たか・残数がいくつになったかまで、
+       1件で追えるようにしてあります */
+  DRAW: "抽選（ガチャを1回）",
+
   /* お客様の本人確認まわり。
      ★ログインと住所変更を必ず残すこと。
        乗っ取りは、ほぼ必ず「ログイン→住所変更→高額発送」の順で進みます。
@@ -47,6 +53,18 @@ const ACTION_LABEL: Record<AuditAction, string> = {
        なぜそれが起きたのかを、誰も説明できません */
   CUSTOMER_LOGIN: "お客様のログイン",
   CUSTOMER_STEP_UP: "お客様の追加本人確認",
+
+  /* 出ていった記録と、鍵まわり。
+     ★ログアウトも残すこと。入った記録だけだと、
+       事故が起きた時刻に誰が中にいたのかを言えません。
+     ★締め出しは、攻撃を受けた証拠そのものです */
+  LOGOUT: "ログアウト",
+  CUSTOMER_LOGOUT: "お客様のログアウト",
+  CUSTOMER_SIGNUP: "お客様の新規登録",
+  ACCOUNT_LOCKED: "連続失敗による締め出し",
+  MFA_ENABLED: "2段階認証を有効化",
+  MFA_DISABLED: "2段階認証を解除",
+
   ADDRESS_UPDATE: "お届け先の変更",
   SET_CUSTOMER_AUTH: "お客様の認証方式の変更",
 

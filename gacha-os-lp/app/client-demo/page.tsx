@@ -1,8 +1,22 @@
-import type { Metadata } from "next";
-import ClientConsole from "@/components/console/ClientConsole";
-
 /**
- * 契約者向け管理画面（デモ）。
+ * 管理画面の入口（/client-demo）。
+ *
+ * ═══════════════════════════════════════════════
+ * ★ここは、もう画面を持ちません
+ * ═══════════════════════════════════════════════
+ *
+ *   21画面それぞれが、自分のURLを持つようになりました。
+ *
+ *       /client-demo/dashboard
+ *       /client-demo/shipping
+ *       /client-demo/support …
+ *
+ *   このURLは、ダッシュボードへ送るだけにします。
+ *
+ * ★このURLを消さないこと。
+ *   すでにお伝えしてあるURLです。消すと、
+ *   お渡ししたリンクが全部切れます。
+ *   中身を移したあとも、入口は残して案内し続けます。
  *
  * ═══════════════════════════════════════════════
  * ★/demo との違い
@@ -13,27 +27,11 @@ import ClientConsole from "@/components/console/ClientConsole";
  *
  *   /client-demo  … ご契約後に、毎日この画面で運営していただくことを
  *                   想定した管理画面そのもの。データだけ架空にしています。
- *                   18の画面・6段階の権限・二人承認・監査ログの検証まで、
- *                   本番と同じルールで動きます。
- *
- * ★検索には出しません。
- *   契約前後の方に、URLをお伝えして見ていただくためのページです。
- *   本物の管理画面と見た目がほとんど同じなので、
- *   検索から迷い込んだ方が本物と誤解するのを防ぎます。
- *
- * ★このページは、外に一切つながっていません。
- *   決済・メール送信・SMS送信・配送業者・本番データベース。
- *   どれも呼びません。データはブラウザの中だけに置き、
- *   ページを閉じれば消えます。
  */
 
-export const metadata: Metadata = {
-  title: "契約者向け管理画面（デモ）",
-  description:
-    "AI GACHA OS をご契約いただいた場合に、実際に毎日お使いいただく管理画面のデモです。ガチャの作成・公開前バックテスト・実還元率の監視・不正登録の確認・ポイントの二人承認・発送・問い合わせ・監査ログの検証まで、本番と同じルールで操作できます。",
-  robots: { index: false, follow: false },
-};
+import { redirect } from "next/navigation";
+import { CONSOLE_BASE, SLUG } from "@/components/console/menu";
 
 export default function Page() {
-  return <ClientConsole />;
+  redirect(`${CONSOLE_BASE}/${SLUG.dashboard}`);
 }

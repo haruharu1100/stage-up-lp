@@ -29,8 +29,14 @@
  *   区別し、画面にもその区別を出します。
  */
 
-import { appendAudit, type AuditEntry, type AuditAction } from "./audit";
+import {
+  appendAudit,
+  canonicalData,
+  type AuditEntry,
+  type AuditAction,
+} from "./audit";
 import { assess, SIGNALS, type Assessment, type Hit, type SignalKey } from "./fraud";
+import { marketSummary } from "./market";
 import { drawOnce, seedOf, type DrawRecord } from "./draw";
 import { buildSpec } from "./spec";
 import { aiAnswer } from "./support";
@@ -1524,8 +1530,25 @@ export type ConsoleAction =
   /** 監査ログの改ざん検知を実演するための操作。デモ専用 */
   | { type: "TAMPER_AUDIT"; seq: number };
 
-/** いまの時刻。デモなので固定文字（サーバーとブラウザで食い違わせない） */
-const NOW = "2026-08-22 12:00";
+/**
+ * いまの時刻。デモなので固定文字（サーバーとブラウザで食い違わせない）
+ *
+ * ★画面側に、この文字を書き写さないこと。
+ *   同じ日時を2か所に書くと、片方だけ直したときに
+ *   画面の中で日時が食い違います。
+ *   見ている人には、どちらが本当か分かりません。
+ */
+export const NOW = "2026-08-22 12:00";
+
+/**
+ * 画面の中だけで動かしているときの、会社ID と版。
+ *
+ * ★監査ログの項目を、本番（lib/server/draw.ts）とそろえるために置いています。
+ *   ここが「demo」であることは、記録そのものに書かれます。
+ *   後から記録を見た人が、本番の記録と取り違えないようにするためです。
+ */
+const DEMO_TENANT_ID = "demo-tenant";
+const DEMO_SERVER_VERSION = "gacha-os-demo/in-browser";
 
 /**
  * 検証に使う種（seed）。
@@ -1569,9 +1592,16 @@ function log(
      *   後から時系列で追えなくなり、突き合わせに何時間もかかります。
      */
     actor?: { id: string; name: string; role: string };
+    /**
+     * 決まった欄に収まらない項目（抽選など）。
+     *
+     * ★渡したものは必ずハッシュの計算に入ります（形式 v2）。
+     *   後から中身だけ書き換えれば、監査ログの検証で見つかります。
+     */
+    data?: Record<string, unknown>;
   } = {},
 ): AuditEntry[] {
-  const { actor, ...rest } = extra;
+  const { actor, data, ...rest } = extra;
   const me = s.me;
   return appendAudit(s.audit, {
     at: NOW,
@@ -1581,6 +1611,7 @@ function log(
     action,
     target,
     summary,
+    ...(data ? { version: "v2" as const, data: canonicalData(data) } : {}),
     ...rest,
   });
 }
@@ -2547,6 +2578,51 @@ function core(s: ConsoleState, a: ConsoleAction): Draft {
         prizes,
         ledger,
         draws: [...s.draws, record],
+        /**
+         * ★抽選も監査ログに残すこと。
+         *
+         *   以前はここだけが鎖の外にありました。
+         *   ポイントの手動調整は残るのに、そのポイントが何に使われ、
+         *   何が出たのかは残らない状態です。
+         *   いちばんお金が動く操作が、いちばん記録が薄いという逆転が起きていました。
+         *
+         *   残す項目は、本番（lib/server/draw.ts）と同じにしてあります。
+         *   画面用と本番用で項目が違うと、突き合わせができません。
+         */
+        audit: log(
+          s,
+          "DRAW",
+          g.id,
+          `${g.title} を1回引き、${out.grade === "-" ? "はずれ" : `${out.grade}賞`}（${out.name}）が出ました。`,
+          {
+            actor: asCustomer(u),
+            before: `残高 ${u.points.toLocaleString()}pt ／ 残り ${g.left.toLocaleString()}口`,
+            after: `残高 ${balanceAfter.toLocaleString()}pt ／ 残り ${leftAfter.toLocaleString()}口`,
+            data: {
+              draw_id: record.id,
+              tenant_id: DEMO_TENANT_ID,
+              user_id: u.id,
+              gacha_id: g.id,
+              request_id: a.key,
+              idempotency_key: a.key,
+              play_count: nth,
+              point_before: u.points,
+              point_spent: g.price,
+              point_returned: out.points,
+              point_after: balanceAfter,
+              prize_id: out.needsShipping ? prizes[0].id : null,
+              prize_rank: out.grade,
+              prize_name: out.name,
+              prize_value: out.value,
+              last_one: Boolean(out.lastOne),
+              remaining_before: g.left,
+              remaining_after: leftAfter,
+              rng_source: "demo/seeded",
+              server_version: DEMO_SERVER_VERSION,
+              timestamp: NOW,
+            },
+          },
+        ),
         flash: {
           kind: out.needsShipping ? "ok" : "warn",
           text: out.needsShipping
@@ -3222,17 +3298,79 @@ export function todayTodos(s: ConsoleState): TodoItem[] {
   const stepUp = s.signups.filter((x) => !x.handled && x.risk.level === "MEDIUM").length;
   if (stepUp > 0) out.push({ urgency: "SHOULD", label: "追加認証を求めた登録", count: stepUp, to: "fraud" });
 
+  /**
+   * 相場が取れていない景品。
+   *
+   * ★これを「やること」に出すこと。
+   *   相場ウォッチの画面を開いた人にしか伝わらないと、
+   *   朝いちばんにダッシュボードだけ見る人には一生届きません。
+   *   古い値で計算された還元率を見て「大丈夫そうだ」と判断されます。
+   *
+   * ★これは「値上がり」ではありません。「分からない」です。
+   *   赤（要対応）ではなく黄（確認）にしてあるのは、
+   *   まだ損が出ていると決まったわけではないからです。
+   *   ただし、放っておけば、いつか損として出てきます。
+   */
+  const stale = marketSummary().stale.length;
+  if (stale > 0) {
+    out.push({
+      urgency: "SHOULD",
+      label: "相場が取れていない景品（古い値で計算しています）",
+      count: stale,
+      to: "market",
+    });
+  }
+
   return out;
 }
 
-/** ダッシュボードの数字 */
+/** その日ぶんだけを取り出す（at は "YYYY-MM-DD HH:MM" の形） */
+function drawsOn(s: ConsoleState, day: string) {
+  return s.draws.filter((d) => d.at.slice(0, 10) === day);
+}
+
+/** いまの日付（YYYY-MM-DD）。デモでは固定です */
+export const TODAY = NOW.slice(0, 10);
+
+/**
+ * ダッシュボードの数字。
+ *
+ * ═══════════════════════════════════════════════
+ * ★ここに、決め打ちの数字を書かないこと
+ * ═══════════════════════════════════════════════
+ *
+ *   以前ここには
+ *
+ *       本日の売上   … 12万8千円台
+ *       本日のプレイ … 400回台
+ *       会員数       … 2千8百人台
+ *
+ *   が、コードに直に書いてありました。見た目は立派でした。
+ *
+ *   ★ここに、そのときの数字をそのまま書き写さないこと。
+ *     書き写すと、決め打ちを見張る検査
+ *     （tests/noFixedNumbers.test.ts）が、この説明文に反応します。
+ *   ですが、お客様の画面で1回引いても、この数字は動きません。
+ *
+ *   動かない数字は、経営の判断に使えません。
+ *   使えない数字を大きく出すのは、無いよりも悪いことです。
+ *   「今日の売上」と書いてある以上、今日の売上でなければいけません。
+ *
+ *   ★0 になることを、こわがらないこと。
+ *     まだ1回も引かれていない日は、0 が正しい答えです。
+ *     0 を隠すために数字を作ると、
+ *     その瞬間に、この画面全部が信用できなくなります。
+ */
 export function summary(s: ConsoleState) {
   const published = s.gachas.filter((g) => g.status === "PUBLISHED");
+  const today = drawsOn(s, TODAY);
+  const market = marketSummary();
   return {
-    revenueToday: 128_400,
+    /* 本日の売上 ＝ 今日引かれた回数ぶんの、1回あたりの料金の合計（1円 = 1pt） */
+    revenueToday: today.reduce((a, d) => a + d.price, 0),
     revenueMonth: published.reduce((a, g) => a + g.revenue, 0),
-    playsToday: 412,
-    users: 2_847,
+    playsToday: today.length,
+    users: s.users.length,
     publishedCount: published.length,
     rtpAlerts: published.filter((g) => g.realRtp >= 105 || g.marketRtp >= 110).length,
     unshipped: s.orders.filter((o) => ORDER_TODO.includes(o.status)).length,
@@ -3240,19 +3378,41 @@ export function summary(s: ConsoleState) {
     fraudReview: s.signups.filter((x) => !x.handled && x.risk.level !== "LOW").length,
     /* お客様が、まだ受け取り方法を選んでいない商品 */
     unchosenPrizes: s.prizes.filter((p) => p.status === "UNCHOSEN").length,
+
+    /* ── システムの状態を出すための材料 ──
+         ★「正常です」と書くための材料が無いものは、ここに入れないこと。
+           材料が無いのに正常と書けてしまう作りにはしません。 */
+    /** 安全のために止めた要求の数 */
+    blockedRequests: s.securityEvents.length,
+    /** 相場が取れていない景品の数 */
+    marketStale: market.stale.length,
+    /** 見張っている景品の数 */
+    marketWatched: market.watched,
   };
 }
 
-/** FRAUD CENTER の集計。項目11の表示に使う */
+/**
+ * FRAUD CENTER の集計。
+ *
+ * ★以前ここには「総数は千二百件台」といった決め打ちが並んでいました。
+ *   どこにも使われていないのに、数字だけが立派に置いてありました。
+ *   使われていない決め打ちは、いつか誰かが画面に出します。
+ *   出た瞬間、動かない数字が「実績」として並びます。
+ *   だから、数えられるものだけを返します。
+ */
 export function fraudCounts(s: ConsoleState) {
   const all = [...s.signups];
+  const level = (lv: Assessment["level"]) =>
+    all.filter((x) => x.risk.level === lv).length;
+
   return {
-    total: 1_284,
-    normal: 1_241,
-    stepUp: 31,
-    review: 10,
-    block: 2,
-    /** デモで実際に手を動かせる分 */
+    /** 見ている登録の総数 */
+    total: all.length,
+    normal: level("LOW"),
+    stepUp: level("MEDIUM"),
+    review: level("HIGH"),
+    block: level("BLOCK"),
+    /** まだ運営が手を付けていない分 */
     pending: all.filter((x) => !x.handled),
   };
 }

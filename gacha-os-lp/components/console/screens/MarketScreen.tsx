@@ -21,34 +21,20 @@
 "use client";
 
 import { Badge, Card, DemoNote, KV, RowCard, Rows, Stat, Table, Td, WhatIsThis } from "../ui";
-
-type Row = {
-  name: string;
-  base: number;
-  now: number;
-  /** 相場をいつ取れたか。取れていないなら null */
-  at: string | null;
-  usedIn: string;
-};
-
-/** ★すべて架空の景品です */
-const ROWS: Row[] = [
-  { name: "デモ景品A（S賞相当）", base: 42_000, now: 58_000, at: "2026-08-22 11:30", usedIn: "腕時計 ハイエンド 3000" },
-  { name: "デモ景品B（A賞相当）", base: 18_000, now: 21_400, at: "2026-08-22 11:30", usedIn: "腕時計 ハイエンド 3000" },
-  { name: "デモ景品C（S賞相当）", base: 26_000, now: 27_100, at: "2026-08-22 11:30", usedIn: "プレミアムカード 500" },
-  { name: "デモ景品D（A賞相当）", base: 9_800, now: 9_600, at: "2026-08-22 11:30", usedIn: "プレミアムカード 500" },
-  { name: "デモ景品E（S賞相当）", base: 31_000, now: 31_000, at: null, usedIn: "スニーカー BOX 1000" },
-  { name: "デモ景品F（B賞相当）", base: 4_200, now: 4_050, at: "2026-08-22 11:30", usedIn: "スニーカー BOX 1000" },
-];
-
-function rate(r: Row): number {
-  return ((r.now - r.base) / r.base) * 100;
-}
+/* ★一覧をここに書き戻さないこと。
+     ダッシュボードも同じ一覧を見ています。
+     ここに別の一覧を置くと、2つの画面が違うことを言い始めます。 */
+import {
+  MARKET_ROWS as ROWS,
+  marketRate as rate,
+  marketSummary,
+} from "@/lib/console/market";
 
 export default function MarketScreen() {
-  const up = ROWS.filter((r) => r.at && rate(r) >= 10);
-  const stale = ROWS.filter((r) => r.at === null);
-  const affected = new Set(up.map((r) => r.usedIn));
+  const m = marketSummary(ROWS);
+  const up = m.spiked;
+  const stale = m.stale;
+  const affected = m.affected;
 
   return (
     <>
