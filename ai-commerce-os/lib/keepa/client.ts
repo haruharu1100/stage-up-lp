@@ -26,8 +26,11 @@ import {
   KEEPA_ALLOWED_ENDPOINTS,
   KEEPA_ALLOWED_HTTP_METHOD,
   KEEPA_API_KEY_ENV,
+  KEEPA_DISCOVERY_COSTS,
+  KEEPA_DISCOVERY_PER_PAGE,
   KEEPA_DOMAIN_JP,
   KEEPA_MAX_ASINS_PER_RUN,
+  KEEPA_MAX_DISCOVERY_TOKENS,
   redactKeepaKey,
   type KeepaEndpoint,
 } from './policy';
@@ -317,4 +320,145 @@ export async function fetchKeepaTokenStatus(): Promise<KeepaFetchResult> {
       errorJa: `Keepaへ接続できませんでした：${redactKeepaKey(String((e as Error)?.message ?? e), key)}`,
     };
   }
+}
+
+/* ================================================================
+ * 候補ASINを探す（Product Finder）
+ * ================================================================ */
+
+/**
+ * 【Keepa自身に、条件に合う実在ASINを挙げてもらう】
+ *
+ * ご本人の指示（2026-08-25）：
+ *   「Keepa公式APIで正式に取得可能な Product Finder / Best Sellers / Deals / 商品検索 等から
+ *     ASIN候補を取得できる場合、Keepa自身をASIN候補の発見元として使用可能な設計に
+ *     してください。これなら、人間がAmazon画面から毎回コピーする必要がありません。」
+ *
+ * ここがこの機能のいちばんの利点である。
+ * **AIが文字列としてASINを作る余地が、設計から消える。**
+ * 返ってくるのは Keepa のデータベースに実在する商品のASINだけなので、
+ * 「実在しないASINから、実在するが別の商品のページを開いてしまう」事故が起こりようがない。
+ *
+ * ------------------------------------------------------------------
+ * 【読み取りだけ】
+ *
+ * `/query` は条件に合うASINの一覧（`asinList`）と件数（`totalResults`）を返すだけ。
+ * 買う・出品する・Keepa側の設定を変える、はできない。
+ *
+ * ------------------------------------------------------------------
+ * 【枠を使いすぎない】
+ *
+ * 公式の実額は「1回10 ＋ 結果100件ごとに1」。最小ページ（50件）で投げるので **11**。
+ * 見積もりが `KEEPA_MAX_DISCOVERY_TOKENS`（15）を超えるときは、**投げる前に止める**。
+ * `stats=1` は付けない（追加30。今回の判断に要らない）。
+ */
+export type KeepaFinderSelection = Record<string, unknown>;
+
+export type KeepaDiscoveryResult = KeepaFetchResult & {
+  /** 見つかったASIN（Keepaが実在を保証している） */
+  asinList: string[];
+  /** 条件に合った総数（の見積もり） */
+  totalResults: number | null;
+};
+
+export async function discoverAsinCandidates(
+  selection: KeepaFinderSelection,
+): Promise<KeepaDiscoveryResult> {
+  const perPage = Number((selection as any)?.perPage ?? KEEPA_DISCOVERY_PER_PAGE);
+  const estimatedCost =
+    KEEPA_DISCOVERY_COSTS.QUERY_BASE
+    + Math.max(1, Math.ceil(perPage / 100)) * KEEPA_DISCOVERY_COSTS.QUERY_PER_100_ASINS;
+
+  const params: Record<string, string> = {
+    domain: String(KEEPA_DOMAIN_JP),
+    // ★selection（検索条件）は params に入れる。キーは入っていないので保存してよい。
+    selection: JSON.stringify(selection),
+  };
+
+  const request: KeepaRequestSummary = {
+    endpoint: 'query',
+    method: KEEPA_ALLOWED_HTTP_METHOD,
+    params,
+    requestedAt: new Date().toISOString(),
+  };
+
+  const emptyTokens: KeepaTokenInfo = {
+    tokensLeft: null, tokensConsumed: null, refillRate: null,
+    refillIn: null, tokenFlowReduction: null, processingTimeInMs: null,
+  };
+
+  const fail = (errorJa: string): KeepaDiscoveryResult => ({
+    ok: false, httpStatus: null, raw: null, tokens: emptyTokens, request,
+    errorJa, estimatedCost, asinList: [], totalResults: null,
+  });
+
+  // ---- 投げる前に止める --------------------------------------
+  if (estimatedCost > KEEPA_MAX_DISCOVERY_TOKENS) {
+    return fail(
+      `候補探しの見積もりが${estimatedCost}で、上限（${KEEPA_MAX_DISCOVERY_TOKENS}）を超えています。`
+      + '件数を減らしてください。上限を上げるにはコードを書き換えてコミットする必要があります。',
+    );
+  }
+  if ((selection as any)?.stats) {
+    return fail('候補探しに stats は付けません（追加で30の枠を使うため）。');
+  }
+  if (!(KEEPA_ALLOWED_ENDPOINTS as readonly string[]).includes(request.endpoint)) {
+    return fail(`このコネクタは ${request.endpoint} を呼びません。`);
+  }
+
+  const key = readKey();
+  if (!key) return fail(keepaKeyStatus().messageJa);
+
+  // ★キー入りのURLは、この関数の外へ一切出さない（ルール85）。
+  const url = new URL('query', KEEPA_BASE);
+  url.searchParams.set('key', key);
+  for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
+
+  let res: Response;
+  try {
+    res = await fetch(url.toString(), {
+      method: KEEPA_ALLOWED_HTTP_METHOD,
+      headers: { 'Accept-Encoding': 'gzip', Accept: 'application/json' },
+    });
+  } catch (e) {
+    return fail(`Keepaへ接続できませんでした：${redactKeepaKey(String((e as Error)?.message ?? e), key)}`);
+  }
+
+  let body: any = null;
+  let text = '';
+  try {
+    text = await res.text();
+    body = JSON.parse(text);
+  } catch {
+    return {
+      ok: false, httpStatus: res.status, raw: null, tokens: emptyTokens, request,
+      estimatedCost, asinList: [], totalResults: null,
+      errorJa: `応答をJSONとして読み取れませんでした（HTTP ${res.status}）。`
+        + `先頭200文字：${redactKeepaKey(text.slice(0, 200), key)}`,
+    };
+  }
+
+  const tokens = extractTokens(body);
+
+  if (!res.ok) {
+    const detail = body?.error?.message ?? body?.error ?? '';
+    return {
+      ok: false, httpStatus: res.status, raw: body, tokens, request, estimatedCost,
+      asinList: [], totalResults: null,
+      errorJa: `Keepaがエラーを返しました（HTTP ${res.status}）：${redactKeepaKey(String(detail), key)}`,
+    };
+  }
+
+  // ★ここで返すASINは、Keepaのデータベースに実在するものだけ。
+  //   形が10桁でないものは、念のため落とす（読み違いを通さない）。
+  const asinList = (Array.isArray(body?.asinList) ? body.asinList : [])
+    .map((a: unknown) => String(a ?? '').trim().toUpperCase())
+    .filter((a: string) => isValidAsin(a));
+
+  return {
+    ok: true, httpStatus: res.status, raw: body, tokens, request, estimatedCost,
+    asinList,
+    totalResults: numOrNull(body?.totalResults),
+    errorJa: null,
+  };
 }

@@ -30,7 +30,9 @@
     "keepa:token": "tsx scripts/keepa-token.ts",
     "keepa:one": "tsx scripts/keepa-one.ts",
     "keepa:audit": "tsx scripts/keepa-audit.ts",
-    "test:phase3-10": "tsx scripts/test-phase3-10.ts"
+    "keepa:discover": "tsx scripts/keepa-discover.ts",
+    "test:phase3-10": "tsx scripts/test-phase3-10.ts",
+    "test:phase3-11": "tsx scripts/test-phase3-11.ts"
   },
   "dependencies": {
     "@libsql/client": "^0.14.0",

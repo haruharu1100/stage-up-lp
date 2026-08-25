@@ -66,8 +66,10 @@
 → 正規Connectorへの一本化（取得手段7段階・状態10種）と「購入ページを開く」導線（`/buy`）
 → 市場ごとの「許可」を8項目に分けて管理・13接続先のCONNECTOR PRIORITY SCORE（`/venues`）
 → 売れるかテスト（`/sellability`）＝人が Keepa 等で見た数字を書き写し、売れているかだけを判定
-→ **KEEPA_READ_ONLY（`/keepa`）＝Keepa APIから1回1件だけ読み取り、保存→正規化→売れるか判定→
-枠（Token）の消費確認までを社内検証としてやる** まで。
+→ KEEPA_READ_ONLY（`/keepa`）＝Keepa APIから1回1件だけ読み取り、保存→正規化→売れるか判定→
+枠（Token）の消費確認までを社内検証としてやる
+→ **ASINの出どころ管理（Phase 3.11）＝ASINを「どこから手に入れたか」を必ず記録し、
+出どころが確かなときだけAmazon公式形式の商品ページURLを組み立てる** まで。
 実購入・実出品・実決済・実発送・外部サイトへの自動ログイン・自動値上げ・無許可スクレイピングは
 **コードごと存在しない**（フラグOFFではなく未実装）。
 所有していない商品の先行販売もしない（`ownership_state` は全件 `NOT_OWNED`）。
@@ -79,26 +81,42 @@
   → `15_Phase3.8実装記録.md` → `18_Phase3.9実装記録.md`
   → `19_Connector再調査_市場別スコア.md`
   → `20_Keepa公式API調査.md`
-  → **`21_Phase3.10実装記録_KEEPA_READ_ONLY.md`**（`../事業Vault/AI Commerce OS/`）
+  → `21_Phase3.10実装記録_KEEPA_READ_ONLY.md`
+  → **`23_Phase3.11実装記録_ASINの出どころ管理.md`**（`../事業Vault/AI Commerce OS/`）
 - 受け入れテスト：`npm run test:phase1`（66項目）／`npm run test:phase2`（50項目）／
   `npm run test:phase3`（113項目）／`npm run test:phase3-5`（112項目）／
   `npm run test:phase3-6`（107項目）／`npm run test:phase3-7`（122項目）／
   `npm run test:phase3-8`（128項目）／`npm run test:phase3-9`（113項目）／
   `npm run test:phase3-9b`（147項目）／`npm run test:phase3-9d`（86項目）／
-  **`npm run test:phase3-10`（309項目）**。**合計1,353項目。**
-  **仕様を変えたら11個とも通す。1つだけ通して満足しない。あわせて `npm run build` も通す**
+  `npm run test:phase3-10`（308項目）／**`npm run test:phase3-11`（179項目）**。
+  **合計1,531項目。**
+  **仕様を変えたら12個とも通す。1つだけ通して満足しない。あわせて `npm run build` も通す**
   （画面のバンドルエラーはテストでは見つからない）。
 - **受け入れテストが自分の安全装置を落としたときは、安全装置ではなくテストの方を直す。**
   ただし直してよいのは「**テストが事実を取り違えているとき**」だけ。
-  実際に2件あった（ログイン情報入りURLを弾く `u.password` を「ログイン情報を扱っている」と誤判定／
-  `lib/autopurchase.ts` に引用したユーザー指示の原文に反応）。**直した理由は必ずコメントに残す。**
+  **実際に4件あった。4件とも同じ形の間違いで、「歯止めをコメントで説明したら、
+  その説明文にテストが反応して落ちた」というものである。**
+  （①ログイン情報入りURLを弾く `u.password` を「ログイン情報を扱っている」と誤判定
+  ②`lib/autopurchase.ts` に引用したユーザー指示の原文に反応
+  ③`lib/keepa/policy.ts` の「`process.env` では変えられない」という説明文に反応
+  ④`scripts/keepa-one.ts` の「`--source=` と書くだけで名乗れてしまう」という説明文に反応）。
+  → **ソース全文を正規表現で検査するときは、先にコメントを取り除く。**
+  **直した理由は必ずコメントに残す。**
 - 仕入候補と「購入ページを開く」：画面は **`/buy`**。ボタンは**新しいタブで開くだけ**。
   **2026-08-20 時点で、開ける候補0件・押した回数0件・`CONNECTED` の市場0件。**
 - Keepa から1件だけ取る：**`npm run keepa:one -- --asin=（10桁のASIN）`**。画面は **`/keepa`**（見るだけ）。
   取ったあとは必ず止まり、5件へは自動で進まない。
   **投げる前に必ず `npm run keepa:token` を通す**（キーが有効かと残り枠だけを確かめる。
   Keepa の `token` は**枠を消費しない**ので、間違ったキーで枠を溶かす事故が消える）。
-  **2026-08-25 に初回取得を実施（1件・実消費1）。** 残り1,199／補充20（毎分）／上限1,200。
+  **2026-08-25 に初回取得を実施（B0978NB1VQ・1件・実消費1）。**
+  **同日、第2実測を実施（0747554560・1件・実消費1）。** 残り1,188／補充20（毎分）／上限1,200。
+- **候補ASINを1件だけ正式に選ぶ：`npm run keepa:discover`**（`-- --dry` で通信ゼロの下見）。
+  Keepa の商品検索（Product Finder）を1回だけ呼び、返ってきた実在ASINの中から1件を選ぶ。
+  **枠は11（10＋結果100件ごとに1）。`KEEPA_MAX_DISCOVERY_TOKENS = 15` を超える条件は投げない。**
+  この枠は `keepa_token_usage.purpose = 'DISCOVERY'` として、商品取得（`PRODUCT_FETCH`）と
+  **別に記録する**（1商品あたりの実費がぼやけるため混ぜない）。
+  返ってきた候補は**全部** `keepa_asin_candidates` に保存し、選んだ1件に `chosen = 1` を立てる。
+  **1件も返らなくても条件を緩めない**（緩めれば必ず何か返るが、それは条件を満たした商品ではない）。
 - **取ったデータの検算：`npm run keepa:audit`**（一覧）／`npm run keepa:audit -- --asin=（ASIN）`（1件）。
   **Keepa へ一切通信せず、枠を1つも使わず、APIキーも読まない。**
   使うのは `keepa_raw_responses` に保存済みの生の応答だけ。
@@ -499,6 +517,44 @@ Phase 3.10（KEEPA_READ_ONLY・2026-08-25）で追加。**ここも崩さない�
       **それ以外で値が入っているのに読めていないものは、全部こちらの不具合とみなす。**
     - **鮮度の線（`KEEPA_FRESHNESS_MAX_DAYS = 30`）を、目の前のデータが古いからといって動かさない。**
       「今回だけ35日にすれば判定できる」は、判定できたことにしているだけである。
+
+Phase 3.11（ASINの出どころ管理・2026-08-25）で追加。**ここも崩さない。**
+
+98. **ルール55を2つに割る。危ないのは「URLを組み立てること」ではなく「材料が確かめられていないこと」。**
+    ご本人の言葉：「以前の『AIにURLを作らせない』ルールと、『正式に取得したASINからAmazon公式形式の
+    URLを決定論的に生成』は分けて扱ってください。」
+    - **①AIが商品ページのURLを推測で作る → いまも禁止**（`AI_GENERATED` という選択肢を作らない）。
+    - **②実在が確かめられたASINから公式形式（`https://www.amazon.co.jp/dp/{ASIN}`）で組み立てる → 別の話。**
+      記録する出どころは `AMAZON_OFFICIAL_ASIN_PATTERN` で、**AI生成URLとして扱わない**。
+    組み立ててよいのは **`lib/keepa/asinsource.ts` 1ファイルだけ**（他のファイルに `amazon.co.jp/dp` を書かない）。
+    そこには**7つの検査**があり、**全部通らなければURLを作らない**（`resolveAmazonProductUrl`）。
+    ルール74（SP-APIはURLを返さないので組み立てない）は**この改訂で置き換わった**。
+    組み立て自体は禁止ではなく、**出どころが `KEEPA_API` などで確信度が `VERIFIED_EXISTS` のときだけ**行う。
+99. **ASINには必ず「出どころ」を付けて回す。**
+    `asin_source` / `asin_verified_at` / `asin_confidence` / `asin_verification_method_ja` の4点セット。
+    使ってよい出どころは4つ（`KEEPA_API` / `OFFICIAL_AMAZON_SOURCE` / `AUTHORIZED_DATA_FEED` / `HUMAN_INPUT`）。
+    **禁止は3つ（`AI_GUESS` / `STRING_GENERATION` / `UNVERIFIED_SEARCH_RESULT`）。**
+    禁止の出どころが付いたASINは、**通信する前に止まる**（枠も1つも使わない）。
+    確信度は3段階（`VERIFIED_EXISTS` / `REPORTED` / `UNVERIFIED`）で、**「たぶん実在」を作らない**。
+    **出どころはコマンドの引数で受け取らない。** `--source=KEEPA_API` と書けてしまうと、
+    どんな文字列でも「Keepaが確認した」と名乗れる。`keepa-one.ts` は
+    `lookupAsinProvenance()` で `keepa_asin_candidates` から引くだけで、引き直すときも許可リストを通す。
+100. **`URL_VALID` と `PRODUCT_MATCH_CONFIRMED` を最後まで別の値として持つ。**
+    ご本人の言葉：「URLが正しくても商品一致が低ければ購入候補にしません。」
+    2つがそろって初めて `PURCHASE_URL_AVAILABLE = true`（`purchaseGate`）。
+    **`runOneAsin` は `product_match_confirmed` に常に 0 を入れる。**
+    機械が自分で「同じ商品だ」と決めない（ルール48の続き）。
+101. **購入導線には、実際にOfferがあるChild ASINを使う。**
+    `variation_role` は4種（`STANDALONE` / `CHILD` / `PARENT` / `UNKNOWN`）。
+    **`PARENT` と `UNKNOWN` にはURLを作らない**（`PURCHASE_URL_AVAILABLE = false`）。
+    親ASINのページはサイズ・色を選ぶ前の画面なので、そこへ人を送ると別の枝を買わせる事故になる。
+    判定は `productType === 5` と `parentAsin` の有無で行い、**分からないものを `STANDALONE` に寄せない**。
+102. **候補選定で大量の枠を使わない。使った枠は用途を分けて記録する。**
+    ご本人の言葉：「候補探しのために何百・何千ASINもKeepaへ投げないでください。」
+    Product Finder は **10 ＋（結果100件ごとに1）**で、`perPage` の最小が50なので **1回11**。
+    `stats=1` を付けると **+30** になるので**付けない**。Best Sellers（50）は使わない。
+    `keepa_token_usage.purpose` を `DISCOVERY` / `PRODUCT_FETCH` に分け、
+    **1商品あたりの実費（現在6.5）を出せる形にしておく**。合算すると「1件1枠」に見えてしまう。
 
 ## ポート
 

@@ -92,9 +92,58 @@ export const KEEPA_FORBIDDEN_ACTIONS_JA = [
  * 禁止リストではなく許可リストにしてある理由：
  * 禁止リストは「知らないうちに増えた新しい書き込み機能」を素通しする。
  * 許可リストなら、知らないものは全部止まる（Fail Closed）。
+ *
+ * ★2026-08-25 に `query`（Product Finder）を追加した。
+ *   これは**読み取り専用の検索**で、条件に合うASINの一覧（`asinList`）だけを返す。
+ *   商品を買う・出品する・Keepa側の設定を変える、といった書き込みは一切しない。
+ *   追加した理由は「ASINを人が毎回Amazonで探さなくてよくする」ため（ご本人の指示・2026-08-25）。
+ *   これで **Keepa自身が実在を保証したASIN** だけを使えるようになり、
+ *   AIが文字列としてASINを作る余地が完全に消える。
  */
-export const KEEPA_ALLOWED_ENDPOINTS = ['product', 'token'] as const;
+export const KEEPA_ALLOWED_ENDPOINTS = ['product', 'token', 'query'] as const;
 export type KeepaEndpoint = (typeof KEEPA_ALLOWED_ENDPOINTS)[number];
+
+/**
+ * 【候補探しの枠（Token）— 公式ドキュメントの実額】
+ *
+ * ★2026-08-25 に `https://keepa.com/api-docs/` を実際に開いて確認した実額。推測ではない。
+ *   原文（Overview の Endpoint 一覧）：
+ *     Product Search  /search?type=product … "10 per result page (up to 10 results)"
+ *     Browsing Deals  /deal               … "5 per 150 deals"
+ *     Best Sellers    /bestsellers        … "50 per requested best sellers list"
+ *   Product Finder（`/query`）は個別ページに記載：
+ *     "Base cost: 10 tokens per request + 1 token per 100 ASINs in the result set."
+ *     （`stats=1` を付けると追加で30＋。**付けない。**）
+ *
+ * つまり `/query` を1回・50件で投げると **10 + 1 = 11**。
+ * Best Sellers（50）の5分の1以下で、しかも条件を細かく指定できるので
+ * 「条件に合わない候補を取り直す」無駄が出ない。**候補探しはこれ1本に絞る。**
+ *
+ * ★`stats=1` を既定でオンにしない。30トークンは候補1件を選ぶには高すぎるうえ、
+ *   集計値は今回の判断に要らない。
+ */
+export const KEEPA_DISCOVERY_COSTS = {
+  /** Product Finder の基本料 */
+  QUERY_BASE: 10,
+  /** 結果100件ごとに1 */
+  QUERY_PER_100_ASINS: 1,
+  /** `stats=1` を付けた場合の追加（**付けない**） */
+  QUERY_STATS_EXTRA: 30,
+} as const;
+
+/**
+ * 候補探しに使ってよい枠の上限（1回あたり）。
+ *
+ * ご本人の指示（2026-08-25）：
+ *   「候補探しのために何百・何千ASINもKeepaへ投げないでください。
+ *     既存データ・正式検索機能等を使い、最小Tokenで1候補を選ぶこと。」
+ *
+ * ★これも `process.env` では変えられない。増やすにはコードを書き換えてコミットする（ルール84）。
+ */
+export const KEEPA_MAX_DISCOVERY_TOKENS = 15;
+
+/** Product Finder の1ページあたり件数。公式の最小値が50なので、最小で投げる。 */
+export const KEEPA_DISCOVERY_PER_PAGE = 50;
 
 /**
  * HTTPメソッドは GET だけ。
@@ -233,21 +282,35 @@ export const KEEPA_COUNTS_AS_REAL_MARKET = false;
  * ================================================================ */
 
 /**
- * 【商品ページのURLは取れない】
+ * 【商品ページのURL】（★2026-08-25 に方針を分けた・ユーザー指示5・6）
  *
- * Keepa の商品データにはASINは入っているが、Amazonの商品ページURLは入っていない。
- * ASINから組み立てれば作れてしまうが、**それはルール55違反なのでやらない**。
- * SP-API のときとまったく同じ結論である（ルール74）。
+ * Keepa の商品データに、Amazonの商品ページURLは入っていない。これは今も同じである。
  *
- * よって `/buy` の「購入ページを開く」導線は、Keepaを入れても自動では作れない。
- * できないことを、できることにしない。
+ * 以前はここに「ASINから組み立てるのはルール55違反なのでやらない」と書いていた。
+ * しかしご本人の指示で、次の2つは**別の話**として扱うことになった。
+ *
+ *   ①AIが商品ページのURLを**推測で作る**            → 今も禁止。変えない。
+ *   ②**実在が確かめられたASIN**から、Amazon公式の形式で組み立てる → 別の話。
+ *
+ * ご本人の言葉：「以前の『AIにURLを作らせない』ルールと、『正式に取得したASINから
+ * Amazon公式形式のURLを決定論的に生成』は分けて扱ってください。」
+ *
+ * 危ないのは「組み立てること」ではなく「**材料が確かめられていないこと**」である。
+ * ASINが Keepa の検索結果に実在したのなら、材料は確かめられている。
+ *
+ * ★組み立ての可否そのものは、この定数ではなく `lib/keepa/asinsource.ts` の
+ *   `resolveAmazonProductUrl()` が7つの条件で1件ずつ判定する。
+ *   「全部だめ」か「全部よい」の1つのスイッチにすると、
+ *   確かめていないASINまで一緒に通ってしまうためである。
  */
-export const KEEPA_PRODUCT_URL_AVAILABLE = false;
+export const KEEPA_PRODUCT_URL_IN_RESPONSE = false;
 
 export const KEEPA_PRODUCT_URL_NOTE_JA =
-  'Keepa は商品ページのURLを返しません。ASINから組み立てれば作れますが、'
-  + 'それは「AIはURLを作らない」という決まりに反するのでやりません。'
-  + '購入ページへのリンクは、人が貼ったURLだけを使います。';
+  'Keepa は商品ページのURLを返しません。'
+  + 'ただし、Keepa が実在を返したASINについては、Amazon公式の形式（/dp/ASIN）で'
+  + 'URLを組み立てます。これはAIが推測で作ったURLではありません。'
+  + 'それでも「リンクが正しいこと」と「この商品が仕入れたい商品と同じであること」は別なので、'
+  + '人が確かめるまで購入候補にはしません。';
 
 /**
  * 【7日間の下落回数は存在しない】

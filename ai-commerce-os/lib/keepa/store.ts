@@ -19,7 +19,7 @@ import {
   KEEPA_USE_SCOPE,
   redactKeepaKey,
 } from './policy';
-import type { KeepaFetchResult } from './client';
+import type { KeepaDiscoveryResult, KeepaFetchResult } from './client';
 import {
   extractWindowSignals,
   judgeTrend,
@@ -45,6 +45,15 @@ import {
   type AsinMatchSelection,
   type LocalProduct,
 } from './match';
+import {
+  isAllowedAsinSource,
+  judgeVariationRole,
+  purchaseGate,
+  resolveAmazonProductUrl,
+  type AsinProvenance,
+  type AsinVariationRole,
+  type ProductUrlResolution,
+} from './asinsource';
 
 /* ================================================================
  * 1. 生の応答を残す
@@ -76,9 +85,22 @@ export async function saveRawResponse(r: KeepaFetchResult, asin: string | null):
  * 2. 枠の使用を記録する
  * ================================================================ */
 
-export async function recordTokenUsage(r: KeepaFetchResult, asinCount: number): Promise<void> {
+/**
+ * 枠の使用を記録する。
+ *
+ * ★`purpose` を必ず分ける（ユーザー指示4）。
+ *   候補ASINを探すのに使った枠（DISCOVERY）と、商品1件を取るのに使った枠
+ *   （PRODUCT_FETCH）を同じ数字にすると、「商品1件あたりいくらか」が
+ *   永久に分からなくなる。分からなければ、増やしてよいかも決められない。
+ */
+export async function recordTokenUsage(
+  r: KeepaFetchResult,
+  asinCount: number,
+  purpose: 'DISCOVERY' | 'PRODUCT_FETCH' = 'PRODUCT_FETCH',
+): Promise<void> {
   await insert('keepa_token_usage', {
     endpoint: r.request.endpoint,
+    purpose,
     asin_count: asinCount,
     estimated_cost: r.estimatedCost,
     tokens_consumed: r.tokens.tokensConsumed,
@@ -110,6 +132,20 @@ export async function saveNormalizedProduct(
     trend: TrendResult;
     sellability: { windowDays: number | null; result: SellabilityResult | null };
     rawResponseId?: number;
+    /**
+     * ASINの出どころ（Phase 3.11・ユーザー指示1）。
+     * 渡されなかった場合は「確かめられていない」として保存する。
+     * ★既定を「確認済み」に寄せない。寄せた瞬間、何も確認していない行が
+     *   「押してよいURL」を持ってしまう。
+     */
+    provenance?: AsinProvenance | null;
+    /** 人が「同じ商品だ」と確かめたか（ユーザー指示7）。既定は false。 */
+    productMatchConfirmed?: boolean;
+    /**
+     * Keepa の生の商品データ。親ASIN／子ASINの判定に使う（ユーザー指示8）。
+     * 渡されなければ判定できないので 'UNKNOWN' になり、購入導線は出ない。
+     */
+    rawProduct?: any;
   },
 ): Promise<SaveProductResult> {
   /*
@@ -130,6 +166,25 @@ export async function saveNormalizedProduct(
     return { saved: false, duplicate: false, messageJa: 'ASINが取れていないため保存しませんでした。' };
   }
 
+  /*
+   * 【ASINの出どころと、商品ページURL】（ユーザー指示1・5〜9）
+   *
+   * URLは「作れるかどうか」ではなく「**材料が確かめられているかどうか**」で決まる。
+   * resolveAmazonProductUrl は7つの条件を全部満たしたときだけURLを返し、
+   * 1つでも欠ければ null を返す（Fail Closed）。
+   */
+  const provenance: AsinProvenance = extras.provenance ?? {
+    asin: n.asin,
+    asinSource: 'HUMAN_INPUT',
+    asinVerifiedAt: null,
+    asinConfidence: 'UNVERIFIED',
+    verificationMethodJa: '出どころの記録がありません。',
+    domainId: KEEPA_DOMAIN_JP,
+  };
+  const variationRole = judgeVariationRole(extras.rawProduct ?? null);
+  const urlResolution = resolveAmazonProductUrl(provenance, variationRole);
+  const gate = purchaseGate(urlResolution, extras.productMatchConfirmed === true);
+
   const res = await run(
     `INSERT OR IGNORE INTO keepa_products (
       asin, domain_id, title, brand, model, part_number, ean_list, upc_list, color,
@@ -145,8 +200,11 @@ export async function saveNormalizedProduct(
       competition_score, competition_status, trend_verdict, trend_reason,
       sellability_window_days, sellability_verdict, sellability_reason,
       estimated_monthly_sales, per_seller_monthly, estimated_turnover_days,
-      raw_response_id, counts_as_real_market, use_scope, created_at
-    ) VALUES (${new Array(56).fill('?').join(', ')})`,
+      raw_response_id, counts_as_real_market, use_scope, created_at,
+      asin_source, asin_verified_at, asin_confidence, asin_verification_method_ja,
+      variation_role, product_url, product_url_source,
+      url_valid, product_match_confirmed, purchase_url_available
+    ) VALUES (${new Array(66).fill('?').join(', ')})`,
     [
       n.asin, KEEPA_DOMAIN_JP, n.title, n.brand, n.model, n.partNumber,
       n.eanList.length ? JSON.stringify(n.eanList) : null,
@@ -177,6 +235,18 @@ export async function saveNormalizedProduct(
       KEEPA_COUNTS_AS_REAL_MARKET ? 1 : 0,
       KEEPA_USE_SCOPE,
       nowIso(),
+
+      // ---- ASINの出どころと、商品ページURL（Phase 3.11） ----
+      provenance.asinSource,
+      provenance.asinVerifiedAt,
+      provenance.asinConfidence,
+      provenance.verificationMethodJa,
+      variationRole,
+      urlResolution.url,
+      urlResolution.urlSource,
+      urlResolution.urlValid ? 1 : 0,
+      gate.productMatchConfirmed ? 1 : 0,
+      gate.purchaseUrlAvailable ? 1 : 0,
     ],
   );
 
@@ -435,6 +505,14 @@ export type OneAsinReport = {
   unknownFieldsJa: string[];
   /** 値がおかしいので人に見せるべきもの */
   anomaliesJa: string[];
+
+  /* ---- Phase 3.11：ASINの出どころと商品ページURL ---- */
+  /** このASINをどこから受け取ったか。報告に必ず載せる（ユーザー指示11）。 */
+  provenance: AsinProvenance;
+  /** 親ASINか子ASINか（ユーザー指示8）。分からなければ 'UNKNOWN'。 */
+  variationRole: AsinVariationRole;
+  /** 商品ページURLを作ってよいかの判定結果（ユーザー指示5・6）。 */
+  urlResolution: ProductUrlResolution;
 };
 
 /**
@@ -507,9 +585,30 @@ export async function runOneAsin(
   deps: {
     fetchProducts: (asins: string[]) => Promise<KeepaFetchResult>;
   },
-  opt: { windowDays: 30 | 90 | 180 } = { windowDays: 90 },
+  opt: {
+    windowDays: 30 | 90 | 180;
+    /**
+     * このASINをどこから受け取ったか（Phase 3.11・ユーザー指示1）。
+     * 渡されなければ「確かめられていない」として扱う。
+     */
+    provenance?: AsinProvenance | null;
+  } = { windowDays: 90 },
 ): Promise<OneAsinReport> {
   const asin = String(asinInput ?? '').trim().toUpperCase();
+
+  /*
+   * 【出どころの既定値】
+   * 何も渡されなかったときに「人が入れた・確認済み」と決めつけない。
+   * 決めつけると、出どころ不明のASINが黙って購入導線に乗る。
+   */
+  const provenance: AsinProvenance = opt.provenance ?? {
+    asin,
+    asinSource: 'HUMAN_INPUT',
+    asinVerifiedAt: null,
+    asinConfidence: 'UNVERIFIED',
+    verificationMethodJa: '出どころの記録がありません。',
+    domainId: KEEPA_DOMAIN_JP,
+  };
 
   const emptyReport = async (stoppedReasonJa: string, gateReasonJa = ''): Promise<OneAsinReport> => ({
     ok: false,
@@ -529,7 +628,23 @@ export async function runOneAsin(
     monitor: await tokenMonitor(),
     unknownFieldsJa: [],
     anomaliesJa: [],
+    provenance,
+    variationRole: 'UNKNOWN',
+    urlResolution: resolveAmazonProductUrl(provenance, 'UNKNOWN'),
   });
+
+  /*
+   * 【禁止された出どころは、通信する前に止める】（ユーザー指示1）
+   * AIが作った文字列・裏の取れていない検索結果は、枠を使う価値が無い。
+   * それどころか、実在しないASINへ問い合わせて「データが無い」と記録が残ると、
+   * あとで「市場にデータが無い商品」と読み違えてしまう。
+   */
+  if (!isAllowedAsinSource(provenance.asinSource)) {
+    return emptyReport(
+      `ASINの出どころが許可されていません（${provenance.asinSource}）。`
+      + 'AIが推測で作ったASIN・裏の取れていない検索結果は使いません。通信せずに止めました。',
+    );
+  }
 
   // ---- 取り直しの間隔 ----------------------------------------
   const soon = await tooSoonToRefetch(asin);
@@ -597,12 +712,30 @@ export async function runOneAsin(
     await saveMatchCandidates(localProduct, match);
   }
 
+  /*
+   * ---- 親ASIN／子ASIN と 商品ページURL（ユーザー指示6・8） ----
+   *
+   * ★ここで初めてURLが決まる。**取得後**にしか決まらないのが要点である。
+   *   取得前は「その商品が実在するか」も「親か子か」も分からないので、
+   *   URLを先に作ってしまうと、実在しないページを人に押させることになる。
+   */
+  const variationRole = judgeVariationRole(products[0]);
+  const urlResolution = resolveAmazonProductUrl(provenance, variationRole);
+
   // ---- 保存 ---------------------------------------------------
   const save = await saveNormalizedProduct(n, {
     competition,
     trend,
     sellability,
     rawResponseId: rawId,
+    provenance,
+    rawProduct: products[0],
+    /*
+     * ★ここは常に false。（ユーザー指示7）
+     *   「URLが正しい」と「この商品が仕入れたい商品と同じ」は別の話で、
+     *   後者は人が確かめるまで真にならない。機械が勝手に真にしない。
+     */
+    productMatchConfirmed: false,
   });
 
   return {
@@ -623,6 +756,159 @@ export async function runOneAsin(
     monitor: await tokenMonitor(),
     unknownFieldsJa: n.unknownFields,
     anomaliesJa,
+    provenance,
+    variationRole,
+    urlResolution,
+  };
+}
+
+/* ================================================================
+ * 7b. 候補ASINを正式な情報源から1件だけ選ぶ（Phase 3.11）
+ *
+ * ユーザー指示2：「Keepa自身から候補ASINを選べる場合は利用してください。
+ *                 …Keepa → 実在ASIN → Keepa商品取得 となり、
+ *                 人間がAmazon画面から毎回コピーする必要がありません。」
+ * ユーザー指示4：「候補探しのために何百・何千ASINもKeepaへ投げないでください。」
+ * ================================================================ */
+
+export type DiscoverReport = {
+  ok: boolean;
+  stoppedReasonJa: string | null;
+  /** 返ってきた候補ASIN（全部残す。選ばれなかったものも消さない） */
+  candidates: string[];
+  /** そのうち選んだ1件 */
+  chosen: string | null;
+  chosenProvenance: AsinProvenance | null;
+  totalResults: number | null;
+  estimatedCost: number;
+  tokensConsumed: number | null;
+  tokensLeft: number | null;
+};
+
+/**
+ * 候補ASINを1回だけ探す。
+ *
+ * ★この関数は**一覧を返すだけ**で、商品データは取らない。
+ *   商品データを取るのは `runOneAsin` の仕事で、そこで別に1枠使う。
+ *   ここで一気に取れるようにすると、「候補探し」の名前で大量取得ができてしまう。
+ *
+ * ★選ぶのは「一覧の先頭1件」。点数付けをして選ばない。
+ *   点数付けをすると、その点数の根拠を検算できないまま「AIが選んだ」ことになる。
+ *   並び順はKeepaへ渡した条件（selection）で決まっており、条件は記録に残る。
+ */
+export async function discoverOneCandidate(
+  selection: Record<string, unknown>,
+  deps: { discover: (s: Record<string, unknown>) => Promise<KeepaDiscoveryResult> },
+): Promise<DiscoverReport> {
+  const res = await deps.discover(selection);
+
+  // 失敗しても記録は残す。使った枠は返ってこないので、記録だけが残る資産である。
+  const rawId = await saveRawResponse(res, null);
+  await recordTokenUsage(res, res.asinList.length, 'DISCOVERY');
+
+  if (!res.ok) {
+    return {
+      ok: false,
+      stoppedReasonJa: res.errorJa ?? '候補の検索に失敗しました。',
+      candidates: [],
+      chosen: null,
+      chosenProvenance: null,
+      totalResults: null,
+      estimatedCost: res.estimatedCost,
+      tokensConsumed: res.tokens.tokensConsumed,
+      tokensLeft: res.tokens.tokensLeft,
+    };
+  }
+
+  const verifiedAt = res.request.requestedAt;
+  const chosen = res.asinList[0] ?? null;
+
+  // 候補は全部残す（選ばれなかったものも）。あとで選び方を検算するため。
+  for (let i = 0; i < res.asinList.length; i += 1) {
+    await insert('keepa_asin_candidates', {
+      asin: res.asinList[i],
+      domain_id: KEEPA_DOMAIN_JP,
+      /*
+       * 出どころは KEEPA_API。
+       * ★これは「Keepaが実際に返した一覧に入っていた」という意味であって、
+       *   AIが作った文字列ではない。ここが今回の設計の要点である。
+       */
+      asin_source: 'KEEPA_API',
+      asin_confidence: 'VERIFIED_EXISTS',
+      asin_verified_at: verifiedAt,
+      verification_method_ja:
+        'Keepaの商品検索（Product Finder）が返した実在ASINの一覧に含まれていた。',
+      discovery_endpoint: res.request.endpoint,
+      selection_json: JSON.stringify(selection),
+      rank_in_result: i + 1,
+      total_results: res.totalResults,
+      chosen: res.asinList[i] === chosen ? 1 : 0,
+      raw_response_id: rawId ?? null,
+      created_at: nowIso(),
+    });
+  }
+
+  if (!chosen) {
+    return {
+      ok: false,
+      stoppedReasonJa:
+        '条件に合う商品が1件も返りませんでした。条件を緩めずに、そのまま止めます。'
+        + '（通したくて条件を緩めるのは、判定ではありません）',
+      candidates: [],
+      chosen: null,
+      chosenProvenance: null,
+      totalResults: res.totalResults,
+      estimatedCost: res.estimatedCost,
+      tokensConsumed: res.tokens.tokensConsumed,
+      tokensLeft: res.tokens.tokensLeft,
+    };
+  }
+
+  return {
+    ok: true,
+    stoppedReasonJa: null,
+    candidates: res.asinList,
+    chosen,
+    chosenProvenance: {
+      asin: chosen,
+      asinSource: 'KEEPA_API',
+      asinVerifiedAt: verifiedAt,
+      asinConfidence: 'VERIFIED_EXISTS',
+      verificationMethodJa:
+        'Keepaの商品検索（Product Finder）が返した実在ASINの一覧に含まれていた。',
+      domainId: KEEPA_DOMAIN_JP,
+    },
+    totalResults: res.totalResults,
+    estimatedCost: res.estimatedCost,
+    tokensConsumed: res.tokens.tokensConsumed,
+    tokensLeft: res.tokens.tokensLeft,
+  };
+}
+
+/**
+ * 保存済みの候補一覧から、そのASINの出どころを引く。
+ *
+ * ★出どころを**コマンドの引数で受け取らない**のが要点である。
+ *   引数で受け取れるようにすると、`--source=KEEPA_API` と書くだけで
+ *   どんな文字列でも「Keepaが返した実在ASIN」を名乗れてしまう。
+ *   出どころは、実際に保存された記録からしか出てこないようにする。
+ */
+export async function lookupAsinProvenance(asin: string): Promise<AsinProvenance | null> {
+  const row = await one(
+    `SELECT * FROM keepa_asin_candidates
+      WHERE asin = ? AND domain_id = ?
+      ORDER BY id DESC LIMIT 1`,
+    [String(asin ?? '').trim().toUpperCase(), KEEPA_DOMAIN_JP],
+  );
+  if (!row) return null;
+  if (!isAllowedAsinSource(String(row.asin_source))) return null;
+  return {
+    asin: String(row.asin),
+    asinSource: String(row.asin_source) as AsinProvenance['asinSource'],
+    asinVerifiedAt: row.asin_verified_at ?? null,
+    asinConfidence: String(row.asin_confidence) as AsinProvenance['asinConfidence'],
+    verificationMethodJa: String(row.verification_method_ja ?? ''),
+    domainId: Number(row.domain_id),
   };
 }
 

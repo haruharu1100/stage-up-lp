@@ -1034,6 +1034,57 @@ export const ADD_COLUMNS: string[] = [
   `ALTER TABLE keepa_products ADD COLUMN estimated_monthly_sales REAL`,
   `ALTER TABLE keepa_products ADD COLUMN per_seller_monthly REAL`,
   `ALTER TABLE keepa_products ADD COLUMN estimated_turnover_days REAL`,
+
+  /* ---- Phase 3.11（ASINの出どころ管理・2026-08-25／ユーザー指示1・5〜9）----
+   *
+   * 【なぜ「出どころ」を列で持つのか】
+   * ASIN は10文字の英数字である。**それらしい文字列はいくらでも作れてしまう。**
+   * だから「ASINが正しい形をしている」ことは、何の保証にもならない。
+   * 保証になるのは「**その文字列を、どこから受け取ったか**」だけである。
+   *
+   * 許可する出どころ … KEEPA_API / OFFICIAL_AMAZON_SOURCE /
+   *                    AUTHORIZED_DATA_FEED / HUMAN_INPUT
+   * 禁止する出どころ … AI_GUESS / STRING_GENERATION / UNVERIFIED_SEARCH_RESULT
+   *
+   * 既定値は 'HUMAN_INPUT' ではなく **'UNVERIFIED'（確信度）** の側で止める。
+   * 何も書かずに入った行が、そのまま「押してよいURL」に化けないようにするため。
+   */
+  `ALTER TABLE keepa_products ADD COLUMN asin_source TEXT NOT NULL DEFAULT 'HUMAN_INPUT'`,
+  `ALTER TABLE keepa_products ADD COLUMN asin_verified_at TEXT`,
+  `ALTER TABLE keepa_products ADD COLUMN asin_confidence TEXT NOT NULL DEFAULT 'UNVERIFIED'`,
+  `ALTER TABLE keepa_products ADD COLUMN asin_verification_method_ja TEXT`,
+
+  /*
+   * 【親ASIN／子ASIN】（ユーザー指示8）
+   * 色やサイズをまとめる「親」は、実際には売っていないことがある。
+   * 親のページを買い物導線に出すと、人は別の色を買ってしまう。
+   * 分からないときは 'UNKNOWN' のまま置く（'STANDALONE' に寄せない）。
+   */
+  `ALTER TABLE keepa_products ADD COLUMN variation_role TEXT NOT NULL DEFAULT 'UNKNOWN'`,
+
+  /*
+   * 【商品ページURL】（ユーザー指示5・6・7・9）
+   * url_source は 'AMAZON_OFFICIAL_ASIN_PATTERN'。**'AI_GENERATED' ではない。**
+   *
+   * ★ url_valid（リンクが正しい）と product_match_confirmed（同じ商品だと確かめた）は
+   *   完全に別の列にしてある。1つにまとめると、リンクが開けただけで
+   *   「仕入れてよい商品」に化ける。purchase_url_available は**両方が真のときだけ**真。
+   */
+  `ALTER TABLE keepa_products ADD COLUMN product_url TEXT`,
+  `ALTER TABLE keepa_products ADD COLUMN product_url_source TEXT`,
+  `ALTER TABLE keepa_products ADD COLUMN url_valid INTEGER NOT NULL DEFAULT 0`,
+  `ALTER TABLE keepa_products ADD COLUMN product_match_confirmed INTEGER NOT NULL DEFAULT 0`,
+  `ALTER TABLE keepa_products ADD COLUMN purchase_url_available INTEGER NOT NULL DEFAULT 0`,
+
+  /*
+   * 【枠の使い道を分ける】（ユーザー指示4）
+   * ユーザー指示：「候補選定に使用したTokenも別記録してください。」
+   * 候補を探すのに使った枠と、商品1件を取るのに使った枠を同じ数字にすると、
+   * 「1件あたりいくらか」が永久に分からなくなる。
+   *   DISCOVERY … 候補ASINを選ぶために使った分
+   *   PRODUCT_FETCH … 商品データを取るために使った分
+   */
+  `ALTER TABLE keepa_token_usage ADD COLUMN purpose TEXT NOT NULL DEFAULT 'PRODUCT_FETCH'`,
 ];
 
 /**
@@ -1412,10 +1463,11 @@ export const SCHEMA_SELLABILITY: string[] = [
  * Keepa の公式APIから**読むだけ**の接続。購入・出品・注文・決済の表は作らない
  * （ルール46。実行系を思わせる名前の表を作らない）。
  *
- * 【4つの表の役割】
+ * 【表の役割】
  *   keepa_raw_responses  … 返ってきたJSONをそのまま残す（追記専用）
  *   keepa_products       … そこから当社の形に直したもの（1商品×1更新時刻＝1行）
  *   keepa_token_usage    … 1回の呼び出しごとに、いくつ枠を使ったか
+ *   keepa_asin_candidates… 候補ASINの一覧と、その出どころ（Phase 3.11で追加）
  *   asin_match_candidates… 手元の商品とASINの一致度（複数候補を残す）
  * ================================================================================ */
 export const SCHEMA_KEEPA: string[] = [
@@ -1453,9 +1505,18 @@ export const SCHEMA_KEEPA: string[] = [
    * 更新時刻が進んでいれば新しい行を積む。**上書きはしない**（Phase 3 のルール19と同じ考え方。
    * 上書きすると「先月より鈍った」という変化が消える）。
    *
-   * ★ product_url の列を作っていない。
-   *   Keepa は商品ページURLを返さないし、ASINから組み立てるのはルール55違反だから。
-   *   「あとで埋めよう」と空の列を作ると、いつか誰かが組み立てて埋める。
+   * ★2026-08-25 更新（ユーザー指示5・6）。
+   *   以前ここには「product_url の列を作っていない（ASINから組み立てるのはルール55違反）」
+   *   と書いていた。これは2つの別々の話を1つにしていた。
+   *
+   *     ①AIが商品ページのURLを**推測で作る** → 今も禁止。変えない。
+   *     ②**実在が確かめられたASIN**から Amazon 公式の形式で URL を組み立てる → 別の話。
+   *
+   *   危ないのは「組み立てること」ではなく「**材料が確かめられていないこと**」である。
+   *   そこで、URLの列を作るかわりに、**材料の出どころ**（asin_source /
+   *   asin_verified_at / asin_confidence）を必ず一緒に持つことにした。
+   *   出どころが確かめられていない行では、URLは作られない（Fail Closed）。
+   *   列は Phase 3.11 の ADD_COLUMNS 側で足している。
    */
   `CREATE TABLE IF NOT EXISTS keepa_products (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1559,6 +1620,38 @@ export const SCHEMA_KEEPA: string[] = [
     created_at TEXT NOT NULL
   )`,
   `CREATE INDEX IF NOT EXISTS idx_keepa_token_day ON keepa_token_usage(day)`,
+
+  /*
+   * 【候補ASINの控え】（Phase 3.11・ユーザー指示1・2・4）
+   *
+   * Keepa の検索（Product Finder）は、条件に合う**実在するASINの一覧**だけを返す。
+   * 返ってきた一覧をここへそのまま残しておく理由は2つある。
+   *
+   *   ①「このASINはどこから来たのか」を、あとから何度でも示せるようにするため。
+   *     出どころを残していなければ、1週間後には自分でも区別できなくなる。
+   *   ②同じ候補探しを2回やらないため。枠（Token）は有限で、消えたら戻らない。
+   *
+   * ★選ばれなかった候補も消さずに残す。
+   *   選んだ1件だけを残すと「なぜそれを選んだか」が検算できない。
+   */
+  `CREATE TABLE IF NOT EXISTS keepa_asin_candidates (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    asin TEXT NOT NULL,
+    domain_id INTEGER NOT NULL,
+    asin_source TEXT NOT NULL,
+    asin_confidence TEXT NOT NULL,
+    asin_verified_at TEXT,
+    verification_method_ja TEXT,
+    discovery_endpoint TEXT NOT NULL,
+    selection_json TEXT NOT NULL,
+    rank_in_result INTEGER,
+    total_results INTEGER,
+    chosen INTEGER NOT NULL DEFAULT 0,
+    raw_response_id INTEGER,
+    created_at TEXT NOT NULL,
+    UNIQUE(asin, domain_id, created_at)
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_keepa_cand_asin ON keepa_asin_candidates(asin)`,
 
   /*
    * 【一致の候補（複数残す）】

@@ -709,7 +709,7 @@ export const VENUE_RESEARCH: VenueResearch[] = [
      *   storage    6 … 保存はOK（11(2)）だが、利用権が契約期間中に限られ（11(1)）、
      *                  正規化の線引き（U1）と契約終了後の扱い（U2）が未確認なので満点にしない
      *   auto       9 … 正式な機械アクセス手段。ただし 20トークン/分の上限がある
-     *   url        0 … 商品ページURLは返らない（KEEPA_PRODUCT_URL_AVAILABLE = false）
+     *   url        0 … 商品ページURLは返らない（KEEPA_PRODUCT_URL_IN_RESPONSE = false）
      *   entry      9 … 審査なし・契約済み。ただし月額課金が前提なので満点にはしない
      * ★Gate（商用・社内・価格判断・保存）は通る。だが**Gateは「候補にしてよい」までの話**で、
      *   本番自動運用の許可ではない。実際の使用範囲は KEEPA_USE_SCOPE が別に縛っている。

@@ -44,7 +44,7 @@ import {
   KEEPA_JPY_DIVISOR,
   KEEPA_MAX_ASINS_PER_RUN,
   KEEPA_OPEN_QUESTIONS,
-  KEEPA_PRODUCT_URL_AVAILABLE,
+  KEEPA_PRODUCT_URL_IN_RESPONSE,
   KEEPA_RANK_DROP_WINDOWS,
   KEEPA_STAGES,
   KEEPA_USE_SCOPE,
@@ -279,7 +279,18 @@ async function main(): Promise<void> {
     check('S1の上限は1件', KEEPA_STAGES[0].maxAsins === 1);
 
     const policy = readFile('lib/keepa/policy.ts');
-    check('上限に環境変数を使っていない', !/process\.env/.test(policy));
+    /*
+     * ★2026-08-25 修正（ルール64：テストの方が事実を取り違えていた）。
+     *   すぐ下の client.ts と**まったく同じ取り違え**が policy.ts でも起きた。
+     *   「増やすには `process.env` ではなくコードを書き換える」と歯止めを
+     *   **コメントで説明した**ら、その説明文に反応して不合格になった。
+     *   歯止めは生きているので、コメント行を除いた実コードだけを見る形へ直した。
+     */
+    const policyCode = policy
+      .split('\n')
+      .filter((line) => !/^\s*(\/\/|\/\*|\*)/.test(line))
+      .join('\n');
+    check('上限に環境変数を使っていない', !/process\.env/.test(policyCode));
     const client = readFile('lib/keepa/client.ts');
     // 【テストの方を直した理由】（ルール64）
     // 元は client.ts 全文の `process.env` を数えて1個であることを求めていたが、
@@ -306,9 +317,21 @@ async function main(): Promise<void> {
   {
     const client = readFile('lib/keepa/client.ts');
     const store = readFile('lib/keepa/store.ts');
-    check('呼べるエンドポイントは2つだけ', KEEPA_ALLOWED_ENDPOINTS.length === 2);
-    check('product と token のみ',
+    /*
+     * ★2026-08-25 修正（ルール64：テストの方が事実を取り違えていた）。
+     *   ここは「呼べる先は2つだけ」と**個数**で書いていた。
+     *   しかし守りたいのは個数ではなく「**書き込みをする先が1つも無い**」ことである。
+     *   候補ASINを正式に選ぶための `query`（Product Finder）を足したので、
+     *   個数ではなく**中身が全部読み取り専用か**で判定する形に直した。
+     */
+    const READ_ONLY_KEEPA_ENDPOINTS = ['product', 'token', 'query'];
+    check('呼べるエンドポイントは読み取り専用のものだけ',
+      KEEPA_ALLOWED_ENDPOINTS.every((e) => READ_ONLY_KEEPA_ENDPOINTS.includes(e)),
+      KEEPA_ALLOWED_ENDPOINTS.join(' / '));
+    check('product と token を含む',
       KEEPA_ALLOWED_ENDPOINTS.includes('product') && KEEPA_ALLOWED_ENDPOINTS.includes('token'));
+    check('候補探しの query（一覧を返すだけ）を含む',
+      KEEPA_ALLOWED_ENDPOINTS.includes('query'));
     check('HTTPメソッドはGETのみ', KEEPA_ALLOWED_HTTP_METHOD === 'GET');
     check('POSTを書いていない', !/method:\s*'POST'/.test(client) && !/"POST"/.test(client));
     check('PUT/DELETEを書いていない', !/method:\s*'(PUT|DELETE)'/.test(client));
@@ -369,25 +392,37 @@ async function main(): Promise<void> {
   }
 
   // ================================================================
-  console.log('\n[4. URLを組み立てない（ルール55）]');
+  console.log('\n[4. URLは「推測で作らない」（ルール55）]');
   {
-    for (const f of ['lib/keepa/policy.ts', 'lib/keepa/normalize.ts', 'lib/keepa/store.ts', 'lib/keepa/match.ts']) {
+    /*
+     * ★2026-08-25 修正（ルール64：テストの方が事実を取り違えていた）。
+     *
+     *   ここは元々「どのファイルにも amazon.co.jp/dp を書かない」と、
+     *   **組み立てること自体**を禁じていた。
+     *   しかしご本人の指示で、次の2つは別の話として扱うことになった。
+     *
+     *     ①AIが商品ページのURLを**推測で作る**              → 今も禁止
+     *     ②実在が確かめられたASINから公式形式で組み立てる    → 別の話
+     *
+     *   ご本人の言葉：「以前の『AIにURLを作らせない』ルールと、『正式に取得した
+     *   ASINからAmazon公式形式のURLを決定論的に生成』は分けて扱ってください。」
+     *
+     *   そこで検査を「書いてあるか」から「**条件を満たさないと作らないか**」へ変えた。
+     *   組み立てを許すファイルは `lib/keepa/asinsource.ts` の**1つだけ**に限る。
+     *   （増やしたくなったら、まずここを直すことになるので、必ず人の目に触れる）
+     */
+    const URL_BUILDER_FILE = 'lib/keepa/asinsource.ts';
+    for (const f of ['lib/keepa/policy.ts', 'lib/keepa/normalize.ts', 'lib/keepa/store.ts', 'lib/keepa/match.ts', 'lib/keepa/client.ts']) {
       const src = readFile(f);
-      check(`${f} にURL組み立て関数が無い`,
-        !/function\s+(build|make|generate)Url/i.test(src));
       check(`${f} が amazon.co.jp のURLを組み立てていない`,
         !/amazon\.co\.jp\/dp/.test(src));
     }
-    check('商品ページURLは取れないと記録してある', KEEPA_PRODUCT_URL_AVAILABLE === false);
-    const schema = readFile('lib/db/schema.ts');
-    const keepaSchema = schema.slice(schema.indexOf('SCHEMA_KEEPA'));
-    // 【テストの方を直した理由】（ルール64）
-    // 元は文字列 'product_url' がSCHEMA_KEEPAの範囲に出てこないことを求めていたが、
-    // schema.ts の中に「★ product_url の列を作っていない。」という説明コメントがあり、
-    // その文言に反応して落ちていた。列が作られていないという事実は変わっていない。
-    // 見るべきなのは「列の定義があるか」なので、列定義の形だけを検査する。
-    check('保存する表に product_url 列が無い',
-      !/^\s*product_url\s+(TEXT|INTEGER|REAL)/m.test(keepaSchema));
+    check(`URLを組み立ててよいのは ${URL_BUILDER_FILE} だけ`,
+      readFile(URL_BUILDER_FILE).includes('amazon.co.jp/dp'));
+    check('Keepaの応答に商品ページURLは入っていないと記録してある',
+      KEEPA_PRODUCT_URL_IN_RESPONSE === false);
+    check('URLの出どころに AI_GENERATED という選択肢が無い',
+      !readFile(URL_BUILDER_FILE).includes("'AI_GENERATED'"));
   }
 
   // ================================================================

@@ -44,7 +44,14 @@ import {
   TREND_VERDICT_JA,
 } from '../lib/keepa/normalize';
 import { SELLABILITY_VERDICT_JA } from '../lib/sellability';
-import { runOneAsin, tokenMonitor } from '../lib/keepa/store';
+import { lookupAsinProvenance, runOneAsin, tokenMonitor } from '../lib/keepa/store';
+import {
+  ASIN_CONFIDENCE_JA,
+  ASIN_SOURCE_JA,
+  ASIN_VARIATION_ROLE_JA,
+  PRODUCT_URL_NOTE_JA,
+  URL_SOURCE_JA,
+} from '../lib/keepa/asinsource';
 
 const LINE = '='.repeat(72);
 
@@ -133,7 +140,26 @@ async function main(): Promise<void> {
     ? (windowArg as 30 | 90 | 180)
     : 90;
 
+  /*
+   * ---- ASINの出どころ（Phase 3.11・ユーザー指示1） ----
+   *
+   * ★引数では受け取らない。保存済みの記録からだけ引く。
+   *   引数で受け取れると `--source=KEEPA_API` と書くだけで、
+   *   どんな文字列でも「Keepaが実在を確認した」と名乗れてしまう。
+   */
+  const provenance = await lookupAsinProvenance(asin);
+
   console.log(`\n取得するASIN：${asin}（1件のみ）`);
+  console.log('  --- このASINの出どころ ---');
+  if (provenance) {
+    console.log(`  出どころ：${provenance.asinSource}（${ASIN_SOURCE_JA[provenance.asinSource]}）`);
+    console.log(`  確信度：${provenance.asinConfidence}（${ASIN_CONFIDENCE_JA[provenance.asinConfidence]}）`);
+    console.log(`  実在の確認方法：${provenance.verificationMethodJa}`);
+    console.log(`  確認した時刻：${provenance.asinVerifiedAt ?? '不明'}`);
+  } else {
+    console.log('  記録がありません → HUMAN_INPUT／UNVERIFIED（確かめられていない）として扱います。');
+    console.log('  ※ 取得は行いますが、商品ページURLは作りません（材料が確かめられていないため）。');
+  }
   console.log(`売れるか判定の期間：${windowDays}日`);
   console.log(hasLocal
     ? `手元の商品と照合します：${text(nameArg)}`
@@ -148,7 +174,7 @@ async function main(): Promise<void> {
     asin,
     localProduct,
     { fetchProducts: (asins) => fetchKeepaProducts(asins) },
-    { windowDays },
+    { windowDays, provenance },
   );
 
   if (r.stoppedReasonJa && !r.normalized) {
@@ -203,7 +229,30 @@ async function main(): Promise<void> {
   console.log('  --- いつの情報か ---');
   console.log(`  Keepa側の最終更新：${text(n.lastUpdateIso)}`);
   console.log(`  追跡開始：${text(n.trackingSinceIso)}`);
-  console.log(`  商品ページURL：取得できません（${KEEPA_PRODUCT_URL_NOTE_JA}）`);
+
+  // ================================================================
+  console.log(`\n${LINE}`);
+  console.log('①-2 商品ページURL（ユーザー指示5〜9）');
+  console.log(LINE);
+  console.log(`  ASINの出どころ：${r.provenance.asinSource}（${ASIN_SOURCE_JA[r.provenance.asinSource]}）`);
+  console.log(`  確信度：${r.provenance.asinConfidence}（${ASIN_CONFIDENCE_JA[r.provenance.asinConfidence]}）`);
+  console.log(`  親ASINか子ASINか：${r.variationRole}（${ASIN_VARIATION_ROLE_JA[r.variationRole]}）`);
+  console.log(`  URLを作れるか：${r.urlResolution.available ? '作れます' : '作りません'}`);
+  console.log(`  URL：${r.urlResolution.url ?? '（作っていません）'}`);
+  console.log(`  URLの出どころ：${r.urlResolution.urlSource
+    ? `${r.urlResolution.urlSource}（${URL_SOURCE_JA[r.urlResolution.urlSource]}）`
+    : '（なし）'}`);
+  console.log(`  理由：${r.urlResolution.reasonJa}`);
+  if (r.urlResolution.blockersJa.length > 0) {
+    console.log('  作らなかった理由：');
+    for (const b of r.urlResolution.blockersJa) console.log(`   ・${b}`);
+  }
+  console.log('  --- 購入導線の判定（2つは別々） ---');
+  console.log(`  URL_VALID（リンクが正しいか）：${r.urlResolution.urlValid ? 'true' : 'false'}`);
+  console.log('  PRODUCT_MATCH_CONFIRMED（仕入れたい商品と同じか）：false（人が確かめるまで真にしません）');
+  console.log('  PURCHASE_URL_AVAILABLE：false（上の2つが両方 true のときだけ true）');
+  console.log(`  ${PRODUCT_URL_NOTE_JA}`);
+  console.log(`  ${KEEPA_PRODUCT_URL_NOTE_JA}`);
 
   // ================================================================
   console.log(`\n${LINE}`);
