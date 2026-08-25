@@ -48,7 +48,8 @@
     "phase4:confirm": "tsx scripts/phase4-confirm.ts",
     "test:phase4": "tsx scripts/test-phase4.ts",
     "phase5:research": "tsx scripts/phase5-research.ts",
-    "test:phase5": "tsx scripts/test-phase5.ts"
+    "test:phase5": "tsx scripts/test-phase5.ts",
+    "test:phase6": "tsx scripts/test-phase6.ts"
   },
   "dependencies": {
     "@libsql/client": "^0.14.0",

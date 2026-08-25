@@ -8,8 +8,11 @@
    - 06_商品大量生成とパイプライン / 07_価格戦略設計 / 08_仕入先ネットワークと勝ち筋拡張
    - 09_Phase1実装記録 / 10_Phase2実装記録 / 11_Phase3実装記録 / 12_Phase3.5実装記録
      / 13_Phase3.6実装記録 / 14_Phase3.7実装記録 / 15_Phase3.8実装記録
+   - **30_Phase6設計_FIRST_SUPPLIER_CONNECTOR**
+     （**いまの最前線はここ。外部市場へ繋ぐ話・利用可否・LEGAL_USAGE_GATE に触る前に必ず読む。
+     Yahoo!もeBayも BLOCKED で、通信は1回もしていない。「たぶん使える」で繋がない**）
    - **29_Phase5設計_AUTO_RESEARCH_ORCHESTRATOR**
-     （**いまの最前線はここ。主経路が「人が10件入れる」から「AIが自動で探す」へ変わった。
+     （**主経路が「人が10件入れる」から「AIが自動で探す」へ変わった回。
      自動リサーチ・Connector・候補キューに触る前に必ず読む**）
    - **28_Phase4設計_Supplier to Amazon Route Validation**
      （**仕入価格→Amazon販売のRouteに触る前に必ず読む。Phase 5 の下地はここ**）
@@ -60,7 +63,34 @@
 
 ## 現状
 
-**Phase 5（AUTO RESEARCH ORCHESTRATOR）実装済み（2026-08-25）。**
+**Phase 6（FIRST SUPPLIER CONNECTOR）実装済み（2026-08-26）。**
+
+> [!danger] Phase 6 でいちばん大事なこと：**技術は出来た。許可が取れていない。**
+> **`LEGAL_USAGE_GATE = BLOCKED`（Yahoo!ショッピング・eBay の2市場とも）。外部への通信は0回。**
+> Yahoo!のFAQに「**非商用目的のみ**」と「**商用をすべて禁じるものではない**」が併記されており、
+> 当社の用途が入るか公式の文だけでは決まらない（10項目のうち**6項目がUNKNOWN**）。
+> **次の一手は人がYahoo!へ問い合わせること。`CONTACT_VENUE_BY_AI_ALLOWED = false`＝AIは外部へ連絡しない。**
+> 詳細は `30_Phase6設計_FIRST_SUPPLIER_CONNECTOR.md`。
+
+Phase 6 で足したのは、**「その市場の口を使ってよいか」を先に決める門**（`lib/phase6/legalgate.ts`）と、
+門が開いたときに動く仕入側の一式（読み取り・同一商品判定・順位付け・段階Gate・ファネル/KPI・Route配線）。
+**順番を逆にした＝規約の確認 → 門を作る → 門が開いた市場だけ実装。**
+先に繋ぐと、後から「駄目でした」と言われても取り消せないため。
+
+- **UNKNOWN を YES 扱いしない。登録の無い市場は通さない（Fail Closed）。**
+  **「禁止と書かれていない」を、やってよい根拠にしない。**
+- **判定には一次資料の原文引用＋出典URL＋確認日が必須。根拠の無いYESはYESと数えない**
+  （`effectiveValue()` が UNKNOWN へ落とす）。
+- **Rate Limit の数字が食い違ったら、全部残して一番厳しい値で設計する**（Yahoo!は2秒間隔）。
+- **eBayは当社の設計と根本的に相性が悪い**：①日本のマーケットプレイスが無い
+  ②取得データをAI学習へ入れることを条文が名指しで禁止（＝Phase 3 のSHADOW学習へ流し込めない）
+  ③他社データと同じ画面で混ぜてはならない（Public Display）。**Yahoo!が通らなかった場合の代替に留める。**
+- **安全装置はフラグではなく「コードが無い」**：`YAHOO_SHOPPING_LIVE_FETCH_IMPLEMENTED = false` ／
+  `EBAY_BROWSE_LIVE_FETCH_IMPLEMENTED = false` ／ `AUTO_SUPPLIER_RESEARCH = false` ／
+  `AUTO_PURCHASE_IMPLEMENTED = false` ／ `SCRAPING_IMPLEMENTED = false`。
+- **47件へ一気に当てない。段階Gate 1件 → 5件 → 10件。同時接続は1市場まで。**
+
+以下は Phase 5 までの範囲（**そのまま生きている。削らない**）。
 
 > [!danger] いちばん上の方針（2026-08-25 に変わった）
 > **`PRIMARY WORKFLOW = AUTO RESEARCH` ／ `MANUAL INPUT = FALLBACK`。**
@@ -131,7 +161,8 @@ BUY/SELL Route → 需要 → 競合 → 費用 → 利益 → 売却確率 → 
   → `26_Phase3.14実測記録_Keepa20件テスト.md`
   → `27_Phase3.15実測記録_Keepa100件テスト.md`
   → **`28_Phase4設計_Supplier to Amazon Route Validation.md`**
-  → **`29_Phase5設計_AUTO_RESEARCH_ORCHESTRATOR.md`**（`../事業Vault/AI Commerce OS/`）
+  → **`29_Phase5設計_AUTO_RESEARCH_ORCHESTRATOR.md`**
+  → **`30_Phase6設計_FIRST_SUPPLIER_CONNECTOR.md`**（`../事業Vault/AI Commerce OS/`）
 - 受け入れテスト：`npm run test:phase1`（66項目）／`npm run test:phase2`（50項目）／
   `npm run test:phase3`（113項目）／`npm run test:phase3-5`（112項目）／
   `npm run test:phase3-6`（107項目）／`npm run test:phase3-7`（122項目）／
@@ -143,8 +174,9 @@ BUY/SELL Route → 需要 → 競合 → 費用 → 利益 → 売却確率 → 
   `npm run test:phase3-14`（151項目）／
   `npm run test:phase3-15`（245項目）／
   `npm run test:phase4`（334項目）／
-  **`npm run test:phase5`（311項目）**。
-  **合計2,910項目。**
+  `npm run test:phase5`（311項目）／
+  **`npm run test:phase6`（414項目）**。
+  **合計3,324項目（19本）。**
   **仕様を変えたら18個とも通す。1つだけ通して満足しない。あわせて `npm run build` も通す**
   （画面のバンドルエラーはテストでは見つからない）。
 - **受け入れテストが自分の安全装置を落としたときは、安全装置ではなくテストの方を直す。**
@@ -298,7 +330,8 @@ Phase 3（SHADOW学習・答え合わせ）で追加。**ここも崩さない�
     **URLオブジェクトをそのまま `fs` に渡す**。
 
 - ルール版は Phase 1 が `v1-`、Phase 2 が `r1-`、Phase 3 が `r2-`、Phase 4 が `s1-`、
-  **Phase 5 が `a1-`**。**混ぜない。**
+  Phase 5 が `a1-`、**Phase 6 が `g1-`**。**混ぜない。**
+  （とくに **Phase 6 の `g1-` を Phase 5 の `a1-` と混ぜない**。門の判定と自動リサーチは別の責任範囲）
 
 Phase 3.5 / 3.6（実市場検証）で追加。**ここが崩れると集めたデータが全部無意味になる。**
 
@@ -960,6 +993,27 @@ Phase 5（AUTO RESEARCH ORCHESTRATOR・2026-08-25）で追加。**ここも崩�
      ご本人の言葉：「**最優先KPIは、利益です。ただし、規約違反／無許可スクレイピング／
      危険な自動購入 によって利益を出すことは禁止です。**」
      「短期的な見かけの利益のために、**データの捏造／規約違反／判定基準緩和／リスク無視 をしないこと。**」
+
+Phase 6（FIRST SUPPLIER CONNECTOR）で追加。**ここが崩れると規約違反になる。**
+
+144. **順番を逆にする＝規約の確認 → 門を作る → 門が開いた市場だけ実装。**
+     先に繋いでしまうと、後から「駄目でした」と言われても**取り消せない**。
+     1回でも取得したデータは、消しても「取得した事実」は消えない。
+     **`LEGAL_USAGE_GATE` が `BLOCKED` を返す市場には、取得コードそのものを書かない**
+     （フラグOFFで止めるのではなく、`..._LIVE_FETCH_IMPLEMENTED = false` ＝実装が無い状態にする）。
+     **登録の無い市場は自動で BLOCKED**（`isLiveFetchAllowed()` は未登録に false を返す＝Fail Closed）。
+     `canFetchLive()` は **門・実装・全体スイッチの3つがそろって初めて true**。
+145. **根拠の無い YES を書かない。原文引用＋出典URL＋確認日の3点セットが無い項目は YES と数えない。**
+     `effectiveValue()` が、`evidence` の空な項目を**値がYESでもUNKNOWNへ落とす**。
+     **要約した文を引用欄に書かない**（原文のまま置く。英語なら英語のまま。訳して意味を変えない）。
+     公式資料が互いに矛盾していたら**どちらも消さずに両方載せ、厳しい側で判定する**（ルール70の続き）。
+     過去の記録と今回の確認が食い違ったときも**過去を消さず、訂正を並べて残す**（ルール76の続き）。
+146. **「区分」から金額を作らない。とくに「条件付き送料無料」を0円にしない。**
+     「◯円以上で送料無料」「一部地域を除き無料」は、**この商品を1個買ったときに無料とは限らない**。
+     0円と書いた瞬間、**利益を送料ぶん多く見積もる**ことになる。
+     名前に「条件」「以上」「一部」「地域」「除く」「まで」が含まれるものは
+     **金額を作らず「不明」へ倒す**（無料側へ寄せない＝Fail Closed）。
+     同じ理由で **ポイントを現金として利益に足さない**（`POINTS_ADDED_TO_PROFIT = false`。別枠表示のみ）。
 
 ## ポート
 
