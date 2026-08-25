@@ -11,6 +11,8 @@ import {
   SELLABILITY_VERDICT_JA,
   SELLABILITY_VERDICT_TONE,
   SELLABILITY_SCOPE_NOTE,
+  RANK_DROPS_NOT_SALES_NOTE,
+  EQUAL_SHARE_MODEL_NOTE,
 } from '@/lib/sellability';
 
 const initial = { ok: false, message: '', duplicate: false, judged: null, caution: null } as any;
@@ -35,7 +37,7 @@ export default function SellCheckForm({ venues }: { venues: { code: string; name
   const [state, action] = useFormState(recordSellCheckAction, initial);
   const judged = state?.judged as
     | { verdict: keyof typeof SELLABILITY_VERDICT_JA; reason: string; warnings: string[]; missing: string[];
-        estimatedMonthlySales: number | null; perSellerMonthly: number | null; estimatedTurnoverDays: number | null }
+        estimatedDemandSignal: number | null; estimatedEqualShareOpportunity: number | null; estimatedEqualShareTurnoverDays: number | null }
     | null;
 
   return (
@@ -157,13 +159,20 @@ export default function SellCheckForm({ venues }: { venues: { code: string; name
           : SELLABILITY_VERDICT_TONE[judged.verdict] === 'danger' ? 'danger' : ''}`}>
           <strong>判定：{SELLABILITY_VERDICT_JA[judged.verdict]}</strong>
           <div className="small">{judged.reason}</div>
-          {judged.estimatedMonthlySales !== null && (
-            <div className="small muted">
-              推定の月間販売数 {judged.estimatedMonthlySales.toFixed(1)}個
-              ／自分の取り分 月{(judged.perSellerMonthly ?? 0).toFixed(2)}個
-              ／1個売れるまで およそ{Math.round(judged.estimatedTurnoverDays ?? 0)}日
-              （いずれも推定です）
-            </div>
+          {judged.estimatedDemandSignal !== null && (
+            <>
+              <div className="small muted">
+                推定需要シグナル 月{judged.estimatedDemandSignal.toFixed(1)}個相当
+                ／推定自己販売機会 月{(judged.estimatedEqualShareOpportunity ?? 0).toFixed(2)}個相当
+                ／1個動くまで およそ{Math.round(judged.estimatedEqualShareTurnoverDays ?? 0)}日
+              </div>
+              {/*
+                ★2026-08-25 追加（ご本人の指示：「常に Rank Drops ≠ Actual Sales を表示」）。
+                  数字だけ出すと、必ず販売実績として読まれる。だから但し書きを数字から離さない。
+              */}
+              <div className="small muted">{RANK_DROPS_NOT_SALES_NOTE}</div>
+              <div className="small muted">{EQUAL_SHARE_MODEL_NOTE}</div>
+            </>
           )}
           {judged.warnings?.length > 0 && (
             <ul className="small">

@@ -19,7 +19,21 @@ import {
   KEEPA_USE_SCOPE,
   redactKeepaKey,
 } from './policy';
-import type { KeepaDiscoveryResult, KeepaFetchResult } from './client';
+import type { KeepaCategoryResult, KeepaDiscoveryResult, KeepaFetchResult } from './client';
+import {
+  addToLedger,
+  emptyTokenLedger,
+  tokenBucketOfPurpose,
+  KEEPA_SHAPE_WATCH_GROUPS,
+  type TokenLedger,
+} from './scan';
+import {
+  briefValue,
+  classifyUnknown,
+  readPath,
+  type KeepaShape,
+  type UnknownReason,
+} from './schema';
 import {
   extractWindowSignals,
   judgeTrend,
@@ -93,10 +107,26 @@ export async function saveRawResponse(r: KeepaFetchResult, asin: string | null):
  *   （PRODUCT_FETCH）を同じ数字にすると、「商品1件あたりいくらか」が
  *   永久に分からなくなる。分からなければ、増やしてよいかも決められない。
  */
+/**
+ * ★2026-08-25 に用途を2つ増やした（ご本人の指示・Phase 3.12）。原文：
+ *   「候補検索に使うTokenと、商品データ取得に使うTokenを分けて管理してください。
+ *     DISCOVERY_TOKENS / PRODUCT_FETCH_TOKENS / DEEP_SCAN_TOKENS」
+ *
+ *   CATEGORY_LOOKUP … 売り場の分類の番号をもらうのに使った枠（1回1枠）。
+ *                     候補を探すための下ごしらえなので、集計では候補探しの側に入れる。
+ *   DEEP_SCAN       … 出品者一覧やBuy Boxの詳細を取るのに使った枠（1件6〜8枠）。
+ *                     下見の1枠と混ぜると「1件あたりいくら」が意味を失う。
+ */
+export type KeepaTokenPurpose =
+  | 'DISCOVERY'
+  | 'CATEGORY_LOOKUP'
+  | 'PRODUCT_FETCH'
+  | 'DEEP_SCAN';
+
 export async function recordTokenUsage(
   r: KeepaFetchResult,
   asinCount: number,
-  purpose: 'DISCOVERY' | 'PRODUCT_FETCH' = 'PRODUCT_FETCH',
+  purpose: KeepaTokenPurpose = 'PRODUCT_FETCH',
 ): Promise<void> {
   await insert('keepa_token_usage', {
     endpoint: r.request.endpoint,
@@ -223,9 +253,9 @@ export async function saveNormalizedProduct(
       extras.sellability.windowDays,
       extras.sellability.result?.verdict ?? null,
       extras.sellability.result?.reason ?? null,
-      extras.sellability.result?.estimatedMonthlySales ?? null,
-      extras.sellability.result?.perSellerMonthly ?? null,
-      extras.sellability.result?.estimatedTurnoverDays ?? null,
+      extras.sellability.result?.estimatedDemandSignal ?? null,
+      extras.sellability.result?.estimatedEqualShareOpportunity ?? null,
+      extras.sellability.result?.estimatedEqualShareTurnoverDays ?? null,
       extras.rawResponseId ?? null,
       /*
        * 【0で固定】
@@ -910,6 +940,267 @@ export async function lookupAsinProvenance(asin: string): Promise<AsinProvenance
     verificationMethodJa: String(row.verification_method_ja ?? ''),
     domainId: Number(row.domain_id),
   };
+}
+
+/* ================================================================
+ * 7c. 売り場の分類を、正式な一覧としてもらう（Phase 3.12）
+ * ================================================================ */
+
+export type RootCategoryReport = {
+  ok: boolean;
+  stoppedReasonJa: string | null;
+  categories: { catId: string; name: string; productCount: number | null }[];
+  estimatedCost: number;
+  tokensConsumed: number | null;
+  tokensLeft: number | null;
+};
+
+/**
+ * 日本のAmazonの「いちばん上の分類」を全部もらう（1枠）。
+ *
+ * ★なぜ番号を自分で書かないのか。
+ *   書いた番号が間違っていても、検索は成功して商品が返ってくる。
+ *   返ってきた商品は実在するので、**間違いに気づけない**。
+ *   「本の分類のつもりが、実は文房具だった」まま5件テストを終えることになる。
+ *   1枠払って正式な一覧をもらえば、この間違いは起こりようがない。
+ */
+export async function lookupRootCategories(deps: {
+  fetchCategories: () => Promise<KeepaCategoryResult>;
+}): Promise<RootCategoryReport> {
+  const res = await deps.fetchCategories();
+
+  await saveRawResponse(res, null);
+  // ★候補探しの下ごしらえなので、用途は CATEGORY_LOOKUP として別に数える。
+  await recordTokenUsage(res, 0, 'CATEGORY_LOOKUP');
+
+  if (!res.ok) {
+    return {
+      ok: false,
+      stoppedReasonJa: res.errorJa ?? '分類の一覧を取得できませんでした。',
+      categories: [],
+      estimatedCost: res.estimatedCost,
+      tokensConsumed: res.tokens.tokensConsumed,
+      tokensLeft: res.tokens.tokensLeft,
+    };
+  }
+
+  if (res.categories.length === 0) {
+    return {
+      ok: false,
+      stoppedReasonJa:
+        '分類が1件も返りませんでした。ここで番号を推測して先へ進むと、'
+        + '違う売り場を調べたまま気づけません。そのため止めます。',
+      categories: [],
+      estimatedCost: res.estimatedCost,
+      tokensConsumed: res.tokens.tokensConsumed,
+      tokensLeft: res.tokens.tokensLeft,
+    };
+  }
+
+  return {
+    ok: true,
+    stoppedReasonJa: null,
+    categories: res.categories,
+    estimatedCost: res.estimatedCost,
+    tokensConsumed: res.tokens.tokensConsumed,
+    tokensLeft: res.tokens.tokensLeft,
+  };
+}
+
+/* ================================================================
+ * 7d. 枠を用途別に集計する（Phase 3.12・ユーザー指示8と9）
+ * ================================================================ */
+
+/**
+ * 用途ごとの枠の使用量を出す。
+ *
+ * ご本人の指示（原文）：
+ *   「BASE_SCAN_TOKENS / DEEP_SCAN_TOKENS / TOTAL_TOKENS を分けて保存してください。」
+ *   「候補検索に使うTokenと、商品データ取得に使うTokenを分けて管理してください。」
+ *
+ * ★合計は、用途の合計ではなく**実際の消費額の合計**から出す。
+ *   用途を足し上げて合計にすると、用途の付け忘れがあったときに
+ *   合計まで一緒にずれて、ずれたこと自体が見えなくなる。
+ */
+export async function tokenLedgerSince(sinceIso: string): Promise<{
+  ledger: TokenLedger;
+  /** 用途に振り分けられなかった消費（あってはいけない。0であるべき） */
+  unclassified: number;
+  rows: { purpose: string; endpoint: string; tokens: number; count: number }[];
+}> {
+  const rows = await all(
+    `SELECT purpose, endpoint,
+            SUM(COALESCE(tokens_consumed, 0)) AS tokens,
+            COUNT(*) AS count
+       FROM keepa_token_usage
+      WHERE created_at >= ?
+      GROUP BY purpose, endpoint
+      ORDER BY purpose, endpoint`,
+    [sinceIso],
+  );
+
+  let ledger = emptyTokenLedger();
+  let unclassified = 0;
+  const out: { purpose: string; endpoint: string; tokens: number; count: number }[] = [];
+
+  for (const r of rows) {
+    const purpose = String(r.purpose ?? '');
+    const tokens = Number(r.tokens ?? 0);
+    out.push({ purpose, endpoint: String(r.endpoint ?? ''), tokens, count: Number(r.count ?? 0) });
+    if (tokenBucketOfPurpose(purpose) === null) unclassified += tokens;
+    ledger = addToLedger(ledger, purpose, tokens);
+  }
+
+  return { ledger, unclassified, rows: out };
+}
+
+/* ================================================================
+ * 7e. 商品ごとに「形」がどう違うかを記録する（Phase 3.12・ユーザー指示11）
+ * ================================================================ */
+
+export type FieldShapeRow = {
+  group: string;
+  path: string;
+  labelJa: string;
+  shape: KeepaShape;
+  present: boolean;
+  arrayLength: number | null;
+  sampleText: string;
+  unknownReason: UnknownReason | null;
+};
+
+export type ShapeAudit = {
+  asin: string;
+  rows: FieldShapeRow[];
+};
+
+/**
+ * 生データ1件から、見張り対象10グループの「形」を全部読み取る。
+ *
+ * ★ここで読むのは**値ではなく形**である。
+ *   値は商品ごとに違って当たり前だが、形は同じであってほしい。
+ *   形が商品ごとに違うなら、当社の読み取りコードは「たまたま最初の1件で動いていた」だけである。
+ *   ルール95（在庫切れ割合が配列で来ていた）は、まさにその形の違いを見ていなかったために起きた。
+ *
+ * ★通信しない。保存済みの生データだけを見る。枠は1つも使わない。
+ */
+export function auditFieldShapes(asin: string, raw: unknown): ShapeAudit {
+  const rows: FieldShapeRow[] = [];
+
+  for (const g of KEEPA_SHAPE_WATCH_GROUPS) {
+    for (const path of g.paths) {
+      const r = readPath(raw, path);
+
+      /*
+       * 値が取れていないときだけ、その理由を2つに分ける（ルール97）。
+       * 「無い」と「読めていない」を混ぜると、当社の不具合が市場のせいに見える。
+       */
+      let unknownReason: UnknownReason | null = null;
+      if (!r.exists || r.value === null) {
+        unknownReason = classifyUnknown(raw, path, g.labelJa).reason;
+      }
+
+      rows.push({
+        group: g.group,
+        path,
+        labelJa: g.labelJa,
+        shape: r.shape,
+        present: r.exists,
+        arrayLength: Array.isArray(r.value) ? r.value.length : null,
+        sampleText: briefValue(r.value),
+        unknownReason,
+      });
+    }
+  }
+
+  return { asin, rows };
+}
+
+/**
+ * 形の記録を保存する。
+ *
+ * ★上書きしない（`ON CONFLICT DO NOTHING`）。
+ *   同じ run で同じ ASIN の同じ項目を2回書くことは無いはずで、
+ *   もし起きたなら「2回取った」こと自体が調べる価値のある事実である。上書きで消さない。
+ */
+export async function saveFieldShapes(
+  runId: string,
+  audit: ShapeAudit,
+  rawResponseId: number | null,
+): Promise<number> {
+  let saved = 0;
+  for (const r of audit.rows) {
+    await run(
+      `INSERT INTO keepa_field_shapes
+         (run_id, asin, domain_id, group_name, path, shape, present,
+          array_length, sample_text, unknown_reason, raw_response_id, created_at)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
+       ON CONFLICT DO NOTHING`,
+      [
+        runId,
+        audit.asin,
+        KEEPA_DOMAIN_JP,
+        r.group,
+        r.path,
+        r.shape,
+        r.present ? 1 : 0,
+        r.arrayLength,
+        r.sampleText,
+        r.unknownReason,
+        rawResponseId,
+        nowIso(),
+      ],
+    );
+    saved += 1;
+  }
+  return saved;
+}
+
+export type ShapeDriftRow = {
+  group: string;
+  path: string;
+  labelJa: string;
+  /** 商品ごとの形。ASIN → 形 */
+  byAsin: { asin: string; shape: KeepaShape; arrayLength: number | null }[];
+  /** 見つかった形の種類（1種類なら揃っている） */
+  distinctShapes: string[];
+  drift: boolean;
+};
+
+/**
+ * 商品どうしで形が食い違っている場所を数える。
+ *
+ * ★「形が違う＝不具合」ではない。
+ *   本には `eanList` があり家電には無い、というのは正常な違いである。
+ *   ここが出すのは「気をつけて読むべき場所の一覧」であって、故障の一覧ではない。
+ *   その区別を消して全部を不具合として数えると、本物の不具合が埋もれる。
+ */
+export function findShapeDrift(audits: ShapeAudit[]): ShapeDriftRow[] {
+  const out: ShapeDriftRow[] = [];
+
+  for (const g of KEEPA_SHAPE_WATCH_GROUPS) {
+    for (const path of g.paths) {
+      const byAsin = audits.map((a) => {
+        const row = a.rows.find((r) => r.path === path);
+        return {
+          asin: a.asin,
+          shape: (row?.shape ?? 'missing') as KeepaShape,
+          arrayLength: row?.arrayLength ?? null,
+        };
+      });
+      const distinctShapes = Array.from(new Set(byAsin.map((b) => b.shape)));
+      out.push({
+        group: g.group,
+        path,
+        labelJa: g.labelJa,
+        byAsin,
+        distinctShapes,
+        drift: distinctShapes.length > 1,
+      });
+    }
+  }
+
+  return out;
 }
 
 /* ================================================================

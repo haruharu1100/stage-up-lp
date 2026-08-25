@@ -363,9 +363,9 @@ async function main(): Promise<void> {
     console.log(`  期間：直近${r.sellability.windowDays}日`);
     console.log(`  判定：${s.verdict}（${SELLABILITY_VERDICT_JA[s.verdict]}）`);
     console.log(`  理由：${s.reason}`);
-    console.log(`  推定の月間販売数：${s.estimatedMonthlySales === null ? '不明' : `${s.estimatedMonthlySales}個`}`);
-    console.log(`  自分に回ってくる推定：${s.perSellerMonthly === null ? '不明' : `月${s.perSellerMonthly}個`}`);
-    console.log(`  推定の回転日数：${s.estimatedTurnoverDays === null ? '不明' : `${s.estimatedTurnoverDays}日`}`);
+    console.log(`  推定需要シグナル：月${s.estimatedDemandSignal === null ? '不明' : `${s.estimatedDemandSignal}個`}`);
+    console.log(`  推定自己販売機会：${s.estimatedEqualShareOpportunity === null ? '不明' : `月${s.estimatedEqualShareOpportunity}個`}`);
+    console.log(`  1個動くまでの推定日数：${s.estimatedEqualShareTurnoverDays === null ? '不明' : `${s.estimatedEqualShareTurnoverDays}日`}`);
     console.log('  ※ 順位の下落回数は販売数そのものではないため、上の数はすべて「推定」です。');
   }
   console.log(`  勢い：${r.trend?.verdict}（${r.trend ? TREND_VERDICT_JA[r.trend.verdict] : ''}）`);

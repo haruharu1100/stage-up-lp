@@ -100,7 +100,19 @@ export const KEEPA_FORBIDDEN_ACTIONS_JA = [
  *   これで **Keepa自身が実在を保証したASIN** だけを使えるようになり、
  *   AIが文字列としてASINを作る余地が完全に消える。
  */
-export const KEEPA_ALLOWED_ENDPOINTS = ['product', 'token', 'query'] as const;
+/*
+ * ★2026-08-25 に `category`（Category Lookup）を追加した。
+ *   これも**読み取り専用**で、Amazonの売り場の分類（本／家電／ゲーム 等）の
+ *   正式な番号と名前を返すだけである。商品も価格も返さない。
+ *
+ *   追加した理由：5件テストで「同じ種類の商品ばかり5件」にならないよう、
+ *   分野をまたいで候補を探す必要が出た。そのとき分類番号が要る。
+ *   ★番号をこちらで思いつきで書くと、それは推測になる。
+ *     Keepa に「日本のAmazonの分類を全部ください」と聞けば1枠で正式な一覧が返るので、
+ *     必ずそれを使う（公式ドキュメント原文：
+ *     "you can specify the value 0 to retrieve a list of all root categories"）。
+ */
+export const KEEPA_ALLOWED_ENDPOINTS = ['product', 'token', 'query', 'category'] as const;
 export type KeepaEndpoint = (typeof KEEPA_ALLOWED_ENDPOINTS)[number];
 
 /**
@@ -162,13 +174,23 @@ export const KEEPA_ALLOWED_HTTP_METHOD = 'GET' as const;
  * **いまは S1（1件）で止める。** 5件へ進むかどうかは、S1の監査結果を見て人が決める。
  */
 export const KEEPA_STAGES = [
-  { code: 'S1', maxAsins: 1, labelJa: '1件だけ取って必ず止まる（いまここ）' },
-  { code: 'S2', maxAsins: 5, labelJa: '5件（S1の監査に合格してから）' },
+  { code: 'S1', maxAsins: 1, labelJa: '1件だけ取って必ず止まる（合格済み）' },
+  { code: 'S2', maxAsins: 5, labelJa: '5件（いまここ）' },
   { code: 'S3', maxAsins: 20, labelJa: '20件（S2の監査に合格してから）' },
   { code: 'S4', maxAsins: 100, labelJa: '100件（S3の監査に合格してから）' },
 ] as const;
 
-export const KEEPA_CURRENT_STAGE = 'S1' as const;
+/**
+ * ★2026-08-25 に S1 → S2 へ進めた。**この仕組みが自分で進めたのではない。**
+ *
+ *   経緯：1件の実測を2回おこない（B0978NB1VQ／0747554560）、
+ *   読み取りの食い違い0件・枠の見積と実消費が一致・日本のAmazon固定を確認した。
+ *   その結果をご本人が読み、「5件テストへ進んでください」と判断された（原文・2026-08-25）。
+ *
+ *   ★S3（20件）へは、この行を書き換えないと進めない。
+ *     5件の結果を見て、進めるかどうかを決めるのはご本人である（原文：「自動で進まないこと。」）。
+ */
+export const KEEPA_CURRENT_STAGE = 'S2' as const;
 
 /**
  * 1回の実行で取ってよいASINの上限。
@@ -176,7 +198,7 @@ export const KEEPA_CURRENT_STAGE = 'S1' as const;
  * ★環境変数で増やせるようにしていない。増やすにはこの数字を書き換えてコミットするしかない。
  *   「気づいたら100件取っていた」を、設定ミスで起こせないようにするため。
  */
-export const KEEPA_MAX_ASINS_PER_RUN = 1;
+export const KEEPA_MAX_ASINS_PER_RUN = 5;
 
 /* ================================================================
  * 4. 日本のAmazonであることの確認

@@ -1444,6 +1444,22 @@ export const SCHEMA_SELLABILITY: string[] = [
     current_price INTEGER,
     verdict TEXT NOT NULL,
     reason TEXT NOT NULL,
+    /*
+     * ★2026-08-25 注意（呼び方を直したが、列名は昔のまま）。
+     *   画面とコードでは「推定需要シグナル / 推定自己販売機会」と呼ぶように直した。
+     *   ここの列名だけが昔の呼び方で残っている。
+     *
+     *   列名を変えなかった理由：すでに保存してある行があり、列名を付け替える作業は
+     *   「直したつもりで中身がずれる」事故を起こしやすい。読み書きの場所は
+     *   lib/sellcheck.ts と lib/keepa/store.ts の2か所しかなく、そこで対応が付いている。
+     *
+     *   対応：
+     *     estimated_monthly_sales  → 推定需要シグナル（estimatedDemandSignal）
+     *     per_seller_monthly       → 推定自己販売機会（estimatedEqualShareOpportunity・暫定モデル）
+     *     estimated_turnover_days  → 上と同じ暫定モデルでの回転日数
+     *
+     *   ★どれも「販売数」ではない。列名を見て販売実績として集計しないこと。
+     */
     estimated_monthly_sales REAL,
     per_seller_monthly REAL,
     estimated_turnover_days REAL,
@@ -1583,6 +1599,22 @@ export const SCHEMA_KEEPA: string[] = [
     sellability_window_days INTEGER,
     sellability_verdict TEXT,
     sellability_reason TEXT,
+    /*
+     * ★2026-08-25 注意（呼び方を直したが、列名は昔のまま）。
+     *   画面とコードでは「推定需要シグナル / 推定自己販売機会」と呼ぶように直した。
+     *   ここの列名だけが昔の呼び方で残っている。
+     *
+     *   列名を変えなかった理由：すでに保存してある行があり、列名を付け替える作業は
+     *   「直したつもりで中身がずれる」事故を起こしやすい。読み書きの場所は
+     *   lib/sellcheck.ts と lib/keepa/store.ts の2か所しかなく、そこで対応が付いている。
+     *
+     *   対応：
+     *     estimated_monthly_sales  → 推定需要シグナル（estimatedDemandSignal）
+     *     per_seller_monthly       → 推定自己販売機会（estimatedEqualShareOpportunity・暫定モデル）
+     *     estimated_turnover_days  → 上と同じ暫定モデルでの回転日数
+     *
+     *   ★どれも「販売数」ではない。列名を見て販売実績として集計しないこと。
+     */
     estimated_monthly_sales REAL,
     per_seller_monthly REAL,
     estimated_turnover_days REAL,
@@ -1652,6 +1684,45 @@ export const SCHEMA_KEEPA: string[] = [
     UNIQUE(asin, domain_id, created_at)
   )`,
   `CREATE INDEX IF NOT EXISTS idx_keepa_cand_asin ON keepa_asin_candidates(asin)`,
+
+  /*
+   * 【項目の「形」の記録】（Phase 3.12・ユーザー指示11）
+   *
+   * ご本人の指示（原文）：
+   *   「5件で特に確認するSchema　price fields / csv arrays / stats / offers / availability /
+   *     outOfStockPercentage / fees / salesRanks / images / identifiers の
+   *     実際の型が商品ごとにどう違うか。」
+   *
+   * ★ここに残すのは「値」ではなく「形」である。
+   *   1商品だけを見ていると、その商品の形が Keepa の形だと思い込む。
+   *   ルール95（在庫切れ割合が配列で来ていたのに1つの数だと思っていた）は、
+   *   まさにこの思い込みで起きた。5件を横に並べて初めて「商品によって形が違う」ことが見える。
+   *
+   * ★shape は lib/keepa/schema.ts の shapeOf() が返す語彙をそのまま入れる。
+   *   sample_text は briefValue() で短く刻んだもの。生の値を丸ごとは入れない。
+   *
+   * ★unknown_reason は DATA_NOT_AVAILABLE（市場に値が無い）と
+   *   PARSER_OR_SCHEMA_ERROR（値はあるのに当社が読めていない）を必ず分ける（ルール97）。
+   *   混ぜると自分の不具合が市場のせいに見える。
+   */
+  `CREATE TABLE IF NOT EXISTS keepa_field_shapes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    run_id TEXT NOT NULL,
+    asin TEXT NOT NULL,
+    domain_id INTEGER NOT NULL,
+    group_name TEXT NOT NULL,
+    path TEXT NOT NULL,
+    shape TEXT NOT NULL,
+    present INTEGER NOT NULL DEFAULT 0,
+    array_length INTEGER,
+    sample_text TEXT,
+    unknown_reason TEXT,
+    raw_response_id INTEGER,
+    created_at TEXT NOT NULL,
+    UNIQUE(run_id, asin, path)
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_keepa_shape_run ON keepa_field_shapes(run_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_keepa_shape_path ON keepa_field_shapes(path)`,
 
   /*
    * 【一致の候補（複数残す）】

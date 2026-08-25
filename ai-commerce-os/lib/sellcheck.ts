@@ -135,7 +135,7 @@ export async function recordSellCheck(i: SellCheckInput): Promise<SellCheckResul
       productKey, cleanText(i.productName ?? '') || null, venueCode, sourceTool, url || null,
       observedAt, windowDays, rankDrops, salesRank, offerCount,
       avgPrice, currentPrice, judged.verdict, judged.reason,
-      judged.estimatedMonthlySales, judged.perSellerMonthly, judged.estimatedTurnoverDays,
+      judged.estimatedDemandSignal, judged.estimatedEqualShareOpportunity, judged.estimatedEqualShareTurnoverDays,
       JSON.stringify(judged.warnings),
       /*
        * 【0で固定してある】

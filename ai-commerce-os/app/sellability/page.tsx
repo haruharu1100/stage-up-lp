@@ -5,6 +5,8 @@ import {
   SELLABILITY_SOURCE_TOOL_JA,
   SELLABILITY_THRESHOLDS,
   SELLABILITY_VERDICT_JA,
+  RANK_DROPS_NOT_SALES_NOTE,
+  EQUAL_SHARE_MODEL_NOTE,
   type SellabilitySourceTool,
   type SellabilityVerdict,
 } from '@/lib/sellability';
@@ -106,6 +108,17 @@ export default async function SellabilityPage() {
       <SellCheckForm venues={venueOptions} />
 
       <h2>これまでの記録</h2>
+      {/*
+        ★2026-08-25 復旧。
+          「推定の月間販売数」→「推定需要シグナル」へ列名を改めたとき、
+          この但し書きまで一緒に消してしまっていた。
+          名前を慎重にしても、但し書きが消えれば読む人は結局「販売数」として読む。
+          消さない（ルール78）。
+      */}
+      <p className="note">
+        下落回数は販売数そのものではありません（1回の注文で2個売れても下落が1回のことがあり、
+        下落が起きない販売もあります）。下の「推定」はすべて、そこから組み立てた目安です。
+      </p>
       {rows.length === 0 ? (
         <p className="note">まだ1件もありません。</p>
       ) : (
@@ -118,8 +131,8 @@ export default async function SellabilityPage() {
               <th>期間</th>
               <th>下落回数</th>
               <th>ライバル</th>
-              <th>推定 月間販売数</th>
-              <th>自分の取り分（月）</th>
+              <th>推定需要シグナル（月あたり相当）</th>
+              <th>推定自己販売機会（月あたり相当・暫定モデル）</th>
               <th>判定</th>
               <th>実市場データに数えたか</th>
             </tr>
@@ -141,8 +154,8 @@ export default async function SellabilityPage() {
                 <td>{r.window_days}日</td>
                 <td>{n(r.rank_drops, '回')}</td>
                 <td>{n(r.offer_count, '人')}</td>
-                <td>{f(r.estimated_monthly_sales)}個</td>
-                <td>{f(r.per_seller_monthly, 2)}個</td>
+                <td>{f(r.estimated_monthly_sales)}個相当</td>
+                <td>{f(r.per_seller_monthly, 2)}個相当</td>
                 <td>
                   {SELLABILITY_VERDICT_JA[r.verdict as SellabilityVerdict] ?? r.verdict}
                   <div className="small muted">{r.reason}</div>
@@ -157,10 +170,13 @@ export default async function SellabilityPage() {
       <h2>この画面の限界（はっきり書いておきます）</h2>
       <ul>
         <li>{SELLABILITY_SCOPE_NOTE}</li>
-        <li>
-          売れ筋順位の下落回数は<strong>販売数そのものではありません</strong>。
-          このシステムはそこから出した数字を必ず「推定」と呼びます。
-        </li>
+        {/*
+          ★2026-08-25（ご本人の指示：「常に Rank Drops ≠ Actual Sales を表示」）。
+            ここは以前、同じ趣旨を手で書き写していた。書き写すと、直す場所が増えて必ず食い違う。
+            文面はソースの1か所（lib/sellability.ts）から持ってくる形へ直した。
+        */}
+        <li>{RANK_DROPS_NOT_SALES_NOTE}</li>
+        <li>{EQUAL_SHARE_MODEL_NOTE}</li>
         <li>
           第三者ツールで見た数字は、<strong>実市場データ100件には数えていません</strong>
           （現在 {summary.countedAsRealMarket} 件）。

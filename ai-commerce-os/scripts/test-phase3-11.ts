@@ -384,8 +384,10 @@ async function main(): Promise<void> {
   {
     check('呼べるエンドポイントに query が入っている',
       (KEEPA_ALLOWED_ENDPOINTS as readonly string[]).includes('query'));
+    // ★2026-08-25 追記：`category`（売り場の一覧をもらうだけ）を足した。
+    //   これも一覧を返すだけで、何も書き換えない。中身で判定する方針は変えていない。
     check('呼べるエンドポイントは読み取り専用のものだけ',
-      KEEPA_ALLOWED_ENDPOINTS.every((e) => ['product', 'token', 'query'].includes(e)),
+      KEEPA_ALLOWED_ENDPOINTS.every((e) => ['product', 'token', 'query', 'category'].includes(e)),
       KEEPA_ALLOWED_ENDPOINTS.join(' / '));
 
     /*

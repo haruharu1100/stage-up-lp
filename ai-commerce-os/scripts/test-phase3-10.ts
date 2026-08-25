@@ -271,10 +271,26 @@ async function main(): Promise<void> {
   );
 
   // ================================================================
-  console.log('\n[1. 1件だけ。増やせる経路が無い]');
+  console.log('\n[1. 件数はコードで縛る。設定で増やせる経路が無い]');
   {
-    check('1回に取れるのは1件', KEEPA_MAX_ASINS_PER_RUN === 1);
-    check('いまの段階はS1', KEEPA_CURRENT_STAGE === 'S1');
+    /*
+     * ★2026-08-25 修正（ルール64）。
+     *   ここは元々「1回に取れるのは1件」「いまの段階はS1」を固定で求めていた。
+     *   その後、ご本人の判断で **S1（1件）→ S2（5件）へ進めた**ため、
+     *   この2行は「事実の方が変わった」ことによる不合格になっていた。
+     *
+     *   ★ただし、ゆるめてはいけないのは「段階を進めた事実」ではなく
+     *     **段階を設定で進められないこと**の方である。
+     *     そこで、いまの段階の数字を決め打ちで書くのをやめ、
+     *     「いまの段階として宣言された上限と、実際の上限が一致していること」を検査する形へ直した。
+     *     こうすると、コードを書き換えずに件数だけ増やす、という抜け道は塞がったまま、
+     *     段階が進んでもテストが嘘をつかない。
+     */
+    const stageNow = KEEPA_STAGES.find((s) => s.code === KEEPA_CURRENT_STAGE);
+    check('いまの段階が段階表に載っている', stageNow !== undefined, String(KEEPA_CURRENT_STAGE));
+    check('1回に取れる件数は、いまの段階の上限と一致している',
+      stageNow !== undefined && KEEPA_MAX_ASINS_PER_RUN === stageNow.maxAsins,
+      `${KEEPA_MAX_ASINS_PER_RUN}件`);
     check('段階は4つ用意してある（1→5→20→100）', KEEPA_STAGES.length === 4);
     check('S1の上限は1件', KEEPA_STAGES[0].maxAsins === 1);
 
@@ -304,10 +320,22 @@ async function main(): Promise<void> {
     check('取得側で環境変数を読むのはAPIキーだけ',
       (clientCode.match(/process\.env/g) ?? []).length === 1);
 
-    // 2件渡すと、通信する前に止まる（キーが無くても・あっても止まる）
-    const two = await fetchKeepaProducts([TEST_ASIN, TEST_ASIN_US]);
-    check('2件渡すと失敗する', two.ok === false);
-    check('止めた理由に件数が書いてある', String(two.errorJa).includes('1件まで'));
+    /*
+     * 上限より1件多く渡すと、通信する前に止まる（キーが無くても・あっても止まる）。
+     *
+     * ★2026-08-25 修正（ルール64）。
+     *   ここは「2件渡すと失敗する」「理由に『1件まで』と書いてある」を固定で求めていた。
+     *   S2（5件）へ進んだので、2件は正常に通る。**歯止めが壊れたのではなく、線が動いた。**
+     *   守りたいのは「2件で止まること」ではなく「**上限を1件でも超えたら通信前に止まること**」なので、
+     *   上限＋1件を渡す形へ直した。こうすれば段階が進んでも検査の意味が変わらない。
+     */
+    const over = new Array(KEEPA_MAX_ASINS_PER_RUN + 1)
+      .fill(null)
+      .map((_, i) => `B0TESTP3${String(i).padStart(2, '0')}`);
+    const two = await fetchKeepaProducts(over);
+    check('上限を1件でも超えると失敗する', two.ok === false, `${over.length}件`);
+    check('止めた理由に件数が書いてある',
+      String(two.errorJa).includes(`${KEEPA_MAX_ASINS_PER_RUN}件まで`));
     check('コードを書き換えないと増やせないと書いてある',
       String(two.errorJa).includes('KEEPA_MAX_ASINS_PER_RUN'));
   }
@@ -324,7 +352,11 @@ async function main(): Promise<void> {
      *   候補ASINを正式に選ぶための `query`（Product Finder）を足したので、
      *   個数ではなく**中身が全部読み取り専用か**で判定する形に直した。
      */
-    const READ_ONLY_KEEPA_ENDPOINTS = ['product', 'token', 'query'];
+    /*
+     * ★2026-08-25 追記。`category`（売り場の一覧をもらうだけ）を足した。
+     *   これも一覧を返すだけで、何も書き換えない。個数ではなく中身で判定する方針は変えない。
+     */
+    const READ_ONLY_KEEPA_ENDPOINTS = ['product', 'token', 'query', 'category'];
     check('呼べるエンドポイントは読み取り専用のものだけ',
       KEEPA_ALLOWED_ENDPOINTS.every((e) => READ_ONLY_KEEPA_ENDPOINTS.includes(e)),
       KEEPA_ALLOWED_ENDPOINTS.join(' / '));
@@ -508,8 +540,8 @@ async function main(): Promise<void> {
       rankDrops: 24,
       offerCount: 8,
     });
-    check('推定の月間販売数という名前になっている', 'estimatedMonthlySales' in s);
-    check('推定の回転日数という名前になっている', 'estimatedTurnoverDays' in s);
+    check('推定需要シグナルという名前になっている', 'estimatedDemandSignal' in s);
+    check('均等配分の暫定モデルという名前になっている', 'estimatedEqualShareTurnoverDays' in s);
 
     const script = readFile('scripts/keepa-one.ts');
     check('報告にも「推定」と書いている', script.includes('すべて「推定」です'));

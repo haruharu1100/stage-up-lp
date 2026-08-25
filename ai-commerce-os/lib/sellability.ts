@@ -154,6 +154,43 @@ export const SELLABILITY_THRESHOLDS = {
 } as const;
 
 /* ================================================================
+ * 但し書き（必ず一緒に表示する）
+ * ================================================================ */
+
+/**
+ * 【順位が下がった回数は、販売数ではない】
+ *
+ * ご本人の指示（原文・2026-08-25）：「常に、Rank Drops ≠ Actual Sales を表示。」
+ *
+ * 画面にこの一文を出さずに数字だけ見せると、必ず販売数として読まれる。
+ * だから数字とこの文をセットにして、離れないようにする。
+ */
+export const RANK_DROPS_NOT_SALES_NOTE =
+  '順位が下がった回数 ＝ 実際に売れた個数ではありません。'
+  + '1回の注文で複数個売れても下落は1回のことがあり、下落が起きない販売もあります。'
+  + 'ここに出る数字は「どれくらい動いていそうか」の目安（需要シグナル）であって、販売実績ではありません。';
+
+/**
+ * 【均等配分は暫定モデルである】
+ *
+ * ご本人の指示（原文・2026-08-25）：
+ *   「Rank Drops ÷ (Seller数 + 1) は暫定モデルとして扱ってください。
+ *     商品の販売がSellerへ均等配分されるとは限りません。
+ *     そのため名前を ESTIMATED_EQUAL_SHARE_OPPORTUNITY 等にして、
+ *     実販売予測そのものとは区別してください。」
+ *
+ * 実際には、カートを持っている出品者に注文が偏る。安い出品者にも偏る。
+ * 全員に同じだけ配られるという前提は、現実には成り立たない。
+ * それでも使うのは、他に材料が無いからである。**前提が弱いことを、名前と文で言い続ける。**
+ */
+export const EQUAL_SHARE_MODEL_NAME = 'ESTIMATED_EQUAL_SHARE_OPPORTUNITY' as const;
+
+export const EQUAL_SHARE_MODEL_NOTE =
+  'この「自分の取り分」は、売上が出品者全員へ均等に配られると仮定した暫定モデルの計算です。'
+  + '実際は、カートを持っている出品者や、値段の安い出品者に注文が偏ります。'
+  + '実際の販売予測ではなく、ライバルの多さを一つの数字に直しただけのものとして見てください。';
+
+/* ================================================================
  * 入力と出力
  * ================================================================ */
 
@@ -180,12 +217,28 @@ export type SellabilityResult = {
   verdict: SellabilityVerdict;
   /** なぜその判定になったか。画面にそのまま日本語で出す。 */
   reason: string;
-  /** 推定の月間販売数。分からなければ null。0 と null を混ぜない。 */
-  estimatedMonthlySales: number | null;
-  /** 自分が1人加わったときに、月に何回自分の番が来そうか。 */
-  perSellerMonthly: number | null;
-  /** 自分の1個が売れるまで何日かかりそうか（推定）。 */
-  estimatedTurnoverDays: number | null;
+  /**
+   * 【推定需要シグナル】（旧名：推定の月間販売数）
+   *
+   * ★2026-08-25 改名（ご本人の指示）。原文：
+   *   「30日Rank Drops 13回 等から、『月12個売れている』と単一の実数として
+   *     扱わないでください。表示は、推定需要シグナル / 推定自己販売機会 等にしてください。
+   *     常に、Rank Drops ≠ Actual Sales を表示。」
+   *
+   * 中身の計算は変えていない。**呼び方だけを、事実に合う名前へ直した。**
+   * 「販売数」と名付けると、見た人は必ず販売数として読む。読み方は名前が決めてしまう。
+   * 分からなければ null。0 と null を混ぜない。
+   */
+  estimatedDemandSignal: number | null;
+  /**
+   * 【推定自己販売機会】（旧名：自分の取り分・月あたり）
+   *
+   * 均等配分という**暫定モデル**の出力である（下の EQUAL_SHARE_MODEL_NOTE を参照）。
+   * 実際の販売予測そのものではない。
+   */
+  estimatedEqualShareOpportunity: number | null;
+  /** 上と同じ暫定モデルで、自分の1個が動くまで何日かかりそうか。 */
+  estimatedEqualShareTurnoverDays: number | null;
   /** 止めるほどではないが、必ず見せる注意。黙って飲み込まない。 */
   warnings: string[];
   /** 判定に使えなかった項目（空欄・値がおかしい）。 */
@@ -216,9 +269,9 @@ export function judgeSellability(i: SellabilityInput): SellabilityResult {
   ): SellabilityResult => ({
     verdict,
     reason,
-    estimatedMonthlySales: null,
-    perSellerMonthly: null,
-    estimatedTurnoverDays: null,
+    estimatedDemandSignal: null,
+    estimatedEqualShareOpportunity: null,
+    estimatedEqualShareTurnoverDays: null,
     warnings,
     missing,
     ...extra,
@@ -271,12 +324,19 @@ export function judgeSellability(i: SellabilityInput): SellabilityResult {
   const offerCount = offers as number;
 
   // ---- 5. 参考になる値の計算（すべて推定） ----------------------
-  const estimatedMonthlySales = (rankDrops / windowDays) * 30;
+  // ★これは販売数ではない。順位の動きを月あたりに直しただけの「需要シグナル」である。
+  const estimatedDemandSignal = (rankDrops / windowDays) * 30;
   // 自分が1人加わる前提で割る。ライバル数だけで割ると自分の取り分を多く見積もる。
-  const perSellerMonthly = estimatedMonthlySales / (offerCount + 1);
-  const estimatedTurnoverDays = perSellerMonthly > 0 ? 30 / perSellerMonthly : null;
+  // ★均等配分は暫定モデル（EQUAL_SHARE_MODEL_NOTE）。実販売予測ではない。
+  const estimatedEqualShareOpportunity = estimatedDemandSignal / (offerCount + 1);
+  const estimatedEqualShareTurnoverDays =
+    estimatedEqualShareOpportunity > 0 ? 30 / estimatedEqualShareOpportunity : null;
 
-  const nums = { estimatedMonthlySales, perSellerMonthly, estimatedTurnoverDays };
+  const nums = {
+    estimatedDemandSignal,
+    estimatedEqualShareOpportunity,
+    estimatedEqualShareTurnoverDays,
+  };
 
   // ---- 6. 価格の注意（判定は変えない） --------------------------
   const avg = num(i.avgPrice);
@@ -312,19 +372,28 @@ export function judgeSellability(i: SellabilityInput): SellabilityResult {
     );
   }
 
-  if (perSellerMonthly < SELLABILITY_THRESHOLDS.MIN_PER_SELLER_MONTHLY) {
+  /*
+   * ★2026-08-25 文面修正（ご本人の指示）。
+   *   以前はここで「月におよそ12.0個売れている見込み」と、**販売数を一つの実数として言い切っていた**。
+   *   元にしているのは順位が下がった回数であって、販売数ではない。
+   *   言い切った瞬間、読む人は確定した実績として扱う。だから「〜相当の需要シグナル」に直した。
+   *   計算式は1文字も変えていない。変えたのは呼び方だけである。
+   */
+  if (estimatedEqualShareOpportunity < SELLABILITY_THRESHOLDS.MIN_PER_SELLER_MONTHLY) {
     return out(
       'CROWDED',
-      `月におよそ${estimatedMonthlySales.toFixed(1)}個売れている見込みですが、ライバルが${offerCount}人います。`
-      + `自分が加わると月${perSellerMonthly.toFixed(2)}個ペース＝1個売れるのにおよそ${Math.round(estimatedTurnoverDays ?? 0)}日かかる計算です。`,
+      `${windowDays}日間の順位の動きは、月およそ${estimatedDemandSignal.toFixed(1)}個相当の需要シグナルです（実際の販売数ではありません）。`
+      + `ライバルは${offerCount}人。売上が全員へ均等に配られると仮に置くと、自分の取り分は月${estimatedEqualShareOpportunity.toFixed(2)}個相当`
+      + `＝1個動くのにおよそ${Math.round(estimatedEqualShareTurnoverDays ?? 0)}日かかる計算になります（暫定モデル）。`,
       nums,
     );
   }
 
   return out(
     'SELLS',
-    `月におよそ${estimatedMonthlySales.toFixed(1)}個売れている見込みで、ライバルは${offerCount}人。`
-    + `自分が加わっても月${perSellerMonthly.toFixed(2)}個ペース＝1個売れるのにおよそ${Math.round(estimatedTurnoverDays ?? 0)}日の計算です。`,
+    `${windowDays}日間の順位の動きは、月およそ${estimatedDemandSignal.toFixed(1)}個相当の需要シグナルです（実際の販売数ではありません）。`
+    + `ライバルは${offerCount}人。売上が全員へ均等に配られると仮に置くと、自分の取り分は月${estimatedEqualShareOpportunity.toFixed(2)}個相当`
+    + `＝1個動くのにおよそ${Math.round(estimatedEqualShareTurnoverDays ?? 0)}日の計算になります（暫定モデル）。`,
     nums,
   );
 }

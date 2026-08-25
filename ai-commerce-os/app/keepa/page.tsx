@@ -13,7 +13,11 @@ import {
 import { KEEPA_TOKEN_DESIGN_NOTE_JA } from '@/lib/keepa/tokens';
 import { keepaKeyStatus } from '@/lib/keepa/client';
 import { keepaDailyBudgetState, listKeepaProducts, listTokenUsage, tokenMonitor } from '@/lib/keepa/store';
-import { SELLABILITY_VERDICT_JA, type SellabilityVerdict } from '@/lib/sellability';
+import {
+  SELLABILITY_VERDICT_JA,
+  RANK_DROPS_NOT_SALES_NOTE,
+  type SellabilityVerdict,
+} from '@/lib/sellability';
 
 export const dynamic = 'force-dynamic';
 
@@ -117,6 +121,16 @@ export default async function KeepaPage() {
       {/* ---- 取得済みの商品 --------------------------------------- */}
       <h2>取得した商品</h2>
       <div className="note">{KEEPA_DATA_CAUTION_JA}</div>
+      {/*
+        ★2026-08-25 復旧。列名を「推定の月間販売数」→「推定需要シグナル」へ改めたとき、
+          この但し書きを一緒に消してしまっていた。名前だけ慎重にしても、
+          但し書きが無ければ読む人は結局「販売数」として読む（ルール78）。
+      */}
+      <div className="note">
+        表の「推定」は、売れ筋順位が下がった回数から組み立てた目安です。
+        下落回数は実際の販売数ではありません（1回の注文で2個売れても下落が1回のことがあり、
+        下落が起きない販売もあります）。
+      </div>
 
       {products.length === 0 ? (
         <p className="lead">
@@ -137,7 +151,7 @@ export default async function KeepaPage() {
               <th>売れ筋順位</th>
               <th>出品者(新品)</th>
               <th>90日の下落回数</th>
-              <th>推定 月間販売数</th>
+              <th>推定需要シグナル（月あたり相当）</th>
               <th>売れるか</th>
               <th>取得日時</th>
             </tr>
@@ -154,7 +168,7 @@ export default async function KeepaPage() {
                 <td>
                   {p.estimated_monthly_sales === null || p.estimated_monthly_sales === undefined
                     ? '不明'
-                    : `約${Number(p.estimated_monthly_sales).toFixed(0)}（推定）`}
+                    : `約${Number(p.estimated_monthly_sales).toFixed(0)}個相当（推定）`}
                 </td>
                 <td>
                   {p.sellability_verdict
@@ -169,10 +183,12 @@ export default async function KeepaPage() {
         </table>
       )}
 
-      <p className="lead">
-        ここに出している「推定 月間販売数」は、売れ筋順位が下がった回数から計算した推定です。
-        実際の販売数ではありません（1回の注文で2個売れても下落は1回のことがあります）。
-      </p>
+      {/*
+        ★2026-08-25（ご本人の指示：「常に Rank Drops ≠ Actual Sales を表示」）。
+          文面はソースの1か所（lib/sellability.ts）から持ってくる。
+          画面ごとに書き写すと、直したつもりの場所だけ直って、他が古いまま残る。
+      */}
+      <p className="lead">{RANK_DROPS_NOT_SALES_NOTE}</p>
 
       {/* ---- 枠の使用記録 ----------------------------------------- */}
       <h2>枠の使用記録</h2>

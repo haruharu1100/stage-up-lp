@@ -131,20 +131,20 @@ async function main(): Promise<void> {
     // 90日で30回＝月10回。ライバル99人なら自分の取り分は月0.1回。
     const r = judgeSellability({ observedAt: daysAgo(1), windowDays: 90, rankDrops: 30, offerCount: 99 });
     check('ライバルが多いときは SELLS にしない', r.verdict === 'CROWDED');
-    check('自分の取り分を数字で出している', (r.perSellerMonthly ?? 0) > 0 && (r.perSellerMonthly ?? 0) < 1);
-    check('何日で1個売れるかを出している', (r.estimatedTurnoverDays ?? 0) > 30);
+    check('自分の取り分を数字で出している', (r.estimatedEqualShareOpportunity ?? 0) > 0 && (r.estimatedEqualShareOpportunity ?? 0) < 1);
+    check('何日で1個売れるかを出している', (r.estimatedEqualShareTurnoverDays ?? 0) > 30);
   }
   {
     const r = judgeSellability({ observedAt: daysAgo(1), windowDays: 90, rankDrops: 30, offerCount: 2 });
     check('十分に回るなら「売れている」', r.verdict === 'SELLS');
     check('自分の取り分が月1個以上ある',
-      (r.perSellerMonthly ?? 0) >= SELLABILITY_THRESHOLDS.MIN_PER_SELLER_MONTHLY);
+      (r.estimatedEqualShareOpportunity ?? 0) >= SELLABILITY_THRESHOLDS.MIN_PER_SELLER_MONTHLY);
   }
   {
     // 自分を数に入れずに割ると取り分を多く見積もる。ライバル数+1で割っていることを確かめる。
     const r = judgeSellability({ observedAt: daysAgo(1), windowDays: 30, rankDrops: 10, offerCount: 9 });
     check('取り分はライバル数+1で割っている（自分を数に入れている）',
-      Math.abs((r.perSellerMonthly ?? 0) - 1) < 0.0001);
+      Math.abs((r.estimatedEqualShareOpportunity ?? 0) - 1) < 0.0001);
   }
 
   // ================================================================
@@ -154,7 +154,7 @@ async function main(): Promise<void> {
     check('下落回数は販売数ではない、とファイルに書いてある',
       src.includes('販売数そのものではない'));
     check('取り出す値の名前が estimated（推定）で始まっている',
-      src.includes('estimatedMonthlySales') && src.includes('estimatedTurnoverDays'));
+      src.includes('estimatedDemandSignal') && src.includes('estimatedEqualShareTurnoverDays'));
     const page = readFile('app/sellability/page.tsx');
     check('画面にも「推定」と出している', page.includes('推定'));
     check('画面に「販売数そのものではありません」と書いてある',
