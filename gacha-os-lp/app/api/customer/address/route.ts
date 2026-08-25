@@ -17,21 +17,26 @@
  *   新しい住所が効くのは、これから出す依頼だけです。
  *
  * ═══════════════════════════════════════════════════════
- * ★将来の本人確認（Step-up）は、ここに1つだけ置きます
+ * ★本人確認（Step-up）は、ここに1つだけ置きます
  * ═══════════════════════════════════════════════════════
  *
- *   いまは、まだつないでいません。正直に stepUp で返します。
- *   need=false（まだ求めない）／wouldNeed=true（つないだら求める）。
+ *   つないであります（2026-08-26）。
+ *   住所の書き換えの前に、パスワードの入れ直しを求めます。
  *
  *   条件を入口ごとに書き足していくと、直し忘れた場所だけが
  *   素通りになります。素通りしている場所は、外から見えません。
+ *   ですので、要る／要らないの判断は stepUpPolicy.ts だけが持ちます。
  */
 
 import { NextResponse, type NextRequest } from "next/server";
 import { guard, passed, internalError } from "@/lib/server/context";
 import { customerActor } from "@/lib/server/customerActor";
 import { MyPageError, getAddress, setAddress } from "@/lib/server/mypage";
-import { forAddressChange } from "@/lib/server/stepUpPolicy";
+import {
+  forAddressChange,
+  isStepUpFresh,
+  STEP_UP_FRESH_MIN,
+} from "@/lib/server/stepUpPolicy";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -59,6 +64,12 @@ export async function GET(req: NextRequest) {
       requestId: gate.requestId,
       ...view,
       stepUp: forAddressChange(),
+      /* ★画面が「もう確認済みかどうか」を知るための値。
+           これで判断を変えてはいけません。通す／通さないは
+           必ず PUT 側（サーバー）で決めます。
+           ここは「確認の窓を先に出すかどうか」だけに使います。 */
+      stepUpFresh: isStepUpFresh(gate.session.stepUpAt, STEP_UP_FRESH_MIN),
+      stepUpMinutes: STEP_UP_FRESH_MIN,
     });
   } catch (e) {
     return internalError(gate.requestId, "customer-address", e);
@@ -76,19 +87,32 @@ export async function PUT(req: NextRequest) {
     >;
     const s = (v: unknown) => (typeof v === "string" ? v : "");
 
-    /* ★将来ここが true になった日に、確認を挟みます。
-         いまは false です。false を「確認済み」として
-         記録に書かないこと。やっていないことになります。 */
+    /* ═══════════════════════════════════════════
+       本人確認：求めるか、そして「いま」通ったか
+       ═══════════════════════════════════════════
+
+       ★通っているかどうかを、本文で受け取らないこと。
+         「確認済みです」と書いて送れば通る作りになります。
+         印は、このログイン（クッキー）に付いたものだけを見ます。
+
+       ★401 ではなく 403 で返します。
+         401 だと画面が「ログインが切れた」と読み、
+         ログイン画面へ飛ばしてしまいます。
+         切れていません。もう一段の確認が要るだけです。 */
     const stepUp = forAddressChange();
-    if (stepUp.need) {
+    if (
+      stepUp.need &&
+      !isStepUpFresh(gate.session.stepUpAt, STEP_UP_FRESH_MIN)
+    ) {
       return NextResponse.json(
         {
           ok: false,
           code: "STEP_UP_REQUIRED",
           message: stepUp.reason,
+          stepUpMinutes: STEP_UP_FRESH_MIN,
           requestId: gate.requestId,
         },
-        { status: 401 },
+        { status: 403 },
       );
     }
 

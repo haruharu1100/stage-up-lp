@@ -288,6 +288,55 @@ if (phraseHits.length === 0) {
   });
 }
 
+/* ────────────────────────────────
+   守りを切ったまま公開していないか
+   ────────────────────────────────
+
+   ★試験のために切った守りは、必ず戻し忘れます。
+     戻し忘れても、画面は普通に動きます。
+     動いてしまうので、誰も気づきません。
+     気づくのは、乗っ取られた日です。
+
+   ★だから「切ってある」ことを、機械に見つけさせます。
+     手元とPreviewでは警告だけ。本番では公開を止めます。
+
+   ★新しく「切れるつまみ」を作ったら、必ずここに1行足すこと。
+     足さないつまみは、切られたまま本番へ出ます。 */
+const OFF_SWITCHES = [
+  {
+    env: "CUSTOMER_STEP_UP",
+    off: "OFF",
+    code: "CUSTOMER_STEP_UP_DISABLED",
+    label: "お客様の追加の本人確認（Step-up）",
+    fix:
+      "CUSTOMER_STEP_UP=OFF が本番に置かれています。この1行があるだけで、" +
+      "お届け先の変更と、高額商品の発送依頼が、パスワードの確認なしで通ります。" +
+      "本番からは必ず外してください（OFF は試験と手元の確認のためだけのものです）。",
+  },
+];
+
+const kiraretaMamori = OFF_SWITCHES.filter(
+  (s) => String(env[s.env] ?? "").trim().toUpperCase() === s.off,
+);
+
+if (kiraretaMamori.length === 0) {
+  console.log(`  ${C.green("✓")} 切られたままの守りはありません`);
+} else {
+  for (const s of kiraretaMamori) {
+    const mark = isProduction ? C.red("✗") : C.yellow("!");
+    console.log(
+      `  ${mark} ${s.label} が OFF です  ${C.dim(`[${s.code}]`)}`,
+    );
+    failures.push({
+      code: s.code,
+      label: s.label,
+      problem: `${s.label} が、切られたままです（${s.env}=${s.off}）。`,
+      fix: s.fix,
+      envs: [`${s.env}（本番では未設定にしてください）`],
+    });
+  }
+}
+
 console.log(C.bold("  ────────────────────────────────────────────"));
 
 if (failures.length === 0) {
@@ -321,7 +370,10 @@ console.log(C.red(C.bold("  本番公開を中止しました。")));
 console.log("");
 for (const f of failures) {
   console.log(C.red(`  ${f.code}`));
-  console.log(`    ${f.label} が未設定です。`);
+  /* ★「未設定です」で片づけないこと。
+       切ってあるつまみは、未設定ではなく「切ってある」です。
+       言い方を間違えると、直す人は空欄を探して回ります。 */
+  console.log(`    ${f.problem ?? `${f.label} が未設定です。`}`);
   console.log(C.dim(`    ${f.fix}`));
   console.log(C.dim(`    環境変数: ${f.envs.join(" / ")}`));
   console.log("");

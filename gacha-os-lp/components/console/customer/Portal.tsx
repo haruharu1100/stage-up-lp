@@ -116,6 +116,100 @@ function Unreadable<T>({ state }: { state: Live<T> }) {
   return null;
 }
 
+/* ══════════════════════════════════════════════
+   追加の本人確認（Step-up）の窓
+   ══════════════════════════════════════════════
+
+   ★この窓を、画面ごとに書き写さないこと。
+     住所変更の画面に1つ、発送依頼の画面にもう1つ、と
+     増やしていくと、文言も、失敗したときの振る舞いも、
+     少しずつ食い違っていきます。ここに1つだけ置きます。
+
+   ★ここで「通った」ことにしないこと。
+     この窓が通っても、通ったのはサーバー側の印だけです。
+     住所を変える／発送を依頼する、の可否は、
+     もう一度サーバーに聞き直して決めます。
+
+   ★パスワードを、送ったあとに残さないこと。
+     画面に残したままにすると、席を離れた隙に読まれます。 */
+function StepUp({
+  reason,
+  minutes,
+  onDone,
+  onCancel,
+}: {
+  reason: string;
+  minutes: number;
+  onDone: () => void;
+  onCancel: () => void;
+}) {
+  const [pw, setPw] = useState("");
+  const [okurichu, setOkurichu] = useState(false);
+  const [ng, setNg] = useState<string | null>(null);
+
+  async function okuru() {
+    if (!pw) {
+      setNg("パスワードをご入力ください。");
+      return;
+    }
+    setOkurichu(true);
+    setNg(null);
+
+    const r = await sendChange("/api/customer/step-up", "POST", { password: pw });
+
+    setOkurichu(false);
+    setPw("");
+
+    if (!r.ok) {
+      setNg(r.message);
+      return;
+    }
+    onDone();
+  }
+
+  return (
+    <div className="mt-4">
+      <Panel>
+        <p className="text-[0.9rem] font-bold text-white">
+          ご本人の確認をお願いいたします
+        </p>
+
+        {/* ★なぜ求めているのかを、必ず書くこと。
+             理由の無い確認は、お客様には「不具合」に見えます。
+             見えた時点で、外してくれという話になります。 */}
+        <p className="mt-1.5 text-[0.79rem] leading-[1.9] text-white/60">{reason}</p>
+
+        <div className="mt-3">
+          <Fld
+            label="パスワード"
+            value={pw}
+            type="password"
+            autoComplete="current-password"
+            onChange={setPw}
+            onEnter={okuru}
+            hint={`ログインのときと同じパスワードです。確認後、約${minutes}分間は続けてお手続きいただけます。`}
+          />
+        </div>
+
+        {ng && (
+          <div className="mt-3">
+            <Note tone="danger">{ng}</Note>
+          </div>
+        )}
+
+        <div className="mt-3 space-y-2">
+          <BigBtn onClick={okuru} disabled={okurichu}>
+            {okurichu ? "確認しています…" : "確認する"}
+          </BigBtn>
+          <BigBtn tone="quiet" onClick={onCancel} disabled={okurichu}>
+            やめる
+          </BigBtn>
+        </div>
+      </Panel>
+    </div>
+  );
+}
+
 /**
  * 下の行き先。
  *
@@ -321,6 +415,19 @@ export function PortalPrizes() {
   const [shirase, setShirase] = useState<{ tone: "ok" | "danger"; text: string } | null>(
     null,
   );
+  /**
+   * 追加の本人確認を求められたときの、理由と有効時間。
+   * null なら求められていません。
+   *
+   * ★分数を、この画面で決め打ちしないこと。
+   *   本当の長さは stepUpPolicy.ts が持っています。
+   *   画面に書き写すと、片方だけ変えた日から嘘の案内になります。
+   *   サーバーが返してきた数字を、そのまま出します。
+   */
+  const [kakuninRiyuu, setKakuninRiyuu] = useState<{
+    reason: string;
+    minutes: number;
+  } | null>(null);
 
   const toggle = useCallback((id: string) => {
     setShirase(null);
@@ -352,9 +459,20 @@ export function PortalPrizes() {
         : await sendChange("/api/customer/prizes/exchange", "POST", { prizeIds: ids });
 
     setOkurichu(false);
-    setKakunin(null);
 
     if (!r.ok) {
+      /* ★確認を求められただけのときは、選んだ商品を消さないこと。
+           消すと、確認のあとに選び直しになります。
+           選び直しをさせる確認は、やがて外されます。
+           最終確認の板も、開いたままにします。 */
+      if (r.code === "STEP_UP_REQUIRED") {
+        setKakuninRiyuu({
+          reason: r.message,
+          minutes: Number(r.data.stepUpMinutes ?? 10),
+        });
+        return;
+      }
+      setKakunin(null);
       setShirase({ tone: "danger", text: r.message });
       /* ★失敗しても、必ず読み直すこと。
            先に他の画面で手続きが済んでいた場合、
@@ -363,6 +481,8 @@ export function PortalPrizes() {
       return;
     }
 
+    setKakunin(null);
+    setKakuninRiyuu(null);
     setErabi(new Set());
     setShirase({
       tone: "ok",
@@ -508,23 +628,43 @@ export function PortalPrizes() {
                   </Note>
                 </div>
 
-                <div className="mt-3 space-y-2">
-                  <BigBtn
-                    tone={kakunin === "EXCHANGE" ? "danger" : "primary"}
-                    onClick={() => jikkou(kakunin)}
-                    disabled={okurichu}
-                  >
-                    {okurichu
-                      ? "送信しています…"
-                      : kakunin === "SHIP"
-                        ? "はい、発送を依頼します"
-                        : "はい、ポイントに交換します"}
-                  </BigBtn>
-                  <BigBtn tone="quiet" onClick={() => setKakunin(null)} disabled={okurichu}>
-                    やめる
-                  </BigBtn>
-                </div>
+                {!kakuninRiyuu && (
+                  <div className="mt-3 space-y-2">
+                    <BigBtn
+                      tone={kakunin === "EXCHANGE" ? "danger" : "primary"}
+                      onClick={() => jikkou(kakunin)}
+                      disabled={okurichu}
+                    >
+                      {okurichu
+                        ? "送信しています…"
+                        : kakunin === "SHIP"
+                          ? "はい、発送を依頼します"
+                          : "はい、ポイントに交換します"}
+                    </BigBtn>
+                    <BigBtn
+                      tone="quiet"
+                      onClick={() => setKakunin(null)}
+                      disabled={okurichu}
+                    >
+                      やめる
+                    </BigBtn>
+                  </div>
+                )}
               </Panel>
+
+              {/* ★選んだ商品は、そのまま残してあります。
+                   確認が通ったら、そのまま依頼し直します。 */}
+              {kakuninRiyuu && (
+                <StepUp
+                  reason={kakuninRiyuu.reason}
+                  minutes={kakuninRiyuu.minutes}
+                  onDone={() => {
+                    setKakuninRiyuu(null);
+                    void jikkou(kakunin);
+                  }}
+                  onCancel={() => setKakuninRiyuu(null)}
+                />
+              )}
             </div>
           )}
         </>
@@ -727,6 +867,8 @@ export function PortalAddress() {
   const [shirase, setShirase] = useState<{ tone: "ok" | "danger"; text: string } | null>(
     null,
   );
+  /** 追加の本人確認を求められたときの理由。null なら求められていません */
+  const [kakuninRiyuu, setKakuninRiyuu] = useState<string | null>(null);
 
   function hirakuHenkou() {
     if (state.phase !== "ok") return;
@@ -748,9 +890,18 @@ export function PortalAddress() {
     setOkurichu(false);
 
     if (!r.ok) {
+      /* ★確認を求められただけのときは、赤い字を出さないこと。
+           入力した住所も、消さないこと。
+           消すと、確認のあとにもう一度打ち直しになります。
+           打ち直しをさせる確認は、やがて外されます。 */
+      if (r.code === "STEP_UP_REQUIRED") {
+        setKakuninRiyuu(r.message);
+        return;
+      }
       setShirase({ tone: "danger", text: r.message });
       return;
     }
+    setKakuninRiyuu(null);
     setHen(false);
     setShirase({
       tone: "ok",
@@ -823,12 +974,23 @@ export function PortalAddress() {
                 </div>
               )}
 
-              {/* ★まだ本人確認をつないでいないことを、隠さないこと。
-                   つないだつもりで運用を始めると、
-                   乗っ取りの一番大事な一手が素通りになります。 */}
-              {state.data.stepUp.wouldNeed && !state.data.stepUp.need && (
+              {/* ★求めることを、押す前に伝えること。
+                   保存を押してから初めて出すと、お客様は
+                   「弾かれた」と受け取ります。先に書いておけば、
+                   同じ確認でも「そういう手順」になります。
+
+                   ★つないでいないときは、つないでいないと書くこと。
+                     つないだつもりで運用を始めると、
+                     乗っ取りの一番大事な一手が素通りになります。 */}
+              {state.data.stepUp.wouldNeed && (
                 <div className="mt-3">
-                  <Note tone="quiet">{state.data.stepUp.reason}</Note>
+                  <Note tone={state.data.stepUp.need ? "info" : "quiet"}>
+                    {state.data.stepUp.need
+                      ? state.data.stepUpFresh
+                        ? `ご本人の確認は、お済みです（約${state.data.stepUpMinutes}分間有効）。`
+                        : "お届け先のご変更には、パスワードの入れ直しをお願いしております。"
+                      : state.data.stepUp.reason}
+                  </Note>
                 </div>
               )}
 
@@ -869,14 +1031,28 @@ export function PortalAddress() {
                 </Note>
               </div>
 
-              <div className="mt-4 space-y-2">
-                <BigBtn onClick={hozon} disabled={okurichu}>
-                  {okurichu ? "保存しています…" : "この内容で保存する"}
-                </BigBtn>
-                <BigBtn tone="quiet" onClick={() => setHen(false)} disabled={okurichu}>
-                  やめる
-                </BigBtn>
-              </div>
+              {kakuninRiyuu ? (
+                /* ★入力した住所は、そのまま残してあります。
+                     確認が通ったら、そのまま保存し直します。 */
+                <StepUp
+                  reason={kakuninRiyuu}
+                  minutes={state.data.stepUpMinutes}
+                  onDone={() => {
+                    setKakuninRiyuu(null);
+                    void hozon();
+                  }}
+                  onCancel={() => setKakuninRiyuu(null)}
+                />
+              ) : (
+                <div className="mt-4 space-y-2">
+                  <BigBtn onClick={hozon} disabled={okurichu}>
+                    {okurichu ? "保存しています…" : "この内容で保存する"}
+                  </BigBtn>
+                  <BigBtn tone="quiet" onClick={() => setHen(false)} disabled={okurichu}>
+                    やめる
+                  </BigBtn>
+                </div>
+              )}
             </>
           )}
         </>

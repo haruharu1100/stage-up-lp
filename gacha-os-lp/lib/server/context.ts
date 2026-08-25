@@ -213,30 +213,44 @@ export async function guard(
     }
   }
 
-  /* ── ④ 追加の本人確認 ─────────────────────── */
+  /* ── ④ 追加の本人確認 ───────────────────────
+
+       ★お客様と運営で、確かめ方が違います。
+         運営 … 認証アプリの6桁
+         お客様 … その場でのパスワードの入れ直し
+         （お客様に認証アプリを配っていないためです。
+           理由は lib/server/auth.ts の verifyCustomerStepUp に。）
+         文言だけを分けます。判断は同じです。 */
+  const stepUpNaninyoru =
+    session.subjectKind === "CUSTOMER"
+      ? "パスワードの入れ直し"
+      : "認証アプリの6桁の数字";
+
   if (need.stepUp && !session.stepUpAt) {
     return deny(
       requestId,
       "STEP_UP_REQUIRED",
-      "この操作には、認証アプリの6桁の数字が必要です。",
+      `この操作には、${stepUpNaninyoru}が必要です。`,
       403,
     );
   }
 
-  /* ── ④' その6桁は、いま入れたものか ─────────
+  /* ── ④' その確認は、いま行ったものか ─────────
        ★古い印を「通ったこと」にしないこと。
          開きっぱなしの画面の前に、あとから座った人が、
-         朝の6桁のまま、いちばん強い操作を実行できてしまいます。 */
+         朝の確認のまま、いちばん強い操作を実行できてしまいます。
+
+       ★この「いま」の計算を、ここに書き写さないこと。
+         stepUpPolicy.ts の isStepUpFresh を必ず呼びます。
+         別々に書くと、片方だけ長い日ができます。
+         長いほうから破られます。 */
   if (need.freshStepUpMinutes) {
-    const at = session.stepUpAt ? Date.parse(session.stepUpAt) : NaN;
-    const furui =
-      !Number.isFinite(at) ||
-      Date.now() - at > need.freshStepUpMinutes * 60_000;
-    if (furui) {
+    const { isStepUpFresh } = await import("./stepUpPolicy");
+    if (!isStepUpFresh(session.stepUpAt, need.freshStepUpMinutes)) {
       return deny(
         requestId,
         "FRESH_STEP_UP_REQUIRED",
-        "この操作の前に、認証アプリの6桁の数字を、もう一度ご入力ください。",
+        `この操作の前に、${stepUpNaninyoru}を、もう一度お願いいたします。`,
         403,
       );
     }

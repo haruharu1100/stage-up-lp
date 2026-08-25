@@ -78,6 +78,7 @@ const FILES = [
   { file: "tests/auth.test.ts", what: "ログイン（締め出し・2段階認証・会社またぎ）" },
   { file: "tests/roleAccess.test.ts", what: "役割ごとの入口（画面で隠すだけになっていないか）" },
   { file: "tests/pointsApi.test.ts", what: "ポイントの入口（二人承認・二度押し・追加の本人確認）" },
+  { file: "tests/customerStepUp.test.ts", what: "お客様の追加の本人確認（住所変更・高額の発送依頼を本当に止めるか）" },
   { file: "tests/passwordChange.test.ts", what: "パスワード（仮パスワードの寿命・強制変更・平文を残さない）" },
   { file: "tests/returnTo.test.ts", what: "ログイン後の戻り先（外のサイトへ飛ばさない）" },
   { file: "tests/noFixedNumbers.test.ts", what: "画面の数字が決め打ちに戻っていないか" },

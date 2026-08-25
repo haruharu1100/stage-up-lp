@@ -822,5 +822,140 @@ export async function disableMfa(input: {
   });
 }
 
+/* ══════════════════════════════════════════════
+   お客様の、追加の本人確認（Step-up）
+   ══════════════════════════════════════════════ */
+
+/**
+ * お客様に、その場でパスワードを入れ直してもらう。
+ *
+ * ═══════════════════════════════════════════════════════
+ * ★なぜ、お客様は6桁ではなくパスワードなのか
+ * ═══════════════════════════════════════════════════════
+ *
+ *   運営の担当者には、認証アプリを入れてもらえます。
+ *   会社の道具だからです。
+ *
+ *   お客様には、それを求められません。
+ *   求めた瞬間、買ってくださるはずだった方の多くが離れます。
+ *   ★「安全にしたので、誰も使わなくなりました」は、安全ではありません。
+ *
+ *   では、パスワードの入れ直しに意味はあるのか。あります。
+ *   守りたいのは、こういう場面です。
+ *
+ *       ・共用のパソコンで、ログインしたまま席を立った
+ *       ・スマホを一時的に人に貸した
+ *       ・合言葉（クッキー）だけを盗まれた
+ *
+ *   どれも「その画面は使えるが、パスワードは知らない」状態です。
+ *   ここで入れ直しを求めると、そこで止まります。
+ *
+ *   ★パスワードごと盗まれた場合は、これでは止まりません。
+ *     止まらないことを、はっきり書いておきます。
+ *     そこは、本物のメールやSMSにつないだ日に足す仕事です。
+ *
+ * ═══════════════════════════════════════════════════════
+ * ★ここを、パスワードの当てっこ機にしないこと
+ * ═══════════════════════════════════════════════════════
+ *
+ *   この入口は、すでにログインしている人しか叩けません。
+ *   だからといって、何度でも試させてよい理由にはなりません。
+ *
+ *   合言葉だけを盗んだ人にとって、ここは
+ *   「回数制限のないパスワード入力欄」になり得ます。
+ *   ログイン画面には締め出しがあるのに、
+ *   こちらに無ければ、こちらから破られます。
+ *
+ *   ですので、ログイン画面とまったく同じ数え方で締め出します。
+ *   記録も同じ login_attempts に残します。
+ *   ★別の数え方を作らないこと。片方だけ緩い日ができます。
+ */
+export async function verifyCustomerStepUp(input: {
+  tenantId: string;
+  customerId: string;
+  password: string;
+  ip?: string;
+  userAgent?: string;
+}): Promise<{
+  ok: boolean;
+  why?: "INVALID" | "LOCKED" | "SUSPENDED";
+  retryAfterMinutes?: number;
+}> {
+  await migrate();
+
+  const res = await db().execute({
+    sql: `SELECT id, email, password_hash, status, locked_until
+            FROM customers WHERE id = ? AND tenant_id = ? LIMIT 1`,
+    args: [input.customerId, input.tenantId],
+  });
+  const row = res.rows[0] as Record<string, unknown> | undefined;
+  const identifier = String(row?.email ?? "").trim().toLowerCase();
+
+  const waitMinutes = lockedNow(row?.locked_until);
+  if (waitMinutes > 0) {
+    await recordAttempt({
+      tenantId: input.tenantId,
+      subjectKind: "CUSTOMER",
+      identifier,
+      ok: false,
+      reason: "STEP_UP_LOCKED",
+      ip: input.ip,
+      userAgent: input.userAgent,
+    });
+    return { ok: false, why: "LOCKED", retryAfterMinutes: waitMinutes };
+  }
+
+  /* ★いない人のときも、必ず同じ計算をすること。
+       すぐ返すと、速さだけで実在が分かります。 */
+  const passwordOk = await verifyPassword(
+    input.password ?? "",
+    row ? (row.password_hash as string | null) : null,
+  );
+
+  if (!row || !passwordOk) {
+    await onFailure({
+      tenantId: input.tenantId,
+      kind: "CUSTOMER",
+      identifier,
+      row,
+      reason: row ? "STEP_UP_BAD_PASSWORD" : "STEP_UP_NO_SUCH_ACCOUNT",
+      ip: input.ip,
+      userAgent: input.userAgent,
+    });
+    return { ok: false, why: "INVALID" };
+  }
+
+  /* ★止めた会員を、ここから通さないこと。
+       ログインだけを止めて、いま開いている画面をそのままにすると、
+       止めた意味がありません。 */
+  if (String(row.status) !== "ACTIVE") {
+    await recordAttempt({
+      tenantId: input.tenantId,
+      subjectKind: "CUSTOMER",
+      identifier,
+      ok: false,
+      reason: "STEP_UP_SUSPENDED",
+      ip: input.ip,
+      userAgent: input.userAgent,
+    });
+    return { ok: false, why: "SUSPENDED" };
+  }
+
+  /* ★通ったことも記録すること。
+       失敗だけを残すと、締め出しの数え方が狂います
+       （recentFailures は、成功が1回出たところで区切ります）。 */
+  await recordAttempt({
+    tenantId: input.tenantId,
+    subjectKind: "CUSTOMER",
+    identifier,
+    ok: true,
+    reason: "STEP_UP_OK",
+    ip: input.ip,
+    userAgent: input.userAgent,
+  });
+
+  return { ok: true };
+}
+
 export const LOGIN_LOCK_AFTER = LOCK_AFTER;
 export const LOGIN_LOCK_MINUTES = LOCK_MINUTES;

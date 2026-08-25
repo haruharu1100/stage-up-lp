@@ -133,7 +133,10 @@ export async function sendChange(
   url: string,
   method: "POST" | "PUT",
   body: unknown,
-): Promise<{ ok: true; data: Record<string, unknown> } | { ok: false; message: string }> {
+): Promise<
+  | { ok: true; data: Record<string, unknown> }
+  | { ok: false; code: string; message: string; data: Record<string, unknown> }
+> {
   try {
     const res = await fetch(url, {
       method,
@@ -145,10 +148,22 @@ export async function sendChange(
     if (!res.ok || raw.ok !== true) {
       return {
         ok: false,
+        /* ★断られた理由の合図（code）を、捨てないこと。
+             文言だけを受け取る作りにすると、画面は
+             「追加の本人確認が要る」と「本当に断られた」を
+             区別できません。区別できないと、確認の窓を出せず、
+             お客様は理由の分からない赤い字の前で止まります。 */
+        code: typeof raw.code === "string" ? raw.code : "NG",
         message:
           typeof raw.message === "string"
             ? raw.message
             : "受け付けられませんでした。時間をおいて、もう一度お試しください。",
+        /* ★断られたときの中身も、そのまま渡すこと。
+             「確認は何分もつか」「あと何分待つか」といった、
+             画面がお客様に伝えるべき数字が入っています。
+             捨てると、画面がその数字を自分で決めることになり、
+             サーバーと食い違った日から、嘘の案内になります。 */
+        data: raw,
       };
     }
     return { ok: true, data: raw };
@@ -159,8 +174,10 @@ export async function sendChange(
          ですので「ご確認ください」と書きます。 */
     return {
       ok: false,
+      code: "NETWORK",
       message:
         "通信が途中で切れました。二重にならないよう、画面を読み込み直して結果をご確認ください。",
+      data: {},
     };
   }
 }
@@ -271,6 +288,17 @@ export type AddressData = {
   frozenShipments: number;
   frozenOrders: number;
   stepUp: { need: boolean; reason: string; wouldNeed: boolean };
+  /**
+   * すでに「いま確かめた」印が付いているか。
+   *
+   * ★これで通す／通さないを決めないこと。
+   *   画面の値は、開発者の道具で書き換えられます。
+   *   通す判断は、必ずサーバー（PUT）が持ちます。
+   *   ここは「先に確認の窓を出すかどうか」だけに使います。
+   */
+  stepUpFresh: boolean;
+  /** 確認が何分もつか。画面の文言に出します */
+  stepUpMinutes: number;
 };
 
 const pickAddress = (raw: Record<string, unknown>): AddressData | null =>
@@ -281,6 +309,8 @@ const pickAddress = (raw: Record<string, unknown>): AddressData | null =>
         frozenShipments: Number(raw.frozenShipments ?? 0),
         frozenOrders: Number(raw.frozenOrders ?? 0),
         stepUp: raw.stepUp as AddressData["stepUp"],
+        stepUpFresh: raw.stepUpFresh === true,
+        stepUpMinutes: Number(raw.stepUpMinutes ?? 10),
       }
     : null;
 

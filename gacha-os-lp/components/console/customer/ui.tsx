@@ -262,20 +262,37 @@ export function Fld({
   onChange,
   hint,
   inputMode,
+  type,
+  autoComplete,
+  onEnter,
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
   hint?: string;
   inputMode?: "text" | "numeric" | "tel";
+  /** ★パスワードを受ける欄は必ず "password"。
+      既定の text のままにすると、そのまま画面に出ます。 */
+  type?: "text" | "password";
+  autoComplete?: string;
+  /** Enter で送りたいとき（パスワードの入れ直しなど） */
+  onEnter?: () => void;
 }) {
   return (
     <label className="block">
       <span className="block text-[0.78rem] font-bold text-white/60">{label}</span>
       <input
         value={value}
+        type={type ?? "text"}
+        autoComplete={autoComplete}
         inputMode={inputMode}
         onChange={(e) => onChange(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" && onEnter) {
+            e.preventDefault();
+            onEnter();
+          }
+        }}
         className="mt-1.5 w-full rounded-xl px-3 py-3.5 text-[0.95rem] text-white outline-none transition"
         style={{ background: "rgba(255,255,255,0.05)", border: `1px solid ${SHOP_EDGE}` }}
         onFocus={(e) => (e.currentTarget.style.borderColor = SHOP_ACCENT)}

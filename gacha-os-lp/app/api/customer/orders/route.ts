@@ -29,7 +29,11 @@ import { NextResponse, type NextRequest } from "next/server";
 import { guard, passed, internalError } from "@/lib/server/context";
 import { OrderError, createShippingOrder } from "@/lib/server/orders";
 import { listCustomerOrders } from "@/lib/server/shipments";
-import { forShipRequest } from "@/lib/server/stepUpPolicy";
+import {
+  forShipRequest,
+  isStepUpFresh,
+  STEP_UP_FRESH_MIN,
+} from "@/lib/server/stepUpPolicy";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -98,7 +102,7 @@ export async function POST(req: NextRequest) {
     const meRow = me.rows[0] as Record<string, unknown> | undefined;
 
     /* ═══════════════════════════════════════════
-       将来の本人確認（Step-up）を、ここで1回だけ聞く
+       本人確認（Step-up）を、ここで1回だけ聞く
        ═══════════════════════════════════════════
 
        ★条件をここに直接書かないこと。
@@ -107,9 +111,9 @@ export async function POST(req: NextRequest) {
          入口ごとに書き写すと、片方だけ直した日から
          そこだけ素通りになります。
 
-       いまは need=false（まだ求めません）で返ってきます。
-       wouldNeed だけが true になり、記録に残ります。
-       つないだ日に何件が止まるのかを、先に数えられます。 */
+       ★合計は、必ずサーバーで数え直すこと。
+         本文の金額を信じると、3万円の品を「1円です」と
+         申告して素通りできます。下の SUM がその数え直しです。 */
     const nedan = await db().execute({
       sql: `SELECT COALESCE(SUM(value), 0) AS v FROM prizes
              WHERE tenant_id = ? AND user_id = ?
@@ -126,15 +130,23 @@ export async function POST(req: NextRequest) {
           ? meRow.address_changed_at
           : null,
     });
-    if (stepUp.need) {
+    /* ★401 ではなく 403 で返します。
+         401 だと画面が「ログインが切れた」と読み、
+         ログイン画面へ飛ばしてしまいます。
+         切れていません。もう一段の確認が要るだけです。 */
+    if (
+      stepUp.need &&
+      !isStepUpFresh(gate.session.stepUpAt, STEP_UP_FRESH_MIN)
+    ) {
       return NextResponse.json(
         {
           ok: false,
           code: "STEP_UP_REQUIRED",
           message: stepUp.reason,
+          stepUpMinutes: STEP_UP_FRESH_MIN,
           requestId: gate.requestId,
         },
-        { status: 401 },
+        { status: 403 },
       );
     }
 
