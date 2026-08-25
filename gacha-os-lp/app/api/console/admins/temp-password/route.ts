@@ -190,6 +190,8 @@ export async function POST(req: NextRequest) {
         role: String(me?.role ?? ""),
       },
       reason,
+      /* ★画面に出た番号と、監査ログを、あとで突き合わせられるように */
+      requestId: gate.requestId,
     });
 
     /*

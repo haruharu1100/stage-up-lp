@@ -165,6 +165,15 @@ export async function issueTemporaryPassword(input: {
   targetAdminId: string;
   by: { adminId: string; name: string; role: string };
   reason: string;
+  /**
+   * その依頼につけた通し番号。
+   *
+   * ★これを記録に入れておくと、
+   *   「画面でエラーが出た」という連絡を受けたときに、
+   *   サーバーの記録と監査ログを、同じ番号で突き合わせられます。
+   *   番号が無いと、時刻の前後だけを頼りに探すことになります。
+   */
+  requestId?: string;
 }): Promise<{ password: string; expiresAt: string }> {
   await migrate();
 
@@ -217,10 +226,43 @@ export async function issueTemporaryPassword(input: {
       target: input.targetAdminId,
       summary: `${String(target.name ?? "")} に仮パスワードを発行しました。`,
       reason: input.reason,
-      /* ★data に、パスワードそのものを入れないこと。
-           監査ログは「あとから読み返すためのもの」です。
-           そこに合言葉を書いたら、読み返せる人全員が入れます。 */
-      data: { expiresAt, mfaRequired: true },
+      requestId: input.requestId,
+      /*
+       * ★data に、パスワードそのものを入れないこと。
+       *   監査ログは「あとから読み返すためのもの」です。
+       *   そこに合言葉を書いたら、読み返せる人全員が入れます。
+       *
+       * ★入れるのは「あとから調べる人が必要とするもの」だけです。
+       *   誰に出したのか（targetAdminId・名前・メール）、
+       *   いつ出したのか（issuedAt）、いつまで使えるのか（expiresAt）、
+       *   そして、成功したのか（result）。
+       *
+       *   result を入れておく理由は、
+       *   のちに「試したが断られた」も記録するようになったとき、
+       *   同じ形で並べられるようにするためです。
+       */
+      data: {
+        targetAdminId: input.targetAdminId,
+        targetName: String(target.name ?? ""),
+        targetEmail: String(target.email ?? ""),
+        issuedAt: at,
+        expiresAt,
+        validHours: TEMP_PASSWORD_HOURS,
+        /*
+         * ★"mfa" という名前を、ここで使わないこと。
+         *
+         *   監査ログの出口には「鍵に見える名前は、何があっても外に出さない」
+         *   という、例外のない網をかけてあります。その網に "mfa" も入っています。
+         *
+         *   ここで mfaRequired という名前を使うと、
+         *   害の無い項目なのに、その網に引っかかって消えます。
+         *   そこで網のほうに例外を足して逃がすのは、いちばんやってはいけません。
+         *   例外は、必ず増えます。増えた先で、本物の鍵が通ります。
+         *   だから、名前のほうを変えます。
+         */
+        freshStepUp: true,
+        result: "OK",
+      },
     });
   });
 

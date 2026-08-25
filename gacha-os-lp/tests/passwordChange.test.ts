@@ -66,6 +66,7 @@ import { POST as resetPost } from "../app/api/auth/password-reset/route";
 import { POST as pointRequestPost } from "../app/api/console/points/request/route";
 import { POST as stepUpPost } from "../app/api/auth/step-up/route";
 import { GET as adminsGet } from "../app/api/console/admins/route";
+import { GET as auditGet } from "../app/api/console/audit/route";
 
 after(() => {
   resetDbForTests();
@@ -504,6 +505,10 @@ test("発行の記録は画面から読めるが、そこにもパスワード�
   }
 });
 
+/** よその会社（混ざらないことを見るために作る） */
+let yosoIn: Login;
+let yosoTenant = "";
+
 test("よその会社の発行の記録は、1件も混ざらない", async () => {
   /*
    * ★これは、いちばん取り返しのつかない事故です。
@@ -540,10 +545,11 @@ test("よその会社の発行の記録は、1件も混ざらない", async () =
   assert.equal(yosoLogin.ok, true);
   if (!yosoLogin.ok) throw new Error("unreachable");
   await markStepUp(yosoLogin.session.token);
-  const yosoIn: Login = {
+  yosoIn = {
     token: yosoLogin.session.token,
     csrf: yosoLogin.session.csrfToken,
   };
+  yosoTenant = yoso;
 
   const hakko = await tempPost(
     post(TEMP, yosoIn, {
@@ -581,6 +587,234 @@ test("サポートの人は、発行の記録も読めない", async () => {
   /* ★「誰が誰に発行したか」は、それ自体が攻める人の地図になります */
   const res = await tempHistoryGet(get(TEMP, supportIn));
   assert.equal(res.status, 403);
+});
+
+/* ══════════════════════════════════════════════
+   ①-2 監査ログの画面から、本物として読めること
+
+   ★発行の画面にだけ記録が出る、という状態は中途半端です。
+     発行した人は、自分の操作を自分で確かめられます。
+     でも監査ログの画面を毎日開く人（経理・セキュリティ）は、
+     そこに出ていなければ、一生気づけません。
+
+     身に覚えのない発行に、いちばん早く気づけるのは、
+     発行した本人ではなく、毎日一覧を眺めている人のほうです。
+   ══════════════════════════════════════════════ */
+
+const AUDIT = "/api/console/audit";
+
+type AuditRow = {
+  seq: number;
+  at: string;
+  actorId: string;
+  actorName: string;
+  actorRole: string;
+  action: string;
+  target: string;
+  summary: string;
+  reason: string | null;
+  requestId: string | null;
+  data: Record<string, unknown> | null;
+};
+
+test("監査ログの画面に、仮パスワード発行が本物の記録として出る", async () => {
+  const res = await auditGet(get(`${AUDIT}?limit=100`, bossIn));
+  assert.equal(res.status, 200);
+  const body = (await res.json()) as { events?: AuditRow[]; total?: number };
+
+  const hakko = (body.events ?? []).filter(
+    (e) => e.action === "TEMP_PASSWORD_ISSUED",
+  );
+  assert.equal(hakko.length, 1, "監査ログの画面に、発行が出ていません");
+  const e = hakko[0];
+
+  /*
+   * ★あとから調べる人が必要とするものが、
+   *   1件の中に全部そろっていること。
+   *   1つでも欠けると、別の表と突き合わせる作業が生まれます。
+   *   その作業は、忙しい日には必ず飛ばされます。
+   */
+
+  /* 誰が押したか（actor_admin_id） */
+  assert.equal(e.actorId, boss, "押した人のIDが残っていません");
+  assert.ok(e.actorName.length > 0, "押した人の名前が残っていません");
+  assert.ok(e.actorRole.length > 0, "押した人の役が残っていません");
+
+  /* 誰に発行したか（target_admin_id） */
+  assert.equal(e.target, target, "相手のIDが残っていません");
+  assert.equal(
+    String(e.data?.targetAdminId ?? ""),
+    target,
+    "追加項目にも相手のIDが残っていません",
+  );
+
+  /* なぜ（reason） */
+  assert.match(String(e.reason ?? ""), /入社/, "理由が残っていません");
+
+  /* いつ（issued_at）と、いつまで（expires_at） */
+  assert.ok(e.at.length > 0, "時刻が残っていません");
+  const hakkoAt = Date.parse(String(e.data?.issuedAt ?? ""));
+  const kigen = Date.parse(String(e.data?.expiresAt ?? ""));
+  assert.ok(Number.isFinite(hakkoAt), "発行した時刻が残っていません");
+  assert.ok(Number.isFinite(kigen), "期限が残っていません");
+  assert.ok(kigen > hakkoAt, "期限が、発行した時刻より前になっています");
+
+  /* うまくいったのか（result） */
+  assert.equal(e.data?.result, "OK", "結果が残っていません");
+
+  /*
+   * ★「直前に6桁を入れ直した」ことも残っていること。
+   *
+   *   ここは、うっかり消えやすい場所です。
+   *   監査ログの出口には「鍵に見える名前は外に出さない」という
+   *   例外のない網があり、その網には "mfa" も入っています。
+   *   もし誰かがこの項目を mfaRequired という名前に戻すと、
+   *   項目そのものは正しく書かれているのに、画面からは消えます。
+   *   消えたことに、誰も気づけません。だから、ここで固定します。
+   */
+  assert.equal(
+    e.data?.freshStepUp,
+    true,
+    "直前の6桁の再確認が、画面まで届いていません",
+  );
+
+  /* 画面のエラー番号と突き合わせるための番号（request_id） */
+  assert.ok(
+    String(e.requestId ?? "").length > 0,
+    "依頼の通し番号が残っていません（画面のエラーと突き合わせられません）",
+  );
+});
+
+test("監査ログの画面にも、パスワードそのものは出ない", async () => {
+  const res = await auditGet(get(`${AUDIT}?limit=100`, bossIn));
+  assert.equal(res.status, 200);
+  const text = await res.text();
+
+  assert.equal(
+    text.includes(tempPassword),
+    false,
+    "監査ログの画面に仮パスワードが出ています",
+  );
+  for (const dame of [
+    "password_hash",
+    "passwordHash",
+    "mfa_secret",
+    "mfaSecret",
+    "token_hash",
+  ]) {
+    assert.equal(text.includes(dame), false, `監査ログに ${dame} が出ています`);
+  }
+});
+
+test("鍵に見える名前は、あとから混ぜられても外に出さない", async () => {
+  /*
+   * ★これは「入れる人を信じない」ための試験です。
+   *
+   *   監査ログの追加項目は、これから先も増えていきます。
+   *   増やす人が毎回「これは出してよいか」を正しく考える、
+   *   という前提の作りは、いつか必ず破れます。
+   *   だから、出口の側でも名前を見て落としています。
+   *   その落とし穴が、本当に働いているかを、ここで固定します。
+   */
+  const { withWriteTx } = await import("../lib/server/db");
+  const { appendAuditTx } = await import("../lib/server/audit");
+
+  const himitsu = "kore-wa-zettai-ni-desanai-atai";
+  await withWriteTx(async (tx) => {
+    await appendAuditTx(tx, {
+      tenantId: tenant,
+      at: new Date().toISOString(),
+      actorKind: "SYSTEM",
+      actorId: "test",
+      actorName: "試験",
+      actorRole: "SYSTEM",
+      action: "SETTINGS_CHANGE",
+      target: "-",
+      summary: "うっかり鍵を入れてしまった記録",
+      data: {
+        /* うっかり入れてしまった、という想定 */
+        tempPassword: himitsu,
+        mfaSecret: himitsu,
+        sessionToken: himitsu,
+        /* こちらは出てよいもの */
+        安全な項目: "でてよい",
+      },
+    });
+  });
+
+  const res = await auditGet(get(`${AUDIT}?limit=100`, bossIn));
+  assert.equal(res.status, 200);
+  const text = await res.text();
+
+  assert.equal(
+    text.includes(himitsu),
+    false,
+    "鍵に見える追加項目が、そのまま外に出ています",
+  );
+  assert.ok(text.includes("でてよい"), "ふつうの項目まで落としています");
+});
+
+test("よその会社の監査ログは、1件も混ざらない", async () => {
+  /*
+   * ★監査ログには「誰が・いつ・何を」が全部入っています。
+   *   ここが1か所ゆるむと、よその会社の内部の動きを、
+   *   そっくり渡したのと同じことになります。
+   */
+  const res = await auditGet(get(`${AUDIT}?limit=200`, bossIn));
+  assert.equal(res.status, 200);
+  const text = await res.text();
+  assert.equal(
+    text.includes("よその"),
+    false,
+    "よその会社の監査ログが混ざっています",
+  );
+
+  const body = JSON.parse(text) as { events?: AuditRow[] };
+  /* この会社の記録しか無いこと（件数ではなく、中身で見ます） */
+  const zenbu = await db().execute({
+    sql: `SELECT COUNT(*) AS n FROM audit_events WHERE tenant_id = ?`,
+    args: [tenant],
+  });
+  assert.equal(
+    body.events?.length,
+    Number((zenbu.rows[0] as Record<string, unknown>)?.n ?? -1),
+    "自分の会社の記録の数と、返ってきた数が合いません",
+  );
+
+  /* ★逆向きも見ます */
+  const gyaku = await auditGet(get(`${AUDIT}?limit=200`, yosoIn));
+  assert.equal(gyaku.status, 200);
+  const gyakuText = await gyaku.text();
+  assert.equal(
+    gyakuText.includes("新しく入った人"),
+    false,
+    "こちらの監査ログが、よその会社から見えています",
+  );
+  assert.equal(
+    gyakuText.includes(tenant),
+    false,
+    "こちらの会社のIDが、よその会社から見えています",
+  );
+  assert.ok(yosoTenant.length > 0);
+});
+
+test("監査ログを見る権限が無い人は、監査ログを読めない", async () => {
+  /* サポートの人には audit.view がありません */
+  const res = await auditGet(get(AUDIT, supportIn));
+  assert.equal(res.status, 403);
+});
+
+test("仮パスワード発行だけを絞り込んでも、よその会社は混ざらない", async () => {
+  const res = await auditGet(
+    get(`${AUDIT}?action=TEMP_PASSWORD_ISSUED`, bossIn),
+  );
+  assert.equal(res.status, 200);
+  const body = (await res.json()) as { events?: AuditRow[] };
+  assert.equal(body.events?.length, 1);
+  assert.equal(body.events?.[0]?.action, "TEMP_PASSWORD_ISSUED");
+
+  const text = JSON.stringify(body);
+  assert.equal(text.includes("よその"), false, "絞り込みでも混ざっています");
 });
 
 /* ══════════════════════════════════════════════
