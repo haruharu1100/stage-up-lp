@@ -8,10 +8,13 @@
    - 06_商品大量生成とパイプライン / 07_価格戦略設計 / 08_仕入先ネットワークと勝ち筋拡張
    - 09_Phase1実装記録 / 10_Phase2実装記録 / 11_Phase3実装記録 / 12_Phase3.5実装記録
      / 13_Phase3.6実装記録 / 14_Phase3.7実装記録 / 15_Phase3.8実装記録
-   - **33_Phase6.5_候補の採点とTOP5 / 31_Phase6.5_仕入データ源の探索_採点基準 / 32_問い合わせ文案_YahooとRakuten**
-     （**いまの最前線はここ。仕入先・データ源の話をする前に 33 → 31 の順で必ず読む。
-     63候補を調べて、4項目すべてYESの候補は0件。だから Live Connector 実装には進んでいない。
-     TOP1は NETSEA（80点）だが、規約第8条2項の書面承諾が未取得。楽天の懸念条項は2つではなく5つ**）
+   - **34_Phase6.5_Source分類の修正とTOP5二本立て / 33_Phase6.5_候補の採点とTOP5 / 31_Phase6.5_仕入データ源の探索_採点基準 / 32_問い合わせ文案_YahooとRakuten**
+     （**いまの最前線はここ。仕入先・データ源の話をする前に 34 → 33 → 31 の順で必ず読む。
+     34 が最新で、33 の分類の誤りを訂正している（33 は経緯としてルール76で残してあるだけ）。
+     核心＝「商品データを取れる」と「実際に仕入れられる」は別物。混ぜてはいけない。
+     63候補を調べて Legal Gate 全通過は0件。だから Live Connector 実装には進んでいない。
+     仕入先TOP1は NETSEA（77点・`FIRST_SUPPLIER_CANDIDATE`）だが第8条2項の書面承諾が未取得。
+     バリューコマースは仕入先ではなく Discovery（`PURCHASABLE_SUPPLIER = UNKNOWN`）。楽天の懸念条項は2つではなく5つ**）
    - **30_Phase6設計_FIRST_SUPPLIER_CONNECTOR**
      （**LEGAL_USAGE_GATE の本体。外部市場へ繋ぐ話・利用可否に触る前に必ず読む。
      Yahoo!もeBayも BLOCKED で、通信は1回もしていない。「たぶん使える」で繋がない**）
@@ -67,35 +70,89 @@
 
 ## 現状
 
-**Phase 6.5（SUPPLIER DATA SOURCE DISCOVERY）調査完了（2026-08-26）。コード実装は増やしていない。**
+**Phase 6.5（SUPPLIER DATA SOURCE DISCOVERY）調査完了＋分類修正済（2026-08-26）。コード実装は増やしていない。**
 
-> [!danger] Phase 6.5 の結論：**63候補を調べて、今すぐ正式接続できる候補は0件。**
+> [!danger] 最重要の区別：**「商品データを取れる」と「実際にその商品を仕入れられる」は別物。**
+> この2つを1本のランキングに混ぜてはいけない。混ぜると
+> 「安い店を見つけた」→「じゃあそこから仕入れよう」→**実際にはその店は法人に卸さない／転売目的の購入を禁じている**という事故が起きる。
+> **`SOURCE_TYPE` を5分類する：**
+> `WHOLESALE_SUPPLIER`（卸・継続仕入できる／本命）／`PURCHASABLE_SUPPLIER`（買えるが卸ではない）／
+> `ONE_OFF_MARKETPLACE`（一点物。自動化対象外）／`MARKET_INTELLIGENCE`（知るためのデータ源。仕入先ではない）／
+> `AFFILIATE_DATA`（広告目的で提供されるデータ。用途制限が強い）。
+>
+> **データ源は3段階に分ける：**
+> ① `DISCOVERY SOURCE`（見つける）→ ② `PURCHASABLE SOURCE`（実際に仕入れられる）→ ③ `VERIFIED ROUTE`（売り先の規約まで確認済み）。
+> **③まで通ったものだけが BUY 候補。①だけで BUY は出さない。**
+
+> [!danger] Phase 6.5 の結論：**63候補を調べて、Legal Gate 全通過は0件。**
 > 合格ライン＝`COMMERCIAL_USE_ALLOWED` / `INTERNAL_BUSINESS_USE_ALLOWED` / `AUTOMATED_RETRIEVAL_ALLOWED` / `PURCHASABLE_PRODUCTS` が**すべてYES**。
 > **1件も満たしていないので、Live Connector の実装には進まない。**
-> ただし**あと1通の書面承諾で開く候補が1件**＝**NETSEA Buyer API（80点）**。
-> 規約第8条2項「情報を加工する場合は事前に書面承諾」が未取得で、
-> かつ第2条（商用目的を認める）と第5条3（使用から収入を得ることを禁止）が文言上ぶつかっている
-> → **ルール70で両論のまま記録し、厳しい側で設計**（`COMMERCIAL_USE_ALLOWED` は UNKNOWN へ倒す）。
-> TOP5＝NETSEA 80／バリューコマース 72／BigBuy 71／Datafeedr 61／vidaXL 58。
-> 6位 orosy 57 は**規約をブラウザで読むだけで1位と入れ替わり得る**（HTTP取得ではSPAで本文に到達できない）。
-> 詳細は `33_Phase6.5_候補の採点とTOP5.md` / 基準は `31_Phase6.5_仕入データ源の探索_採点基準.md`。
+>
+> **【A】実際の仕入先 TOP5**：NETSEA 77／BigBuy 71／vidaXL 58／orosy 57／Ankorstore 48
+> **【B】商品発見・価格比較 TOP5**：バリューコマース 79／SP-API Catalog Items 71／Yahoo!商品検索 67／Keepa 65／Datafeedr 65
+>
+> **トラスコ オレンジブック.Com は60点だが圏外**（規約第9条9号が自動取得を明文で禁止＝**法務Gate不通過は点数が高くても選択禁止**）。
+> orosy 57 は**規約をブラウザで読むだけで順位が一変し得る**（HTTP取得ではSPAで本文に到達できない）。
+> 詳細は `34_Phase6.5_Source分類の修正とTOP5二本立て.md`。
 
-> [!danger] Phase 6.5 で判明した、設計を変える4つの事実
+> [!warning] バリューコマースを仕入先だと即断しない
+> 商品APIは **アフィリエイトサイト向けの商品API** として提供されているもの。
+> **「APIに商品URLがある＝当社が仕入可」とは扱わない。**
+> → `SOURCE_TYPE = AFFILIATE_DATA / MARKET_INTELLIGENCE`、**`PURCHASABLE_SUPPLIER = UNKNOWN`**。
+> ただし価値は下がっていない。社内利用が正式許可されれば **PRICE DISCOVERY CONNECTOR**
+> （Amazon需要商品→JAN→複数広告主の同一商品価格→最安店舗を発見）として中核になり得る。
+> **その店舗から事業仕入してよいかは、店舗ごとに別Gate。**
+
+> [!danger] `FIRST_SUPPLIER_CANDIDATE = NETSEA`（詳細監査済み・それでも繋がない）
+> 一次資料5点（API利用規約全文＝`openapi.json` の `info.description` ／APIスキーマ実体／APIヘルプ／**バイヤー会員規約**／CSV仕様）で監査した結果、
+> **規約が明確にYESと言っているのは「商用利用」（第2条）と「自動取得」の2点だけ。**
+> **`DATA_STORAGE_ALLOWED` / `INTERNAL_BUSINESS_ANALYSIS_ALLOWED` / `PRICE_COMPARISON_ALLOWED` の3点はすべて UNKNOWN**
+> （保存については**条文そのものが存在しない**。加工については第8条2項が書面承諾を要求するが**「加工」の定義がどこにも無い**）。
+> この3つは当システムの中核機能そのもの。**「繋いでから聞く」ではなく、聞いてから繋ぐ。**
+> 文言衝突は**2件**（第2条 vs 第5条3「使用から収入を得ることの禁止」／第1条「再許諾可」vs 第5条3「再許諾禁止」）
+> → **ルール70で両論のまま記録し、厳しい側で設計する。**
+
+> [!danger] Phase 6.5 で判明した、設計を変える事実
 > 1. **「Amazonに出していいか」は卸モールの規約では決まらない。**ほぼ全て「サプライヤー／出展企業ごとの個別条件」。
->    → **モール単位で可否を持つ設計は誤り。サプライヤー単位・商品単位で持ち、取れなければ「判定不能」で止める。**
-> 2. **中国系B2Bは7件すべてJAN非保有**（AliExpress／Alibaba／1688／DHgate／Made-in-China／Global Sources／Temu）。
+>    → **モール単位で可否を持つ設計は誤り。** `supplier_marketplace_policy`（`supplier_id` / `amazon_allowed` / `rakuten_allowed` / `yahoo_allowed` / `mercari_allowed` / `own_ec_allowed` / `consumer_direct_shipping_allowed` / `policy_source` / `verified_at` / `confidence`）と
+>    `product_marketplace_policy` の2本を持ち、**商品Policy ＞ サプライヤーPolicy**。値は **YES / NO / UNKNOWN**。
+>    **`AMAZON_RESALE_ALLOWED = UNKNOWN` は、JAN一致・利益3,000円・Amazon需要強でも BUY にしない → `POLICY_REVIEW_REQUIRED` へ。**
+> 2. **NETSEAでも Amazon個別の可否は機械で取れない。**取れるのは `deal_net_shop_flag`（ネット販売可）という粗い1フラグのみで、
+>    Amazon／楽天／Yahoo／メルカリを区別しない。商品単位フラグは `deal_net_shop_flag` / `deal_net_auction_flag` / `direct_send_flag` / `image_copy_flag` / `net_bulk_order_flag`。
+>    `/suppliers` は `id` / `corp_name` / `trade_name` の3項目のみで**販路情報を持たない**（＝商品Policy優先の設計と一致）。
+>    → **当面ほぼ全商品が `POLICY_REVIEW_REQUIRED` に入る。これは欠陥ではなく正しい挙動。**
+> 3. **NETSEA規約第10条により「加工したもの・利用して得たもの」まで廃棄義務**がある。
+>    → **データ系譜を追跡して一括削除できる仕組みを最初から入れる。後付けはほぼ不可能。**
+> 4. **中国系B2Bは7件すべてJAN非保有**（AliExpress／Alibaba／1688／DHgate／Made-in-China／Global Sources／Temu）。
 >    既存Amazon商品との機械突合が**原理的に不可能**。→ 欧州系卸（EAN-13保有）が唯一の構造的な解。
-> 3. **海外卸は関税・輸入消費税を事前算出できる候補がゼロ。**
+> 5. **海外卸は関税・輸入消費税を事前算出できる候補がゼロ。**
 >    → 利益計算式に「輸入コストを人が入力する欄」を設けない限り、海外卸は利益判定が成立しない。
-> 4. **SP-API を接続すると Keepa との関係で AUP 4.3 の名宛人になる**
+>    **BigBuy は技術的相性が非常に高い（`ean13` / `wholesalePrice` / 数量別卸価格）が、これが理由で NETSEA より上げない。**
+> 6. **SP-API を接続すると Keepa との関係で AUP 4.3 の名宛人になる**
 >    （「Amazonのウェブサイトから取得した情報を販売する外部データサービスを、使用・提供・宣伝してはならない」）。
 >    Keepa はまさにこれに当たり得る。**SP-API 導入前に必ず照会する。**
+>    一方 SP-API Catalog Items の `identifiers` は **JANとASINを規約に守られた形で結べる唯一の正式手段**で、第1本命Routeに不可欠。
+
+> [!warning] 第1本命 Route と、進め方（変えない）
+> ```
+> Keepa → Amazon需要の強いASIN → JAN →（SP-API identifiers で橋渡し）→ NETSEA API
+>   → 同一JANの商品 → 卸価格 → 在庫 → Amazon販売可否 → 利益計算 → 月間利益予測
+>   → BUY候補 →［購入ページを開く］
+> ```
+> **単発利益ではなく月間利益で見る。** `EXPECTED_MONTHLY_UNITS`（Keepa需要Evidenceと組み合わせる）× 単品利益 = `EXPECTED_MONTHLY_NET_PROFIT`。
+> **利益1,000円 × 月100個 = 月10万円**が卸の本命であり、「1回だけ5,000円」より価値が高い。
+> 継続仕入の評価項目は `REPLENISHABLE` / `AVAILABLE_QUANTITY` / `REORDER_AVAILABLE` / `WHOLESALE_PRICE` / `QUANTITY_DISCOUNT` / `STOCK_STABILITY`。
+> **在庫「有無」と在庫「数量」を混同しない**（NETSEAの `sold_out_flag` は有無であり数量ではない。段階的な数量割引表も取れない）。
+> **Legal Gate を通っても、いきなり47件は禁止。1商品 → 停止 → 5商品 → 停止 → 10商品 → 停止 → 47商品。**
+> 第1回テストは、既存47件から**JANが明確な商品を1件だけ**選ぶ。**BUYが出ても［購入ページを開く］まで。購入は人間。**
 
 > [!warning] 3市場の扱い（変えない）
 > - **Yahoo!ショッピング** = `BLOCKED_PENDING_CONFIRMATION`。回答がYESなら**即座に第1候補として再評価**する
 > - **楽天市場** = `EXPLICIT_PERMISSION_REQUIRED`。**禁止と断定はしないが、許可取得前にLive Connectorにしない**。
 >   懸念条項は2つではなく**5つ**（第10条(4)(10)には「明示的に許可した場合を除く」があるが、(7)(9)と第8条4項には**無い**）
-> - **eBay** = 優先度：低。**削除はしない**
+> - **eBay** = 優先度：低。**削除はしない**（分類上は `ONE_OFF_MARKETPLACE`）
+> - **問い合わせは4社**（NETSEA 8項目／バリューコマース 5項目／Yahoo! 4項目／楽天 5条項）。
+>   **送信は人間。AIは送信しない（`CONTACT_VENUE_BY_AI_ALLOWED = false`）。回答前のLIVE接続はしない。**
 
 > [!danger] 採用しないと決めたもの（金を払っても駄目）
 > **スクレイピング代行型（Rainforest API / Bright Data / Oxylabs）は採用不可。**
