@@ -8,8 +8,12 @@
    - 06_商品大量生成とパイプライン / 07_価格戦略設計 / 08_仕入先ネットワークと勝ち筋拡張
    - 09_Phase1実装記録 / 10_Phase2実装記録 / 11_Phase3実装記録 / 12_Phase3.5実装記録
      / 13_Phase3.6実装記録 / 14_Phase3.7実装記録 / 15_Phase3.8実装記録
+   - **33_Phase6.5_候補の採点とTOP5 / 31_Phase6.5_仕入データ源の探索_採点基準 / 32_問い合わせ文案_YahooとRakuten**
+     （**いまの最前線はここ。仕入先・データ源の話をする前に 33 → 31 の順で必ず読む。
+     63候補を調べて、4項目すべてYESの候補は0件。だから Live Connector 実装には進んでいない。
+     TOP1は NETSEA（80点）だが、規約第8条2項の書面承諾が未取得。楽天の懸念条項は2つではなく5つ**）
    - **30_Phase6設計_FIRST_SUPPLIER_CONNECTOR**
-     （**いまの最前線はここ。外部市場へ繋ぐ話・利用可否・LEGAL_USAGE_GATE に触る前に必ず読む。
+     （**LEGAL_USAGE_GATE の本体。外部市場へ繋ぐ話・利用可否に触る前に必ず読む。
      Yahoo!もeBayも BLOCKED で、通信は1回もしていない。「たぶん使える」で繋がない**）
    - **29_Phase5設計_AUTO_RESEARCH_ORCHESTRATOR**
      （**主経路が「人が10件入れる」から「AIが自動で探す」へ変わった回。
@@ -63,7 +67,44 @@
 
 ## 現状
 
-**Phase 6（FIRST SUPPLIER CONNECTOR）実装済み（2026-08-26）。**
+**Phase 6.5（SUPPLIER DATA SOURCE DISCOVERY）調査完了（2026-08-26）。コード実装は増やしていない。**
+
+> [!danger] Phase 6.5 の結論：**63候補を調べて、今すぐ正式接続できる候補は0件。**
+> 合格ライン＝`COMMERCIAL_USE_ALLOWED` / `INTERNAL_BUSINESS_USE_ALLOWED` / `AUTOMATED_RETRIEVAL_ALLOWED` / `PURCHASABLE_PRODUCTS` が**すべてYES**。
+> **1件も満たしていないので、Live Connector の実装には進まない。**
+> ただし**あと1通の書面承諾で開く候補が1件**＝**NETSEA Buyer API（80点）**。
+> 規約第8条2項「情報を加工する場合は事前に書面承諾」が未取得で、
+> かつ第2条（商用目的を認める）と第5条3（使用から収入を得ることを禁止）が文言上ぶつかっている
+> → **ルール70で両論のまま記録し、厳しい側で設計**（`COMMERCIAL_USE_ALLOWED` は UNKNOWN へ倒す）。
+> TOP5＝NETSEA 80／バリューコマース 72／BigBuy 71／Datafeedr 61／vidaXL 58。
+> 6位 orosy 57 は**規約をブラウザで読むだけで1位と入れ替わり得る**（HTTP取得ではSPAで本文に到達できない）。
+> 詳細は `33_Phase6.5_候補の採点とTOP5.md` / 基準は `31_Phase6.5_仕入データ源の探索_採点基準.md`。
+
+> [!danger] Phase 6.5 で判明した、設計を変える4つの事実
+> 1. **「Amazonに出していいか」は卸モールの規約では決まらない。**ほぼ全て「サプライヤー／出展企業ごとの個別条件」。
+>    → **モール単位で可否を持つ設計は誤り。サプライヤー単位・商品単位で持ち、取れなければ「判定不能」で止める。**
+> 2. **中国系B2Bは7件すべてJAN非保有**（AliExpress／Alibaba／1688／DHgate／Made-in-China／Global Sources／Temu）。
+>    既存Amazon商品との機械突合が**原理的に不可能**。→ 欧州系卸（EAN-13保有）が唯一の構造的な解。
+> 3. **海外卸は関税・輸入消費税を事前算出できる候補がゼロ。**
+>    → 利益計算式に「輸入コストを人が入力する欄」を設けない限り、海外卸は利益判定が成立しない。
+> 4. **SP-API を接続すると Keepa との関係で AUP 4.3 の名宛人になる**
+>    （「Amazonのウェブサイトから取得した情報を販売する外部データサービスを、使用・提供・宣伝してはならない」）。
+>    Keepa はまさにこれに当たり得る。**SP-API 導入前に必ず照会する。**
+
+> [!warning] 3市場の扱い（変えない）
+> - **Yahoo!ショッピング** = `BLOCKED_PENDING_CONFIRMATION`。回答がYESなら**即座に第1候補として再評価**する
+> - **楽天市場** = `EXPLICIT_PERMISSION_REQUIRED`。**禁止と断定はしないが、許可取得前にLive Connectorにしない**。
+>   懸念条項は2つではなく**5つ**（第10条(4)(10)には「明示的に許可した場合を除く」があるが、(7)(9)と第8条4項には**無い**）
+> - **eBay** = 優先度：低。**削除はしない**
+
+> [!danger] 採用しないと決めたもの（金を払っても駄目）
+> **スクレイピング代行型（Rainforest API / Bright Data / Oxylabs）は採用不可。**
+> 「提供会社が適法だと述べていること」と「利用者が対象サイトの規約に違反しないこと」は**別の問題**。
+> Rainforest は自ら「Amazonの提供するAPIは使わずWebスクレイピングしたデータ」と明言、
+> Bright Data のライセンスは適法性の判断責任を顧客側に置き、Oxylabs は ToS 本文に到達すらできない。
+> 同じ理由で **Amazon PA-API / Creators API も不可**（集約・分析・価格比較・LLM学習が明文で禁止、ASIN以外は24時間で破棄義務）。
+
+**以下は Phase 6（FIRST SUPPLIER CONNECTOR、2026-08-26 実装済み）の内容。**
 
 > [!danger] Phase 6 でいちばん大事なこと：**技術は出来た。許可が取れていない。**
 > **`LEGAL_USAGE_GATE = BLOCKED`（Yahoo!ショッピング・eBay の2市場とも）。外部への通信は0回。**
