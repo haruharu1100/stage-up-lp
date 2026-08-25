@@ -354,7 +354,20 @@ export async function runRoutes(opts: { onlyIds?: number[] } = {}): Promise<Rout
   // 「人が承認して間に合う組み合わせ」だけを後から選べるようにするため。
   await rebuildHalfLife(t.humanReachHours);
 
-  // best_route_id は行が確定してから紐づける
+  /*
+   * best_route_id は行が確定してから紐づける。
+   *
+   * 【WHERE best_buy_venue IS NOT NULL を外した理由（2026-08-25）】
+   * 以前はベスト市場が入っている商品だけを書き換えていた。
+   * そのため「前回はベストRouteがあったが、今回は無くなった」商品の
+   * best_route_id が**前回のまま残り**、中身（利益・買う市場・売る市場）だけが
+   * 空になるという食い違いが実際に6件できていた（受け入れテストで発覚）。
+   * 残った古い番号は SKIP になったRouteを指しており、画面から辿ると
+   * 「もう狙えない組み合わせ」を今の候補のように見せてしまう。
+   *
+   * いまは全行を書き換える。ベストが無ければ副問い合わせが NULL を返し、
+   * 番号も一緒に消える（＝中身と番号が必ず同じ状態になる）。
+   */
   await run(`
     UPDATE supplier_products SET best_route_id = (
       SELECT r.id FROM arbitrage_routes r
@@ -362,8 +375,7 @@ export async function runRoutes(opts: { onlyIds?: number[] } = {}): Promise<Rout
          AND r.buy_venue_code = supplier_products.best_buy_venue
          AND r.sell_venue_code = supplier_products.best_sell_venue
          AND r.rule_version = ?
-       LIMIT 1)
-     WHERE best_buy_venue IS NOT NULL`, [rv]);
+       LIMIT 1)`, [rv]);
 
   stats.bestRoi = rois.length > 0 ? Math.max(...rois) : null;
   stats.avgRoi = rois.length > 0 ? rois.reduce((a, b) => a + b, 0) / rois.length : null;

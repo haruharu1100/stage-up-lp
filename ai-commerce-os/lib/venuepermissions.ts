@@ -630,63 +630,141 @@ export const VENUE_RESEARCH: VenueResearch[] = [
    * venue_ref を AMAZON にしてあるのは「Amazon市場の数字を扱う道具」だから。
    * Amazon が提供しているデータという意味ではない。第三者のサービスである。
    *
-   * 【全項目 UNKNOWN にしてある理由】
-   * 規約本文を実際に開いて読めていない。keepa.com は自動アクセスを 403 で拒否する
-   * （keepa.com/#!api と keepa.com/api-docs/ の両方で確認した）。
-   * 検索結果には料金や仕様らしき記述が出てくるが、いずれも第三者の記事であって一次情報ではない。
-   * 「たぶんこう書いてある」で埋めない（ルール：推測で埋めない・UNKNOWN を YES 側に寄せない）。
+   * 【2026-08-25 訂正：規約本文は読めている。UNKNOWN を実際の値に置き換えた】（ルール76）
+   * 一時、ここに「keepa.com は403で読めないので規約本文を確認できていない」と書いていたが、
+   * **これは事実誤認だった。** 403 になるのは取得ツールの種類による現象で、
+   *   ・通常のHTTP取得だと `https://keepa.com/api-docs/` は 200 で読める
+   *   ・利用条件（T&C, Version of July 28, 2026）は 2026-08-22 に**ブラウザで本文を開いて読んでいる**
+   * 記録は 事業Vault/AI Commerce OS/20_Keepa公式API調査.md（一次資料として整理済み）。
+   * 読んだものを「読んでいない」と書き続ける方が、事実から遠い。
    *
-   * 【いまの使い方は Connector ではない】
-   * ご本人がブラウザで Keepa を開き、画面の数字を「売れるかテスト」に書き写す。
-   * これは HUMAN_ENTRY であって自動取得ではない。だから state は CONNECTED にしない。
-   * 逆に言えば、**APIで自動取得を始めるには、まず下の未確認8項目を潰す必要がある。**
+   * 【規約本文で確認できた条項（原文）】
+   *   2(2)  "The services are provided solely for the user's own business purposes.
+   *          Reselling data for third-party purposes is only allowed with the Service Provider's
+   *          prior written consent" → 自社事業目的の商用利用はOK／第三者への再販は書面同意が必要
+   *   2(4)  完全性は保証しない・正確性も保証できない・**妥当性チェックは利用者の義務**
+   *   3(4)  "The Service Provider's Price Data API is available solely for business purposes."
+   *   6.1(1) 生データの転売は厳禁
+   *   11(1) 自社の事業目的での**取得・表示**は可。ただし**利用権は契約期間中に限る**
+   *   11(2) 自社の事業目的での**保存**は可
+   *   10    年間平均可用性98%（落ちる前提で設計する）
+   * 事業者は Keepa GmbH（ドイツ）。契約は 2026-06-02 から稼働中（20 tokens/分・49.00 EUR/月）。
+   *
+   * 【サイトの自動操作は今も禁止】
+   * 免責事項の「ボット・スクリプト・スクレイパーの利用は厳禁」は **keepa.com というサイト**への禁止。
+   * 有料のREST APIは Keepa 自身が用意した正式な機械アクセス手段なので別物。
+   * → 触るのは `api.keepa.com` だけ。サイトの自動巡回は今後も一切しない。
+   *
+   * 【いまの使い方は2つあり、どちらも本番運用ではない】
+   * ① 売れるかテスト（`/sellability`）＝ご本人が画面の数字を書き写す（HUMAN_ENTRY）。
+   * ② KEEPA_READ_ONLY（Phase 3.10）＝1回1件だけAPIから取る**社内検証専用**。
+   *    U1（正規化・保存の線引き）と U2（契約終了後の扱い）が未確認のため、
+   *    用途は `INTERNAL_VERIFICATION_ONLY` に固定してある。
+   * **どちらも state を CONNECTED にしない**（ルール57の4条件がそろっていない）。
    */
   {
     connector_code: 'KEEPA_API',
     venue_ref: 'AMAZON',
     name: 'Keepa（Amazonの価格・売れ筋履歴を提供する第三者サービス）',
-    access_method: 'MANUAL_OBSERVATION',
-    state: 'UNKNOWN',
-    verdict: 'CONFIRMATION_REQUIRED',
+    access_method: 'OFFICIAL_API',
+    /*
+     * state を CONNECTED にしない理由：
+     * 契約は生きている（2026-06-02から 20 tokens/分）が、**まだ1回も取得していない**。
+     * 「取れることを確認済み」と書けるのは、実際に1件取って中身を見たあと。
+     */
+    state: 'AVAILABLE',
+    /*
+     * verdict を CONFIRMED_ALLOWED にした根拠は規約本文（2(2)・3(4)・11(1)・11(2)）。
+     * ただし「許可されている」＝「本番で自動運用してよい」ではない。
+     * 用途の制限は lib/keepa/policy.ts の KEEPA_USE_SCOPE = INTERNAL_VERIFICATION_ONLY 側で掛ける。
+     */
+    verdict: 'CONFIRMED_ALLOWED',
     permissions: {
-      api_exists: 'UNKNOWN',
-      commercial_use_allowed: 'UNKNOWN',
-      internal_business_use_allowed: 'UNKNOWN',
-      price_analysis_allowed: 'UNKNOWN',
-      data_storage_allowed: 'UNKNOWN',
-      automated_collection_allowed: 'UNKNOWN',
+      api_exists: 'YES',
+      // 2(2)「solely for the user's own business purposes」＋ 3(4)「solely for business purposes」
+      commercial_use_allowed: 'YES',
+      // 同上。むしろ「自社の事業目的**だけ**」なので、社内ツール用途は規約の想定そのもの
+      internal_business_use_allowed: 'YES',
+      // 3(4) は Price Data API と明記。11(1) で取得・表示が自社事業目的の範囲で認められている
+      price_analysis_allowed: 'YES',
+      // 11(2)「The user may save ...」。ただし 11(1) で利用権は契約期間中に限られる（U2）
+      data_storage_allowed: 'YES',
+      // api.keepa.com は Keepa 自身が用意した機械アクセス手段で、トークン補充もそれ前提の設計。
+      // ★ただし keepa.com という「サイト」の自動巡回は今も禁止。ここで YES にしたのは API だけ。
+      automated_collection_allowed: 'YES',
       automated_purchase_allowed: 'NO',
       automated_listing_allowed: 'NO',
     },
-    sold_data: 'UNKNOWN',
-    // Gate の4観点がすべて0＝合計点が何点でも自動接続の候補にしない。
-    scores: { ...ZERO },
+    /*
+     * 成約価格（いくらで売れたか）は取れない。
+     * `monthlySold` は「先月何回買われたか」であって「いくらで売れたか」ではない。
+     * 公式ドキュメントの全フィールドを見たうえで、成約価格に当たる項目は無いと確認した。
+     */
+    sold_data: 'NO',
+    /*
+     * 【点の根拠】満点にしていない項目には、必ず減点の理由がある。
+     *   commercial 8 … 自社事業目的はOKだが、第三者目的の提供は書面同意が要る（2(2)・U3）
+     *   internal  10 … 「自社の事業目的だけ」が規約の前提なので満点
+     *   analysis   9 … Price Data API と明記。ただし monthlySold は U4 が閉じるまで判定に使わない
+     *   storage    6 … 保存はOK（11(2)）だが、利用権が契約期間中に限られ（11(1)）、
+     *                  正規化の線引き（U1）と契約終了後の扱い（U2）が未確認なので満点にしない
+     *   auto       9 … 正式な機械アクセス手段。ただし 20トークン/分の上限がある
+     *   url        0 … 商品ページURLは返らない（KEEPA_PRODUCT_URL_AVAILABLE = false）
+     *   entry      9 … 審査なし・契約済み。ただし月額課金が前提なので満点にはしない
+     * ★Gate（商用・社内・価格判断・保存）は通る。だが**Gateは「候補にしてよい」までの話**で、
+     *   本番自動運用の許可ではない。実際の使用範囲は KEEPA_USE_SCOPE が別に縛っている。
+     */
+    scores: {
+      commercial: 8, internal: 10, analysis: 9, storage: 6, auto: 9,
+      volume: 10, identifier: 10, price: 10, url: 0, entry: 9,
+    },
     source_urls: [
       'https://keepa.com/',
+      // 公式APIドキュメント（通常のHTTP取得で200。robots.txt でも /api-docs/ は許可されている）
+      'https://keepa.com/api-docs/',
+      // 免責事項（サイトの自動操作禁止の記載元）
+      'https://keepa.com/#!disclaimer',
+      // Keepa社自身が公開している公式クライアントの原本（2026-08-25 に実際に開いて確認）
+      'https://github.com/keepacom/api_backend',
     ],
-    rate_limit_note: '不明（公式ページを機械的に開けないため確認できていない）。',
+    rate_limit_note:
+      '当社の契約は 20トークン/分（2026-06-02開始・49.00 EUR/月）。'
+      + 'バケット上限は 補充速度×60 = 1,200トークンで、未使用分は60分で消える。'
+      + '費用は 商品1件=1／offers=1ページ(最大10件)につき6／buybox=+2／stock=+2／rating=+1。'
+      + '★管理は「月に何トークン使えるか」ではなく「1分あたり20ずつ戻る」を主軸にする。'
+      + '月の総量だけを見ると、短時間の大量取得で詰まる。'
+      + 'なお実際の残量は応答の tokensLeft / refillIn / refillRate をそのまま使う（推測値を持たない）。',
     unknowns: [
-      '公式APIが今も提供されているか（公式ページを開けていない）',
-      '事業者が商用目的で使ってよいか',
-      '取得した数字を自社システムに保存し続けてよいか',
-      '保存してよい期間の上限があるか',
-      '仕入判断に使ってよいか',
-      '定期的な自動取得が認められているか（回数制限を含む）',
-      '料金と契約条件（第三者記事の数字は根拠にしない）',
-      'Amazon以外の市場で売る商品の判断に使ってよいか',
+      '【U1】取得したデータを自社システム用に正規化・整形して保存してよいか'
+        + '（11(1)の「modify, edit, translate, reproduce しない」と 11(2)の「save してよい」の線引き）',
+      '【U2】契約終了後に、保存済みのAPIデータを保持・利用してよいか（削除義務の明文が無い）',
+      '【U3】将来SaaSとして他社へ提供する場合に 2(2) の書面同意が必要になる範囲',
+      '【U4】monthlySold（先月の購入回数）の元データに関するAmazon側の制約',
+      '【U5】日本の特定商取引法・古物営業法の観点での制約（見当たらないが確認していない）',
+      '【U6】AUPと同趣旨の条項が「Amazon Services Business Solutions Agreement」側にもあるか',
     ],
     note:
       '【2026-08-22・ご本人の判断】「まず売れるものなのかどうかテストするので Keepa を使用して」。'
       + 'これを受けて Amazon SP-API は見送り（AUP 4.3 は SP-API を使い始めなければ掛からないので、'
-      + 'Keepa を使い続けること自体に規約上の問題は生じない）。'
-      + '／【調査の結果】keepa.com は自動アクセスを 403 で拒否するため、規約本文を機械的に読めていない。'
-      + 'したがって8項目すべて UNKNOWN のまま。検索で出てくる料金・仕様の記述は第三者記事なので根拠にしない。'
-      + '／【いまの使い方】ご本人がブラウザで見て、数字を「売れるかテスト」画面に手で書き写す（HUMAN_ENTRY）。'
-      + 'システムは Keepa へ一切アクセスしない。'
+      + 'Keepa を使い続けること自体に規約上の問題は生じない。逆に SP-API を使い始めた瞬間に'
+      + '4.3 が発動して Keepa は「使うこと」自体が禁止される）。'
+      + '／【2026-08-25 訂正】以前ここに「keepa.com は403で規約本文を読めていない」と書いていたが誤り。'
+      + '403 は取得ツールの種類による現象で、通常のHTTP取得なら /api-docs/ は200。'
+      + '利用条件（Version of July 28, 2026）は 2026-08-22 にブラウザで本文を読んでいる。'
+      + 'よって UNKNOWN のままにしていた許可項目を、条文を根拠に実際の値へ置き換えた（ルール76）。'
+      + '／【何が認められたか】自社の事業目的での取得・表示（11(1)）・保存（11(2)）・'
+      + '商用利用（2(2)・3(4)）。／【何が認められていないか】生データの転売（6.1(1)）、'
+      + '書面同意の無い第三者目的での提供（2(2)）、契約終了後の利用（11(1)）。'
+      + '／【正確性は保証されない】2(4) が「完全性は保証しない・正確性も保証できない・'
+      + '妥当性チェックは利用者の義務」と明記している。当社の Fail Closed 設計はこの義務そのもの。'
+      + '／【いまの使い方】①ご本人がブラウザで見て数字を手で書き写す（HUMAN_ENTRY）。'
+      + '②KEEPA_READ_ONLY（Phase 3.10）で1回1件だけAPIから取る。'
+      + '②は INTERNAL_VERIFICATION_ONLY＝社内検証専用で、外部提供・再販売・本番自動運用はしない。'
+      + 'U1・U2 が Keepa 社の回答で閉じるまで、この制限は外さない。'
       + '／【その数字の扱い】第三者ツール由来なので、実市場データ100件には数えない（counts_as_real_market = 0 で固定）。'
-      + '数え始めてよいのは、ご本人が規約を読んで商用利用と保存の可否を確認したあと。'
       + '／【下落回数は販売数ではない】Keepa の売れ筋順位の下落回数は販売数そのものではないため、'
-      + 'そこから出した数字はすべて「推定」として画面に出す。',
+      + 'そこから出した数字はすべて「推定」として画面に出す。'
+      + '／【monthlySold は使わない】U4 が閉じるまで、売れるか判定に monthlySold を使わない。',
   },
 ];
 

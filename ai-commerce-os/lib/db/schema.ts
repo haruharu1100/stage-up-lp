@@ -1018,6 +1018,22 @@ export const ADD_COLUMNS: string[] = [
   `ALTER TABLE venue_connectors ADD COLUMN unknowns_json TEXT`,
   // 成約価格（いくらで売れたか）が取れるか。現在価格とは別の質問なので別の欄で持つ。
   `ALTER TABLE venue_connectors ADD COLUMN sold_data_available TEXT NOT NULL DEFAULT 'UNKNOWN'`,
+
+  /* ---- Phase 3.10（KEEPA_READ_ONLY） ----
+   *
+   * 【なぜ CREATE TABLE 側だけでは足りないか】
+   * `CREATE TABLE IF NOT EXISTS` は、**すでにある表には何もしない**。
+   * 表を先に作ってしまったあとに列を足すと、新規の環境では列があるのに
+   * 既存の環境では無い、という食い違いが起きる（実際に起きた）。
+   * 列の追加はここに書いて、どちらの環境でも同じ形になるようにする。
+   */
+  `ALTER TABLE keepa_products ADD COLUMN sellability_window_days INTEGER`,
+  `ALTER TABLE keepa_products ADD COLUMN sellability_verdict TEXT`,
+  `ALTER TABLE keepa_products ADD COLUMN sellability_reason TEXT`,
+  // 順位の下落回数から出した「推定」。販売数そのものではない（ルール78）。
+  `ALTER TABLE keepa_products ADD COLUMN estimated_monthly_sales REAL`,
+  `ALTER TABLE keepa_products ADD COLUMN per_seller_monthly REAL`,
+  `ALTER TABLE keepa_products ADD COLUMN estimated_turnover_days REAL`,
 ];
 
 /**
@@ -1355,10 +1371,11 @@ export const SCHEMA_SELLABILITY: string[] = [
    *
    * 【counts_as_real_market を既定0にしてある理由】
    * Keepa は Amazon ではなく第三者ツール。市場から正式に提供されたデータではない。
-   * また、Keepa の利用規約でこの使い方が認められているかは未確認である
-   * （keepa.com は自動アクセスを 403 で拒否するため、規約本文を機械的に読めていない）。
+   * Keepa 自身も利用条件 2(4) で「完全性は保証しない・正確性も保証できない・
+   * 妥当性の確認は利用者の義務」と書いている（2026-08-22 に本文を確認済み）。
    * だから既定では「実市場データ100件」の件数に数えない。
-   * 数え始めてよいのは、ご本人が規約を読んで確認したあとだけ。
+   * ここは規約の問題ではなく、**数字の出どころの問題**なので、
+   * 規約の確認が進んでも 0 のままにする（ルール77）。
    */
   `CREATE TABLE IF NOT EXISTS sellability_checks (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1387,4 +1404,187 @@ export const SCHEMA_SELLABILITY: string[] = [
   )`,
   `CREATE INDEX IF NOT EXISTS idx_sellability_product ON sellability_checks(product_key)`,
   `CREATE INDEX IF NOT EXISTS idx_sellability_verdict ON sellability_checks(verdict)`,
+];
+
+/* ================================================================================
+ * Phase 3.10（KEEPA_READ_ONLY・2026-08-25）
+ *
+ * Keepa の公式APIから**読むだけ**の接続。購入・出品・注文・決済の表は作らない
+ * （ルール46。実行系を思わせる名前の表を作らない）。
+ *
+ * 【4つの表の役割】
+ *   keepa_raw_responses  … 返ってきたJSONをそのまま残す（追記専用）
+ *   keepa_products       … そこから当社の形に直したもの（1商品×1更新時刻＝1行）
+ *   keepa_token_usage    … 1回の呼び出しごとに、いくつ枠を使ったか
+ *   asin_match_candidates… 手元の商品とASINの一致度（複数候補を残す）
+ * ================================================================================ */
+export const SCHEMA_KEEPA: string[] = [
+  /*
+   * 【生の応答をそのまま残す理由】
+   *
+   * 正規化のやり方は、あとから必ず変わる。そのとき生データが残っていなければ、
+   * もう一度お金（Token）を払って取り直すことになる。
+   * また「当社の読み取りが間違っていたのか、Keepaの数字が違ったのか」を
+   * あとから切り分けられるのは、生データが残っているときだけである。
+   *
+   * ★リクエストURLは保存しない。URLにはAPIキーが入るため。
+   *   保存するのは「どのエンドポイントに、どのパラメータで投げたか」だけ（params_json）。
+   *   params_json にキーを入れないことは、受け入れテストで検査している。
+   */
+  `CREATE TABLE IF NOT EXISTS keepa_raw_responses (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    asin TEXT,
+    domain_id INTEGER,
+    endpoint TEXT NOT NULL,
+    params_json TEXT NOT NULL,
+    http_status INTEGER,
+    ok INTEGER NOT NULL DEFAULT 0,
+    response_json TEXT,
+    error_ja TEXT,
+    fetched_at TEXT NOT NULL
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_keepa_raw_asin ON keepa_raw_responses(asin)`,
+
+  /*
+   * 【正規化した商品】
+   *
+   * UNIQUE(asin, domain_id, keepa_last_update)。
+   * Keepa 側の最終更新時刻が同じなら中身も同じなので、2回取っても2行にしない（冪等性）。
+   * 更新時刻が進んでいれば新しい行を積む。**上書きはしない**（Phase 3 のルール19と同じ考え方。
+   * 上書きすると「先月より鈍った」という変化が消える）。
+   *
+   * ★ product_url の列を作っていない。
+   *   Keepa は商品ページURLを返さないし、ASINから組み立てるのはルール55違反だから。
+   *   「あとで埋めよう」と空の列を作ると、いつか誰かが組み立てて埋める。
+   */
+  `CREATE TABLE IF NOT EXISTS keepa_products (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    asin TEXT NOT NULL,
+    domain_id INTEGER NOT NULL,
+    title TEXT,
+    brand TEXT,
+    model TEXT,
+    part_number TEXT,
+    ean_list TEXT,
+    upc_list TEXT,
+    color TEXT,
+    package_quantity INTEGER,
+    number_of_items INTEGER,
+
+    current_amazon_price INTEGER,
+    current_new_price INTEGER,
+    current_used_price INTEGER,
+    current_buybox_price INTEGER,
+    current_sales_rank INTEGER,
+    list_price INTEGER,
+    rating REAL,
+    review_count INTEGER,
+
+    avg_new_price_30 INTEGER,
+    avg_new_price_90 INTEGER,
+    avg_new_price_180 INTEGER,
+    avg_sales_rank_30 INTEGER,
+    avg_sales_rank_90 INTEGER,
+
+    sales_rank_drops_30 INTEGER,
+    sales_rank_drops_90 INTEGER,
+    sales_rank_drops_180 INTEGER,
+    sales_rank_drops_365 INTEGER,
+    monthly_sold INTEGER,
+
+    offer_count_new INTEGER,
+    offer_count_used INTEGER,
+    offer_count_fba INTEGER,
+    offer_count_fbm INTEGER,
+    amazon_retail_present TEXT NOT NULL DEFAULT 'UNKNOWN',
+    buybox_is_amazon TEXT NOT NULL DEFAULT 'UNKNOWN',
+    out_of_stock_pct_30 INTEGER,
+    out_of_stock_pct_90 INTEGER,
+
+    fba_pick_and_pack_fee INTEGER,
+    referral_fee_percentage REAL,
+
+    keepa_last_update TEXT,
+    tracking_since TEXT,
+    unknown_fields_json TEXT,
+
+    competition_score INTEGER,
+    competition_status TEXT,
+    trend_verdict TEXT,
+    trend_reason TEXT,
+
+    /*
+     * 売れるかの判定。
+     * ★ sellability_checks（人が手で書き写す表）には書き込まない。
+     *   同じ「Keepaの数字」でも、人が画面を見て写したものと、APIが返したものは
+     *   出どころが違う。同じ表に混ぜると、あとから区別できなくなる（ルール29と同じ考え方）。
+     */
+    sellability_window_days INTEGER,
+    sellability_verdict TEXT,
+    sellability_reason TEXT,
+    estimated_monthly_sales REAL,
+    per_seller_monthly REAL,
+    estimated_turnover_days REAL,
+
+    raw_response_id INTEGER,
+    counts_as_real_market INTEGER NOT NULL DEFAULT 0,
+    use_scope TEXT NOT NULL DEFAULT 'INTERNAL_VERIFICATION_ONLY',
+    created_at TEXT NOT NULL,
+    UNIQUE(asin, domain_id, keepa_last_update)
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_keepa_products_asin ON keepa_products(asin)`,
+
+  /*
+   * 【枠の使用記録】
+   *
+   * 記録するのは**実際に使った量**（API応答の tokensConsumed）。
+   * 事前の見積もりも一緒に残して、見積もりが合っているかを後から検算できるようにする。
+   *
+   * 補充速度（refill_rate）も毎回残す。Keepa側が混雑時に速度を下げることがあり、
+   * 「今日は遅い」の原因が自分側なのか相手側なのかを切り分けるため。
+   */
+  `CREATE TABLE IF NOT EXISTS keepa_token_usage (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    endpoint TEXT NOT NULL,
+    asin_count INTEGER NOT NULL DEFAULT 0,
+    estimated_cost INTEGER,
+    tokens_consumed INTEGER,
+    tokens_left INTEGER,
+    refill_rate INTEGER,
+    refill_in_ms INTEGER,
+    token_flow_reduction REAL,
+    processing_time_ms INTEGER,
+    ok INTEGER NOT NULL DEFAULT 0,
+    day TEXT NOT NULL,
+    created_at TEXT NOT NULL
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_keepa_token_day ON keepa_token_usage(day)`,
+
+  /*
+   * 【一致の候補（複数残す）】
+   *
+   * 1つのJANに複数のASINがぶら下がることがあるので、1件に絞って保存しない。
+   * 点数と内訳を全部残し、選ぶのは人。
+   *
+   * ★機械の判定（verdict）を人の答えで上書きしない（ルール49）。
+   *   人の答えは human_verdict に別の列として持つ。
+   *   上書きすると「機械が何回間違えたか」が数えられなくなる。
+   */
+  `CREATE TABLE IF NOT EXISTS asin_match_candidates (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    local_product_key TEXT NOT NULL,
+    local_product_name TEXT,
+    asin TEXT NOT NULL,
+    score INTEGER NOT NULL,
+    verdict TEXT NOT NULL,
+    fields_json TEXT,
+    vetoes_json TEXT,
+    reason_ja TEXT,
+    human_verdict TEXT,
+    human_reason TEXT,
+    human_reviewed_at TEXT,
+    created_at TEXT NOT NULL,
+    UNIQUE(local_product_key, asin, created_at)
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_asin_match_local ON asin_match_candidates(local_product_key)`,
 ];

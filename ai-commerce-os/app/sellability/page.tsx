@@ -46,7 +46,9 @@ export default async function SellabilityPage() {
       <p className="lead">
         「この商品は、そもそも売れているのか」だけを確かめる画面です。
         Keepa などの画面をご自身で開いて、数字をここに書き写してください。
-        <strong>このシステムは Keepa にも Amazon にも一切アクセスしません。</strong>
+        <strong>この画面は Keepa にも Amazon にも一切アクセスしません。</strong>
+        （Keepa から直接取ってくる仕組みは別画面（Keepa取得）にあり、
+        そちらは1回に1件だけ・社内の検証だけに使います。）
       </p>
 
       <div className="cards">

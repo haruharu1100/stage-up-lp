@@ -35,6 +35,7 @@ import {
 } from '../lib/sellability';
 import { recordSellCheck, sellCheckSummary } from '../lib/sellcheck';
 import { FIRST_LIVE_CONNECTOR_STATUS_JA, VENUE_RESEARCH, passesGate } from '../lib/venuepermissions';
+import { mayStartAutoCollection } from '../lib/connectors/permissions';
 
 let passed = 0;
 const failures: string[] = [];
@@ -206,18 +207,54 @@ async function main(): Promise<void> {
   {
     const keepa = VENUE_RESEARCH.find((r) => r.connector_code === 'KEEPA_API');
     check('Keepa が一覧にある', !!keepa);
-    check('8項目のうち、確認できていないものは UNKNOWN のまま',
-      Object.values(keepa?.permissions ?? {}).filter((v) => v === 'UNKNOWN').length >= 6);
-    check('「APIがあるから使ってよい」にしていない',
-      keepa?.permissions.api_exists === 'UNKNOWN');
-    check('Gate を通していない（自動接続の候補にしていない）', keepa ? !passesGate(keepa) : false);
-    check('公式ページを開けなかったことを記録してある',
-      (keepa?.note ?? '').includes('403'));
-    check('第三者記事を根拠にしていないと書いてある',
-      (keepa?.note ?? '').includes('第三者記事'));
+    /*
+     * 【テストの方を2度直した理由】（ルール64・76）
+     *
+     * 1度目：元のテストは api_exists === 'UNKNOWN' を合格条件にしていた。
+     *        調べて確定させると不合格になる、逆さまの状態だった。
+     * 2度目（いまここ）：「規約本文は403で読めていない」を合格条件にしていたが、これも誤り。
+     *        403 は取得ツールの種類による現象で、利用条件（Version of July 28, 2026）は
+     *        2026-08-22 にブラウザで本文を読んでいる（事業Vault/AI Commerce OS/20_Keepa公式API調査.md）。
+     *        読んだものを「読んでいない」と書かせ続けるテストは、事実を固定する働きをしてしまう。
+     *
+     * そこで検査する内容を「調べた結果が条文どおり入っているか」と
+     * 「許可が取れたことを、そのまま自動運用の許可にすり替えていないか」へ変える。
+     */
+    check('APIが実在することは一次情報で確認できた',
+      keepa?.permissions.api_exists === 'YES');
+    check('出典に公式APIドキュメントが入っている',
+      (keepa?.source_urls ?? []).some((u) => u.includes('keepa.com/api-docs')));
+    check('出典に Keepa 社自身の公開クライアントも入っている',
+      (keepa?.source_urls ?? []).some((u) => u.includes('github.com/keepacom')));
+    check('自社事業目的の商用利用は規約本文で確認できた（2(2)・3(4)）',
+      keepa?.permissions.commercial_use_allowed === 'YES');
+    check('保存してよいことも規約本文で確認できた（11(2)）',
+      keepa?.permissions.data_storage_allowed === 'YES');
+    check('自動購入は持たない', keepa?.permissions.automated_purchase_allowed === 'NO');
+    check('自動出品は持たない', keepa?.permissions.automated_listing_allowed === 'NO');
+    check('成約価格（いくらで売れたか）は取れないと記録してある', keepa?.sold_data === 'NO');
+    check('条文を根拠に許可欄を埋めたと書いてある',
+      (keepa?.note ?? '').includes('11(2)') && (keepa?.note ?? '').includes('2(2)'));
+    check('正確性が保証されないこと（2(4)）を記録してある',
+      (keepa?.note ?? '').includes('妥当性チェックは利用者の義務'));
+    check('★許可が取れても社内検証だけに限ると書いてある',
+      (keepa?.note ?? '').includes('INTERNAL_VERIFICATION_ONLY'));
+    check('★U1・U2 が閉じるまで制限を外さないと書いてある',
+      (keepa?.note ?? '').includes('この制限は外さない'));
     check('いまの使い方が人の手入力だと書いてある',
       (keepa?.note ?? '').includes('HUMAN_ENTRY'));
-    check('未確認の項目が残してある', (keepa?.unknowns ?? []).length >= 5);
+    check('残っている問い（U1〜U6）を消していない', (keepa?.unknowns ?? []).length >= 6);
+    /*
+     * ★Gate は通る（商用・社内・価格判断・保存が条文で確認できたため）。
+     *   だが Gate は「候補にしてよい」までの話であって、自動取得を始めてよいという意味ではない。
+     *   実際に始めてよいかを判定する mayStartAutoCollection は、
+     *   U1〜U6 が残っているうちは false を返さなければならない。ここを取り違えない。
+     */
+    check('Gate は通る（許可4観点が条文で埋まったため）', keepa ? passesGate(keepa) : false);
+    const mayKeepa = keepa ? mayStartAutoCollection(keepa) : { ok: false as const, reasonJa: '' };
+    check('★それでも自動取得は始めない判定になっている', mayKeepa.ok === false);
+    check('始めない理由が「答えの出ていない問いが残っている」ことだと分かる',
+      mayKeepa.ok === false && mayKeepa.reasonJa.includes('答えの出ていない問い'));
   }
 
   // ================================================================
@@ -340,7 +377,8 @@ async function main(): Promise<void> {
     process.exit(1);
   }
   console.log('Phase 3.9d（売れるかテスト）の受け入れ条件をすべて満たしています。');
-  console.log('※ このシステムは Keepa にも Amazon にも一切アクセスしません。人が見て書き写す方式だけです。');
+  console.log('※ この画面（売れるかテスト）は Keepa にも Amazon にも一切アクセスしません。人が見て書き写す方式だけです。');
+  console.log('※ Keepa から直接取る仕組みは Phase 3.10（1回1件・社内検証だけ）で、別に用意してあります。');
   console.log('※ 売れ筋順位の下落回数は販売数そのものではないため、出す数字はすべて「推定」です。');
   console.log('※ Keepa 由来の記録は、実市場データ100件には数えていません。');
   console.log('※ これは「売れているか」だけの判定で、「買ってよいか」の判定ではありません。');
