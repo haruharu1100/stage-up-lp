@@ -255,11 +255,12 @@ export async function saveNormalizedProduct(
       image_file_names_json, image_legacy_field_used, image_reason_ja,
       demand_signal_conflict, demand_conflict_reason_ja, demand_ratio_analysis_only,
       demand_evidence_json,
+      root_category_id, root_category_name, category_tree_json, demand_conflict_level,
       raw_response_id, counts_as_real_market, use_scope, created_at,
       asin_source, asin_verified_at, asin_confidence, asin_verification_method_ja,
       variation_role, product_url, product_url_source,
       url_valid, product_match_confirmed, purchase_url_available
-    ) VALUES (${new Array(77).fill('?').join(', ')})`,
+    ) VALUES (${new Array(81).fill('?').join(', ')})`,
     [
       n.asin, KEEPA_DOMAIN_JP, n.title, n.brand, n.model, n.partNumber,
       n.eanList.length ? JSON.stringify(n.eanList) : null,
@@ -304,6 +305,17 @@ export async function saveNormalizedProduct(
       demandEvidence.conflict.reasonJa,
       demandEvidence.keepaToInternalRatio,
       JSON.stringify(demandEvidence),
+
+      /*
+       * 【売り場（カテゴリ）】（2026-08-25 Phase 3.14 追加）
+       * ★名前は Keepa が返したものだけ。取れなければ null のまま。
+       *   「その他」などで埋めると、後で「どのカテゴリで使えるか」を調べたときに
+       *   埋めた分が本物のカテゴリのように見えてしまう。
+       */
+      n.rootCategoryId,
+      n.rootCategoryName,
+      n.categoryTreeNames.length ? JSON.stringify(n.categoryTreeNames) : null,
+      demandEvidence.conflictLevel.level,
 
       extras.rawResponseId ?? null,
       /*

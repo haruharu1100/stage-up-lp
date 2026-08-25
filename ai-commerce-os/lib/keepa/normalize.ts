@@ -105,6 +105,23 @@ function str(v: unknown): string | null {
   return s === '' ? null : s;
 }
 
+/**
+ * 【売り場の階層名を取り出す】（2026-08-25 Phase 3.14）
+ *
+ * Keepa の `categoryTree` は `[{ catId, name }, …]` の配列で、
+ * 先頭が一番おおもとの売り場（本／家電＆カメラ／おもちゃ …）。
+ *
+ * ★ id から名前を当社が推測しない（ルール55と同じ考え方）。
+ *   Keepa が名前を返していないなら、名前は「無い」のままにする。
+ */
+function categoryTreeNames(raw: any): string[] {
+  const tree = raw?.categoryTree;
+  if (!Array.isArray(tree)) return [];
+  return tree
+    .map((x: any) => (x && typeof x === 'object' ? String(x.name ?? '').trim() : String(x ?? '').trim()))
+    .filter((s: string) => s !== '');
+}
+
 function strList(v: unknown): string[] {
   if (!Array.isArray(v)) return [];
   return v.map((x) => String(x).trim()).filter((x) => x !== '');
@@ -129,6 +146,23 @@ export type KeepaNormalized = {
   color: string | null;
   packageQuantity: number | null;
   numberOfItems: number | null;
+
+  /* --- どの売り場か（2026-08-25 Phase 3.14 追加） --- */
+  /**
+   * 【カテゴリ】＝Keepa の `rootCategory` と `categoryTree`。
+   *
+   * ★これまで当社は**カテゴリを1件も保存していなかった**。
+   *   「どの需要指標が、どのカテゴリで使えるのか」を調べるには、
+   *   まず商品がどの売り場のものかを記録していないと何も比べられない。
+   *
+   * 名前の出どころは `categoryTree[0].name`（Keepaが返す日本語名）であって、
+   * 当社が id から推測して付けた名前ではない。**推測で埋めない。**
+   * 取れなければ null のまま（「その他」等でごまかさない）。
+   */
+  rootCategoryId: number | null;
+  rootCategoryName: string | null;
+  /** 売り場の階層名（例：本 → ジャンル別 → 文学・評論 …）。取れなければ空配列。 */
+  categoryTreeNames: string[];
 
   /* --- いまの値 --- */
   currentAmazonPrice: number | null;
@@ -307,6 +341,10 @@ export function normalizeKeepaProduct(raw: any): KeepaNormalized {
     color: mark(str(raw?.color), '色', 'color'),
     packageQuantity: mark(val(raw?.packageQuantity), '梱包内個数', 'packageQuantity'),
     numberOfItems: mark(val(raw?.numberOfItems), '入数', 'numberOfItems'),
+
+    rootCategoryId: watch(val(raw?.rootCategory), '売り場（rootCategory）', 'rootCategory'),
+    rootCategoryName: watch(categoryTreeNames(raw)[0] ?? null, '売り場の名前', 'categoryTree'),
+    categoryTreeNames: categoryTreeNames(raw),
 
     currentAmazonPrice: mark(
       yen(arrAt(cur, KEEPA_CSV_INDEX.AMAZON)), 'Amazon本体の価格',
@@ -556,6 +594,10 @@ export function auditKeepaFields(raw: any, n: KeepaNormalized): KeepaAuditRow[] 
     { labelJa: 'UPC', path: 'upcList', unit: 'TEXT', value: n.upcList, ruleJa: '配列。空の要素は捨てる。' },
     { labelJa: '型番（model）', path: 'model', unit: 'TEXT', value: n.model, ruleJa: '文字をそのまま。' },
     { labelJa: '型番（partNumber）', path: 'partNumber', unit: 'TEXT', value: n.partNumber, ruleJa: '文字をそのまま。' },
+    {
+      labelJa: '売り場（カテゴリ）', path: 'categoryTree[0].name', unit: 'TEXT',
+      value: n.rootCategoryName, ruleJa: 'Keepaが返した名前をそのまま。id から名前を推測しない。',
+    },
 
     {
       labelJa: '現在価格（Amazon本体）', path: `stats.current[${idx.AMAZON}]`, unit: 'JPY',

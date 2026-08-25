@@ -131,6 +131,11 @@ export type DemandEvidence = {
    * 材料が片方でも欠けたら null（無理に埋めない）。
    */
   keepaToInternalRatio: number | null;
+  /**
+   * 食い違いの「強さ」を4段階にしたもの（2026-08-25 追加）。
+   * **これも表示と学習のためだけ。仕入判定には1つも使っていない。**
+   */
+  conflictLevel: DemandConflictLevelResult;
 };
 
 /* ================================================================
@@ -226,6 +231,108 @@ export function judgeDemandConflict(
       + `${DEMAND_CONFLICT_RATIO_THRESHOLD}倍以上あるため、粗さでは説明が付きません。`
       + '**どちらを採用するかはこの時点では決めません**（人が追加で確かめる必要があります）。',
     messageJa: DEMAND_CONFLICT_MESSAGE_JA,
+  };
+}
+
+/* ================================================================
+ * 4b. 食い違いの「強さ」を4段階に分ける（2026-08-25 Phase 3.14）
+ * ================================================================ */
+
+/**
+ * ご本人の指示（原文）：
+ *   「Conflict判定を細分化してください。
+ *     NO_CONFLICT / MILD_CONFLICT / STRONG_CONFLICT / NOT_COMPARABLE
+ *     **閾値はまだBUY判定へ使わないこと。**」
+ *
+ * 【なぜ段階を増やすのか】
+ * これまでは「食い違い」か「そうでない」かの2つしか無かった。
+ * すると 2.9倍（Keepa側の粗さで説明が付くかもしれない）と
+ * 100倍（粗さでは絶対に説明が付かない）が、同じ「食い違っていない／いる」に丸まる。
+ * どのカテゴリで当社の推定が壊れるのかを学ぶには、この差を残す必要がある。
+ *
+ * 【この4段階が絶対にしないこと】
+ *  ・どちらの数字が正しいかを決めない（§8「どちらが正解という採点は禁止」）
+ *  ・仕入判定（SELLS / CROWDED / DOES_NOT_SELL / UNKNOWN）を1つも動かさない
+ *  ・NOT_COMPARABLE を「食い違いが無い」として数えない
+ */
+export const DEMAND_CONFLICT_LEVELS = [
+  'NO_CONFLICT', 'MILD_CONFLICT', 'STRONG_CONFLICT', 'NOT_COMPARABLE',
+] as const;
+export type DemandConflictLevel = (typeof DEMAND_CONFLICT_LEVELS)[number];
+
+/**
+ * 段階の境目。
+ *
+ * ★どちらも当社が置いた暫定の線で、外の裏付けは無い。
+ *   ・2倍未満    … Keepa側の「◯個以上」という粗さで説明が付きうる範囲
+ *   ・2〜3倍未満 … 粗さでは説明しきれないが、決めつけるほどでもない（MILD）
+ *   ・3倍以上    … 粗さでは説明が付かない（STRONG）
+ *
+ *   3倍は既存の `DEMAND_CONFLICT_RATIO_THRESHOLD` と同じ線にしてある。
+ *   つまり **STRONG_CONFLICT ＝ 既存の CONFLICT** で、古い判定と矛盾しない。
+ */
+export const DEMAND_CONFLICT_MILD_THRESHOLD = 2;
+
+export const DEMAND_CONFLICT_LEVEL_JA: Record<DemandConflictLevel, string> = {
+  NO_CONFLICT: '食い違い無し（2倍未満）',
+  MILD_CONFLICT: '軽い食い違い（2倍以上3倍未満）',
+  STRONG_CONFLICT: '強い食い違い（3倍以上）',
+  NOT_COMPARABLE: '比べられない（材料不足）',
+};
+
+/**
+ * ★この4段階を仕入判定へ使ってよいか。**いいえ。**
+ *   ご本人の指示「閾値はまだBUY判定へ使わないこと」をコードの側にも1か所置いておく。
+ *   受け入れテストがこの値が false であることを確認する。
+ */
+export const DEMAND_CONFLICT_LEVEL_USED_IN_BUY_DECISION = false;
+
+export type DemandConflictLevelResult = {
+  level: DemandConflictLevel;
+  /** 倍率（Keepaの区分値 ÷ 当社の推定）。**分析専用。** */
+  ratio: number | null;
+  reasonJa: string;
+};
+
+export function judgeDemandConflictLevel(
+  internalEstimate: number | null | undefined,
+  keepaMonthlySoldAtLeast: number | null | undefined,
+): DemandConflictLevelResult {
+  const ratio = demandRatioAnalysisOnly(internalEstimate, keepaMonthlySoldAtLeast);
+
+  if (ratio === null) {
+    return {
+      level: 'NOT_COMPARABLE',
+      ratio: null,
+      reasonJa: '2つのうち片方（多くはKeepa側）に値が無いため、比べられません。'
+        + '**「食い違いが無い」という意味ではありません。**',
+    };
+  }
+
+  // 上下どちらにずれても同じ扱いにするため、必ず1以上の開きへ直してから見る。
+  const spread = ratio >= 1 ? ratio : 1 / ratio;
+  const r = Math.round(ratio * 10) / 10;
+
+  if (spread >= DEMAND_CONFLICT_RATIO_THRESHOLD) {
+    return {
+      level: 'STRONG_CONFLICT',
+      ratio,
+      reasonJa: `開きは約${r}倍です。Keepa側の「◯個以上」という粗さでは説明が付きません。`
+        + '**どちらを採用するかは決めません。**',
+    };
+  }
+  if (spread >= DEMAND_CONFLICT_MILD_THRESHOLD) {
+    return {
+      level: 'MILD_CONFLICT',
+      ratio,
+      reasonJa: `開きは約${r}倍です。粗さで説明しきれるかどうかは、この件数では決められません。`,
+    };
+  }
+  return {
+    level: 'NO_CONFLICT',
+    ratio,
+    reasonJa: `開きは約${r}倍で、Keepa側の粗さで説明が付く範囲です。`
+      + 'ただし「どちらも正しい」という意味ではありません。',
   };
 }
 
@@ -363,6 +470,9 @@ export function buildDemandEvidence(input: DemandEvidenceInput): DemandEvidence 
     signals,
     conflict,
     keepaToInternalRatio: demandRatioAnalysisOnly(
+      input.internalDemandSignal, input.keepaMonthlySoldAtLeast,
+    ),
+    conflictLevel: judgeDemandConflictLevel(
       input.internalDemandSignal, input.keepaMonthlySoldAtLeast,
     ),
   };

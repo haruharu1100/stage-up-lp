@@ -33,10 +33,13 @@
     "keepa:discover": "tsx scripts/keepa-discover.ts",
     "keepa:five": "tsx scripts/keepa-five.ts",
     "keepa:reanalyze": "tsx scripts/keepa-reanalyze.ts",
+    "keepa:twenty": "tsx scripts/keepa-twenty.ts",
+    "keepa:study": "tsx scripts/keepa-study.ts",
     "test:phase3-10": "tsx scripts/test-phase3-10.ts",
     "test:phase3-11": "tsx scripts/test-phase3-11.ts",
     "test:phase3-12": "tsx scripts/test-phase3-12.ts",
-    "test:phase3-13": "tsx scripts/test-phase3-13.ts"
+    "test:phase3-13": "tsx scripts/test-phase3-13.ts",
+    "test:phase3-14": "tsx scripts/test-phase3-14.ts"
   },
   "dependencies": {
     "@libsql/client": "^0.14.0",

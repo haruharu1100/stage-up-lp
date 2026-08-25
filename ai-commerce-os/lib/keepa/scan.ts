@@ -460,8 +460,12 @@ export const KEEPA_SHAPE_WATCH_GROUPS: ShapeWatchGroup[] = [
   {
     group: 'salesRanks',
     labelJa: '売れ筋順位',
-    paths: ['salesRanks', 'salesRankReference', 'rootCategory', 'categories'],
-    whyJa: 'どの売り場での順位かを取り違えると、比較にならない数字を比べることになる。',
+    // ★2026-08-25（Phase 3.14）追加：`categoryTree`。
+    //   「どの需要指標が、どのカテゴリで使えるか」を調べるのに、
+    //   売り場の名前を保存していなければ何ひとつ比べられない。
+    paths: ['salesRanks', 'salesRankReference', 'rootCategory', 'categories', 'categoryTree'],
+    whyJa: 'どの売り場での順位かを取り違えると、比較にならない数字を比べることになる。'
+      + 'categoryTree は売り場の名前（本／家電＆カメラ など）の出どころ。',
   },
   {
     group: 'images',

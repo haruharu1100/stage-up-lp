@@ -56,6 +56,7 @@ import {
 import {
   KEEPA_ALLOWED_ENDPOINTS,
   KEEPA_CURRENT_STAGE,
+  KEEPA_STAGES,
   KEEPA_DISCOVERY_COSTS,
   KEEPA_DISCOVERY_PER_PAGE,
   KEEPA_DOMAIN_JP,
@@ -509,8 +510,22 @@ async function main(): Promise<void> {
   // ================================================================
   console.log('\n[12. いまの段階と、超えられない上限]');
   {
-    check('いまは段階S2', KEEPA_CURRENT_STAGE === 'S2');
-    check('1回に取れるのは5件まで', KEEPA_MAX_ASINS_PER_RUN === 5);
+    /*
+     * ★2026-08-25 修正（ルール64：テストの方が事実を取り違えていた）。
+     *   ここは「いまは S2（5件）」を合格条件にしていた。
+     *   しかし5件テストの8項目が全部合格した結果をご本人が読み、
+     *   「20件テストへ進んでください」と判断されて S3 になった。
+     *   **段階が進むと不合格になるテスト**は逆さまなので、
+     *   「S2以上まで来ていること」「上限が5件以上あること」に直す。
+     *   ここで守りたいのは「S2固定」ではなく「**AIが自分で段階を進めないこと**」であり、
+     *   それは下の `KEEPA_AUTO_ADVANCE_STAGE === false` が見張っている。
+     */
+    check('段階はS2以上まで来ている（後戻りしていない）',
+      ['S2', 'S3', 'S4'].includes(KEEPA_CURRENT_STAGE), KEEPA_CURRENT_STAGE);
+    check('1回に取れる件数は段階の表と一致している',
+      KEEPA_MAX_ASINS_PER_RUN
+        === KEEPA_STAGES.find((s) => s.code === KEEPA_CURRENT_STAGE)?.maxAsins,
+      `${KEEPA_MAX_ASINS_PER_RUN}件`);
     check('候補探しの上限は15枠', KEEPA_MAX_DISCOVERY_TOKENS === 15);
     const est = KEEPA_DISCOVERY_COSTS.QUERY_BASE
       + Math.max(1, Math.ceil(KEEPA_DISCOVERY_PER_PAGE / 100)) * KEEPA_DISCOVERY_COSTS.QUERY_PER_100_ASINS;

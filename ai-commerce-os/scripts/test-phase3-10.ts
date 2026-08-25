@@ -993,6 +993,8 @@ async function main(): Promise<void> {
     for (const f of [
       'lib/keepa/policy.ts', 'lib/keepa/tokens.ts', 'lib/keepa/match.ts',
       'lib/keepa/schema.ts', 'lib/keepa/images.ts', 'lib/keepa/demand.ts',
+      // ★2026-08-25（Phase 3.14）追加。集計まとめ（coverage.ts）も依存ゼロで作った。
+      'lib/keepa/coverage.ts',
     ]) {
       check(`${f} は他のファイルを import していない`, !/^\s*import\s/m.test(readFile(f)));
     }

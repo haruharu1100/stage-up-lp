@@ -1127,6 +1127,29 @@ export const ADD_COLUMNS: string[] = [
   `ALTER TABLE keepa_products ADD COLUMN demand_conflict_reason_ja TEXT`,
   `ALTER TABLE keepa_products ADD COLUMN demand_ratio_analysis_only REAL`,
   `ALTER TABLE keepa_products ADD COLUMN demand_evidence_json TEXT`,
+
+  /*
+   * 【売り場（カテゴリ）と、食い違いの強さ】（Phase 3.14・2026-08-25）
+   *
+   * ご本人の指示：「20件では利益商品探しではなく、
+   * 『どの需要指標が、どのカテゴリで、どの程度使えるのか』を実データで確認すること。」
+   *
+   * ★これまで当社は**カテゴリを1件も保存していなかった**。
+   *   売り場が分からないままでは「本では使えるが家電では壊れる」といった話が
+   *   一切できない。まず記録する。
+   *
+   * root_category_name の出どころは Keepa の categoryTree の先頭の名前であって、
+   * 当社が id から推測して付けた名前ではない（推測で埋めない）。
+   *
+   * demand_conflict_level は4段階。
+   *   NO_CONFLICT / MILD_CONFLICT / STRONG_CONFLICT / NOT_COMPARABLE
+   * ★**この列は仕入判定に1つも使っていない。**学習のための記録である。
+   *   NOT_COMPARABLE を「食い違い無し」として数えないこと。
+   */
+  `ALTER TABLE keepa_products ADD COLUMN root_category_id INTEGER`,
+  `ALTER TABLE keepa_products ADD COLUMN root_category_name TEXT`,
+  `ALTER TABLE keepa_products ADD COLUMN category_tree_json TEXT`,
+  `ALTER TABLE keepa_products ADD COLUMN demand_conflict_level TEXT NOT NULL DEFAULT 'NOT_COMPARABLE'`,
 ];
 
 /**
@@ -1682,6 +1705,16 @@ export const SCHEMA_KEEPA: string[] = [
     demand_conflict_reason_ja TEXT,
     demand_ratio_analysis_only REAL,
     demand_evidence_json TEXT,
+
+    /*
+     * 【売り場（カテゴリ）と食い違いの強さ】（2026-08-25 Phase 3.14 追加）
+     * カテゴリ名は Keepa が返した名前そのもの。id から当社が推測しない。
+     * demand_conflict_level は学習用の記録で、仕入判定には使っていない。
+     */
+    root_category_id INTEGER,
+    root_category_name TEXT,
+    category_tree_json TEXT,
+    demand_conflict_level TEXT NOT NULL DEFAULT 'NOT_COMPARABLE',
 
     raw_response_id INTEGER,
     counts_as_real_market INTEGER NOT NULL DEFAULT 0,
