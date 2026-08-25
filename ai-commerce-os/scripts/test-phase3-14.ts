@@ -111,6 +111,13 @@ function row(over: Partial<CoverageRow> = {}): CoverageRow {
     sellability: 'SELLS',
     parserErrorCount: 0,
     tokensUsed: 1,
+    // ★2026-08-25（Phase 3.15）で CoverageRow へ足した項目。
+    //   ここを足さないと型が合わないので、テストも一緒に直す必要がある。
+    currentPriceYen: 2500,
+    fbaFeeYen: 400,
+    referralFeePercent: 10,
+    imageCount: 5,
+    divergenceLevel: 'NOT_COMPARABLE',
     ...over,
   };
 }
@@ -382,12 +389,24 @@ function main(): void {
   }
 
   // ================================================================
-  console.log('\n[15. 段階（S3＝20件）へ人が進めた]');
+  console.log('\n[15. 段階（S3＝20件）まで人が進めた]');
   {
-    check('いまの段階は S3', KEEPA_CURRENT_STAGE === 'S3');
-    check('1回に取れるのは20件まで', KEEPA_MAX_ASINS_PER_RUN === 20);
+    // ★2026-08-25 修正（ルール64。同じ間違いの2件目。1件目は test-phase3-12.ts の「いまはS2」）。
+    //   ここは「いまの段階は S3」「上限は20件」を合格条件にしていたため、
+    //   ご本人が「100件へ進むこと自体は許可します」と判断して S4 へ進めた瞬間に落ちた。
+    //   **段階が正しく進むと不合格になるテストは逆さま**なので、
+    //   「S3以上まで来ていること」「上限が段階の表と一致していること」に直した。
+    //   守りたいのは「S3固定」ではなく「AIが自分で段階を進めないこと」であり、
+    //   それは KEEPA_AUTO_ADVANCE_STAGE === false と下の2行（環境変数で動かせない）が見張っている。
+    const order = KEEPA_STAGES.map((s) => s.code);
+    check('いまの段階は S3 以上まで来ている',
+      order.indexOf(KEEPA_CURRENT_STAGE) >= order.indexOf('S3'), KEEPA_CURRENT_STAGE);
+    const now = KEEPA_STAGES.find((s) => s.code === KEEPA_CURRENT_STAGE);
+    check('1回に取れる件数が段階の表と一致している',
+      now !== undefined && KEEPA_MAX_ASINS_PER_RUN === now.maxAsins,
+      `${KEEPA_MAX_ASINS_PER_RUN}件`);
     const s3 = KEEPA_STAGES.find((s) => s.code === 'S3');
-    check('S3 の上限も20件', s3?.maxAsins === 20);
+    check('S3 の上限は20件', s3?.maxAsins === 20);
     const policy = codeOnly(readFile('lib/keepa/policy.ts'));
     check('★policy.ts に process.env が1つも無い（ルール84）', !policy.includes('process.env'));
     check('★段階は環境変数で動かせない', !/KEEPA_CURRENT_STAGE\s*=\s*[^;]*env/.test(policy));

@@ -995,6 +995,9 @@ async function main(): Promise<void> {
       'lib/keepa/schema.ts', 'lib/keepa/images.ts', 'lib/keepa/demand.ts',
       // ★2026-08-25（Phase 3.14）追加。集計まとめ（coverage.ts）も依存ゼロで作った。
       'lib/keepa/coverage.ts',
+      // ★2026-08-25（Phase 3.15）追加。100件の配分表・需要シグナルの読み方・判定モデルv0案。
+      //   どれも画面へそのまま載せられるように、何も import していない。
+      'lib/keepa/strata.ts', 'lib/keepa/signals.ts', 'lib/keepa/modelv0.ts',
     ]) {
       check(`${f} は他のファイルを import していない`, !/^\s*import\s/m.test(readFile(f)));
     }

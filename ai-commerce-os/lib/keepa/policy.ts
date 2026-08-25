@@ -196,8 +196,8 @@ export const KEEPA_ALLOWED_HTTP_METHOD = 'GET' as const;
 export const KEEPA_STAGES = [
   { code: 'S1', maxAsins: 1, labelJa: '1件だけ取って必ず止まる（合格済み）' },
   { code: 'S2', maxAsins: 5, labelJa: '5件（合格済み）' },
-  { code: 'S3', maxAsins: 20, labelJa: '20件（いまここ）' },
-  { code: 'S4', maxAsins: 100, labelJa: '100件（S3の監査に合格してから）' },
+  { code: 'S3', maxAsins: 20, labelJa: '20件（合格済み）' },
+  { code: 'S4', maxAsins: 100, labelJa: '100件（いまここ）' },
 ] as const;
 
 /**
@@ -220,8 +220,24 @@ export const KEEPA_STAGES = [
  *
  *   ★S4（100件）へは、また同じようにこの行を書き換える必要がある。
  *     20件の結果を見て決めるのはご本人である（原文：「YESでも自動で100件へ進まないこと。」）。
+ *
+ * ★2026-08-25、続けて S3 → S4 へ進めた。**これも仕組みが自分で進めたのではない。**
+ *
+ *   経緯：20件テストの結果（読み取り不具合0／実在しないASIN0／日本以外0／
+ *   枠の見積と実消費のズレ0／カギの漏れ0）をご本人が読み、
+ *   **「100件へ進むこと自体は許可します」**と判断された（原文・2026-08-25）。
+ *
+ *   ★ただし同じ文の続きに、外してはいけない条件が付いている。
+ *     **「現在の候補取得方法のまま、単純にあと80件増やすことは禁止とします。」**
+ *     つまりこの書き換えは「80件足してよい」という意味ではなく、
+ *     ①カテゴリ偏り ②Rank DropsとKeepa区分値の方向差 の2点を直したうえで、
+ *     **売り場ごとに件数を割り当てて取る**（`lib/keepa/strata.ts` の配分表）ことが前提である。
+ *     偏った標本を5倍にするだけの取り方に戻したら、この許可は無効になる。
+ *
+ *   ★`KEEPA_AUTO_ADVANCE_TO_HUNDRED` は false のままにしてある。
+ *     段階を進めたのは人であって、この仕組みではない、という事実を残すため。
  */
-export const KEEPA_CURRENT_STAGE = 'S3' as const;
+export const KEEPA_CURRENT_STAGE = 'S4' as const;
 
 /**
  * 1回の実行で取ってよいASINの上限。
@@ -229,7 +245,7 @@ export const KEEPA_CURRENT_STAGE = 'S3' as const;
  * ★環境変数で増やせるようにしていない。増やすにはこの数字を書き換えてコミットするしかない。
  *   「気づいたら100件取っていた」を、設定ミスで起こせないようにするため。
  */
-export const KEEPA_MAX_ASINS_PER_RUN = 20;
+export const KEEPA_MAX_ASINS_PER_RUN = 100;
 
 /* ================================================================
  * 4. 日本のAmazonであることの確認

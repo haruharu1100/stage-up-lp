@@ -58,6 +58,24 @@ export type CoverageRow = {
   parserErrorCount: number;
   /** この商品の取得に使った枠。 */
   tokensUsed: number | null;
+
+  /* ★2026-08-25（Phase 3.15）追加。
+   *   ご本人の指示（原文）：「100件で必ず出すCoverage：
+   *     Current Price / Rank Drops / Seller Count / Out of Stock /
+   *     Monthly Bought Bucket / Amazon Retail / Fee / Image」
+   *   これまで数えていなかった 価格・手数料・画像 の3つを足す。 */
+
+  /** いまの新品価格（円）。取れなければ null。**0円で埋めない。** */
+  currentPriceYen: number | null;
+  /** FBAの配送代行手数料（円）。取れなければ null。 */
+  fbaFeeYen: number | null;
+  /** 販売手数料率（%）。取れなければ null。 */
+  referralFeePercent: number | null;
+  /** 商品画像の枚数。取れなければ null。0枚と「不明」は別物。 */
+  imageCount: number | null;
+
+  /** 需要シグナルの離れぐあい（分析専用・signals.ts で計算したものを入れる）。 */
+  divergenceLevel: 'NONE' | 'SMALL' | 'LARGE' | 'NOT_COMPARABLE';
 };
 
 /** カテゴリ名が取れていない商品を、どう並べるか。**「その他」に混ぜない。** */
@@ -135,6 +153,70 @@ export function rankDropsCoverage(rows: CoverageRow[]): CoverageStat {
 }
 
 /* ================================================================
+ * 2b. 100件で必ず出す8つのCoverage（Phase 3.15）
+ * ================================================================ */
+
+/**
+ * ご本人の指示（原文・2026-08-25）：
+ *   「100件で必ず出すCoverage
+ *     CURRENT_PRICE_COVERAGE / RANK_DROPS_COVERAGE / SELLER_COUNT_COVERAGE /
+ *     OUT_OF_STOCK_COVERAGE / MONTHLY_BOUGHT_BUCKET_COVERAGE /
+ *     AMAZON_RETAIL_COVERAGE / FEE_COVERAGE / IMAGE_COVERAGE
+ *     **カテゴリ別にも表示してください。**」
+ *
+ * ★どれも「値が入っているか」だけを数える。値の良し悪しは見ない。
+ * ★0 は「取得できた」に数える（0円は無いが、在庫切れ0%・画像0枚はあり得る）。
+ */
+export function coverageEight(rows: CoverageRow[]): CoverageStat[] {
+  const t = rows.length;
+  const stat = (key: string, labelJa: string, present: number, noteJa: string): CoverageStat => ({
+    key, labelJa, present, total: t, percent: pct(present, t), noteJa,
+  });
+
+  return [
+    stat('CURRENT_PRICE_COVERAGE', 'いまの新品価格が取れている割合',
+      rows.filter((r) => r.currentPriceYen !== null).length,
+      '価格が無ければ利益の計算そのものができません。**0円で埋めていません。**'),
+    stat('RANK_DROPS_COVERAGE', '30日間の順位下落回数が取れている割合',
+      rows.filter((r) => r.rankDrops30 !== null).length,
+      '★0回は「取得できた」に数えます。下落回数は**販売数ではありません**（ルール78）。'),
+    stat('SELLER_COUNT_COVERAGE', '新品の出品者数が取れている割合',
+      rows.filter((r) => r.sellerCount !== null).length,
+      '人数が取れても、価格やFBAの違いまでは分かりません。'),
+    stat('OUT_OF_STOCK_COVERAGE', '在庫切れだった割合（90日）が取れている割合',
+      rows.filter((r) => r.outOfStock90 !== null).length,
+      '★「0%」と「不明」を分けて数えています。'),
+    stat('MONTHLY_BOUGHT_BUCKET_COVERAGE', 'Keepaの月間購入回数（区分値）が取れている割合',
+      rows.filter((r) => r.keepaMonthlySoldAtLeast !== null).length,
+      'Keepa公式は「大半の商品では空」と書いています。**空でも減点しません。**'),
+    stat('AMAZON_RETAIL_COVERAGE', 'Amazon本体の有無が分かっている割合',
+      rows.filter((r) => r.amazonRetailPresent !== 'UNKNOWN').length,
+      '「いない」と「分からない」を分けて数えています。'),
+    stat('FEE_COVERAGE', '手数料（FBA配送代行または販売手数料率）が取れている割合',
+      rows.filter((r) => r.fbaFeeYen !== null || r.referralFeePercent !== null).length,
+      'どちらか片方でも取れていれば「取得できた」に数えています（両方必要という線はまだ引いていません）。'),
+    stat('IMAGE_COVERAGE', '商品画像の枚数が取れている割合',
+      rows.filter((r) => r.imageCount !== null).length,
+      '★0枚と「不明」は別物です。0枚は「取得できた」に数えます。'),
+  ];
+}
+
+/** 上の8つを、売り場ごとに出す。 */
+export function categoryCoverageEight(rows: CoverageRow[]): { categoryJa: string; count: number; stats: CoverageStat[] }[] {
+  const keys: string[] = [];
+  for (const r of rows) {
+    const k = categoryKey(r);
+    if (!keys.includes(k)) keys.push(k);
+  }
+  return keys
+    .map((k) => {
+      const g = rows.filter((r) => categoryKey(r) === k);
+      return { categoryJa: k, count: g.length, stats: coverageEight(g) };
+    })
+    .sort((a, b) => b.count - a.count);
+}
+
+/* ================================================================
  * 3. 食い違いの4段階の内訳
  * ================================================================ */
 
@@ -188,7 +270,38 @@ export type CategoryStat = {
   /** 出品者数の中央値。取れた商品が無ければ null。 */
   medianSellerCount: number | null;
   amazonRetailYes: number;
+
+  /* ★2026-08-25（Phase 3.15）追加。ご本人の指示（原文）：
+   *   「カテゴリ別に、件数／Rank Drops Coverage／Monthly Bought Bucket Coverage／
+   *     Seller Count平均・中央値／Amazon本体存在率／Out of Stock分布／
+   *     SELLABILITY分布／Signal Divergence を出してください。」 */
+
+  /** 出品者数の平均。取れた商品が無ければ null。 */
+  avgSellerCount: number | null;
+  /** Amazon本体がいた割合（%）。分母0なら null。 */
+  amazonRetailPercent: number | null;
+  /** 在庫切れ（90日）の分布。**「0%」と「不明」を分けている。** */
+  outOfStock: { zero: number; upTo10: number; upTo30: number; over30: number; unknown: number };
+  /** 売れるかの判定の分布（現行モデルのまま。1つも動かしていない）。 */
+  sellability: { sells: number; crowded: number; doesNotSell: number; unknown: number };
+  /** 需要シグナルの離れぐあいの分布（分析専用）。 */
+  divergence: { none: number; small: number; large: number; notComparable: number };
+  /** 件数が少なすぎて傾向を語れない売り場か。 */
+  tooFewToConclude: boolean;
 };
+
+/**
+ * ご本人の指示（原文）：
+ *   「サンプルが少ないカテゴリについて、**断定表現は禁止**。」
+ * 何件から語ってよいかの線。これ未満の売り場には必ず注意書きを付ける。
+ */
+export const CATEGORY_MIN_SAMPLE_TO_DISCUSS = 10;
+
+function average(nums: number[]): number | null {
+  const a = nums.filter((n) => Number.isFinite(n));
+  if (a.length === 0) return null;
+  return Math.round((a.reduce((s, n) => s + n, 0) / a.length) * 10) / 10;
+}
 
 function median(nums: number[]): number | null {
   const a = nums.filter((n) => Number.isFinite(n)).sort((x, y) => x - y);
@@ -229,6 +342,32 @@ export function categoryStats(rows: CoverageRow[]): CategoryStat[] {
       notComparable: g.filter((r) => r.conflictLevel === 'NOT_COMPARABLE').length,
       medianSellerCount: median(g.map((r) => r.sellerCount).filter((n): n is number => n !== null)),
       amazonRetailYes: g.filter((r) => r.amazonRetailPresent === 'YES').length,
+
+      avgSellerCount: average(g.map((r) => r.sellerCount).filter((n): n is number => n !== null)),
+      amazonRetailPercent: pct(
+        g.filter((r) => r.amazonRetailPresent === 'YES').length,
+        g.filter((r) => r.amazonRetailPresent !== 'UNKNOWN').length,
+      ),
+      outOfStock: {
+        zero: g.filter((r) => r.outOfStock90 === 0).length,
+        upTo10: g.filter((r) => r.outOfStock90 !== null && r.outOfStock90 > 0 && r.outOfStock90 <= 10).length,
+        upTo30: g.filter((r) => r.outOfStock90 !== null && r.outOfStock90 > 10 && r.outOfStock90 <= 30).length,
+        over30: g.filter((r) => r.outOfStock90 !== null && r.outOfStock90 > 30).length,
+        unknown: g.filter((r) => r.outOfStock90 === null).length,
+      },
+      sellability: {
+        sells: g.filter((r) => r.sellability === 'SELLS').length,
+        crowded: g.filter((r) => r.sellability === 'CROWDED').length,
+        doesNotSell: g.filter((r) => r.sellability === 'DOES_NOT_SELL').length,
+        unknown: g.filter((r) => r.sellability === 'UNKNOWN').length,
+      },
+      divergence: {
+        none: g.filter((r) => r.divergenceLevel === 'NONE').length,
+        small: g.filter((r) => r.divergenceLevel === 'SMALL').length,
+        large: g.filter((r) => r.divergenceLevel === 'LARGE').length,
+        notComparable: g.filter((r) => r.divergenceLevel === 'NOT_COMPARABLE').length,
+      },
+      tooFewToConclude: g.length < CATEGORY_MIN_SAMPLE_TO_DISCUSS,
     };
   }).sort((a, b) => b.count - a.count);
 }
@@ -382,6 +521,19 @@ export type IndicatorCandidate = {
 export const INDICATOR_CANDIDATE_DISCLAIMER_JA =
   '★これは「採用」ではありません。ご本人の指示どおり、'
   + '**候補として挙げただけ**です。どれを使うかは人が決めます。';
+
+/**
+ * ★2026-08-25（Phase 3.15）追加。ご本人の指示（原文）：
+ *   「20件での暫定TOP3（Rank Drops 30D / Out of Stock % / Seller Count）を
+ *     **固定採用しないこと。**」
+ *
+ * 20件で出したTOP3を、そのまま持ち越さない。100件で最初から数え直す。
+ */
+export const INDICATOR_TOP3_FROM_TWENTY_LOCKED = false;
+
+export const INDICATOR_TOP3_RECOUNT_NOTE_JA =
+  '20件のときのTOP3は引き継いでいません。100件のデータで数え直しています。'
+  + '順位が入れ替わっていれば、それは「20件では足りなかった」という結果です。';
 
 /**
  * ご本人の指示（原文）：
