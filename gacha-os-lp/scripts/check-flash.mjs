@@ -38,6 +38,11 @@ import { dirname, join } from "node:path";
 import { existsSync, readFileSync } from "node:fs";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
+/* ★入り方とメニューの押し方は、共通部品にまとめてあります。
+     ここに書き写さないこと。入り方が変わるたびに
+     直し忘れた道具から順に落ちます。 */
+import { enterConsole, navTo } from "./lib/console-enter.mjs";
+
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 
 /* 実装に書いてある「消えるまでの時間」を、そのまま読む */
@@ -72,47 +77,6 @@ const URL = `${BASE}/client-demo`;
 const bad = [];
 const lines = [];
 
-async function press(page, selector, until) {
-  for (let i = 0; i < 8; i += 1) {
-    await page.locator(selector).first().click({ timeout: 5000 }).catch(() => {});
-    try {
-      await page.waitForSelector(until, { timeout: 2000 });
-      return;
-    } catch {
-      /* 空振り。もう一度押す */
-    }
-  }
-  throw new Error(`${selector} を押しても ${until} が出ない`);
-}
-
-async function enter(page) {
-  await page.addInitScript(() => {
-    try {
-      window.localStorage.setItem("gachaos.admin.tour.v1", "done");
-    } catch {
-      /* 保存が使えない環境。そのときは案内も出ません */
-    }
-  });
-  await page.goto(URL, { waitUntil: "domcontentloaded" });
-  await press(
-    page,
-    'button:has-text("デモ管理者としてログイン")',
-    'input[placeholder="000000"]',
-  );
-  await page.locator('input[placeholder="000000"]').fill("204815");
-  await press(page, 'button:has-text("管理画面に入る")', 'nav[aria-label="管理メニュー"]');
-}
-
-/** 左メニューの1項目を押す（aria-label と完全に一致するものだけ） */
-async function navTo(page, label) {
-  const row = page
-    .locator(`nav[aria-label="管理メニュー"] li > button[aria-label="${label}"]`)
-    .first();
-  await row.scrollIntoViewIfNeeded();
-  await row.click();
-  await page.waitForTimeout(300);
-}
-
 /** いま帯が出ているか。中の文も返す */
 async function band(page) {
   return page.evaluate(() => {
@@ -123,20 +87,51 @@ async function band(page) {
 
 const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
-await enter(page);
+const HOW = await enterConsole(page, URL);
 
 /* ══════════════════════════════════════════════
-   ① ログイン直後の帯は、すぐには消えない
+   ① 入った直後の帯
    ══════════════════════════════════════════════
-   ★ここを飛ばさないこと。
-     「画面が出たこと」を移動と数えてしまうと、
-     ログインの知らせが一瞬で消えます。よくある作り間違いです。 */
+
+   ★入り方によって、正しい答えが逆になります。
+     どちらか片方だけを正解にしないこと。
+
+     ・練習用の入口（デモ）で入ったとき
+         画面の中でログインしています。
+         だから「○○としてログインしました」の帯が出るのが正しい。
+         ここで帯が出ないなら、「画面が出たこと」を
+         画面移動と数えてしまっています。よくある作り間違いです。
+
+     ・本物のログインで入ったとき
+         ログインは前の画面（/login）で済んでいます。
+         こちらの画面は、更新するたび・移動するたびに
+         「いま誰か」をサーバーから受け取り直します。
+         そのときに帯を出すと、
+         ★画面を移るたびに「ログインしました」が出ます。
+         だから帯が出ないのが正しい。
+
+     ★本物のログインのときに「帯が出ないのはおかしい」と直さないこと。
+       直した瞬間、②で止めたはずの
+       「前の画面の知らせを連れて行く」が、別の形で戻ってきます。 */
 {
   const t = await band(page);
-  if (!t) {
-    bad.push("ログインしたのに、お知らせ帯が出ていません。");
+
+  if (HOW === "demo") {
+    if (!t) {
+      bad.push("ログインしたのに、お知らせ帯が出ていません。");
+    } else {
+      lines.push(`ログイン直後：「${t}」が出ています。`);
+    }
+  } else if (t) {
+    bad.push(
+      `本物のログインで入ったのに、お知らせ帯が出ています：「${t}」\n` +
+        "    この画面は移動のたびに「いま誰か」を受け取り直します。\n" +
+        "    ここで帯を出すと、画面を移るたびに同じ知らせが出ます。",
+    );
   } else {
-    lines.push(`ログイン直後：「${t}」が出ています。`);
+    lines.push(
+      "本物のログインで入りました：帯は出ていません（移動のたびに出ないことの確認）。",
+    );
   }
 }
 

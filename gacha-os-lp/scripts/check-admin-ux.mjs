@@ -48,6 +48,11 @@ import { dirname, join } from "node:path";
 import { existsSync, mkdirSync, readdirSync, rmSync } from "node:fs";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
+/* ★入り方とメニューの押し方は、共通部品にまとめてあります。
+     ここに書き写さないこと。入り方が変わるたびに
+     直し忘れた道具から順に落ちます。 */
+import { enterConsole, navTo } from "./lib/console-enter.mjs";
+
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 
 const PW_DIR =
@@ -79,59 +84,8 @@ const OUT = join(ROOT, "docs", "shots", "admin-ux");
 const bad = [];
 const lines = [];
 
-async function press(page, selector, until) {
-  for (let i = 0; i < 8; i += 1) {
-    await page.locator(selector).first().click({ timeout: 5000 }).catch(() => {});
-    try {
-      await page.waitForSelector(until, { timeout: 2000 });
-      return;
-    } catch {
-      /* 空振り。もう一度押す */
-    }
-  }
-  throw new Error(`${selector} を押しても ${until} が出ない`);
-}
-
-async function enter(page) {
-  /* はじめての方への案内は、先に「見たこと」にしておく。
-     案内は画面の手前に出るので、出たままだと何も押せません */
-  await page.addInitScript(() => {
-    try {
-      window.localStorage.setItem("gachaos.admin.tour.v1", "done");
-    } catch {
-      /* 保存が使えない環境。そのときは案内も出ません */
-    }
-  });
-  await page.goto(URL, { waitUntil: "domcontentloaded" });
-  await press(
-    page,
-    'button:has-text("デモ管理者としてログイン")',
-    'input[placeholder="000000"]',
-  );
-  await page.locator('input[placeholder="000000"]').fill("204815");
-  await press(page, 'button:has-text("管理画面に入る")', 'nav[aria-label="管理メニュー"]');
-  await page.waitForTimeout(400);
-}
-
 /** いま出ている画面の名前 */
 const head = (page) => page.locator("main h1").first().innerText();
-
-/** 左メニューの1項目を押す。
- *
- *  ★名前を「含むかどうか」で探さないこと。
- *    説明文にも同じ言葉が入っています。「発送」で探すと
- *    「発送依頼」と「発送管理」の両方に当たります。
- *    行の1つめのボタンには aria-label に画面名がそのまま入っているので、
- *    そこと完全に一致するものだけを押します。
- *    （★印のボタンは「○○をよく使うに入れる」なので当たりません） */
-async function navTo(page, label) {
-  const row = page
-    .locator(`nav[aria-label="管理メニュー"] li > button[aria-label="${label}"]`)
-    .first();
-  await row.scrollIntoViewIfNeeded();
-  await row.click();
-  await page.waitForTimeout(350);
-}
 
 /* ══════════════════════════════════════════════
    ① 何回押して着くか
@@ -152,8 +106,17 @@ async function budget(page, name, want, run) {
    ══════════════════════════════════════════════ */
 async function drawer(page, menu, shotName) {
   await navTo(page, menu);
+
+  /* ★数える前に、出そろうのを待つこと。
+       手元で動かすと表は一瞬で出ますが、
+       ネット越し（Preview）では1〜2秒かかります。
+       待たずに数えると 0件になり、
+       「押せる行がありません」という嘘の指摘が出ます。
+       実際にこれで空振りしました（2026-08-26）。 */
   const row = page.locator('main tbody tr[role="button"]').first();
-  if ((await row.count()) === 0) {
+  try {
+    await row.waitFor({ state: "visible", timeout: 15000 });
+  } catch {
     bad.push(`${menu}：押せる行がありません。表から板へ進めません。`);
     return;
   }
@@ -192,7 +155,7 @@ for (const f of readdirSync(OUT)) {
 
 const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
-await enter(page);
+await enterConsole(page, URL);
 
 /* ── 回数 ── */
 await budget(page, "ダッシュボード → 発送", 2, async (p) => {
