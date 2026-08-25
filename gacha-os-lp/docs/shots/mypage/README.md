@@ -9,3 +9,4 @@
 - `04-shipping.png` — /mypage/shipping　発送状況（分割発送）
 - `05-address.png` — /mypage/address　お届け先（確定分は動かない）
 - `06-support.png` — /mypage/support　お問い合わせ（自動回答なし）
+- `07-stepup.png` — /mypage/address　本人確認（保存を押したら、サーバーが断って出た板）

@@ -104,6 +104,32 @@ await shot("/mypage/shipping", "04-shipping", "発送状況", "発送状況（�
 await shot("/mypage/address", "05-address", "お届け先", "お届け先（確定分は動かない）");
 await shot("/mypage/support", "06-support", "お問い合わせ", "お問い合わせ（自動回答なし）");
 
+/* ═══════════════════════════════════════════════
+   ⑦ 住所を変えようとしたときの、本人確認
+   ═══════════════════════════════════════════════
+
+   ★これは「開いたら出る画面」ではありません。
+     保存しようとして、サーバーに断られて、はじめて出ます。
+     ですので、実際に断られるところまでやって撮ります。
+     手で作った絵を置くと、つないでいないのに
+     「つないである」ように見えてしまいます。 */
+await page.goto(`${BASE}/mypage/address`, { waitUntil: "domcontentloaded" });
+await page.waitForSelector("text=お届け先を変更する", { timeout: 25_000 });
+await page.getByText("お届け先を変更する").click();
+await page.waitForSelector("text=この内容で保存する", { timeout: 15_000 });
+await page.getByText("この内容で保存する").click();
+
+/* サーバーが 403 STEP_UP_REQUIRED を返し、この板が出るはず */
+await page.waitForSelector("text=ご本人の確認をお願いいたします", { timeout: 20_000 });
+await page.waitForTimeout(800);
+await page.screenshot({ path: join(OUT, "07-stepup.png"), fullPage: true });
+shots.push({
+  file: "07-stepup.png",
+  pathname: "/mypage/address",
+  note: "本人確認（保存を押したら、サーバーが断って出た板）",
+});
+console.log("  ✓ 07-stepup.png  /mypage/address  本人確認（実際に断られた画）");
+
 await browser.close();
 
 writeFileSync(
