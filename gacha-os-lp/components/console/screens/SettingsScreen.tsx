@@ -38,6 +38,7 @@ import {
   can,
 } from "@/lib/console/state";
 import { Badge, Card, DemoNote, Field, KV, RowCard, Rows, Table, Td, WhatIsThis, inputClass } from "../ui";
+import TempPasswordPanel from "../TempPasswordPanel";
 
 /** 実装状況の3区分 */
 type Ready = "AVAILABLE" | "OPTION" | "PLANNED";
@@ -187,6 +188,22 @@ export default function SettingsScreen({
           </Rows>
         </div>
       </Card>
+
+      {/*
+        ── 仮パスワードの再発行 ──
+
+        ★ここだけは、この画面の中で唯一「本物のDB」を見ています。
+          他の項目は、確認用の架空データです。
+
+          仕組みだけあって押す場所が無いと、
+          担当者が入れなくなった日に、必ず手が止まります。
+          そのとき人は、いちばん危ない方法（誰かのアカウントを借りる）
+          で回避します。だから、入口は先に作っておきます。
+
+        ★settings.edit を持つ人にだけ出すこと。
+          この一覧は「誰がまだ認証アプリを登録していないか」の表でもあります。
+      */}
+      {mayEdit && <TempPasswordPanel />}
 
       {/* ── 二人承認の金額 ── */}
       <Card title="別の管理者の承認が必要になる金額" note="これ以上のポイント操作は、1人では実行できません。">

@@ -38,19 +38,34 @@ import "./helpers/testDb";
 
 import test, { after } from "node:test";
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { NextRequest } from "next/server";
 import { db, resetDbForTests } from "../lib/server/db";
-import { loginAdmin, setPassword } from "../lib/server/auth";
+import {
+  loginAdmin,
+  setPassword,
+  beginMfaEnrollment,
+  confirmMfaEnrollment,
+} from "../lib/server/auth";
 import { SESSION_COOKIE, CSRF_HEADER, markStepUp, readSession } from "../lib/server/session";
 import { createTenant, createCustomer, createAdmin } from "../lib/server/seed";
 import { codeFor, counterAt } from "../lib/server/mfa";
-import { TEMP_PASSWORD_HOURS, RESET_LINK_MINUTES } from "../lib/server/passwordChange";
+import {
+  TEMP_PASSWORD_HOURS,
+  RESET_LINK_MINUTES,
+  FRESH_STEP_UP_MINUTES,
+} from "../lib/server/passwordChange";
 import { POST as changePost } from "../app/api/auth/change-password/route";
-import { POST as tempPost } from "../app/api/console/admins/temp-password/route";
+import {
+  POST as tempPost,
+  GET as tempHistoryGet,
+} from "../app/api/console/admins/temp-password/route";
 import { POST as mfaBeginPost } from "../app/api/auth/mfa/begin/route";
 import { POST as mfaConfirmPost } from "../app/api/auth/mfa/confirm/route";
 import { POST as resetPost } from "../app/api/auth/password-reset/route";
 import { POST as pointRequestPost } from "../app/api/console/points/request/route";
+import { POST as stepUpPost } from "../app/api/auth/step-up/route";
+import { GET as adminsGet } from "../app/api/console/admins/route";
 
 after(() => {
   resetDbForTests();
@@ -69,16 +84,66 @@ let customer = "";
 let bossIn: Login;
 let supportIn: Login;
 
+/**
+ * ログインする。
+ *
+ * ★認証アプリを登録済みの人には、6桁も出してから入ること。
+ *   登録済みかどうかで呼び分けを書くと、試験の側が本番と食い違います。
+ *   ここで一度だけ面倒を見て、呼ぶ側は同じ書き方で済むようにします。
+ */
 async function login(
   email: string,
   password = PW,
   opts: { stepUp?: boolean } = {},
 ): Promise<Login> {
-  const r = await loginAdmin({ tenantId: tenant, email, password });
+  const u = await db().execute({
+    sql: `SELECT id, mfa_secret, mfa_enabled FROM app_users
+           WHERE tenant_id = ? AND email = ? LIMIT 1`,
+    args: [tenant, email],
+  });
+  const row = u.rows[0] as Record<string, unknown> | undefined;
+  const tsuki = Number(row?.mfa_enabled ?? 0) === 1 && Boolean(row?.mfa_secret);
+
+  let mfaCode: string | undefined;
+  if (tsuki) {
+    /* ★30秒待つ代わりに、使い回し防止の記録だけ戻します。
+         確かめたいのは「入れること」であって、
+         使い回し防止のほうは security 側の試験で見ています */
+    await db().execute({
+      sql: `UPDATE app_users SET mfa_last_counter = NULL WHERE id = ?`,
+      args: [String(row?.id)],
+    });
+    mfaCode = codeFor(String(row?.mfa_secret), counterAt(Date.now()));
+  }
+
+  const r = await loginAdmin({ tenantId: tenant, email, password, mfaCode });
   assert.equal(r.ok, true, `ログインできませんでした：${email}`);
   if (!r.ok) throw new Error("unreachable");
-  if (opts.stepUp !== false) await markStepUp(r.session.token);
+  if (opts.stepUp === false) {
+    /*
+     * ★認証アプリを登録している人は、ログインの時点で
+     *   すでに6桁を通しています。だから印はもう付いています。
+     *   （これは正しい動きです。消してはいけません）
+     *
+     *   この試験だけは「6桁を一度も通していないログイン」を
+     *   わざと作りたいので、印のほうを外します。
+     */
+    await db().execute({
+      sql: `UPDATE sessions SET step_up_at = NULL WHERE token_hash = ?`,
+      args: [createHash("sha256").update(r.session.token).digest("hex")],
+    });
+  } else {
+    await markStepUp(r.session.token);
+  }
   return { token: r.session.token, csrf: r.session.csrfToken };
+}
+
+/** 読むだけの依頼（CSRFの合図は要らない） */
+function get(url: string, who: Login) {
+  return new NextRequest(`https://example.test${url}`, {
+    method: "GET",
+    headers: { cookie: `${SESSION_COOKIE}=${who.token}` },
+  });
 }
 
 function post(
@@ -158,6 +223,22 @@ test("準備：全権・サポート・発行される人を用意する", async
     points: 1000, email: "user@pw.example",
   });
 
+  /*
+   * ★全権の人だけ、認証アプリを先に登録しておきます。
+   *
+   *   このあとの試験で「6桁を“いま”入れ直す」入口を通すからです。
+   *   登録していない人がその入口を通れてしまうと、
+   *   登録そのものを飛ばす抜け道になります。
+   *   （だから verifyStepUpCode は、未登録なら必ず断ります）
+   */
+  const { secret } = await beginMfaEnrollment({ tenantId: tenant, adminId: boss });
+  const kakunin = await confirmMfaEnrollment({
+    tenantId: tenant,
+    adminId: boss,
+    code: codeFor(secret, counterAt(Date.now())),
+  });
+  assert.equal(kakunin.ok, true, "全権の人の認証アプリ登録に失敗しました");
+
   bossIn = await login("boss@pw.example");
   supportIn = await login("support@pw.example");
 });
@@ -186,6 +267,132 @@ test("追加の本人確認を通していなければ、仮パスワードは�
   assert.equal(res.status, 403);
   const body = (await res.json()) as { code?: string };
   assert.equal(body.code, "STEP_UP_REQUIRED");
+});
+
+test("6桁を通してから時間が経っていたら、発行の直前でもう一度求める", async () => {
+  /*
+   * ★これは、いちばん現実に起きる形の事故を止める試験です。
+   *
+   *   朝ログインした管理画面が、昼まで開いたままになっている。
+   *   これは悪い運用ではなく、ふつうの運用です。
+   *   その画面の前に、席を外した数分の間に誰かが座ったとき、
+   *   朝の6桁が「本人がいる証拠」として効き続けるなら、
+   *   他人のアカウントを、そこから丸ごと取れます。
+   *
+   *   だから「6桁を通したか」ではなく
+   *   「6桁を“いま”通したか」を見ます。
+   */
+  const furui = await login("boss@pw.example");
+
+  /* 待つ代わりに、印のほうを過去にします（試験を遅くしないため） */
+  await db().execute({
+    sql: `UPDATE sessions SET step_up_at = ? WHERE token_hash = ?`,
+    args: [
+      new Date(Date.now() - (FRESH_STEP_UP_MINUTES + 1) * 60_000).toISOString(),
+      createHash("sha256").update(furui.token).digest("hex"),
+    ],
+  });
+
+  const res = await tempPost(
+    post(TEMP, furui, { adminId: target, reason: "古い印で発行できないこと" }),
+  );
+  assert.equal(res.status, 403);
+  const body = (await res.json()) as { code?: string };
+  assert.equal(body.code, "FRESH_STEP_UP_REQUIRED");
+
+  /* ★断ったあとに、副作用だけ起きていないこと */
+  assert.equal(Number((await rowOf(target)).must_change_password ?? 0), 0);
+});
+
+test("その場で6桁を入れ直せば、印が新しくなって発行まで進める", async () => {
+  const furui = await login("boss@pw.example");
+  const kako = new Date(
+    Date.now() - (FRESH_STEP_UP_MINUTES + 1) * 60_000,
+  ).toISOString();
+  const hash = createHash("sha256").update(furui.token).digest("hex");
+
+  await db().execute({
+    sql: `UPDATE sessions SET step_up_at = ? WHERE token_hash = ?`,
+    args: [kako, hash],
+  });
+
+  /* ★6桁を入れ直す入口を、実際に通します */
+  await db().execute({
+    sql: `UPDATE app_users SET mfa_last_counter = NULL WHERE id = ?`,
+    args: [boss],
+  });
+  const secret = String((await rowOf(boss)).mfa_secret ?? "");
+  assert.ok(secret, "この試験には、全権の人の認証アプリ登録が必要です");
+
+  const ok = await stepUpPost(
+    post("/api/auth/step-up", furui, {
+      code: codeFor(secret, counterAt(Date.now())),
+    }),
+  );
+  assert.equal(ok.status, 200);
+
+  const after = await db().execute({
+    sql: `SELECT step_up_at FROM sessions WHERE token_hash = ?`,
+    args: [hash],
+  });
+  const atarashii = String(
+    (after.rows[0] as Record<string, unknown>).step_up_at ?? "",
+  );
+  assert.notEqual(atarashii, kako);
+  assert.ok(Date.now() - Date.parse(atarashii) < 60_000);
+});
+
+test("まちがった6桁では、印は新しくならない", async () => {
+  const who = await login("boss@pw.example");
+  const hash = createHash("sha256").update(who.token).digest("hex");
+  const kako = new Date(Date.now() - 60 * 60_000).toISOString();
+  await db().execute({
+    sql: `UPDATE sessions SET step_up_at = ? WHERE token_hash = ?`,
+    args: [kako, hash],
+  });
+
+  const res = await stepUpPost(
+    post("/api/auth/step-up", who, { code: "000000" }),
+  );
+  assert.equal(res.status, 400);
+
+  const after = await db().execute({
+    sql: `SELECT step_up_at FROM sessions WHERE token_hash = ?`,
+    args: [hash],
+  });
+  assert.equal(
+    String((after.rows[0] as Record<string, unknown>).step_up_at ?? ""),
+    kako,
+    "6桁が違うのに、印だけ新しくなっています",
+  );
+});
+
+test("担当者の一覧は、鍵になるものを一切返さない", async () => {
+  const res = await adminsGet(get("/api/console/admins", bossIn));
+  assert.equal(res.status, 200);
+  const text = await res.text();
+
+  /*
+   * ★画面で使い道の無いものを、外に出さないこと。
+   *   使い道の無いものを渡すのは、漏らす練習をしているのと同じです。
+   */
+  for (const dame of ["password_hash", "passwordHash", "mfa_secret", "mfaSecret", "token"]) {
+    assert.equal(text.includes(dame), false, `一覧に ${dame} が入っています`);
+  }
+  /* 合言葉そのものも、当然入っていないこと */
+  assert.equal(text.includes(PW), false);
+
+  const body = JSON.parse(text) as { admins?: Array<Record<string, unknown>> };
+  assert.ok((body.admins?.length ?? 0) >= 3);
+
+  /* ★自分の行に「自分です」の印があること（画面で押せなくするため） */
+  const me = body.admins?.find((a) => a.id === boss);
+  assert.equal(me?.isMe, true);
+});
+
+test("サポートの人は、担当者の一覧を見られない", async () => {
+  const res = await adminsGet(get("/api/console/admins", supportIn));
+  assert.equal(res.status, 403);
 });
 
 test("理由を書かずには、仮パスワードを発行できない", async () => {
@@ -267,6 +474,113 @@ test("監査ログに発行が残り、そこにパスワードそのものは�
    */
   const all = `${String(row.data ?? "")}${String(row.summary ?? "")}${String(row.reason ?? "")}`;
   assert.equal(all.includes(tempPassword), false, "監査ログに仮パスワードが載っています");
+});
+
+test("発行の記録は画面から読めるが、そこにもパスワードは無い", async () => {
+  /*
+   * ★記録は、残しただけでは誰も読みません。
+   *   読まれない記録は、無いのと同じです。
+   *   だから、押した人の目の前に出します。
+   *   正しい鍵を持った人が悪いことをする場合、入口では止まりません。
+   *   止められるのは「あとで読まれる」ことだけです。
+   */
+  const res = await tempHistoryGet(get(TEMP, bossIn));
+  assert.equal(res.status, 200);
+  const text = await res.text();
+
+  const body = JSON.parse(text) as {
+    history?: Array<{ byName: string; reason: string; summary: string }>;
+  };
+  assert.equal(body.history?.length, 1);
+  assert.match(String(body.history?.[0]?.reason ?? ""), /入社/);
+
+  /* ★誰が押したのかが分かること。分からない記録は、記録ではありません */
+  assert.ok(String(body.history?.[0]?.byName ?? "").length > 0);
+
+  /* ★そして、ここにも合言葉が無いこと */
+  assert.equal(text.includes(tempPassword), false, "記録に仮パスワードが載っています");
+  for (const dame of ["password_hash", "passwordHash", "mfa_secret", "mfaSecret"]) {
+    assert.equal(text.includes(dame), false, `記録に ${dame} が入っています`);
+  }
+});
+
+test("よその会社の発行の記録は、1件も混ざらない", async () => {
+  /*
+   * ★これは、いちばん取り返しのつかない事故です。
+   *
+   *   1つの入れ物に複数の会社が同居しています。
+   *   「WHERE tenant_id = ?」を1か所書き忘れただけで、
+   *   よその会社の担当者の名前と、発行の理由が、
+   *   そのまま画面に並びます。
+   *
+   *   画面を見た人は、それがよその会社のものだと気づけません。
+   *   だから、人の注意ではなく、試験で止めます。
+   */
+  const yoso = await createTenant({
+    code: "PWOTHER",
+    name: "よその会社株式会社",
+  });
+  const yosoBoss = await createAdmin({
+    tenantId: yoso, no: 1, email: "boss@other.example",
+    name: "よその全権", role: "SUPER_ADMIN",
+  });
+  const yosoTarget = await createAdmin({
+    tenantId: yoso, no: 2, email: "hito@other.example",
+    name: "よその新人", role: "FINANCE",
+  });
+  for (const uid of [yosoBoss, yosoTarget]) {
+    await setPassword({
+      tenantId: yoso, subjectKind: "ADMIN", subjectId: uid, password: PW,
+    });
+  }
+
+  const yosoLogin = await loginAdmin({
+    tenantId: yoso, email: "boss@other.example", password: PW,
+  });
+  assert.equal(yosoLogin.ok, true);
+  if (!yosoLogin.ok) throw new Error("unreachable");
+  await markStepUp(yosoLogin.session.token);
+  const yosoIn: Login = {
+    token: yosoLogin.session.token,
+    csrf: yosoLogin.session.csrfToken,
+  };
+
+  const hakko = await tempPost(
+    post(TEMP, yosoIn, {
+      adminId: yosoTarget,
+      reason: "よその会社での発行（混ざらないことの確認）",
+    }),
+  );
+  assert.equal(hakko.status, 200, "よその会社で発行できませんでした");
+
+  /* ★こちらの記録に、よその会社のものが1文字も出ないこと */
+  const res = await tempHistoryGet(get(TEMP, bossIn));
+  assert.equal(res.status, 200);
+  const text = await res.text();
+  assert.equal(text.includes("よその"), false, "よその会社の記録が混ざっています");
+
+  const body = JSON.parse(text) as { history?: unknown[] };
+  assert.equal(
+    body.history?.length,
+    1,
+    "自分の会社の記録だけが返るはずです",
+  );
+
+  /* ★逆向きも見ます。よその会社から、こちらが見えないこと */
+  const gyaku = await tempHistoryGet(get(TEMP, yosoIn));
+  assert.equal(gyaku.status, 200);
+  const gyakuText = await gyaku.text();
+  assert.equal(
+    gyakuText.includes("新しく入った人"),
+    false,
+    "こちらの記録が、よその会社から見えています",
+  );
+});
+
+test("サポートの人は、発行の記録も読めない", async () => {
+  /* ★「誰が誰に発行したか」は、それ自体が攻める人の地図になります */
+  const res = await tempHistoryGet(get(TEMP, supportIn));
+  assert.equal(res.status, 403);
 });
 
 /* ══════════════════════════════════════════════

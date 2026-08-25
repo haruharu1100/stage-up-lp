@@ -731,6 +731,59 @@ export async function confirmMfaEnrollment(input: {
 }
 
 /**
+ * すでに登録済みの人に、いまその場で6桁を入れ直してもらう。
+ *
+ * ═══════════════════════════════════════════════════════
+ * ★登録（confirmMfaEnrollment）とは、目的が違います
+ * ═══════════════════════════════════════════════════════
+ *
+ *   登録は「これから使う鍵を、本当に読み取れたか」の確認です。
+ *   こちらは「いま画面の前にいるのは、本当にその人か」の確認です。
+ *
+ *   だから、こちらは mfa_enabled を1にしません。
+ *   まだ登録していない人が、ここを通って
+ *   登録そのものを飛ばせてしまうからです。
+ *
+ * ★同じ6桁を二度通さないこと（mfa_last_counter）。
+ *   6桁は30秒ごとに変わります。
+ *   肩越しに見た人が、すぐ後ろで同じ数字を打てるなら、
+ *   それは「本人だけが知っているもの」ではありません。
+ */
+export async function verifyStepUpCode(input: {
+  tenantId: string;
+  adminId: string;
+  code: string;
+}): Promise<{ ok: boolean; why?: "NOT_ENROLLED" | "BAD_CODE" }> {
+  await migrate();
+  const res = await db().execute({
+    sql: `SELECT mfa_secret, mfa_enabled, mfa_last_counter
+            FROM app_users WHERE id = ? AND tenant_id = ? LIMIT 1`,
+    args: [input.adminId, input.tenantId],
+  });
+  const row = res.rows[0] as Record<string, unknown> | undefined;
+  if (!row) return { ok: false, why: "NOT_ENROLLED" };
+
+  if (Number(row.mfa_enabled ?? 0) !== 1 || !row.mfa_secret) {
+    return { ok: false, why: "NOT_ENROLLED" };
+  }
+
+  const v = verifyMfa({
+    secret: row.mfa_secret as string | null,
+    code: input.code,
+    lastCounter:
+      row.mfa_last_counter == null ? null : Number(row.mfa_last_counter),
+  });
+  if (!v.ok) return { ok: false, why: "BAD_CODE" };
+
+  await db().execute({
+    sql: `UPDATE app_users SET mfa_last_counter = ?
+           WHERE id = ? AND tenant_id = ?`,
+    args: [v.counter, input.adminId, input.tenantId],
+  });
+  return { ok: true };
+}
+
+/**
  * 二段階認証を解除する。
  *
  * ★解除は、必ず記録に残すこと。
