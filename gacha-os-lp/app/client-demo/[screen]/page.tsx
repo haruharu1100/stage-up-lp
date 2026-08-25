@@ -28,18 +28,34 @@
  *   知らないURLは、はっきり「ありません」と出します。
  */
 
+/*
+ * ═══════════════════════════════════════════════
+ * ★なぜ、この21枚を「先に作っておく」のをやめたのか
+ * ═══════════════════════════════════════════════
+ *
+ *   以前は、21画面を事前に作っておいて配っていました（速いので）。
+ *   ですが、事前に作るということは、
+ *   ★誰が開いても同じ中身を返す、ということです。
+ *
+ *   ログインしているかどうかを、サーバーで確かめられません。
+ *   確かめられるのはブラウザに届いたあと、つまり
+ *   中身を渡し終わったあとです。それでは鍵になりません。
+ *
+ *   だから、1回ごとにサーバーで確かめてから作ります。
+ *   表示は少し遅くなります。それでも、
+ *   ログインしていない人に管理画面を渡さないほうを取ります。
+ */
+
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import ClientConsole from "@/components/console/ClientConsole";
-import { MENU, SLUG, keyOfSlug, menuItem } from "@/components/console/menu";
+import NoPermission from "@/components/console/NoPermission";
+import { keyOfSlug, menuItem } from "@/components/console/menu";
+import { requireAdmin } from "@/lib/server/pageAuth";
+import { can } from "@/lib/permissions";
 
-/** 21画面ぶんを、あらかじめ作っておく */
-export function generateStaticParams() {
-  return MENU.map((m) => ({ screen: SLUG[m.key] }));
-}
-
-/* ★知らないURLは、この一覧に無いので 404 にすること */
-export const dynamicParams = false;
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 export async function generateMetadata({
   params,
@@ -60,11 +76,63 @@ export async function generateMetadata({
   };
 }
 
-export default function Page({ params }: { params: { screen: string } }) {
+export default async function Page({
+  params,
+  searchParams,
+}: {
+  params: { screen: string };
+  searchParams: Record<string, string | string[] | undefined>;
+}) {
   const key = keyOfSlug(params.screen);
+
+  /* ★知らないURLは、先に 404 にすること。
+       ログインを求めてから 404 を出すと、
+       「どの画面名が存在するか」を、ログインできる人以外にも
+       試させることになります。 */
   if (!key) notFound();
+
+  /*
+   * ★ここが鍵です。
+   *   ログインしていなければ、この行より先へは進みません。
+   *   中身はブラウザへ1バイトも送られません。
+   *
+   * ★戻り先には「?」の後ろも付けること。
+   *   未発送だけを絞り込んで見ていた人を一覧の先頭へ返すと、
+   *   毎回そこから絞り込み直しになります。
+   */
+  const query = new URLSearchParams();
+  for (const [k, v] of Object.entries(searchParams)) {
+    if (typeof v === "string") query.set(k, v);
+    else if (Array.isArray(v)) for (const one of v) query.append(k, one);
+  }
+  const qs = query.toString();
+  const here = `/client-demo/${params.screen}${qs ? `?${qs}` : ""}`;
+
+  const { user } = await requireAdmin(here);
+
+  /*
+   * ═══════════════════════════════════════════════
+   * ★役割で開ける画面を分けるのも、ここで行うこと
+   * ═══════════════════════════════════════════════
+   *
+   *   左メニューでは、開けない項目を灰色にしています。
+   *   それは親切のためであって、守りではありません。
+   *
+   *   灰色になっていても、URLを直接打てば開けます。
+   *   そのURLは、前に見た人のブラウザの履歴にも、
+   *   社内チャットに貼られたリンクにも残っています。
+   *   「押せないから見られない」は成り立ちません。
+   *
+   *   ★断るのは、中身を作る前。
+   *     ClientConsole を返してから画面の中で判定すると、
+   *     中身はすでにブラウザへ届いています。
+   */
+  const item = menuItem(key);
+  if (item.need && !can(user.role, item.need)) {
+    return <NoPermission screenLabel={item.label} role={user.role} />;
+  }
 
   /* ★画面のキーをURLから渡すこと。
        ここで決め打ちにすると、どのURLを開いても同じ画面になります。 */
-  return <ClientConsole initialPage={key} />;
+  return <ClientConsole initialPage={key} me={user} />;
 }

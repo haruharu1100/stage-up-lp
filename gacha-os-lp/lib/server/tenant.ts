@@ -75,6 +75,7 @@ export const TENANT_TABLES = [
   "draws",
   "prizes",
   "point_ledger",
+  "point_adjustments",
   "orders",
   "shipments",
   "support_tickets",

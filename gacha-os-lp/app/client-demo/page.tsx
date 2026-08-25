@@ -27,11 +27,37 @@
  *
  *   /client-demo  … ご契約後に、毎日この画面で運営していただくことを
  *                   想定した管理画面そのもの。データだけ架空にしています。
+ *
+ * ═══════════════════════════════════════════════
+ * ★ここも、ログインしていない人は通しません
+ * ═══════════════════════════════════════════════
+ *
+ *   「送るだけの住所だから素通しでよい」は成り立ちません。
+ *   素通しにすると、ここが唯一の抜け道になります。
+ *
+ *   しかも抜け道は、いちばん最後に見つかります。
+ *   21画面ぜんぶを固めたあとで、
+ *   「入口の入口」だけ開いていた、という形で見つかります。
+ *
+ *   だから、送る前にここでも確かめます。
  */
 
 import { redirect } from "next/navigation";
 import { CONSOLE_BASE, SLUG } from "@/components/console/menu";
+import { requireAdmin } from "@/lib/server/pageAuth";
 
-export default function Page() {
-  redirect(`${CONSOLE_BASE}/${SLUG.dashboard}`);
+/* ★ここを静的に作らせないこと。
+     静的にすると誰に対しても同じ中身を返すので、
+     ログインの確認そのものが動きません。 */
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+
+export default async function Page() {
+  const home = `${CONSOLE_BASE}/${SLUG.dashboard}`;
+
+  /* ★ログインしていなければ、ここで /login へ送ります。
+       戻り先はダッシュボードにしておきます。 */
+  await requireAdmin(home);
+
+  redirect(home);
 }

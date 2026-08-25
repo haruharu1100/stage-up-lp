@@ -17,7 +17,8 @@
     "check:draw": "node scripts/check-draw-rng.mjs",
     "check:regression": "node scripts/check-regression.mjs",
     "deploy:preview": "node scripts/deploy-preview.mjs",
-    "verify": "npm run check:draw && tsc --noEmit && npm test && npm run check:urls && npm run build"
+    "verify": "npm run check:draw && tsc --noEmit && npm test && npm run check:urls && npm run build",
+    "seed:preview": "tsx scripts/seed-preview.mjs"
   },
   "dependencies": {
     "@libsql/client": "^0.17.4",

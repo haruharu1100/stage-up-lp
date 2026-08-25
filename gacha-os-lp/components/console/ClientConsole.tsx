@@ -86,7 +86,8 @@
 
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { initialState, reducer } from "@/lib/console/state";
+import { initialState, reducer, NOW } from "@/lib/console/state";
+import type { PageUser } from "@/lib/currentUser";
 import { daySnapshot } from "@/lib/console/dayInLife";
 import { IS_DEMO } from "@/lib/console/demo";
 import { Login, Mfa } from "./Gate";
@@ -125,13 +126,46 @@ type Side = "admin" | "customer";
  *                       ここで "dashboard" に決め打ちすると、
  *                       /client-demo/shipping を開いた人が
  *                       毎回ダッシュボードに飛ばされます。
+ *
+ * @param me  サーバーが本人と認めた担当者。
+ *            ★これが渡ってきている＝サーバー側で
+ *              クッキーを確かめ、DBから役割を読んだあと、ということです。
+ *              渡ってこない場合（デモの入口）だけ、
+ *              画面の中のログインに落とします。
  */
 export default function ClientConsole({
   initialPage = "dashboard",
+  me,
 }: {
   initialPage?: MenuKey;
+  me?: PageUser;
 } = {}) {
   const [s, dispatch] = useReducer(reducer, undefined, initialState);
+
+  /**
+   * サーバーが決めた「いま誰か」を、画面の状態へ写す。
+   *
+   * ★ここで役割を作らないこと。
+   *   role は必ず me（サーバー）から来た値をそのまま使います。
+   *   画面側で「たぶん管理者だろう」と補うと、
+   *   画面には出るのに入口では断られる状態になります。
+   *
+   * ★displayId を id として使うこと。
+   *   内部のIDはブラウザへ送っていません。送る必要もありません。
+   */
+  useEffect(() => {
+    if (!me) return;
+    dispatch({
+      type: "SESSION",
+      admin: {
+        id: me.displayId,
+        name: me.name,
+        role: me.role,
+        mfaEnabled: me.mfaEnabled,
+        lastLogin: NOW,
+      },
+    });
+  }, [me]);
   const [page, setPageState] = useState<MenuKey>(initialPage);
   const [side, setSide] = useState<Side>("admin");
   const router = useRouter();

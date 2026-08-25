@@ -533,12 +533,58 @@ const M005: string[] = [
   `ALTER TABLE customers ADD COLUMN must_change_password INTEGER NOT NULL DEFAULT 0`,
 ];
 
+/* ── 006：ポイント変更の「申請」と「承認」を、保存する場所を作る ──
+
+   ★これまで、二人承認は画面の中だけの話でした。
+     画面を閉じれば消えます。つまり、
+     「誰が申請して、誰が承認したか」が残っていませんでした。
+
+     ポイントは、お金と同じものです。
+     お金が動いたのに、動かした人が残らない仕組みは、
+     不正を止められないだけでなく、
+     疑われた担当者の身も守れません。
+
+   ★申請と承認を、必ず別の行として残すこと。
+     1行に「承認済み」とだけ書く作りにすると、
+     申請者と承認者が同じ人だったかどうかが、あとから分かりません。 */
+const M006: string[] = [
+  `CREATE TABLE IF NOT EXISTS point_adjustments (
+     id            TEXT PRIMARY KEY,
+     tenant_id     TEXT NOT NULL,
+     /* 対象のお客様 */
+     user_id       TEXT NOT NULL,
+     /* 増やす（＋）か、減らす（−）か。0は受け付けない */
+     delta         INTEGER NOT NULL,
+     /* なぜ動かすのか。空を受け付けないこと */
+     reason        TEXT NOT NULL,
+     /* PENDING / APPROVED / REJECTED */
+     status        TEXT NOT NULL DEFAULT 'PENDING',
+     requested_by  TEXT NOT NULL,
+     requested_at  TEXT NOT NULL,
+     decided_by    TEXT,
+     decided_at    TEXT,
+     decided_note  TEXT,
+     /* 承認して、実際に台帳へ足した行。1件の申請につき、多くて1つ */
+     ledger_id     TEXT
+   )`,
+
+  /* ★同じ申請から、二度お金を出せないようにする。
+       「承認」を2回押されても、2行目は入りません。 */
+  `CREATE UNIQUE INDEX IF NOT EXISTS ux_point_adj_ledger
+     ON point_adjustments (ledger_id)
+     WHERE ledger_id IS NOT NULL`,
+
+  `CREATE INDEX IF NOT EXISTS ix_point_adj_status
+     ON point_adjustments (tenant_id, status, requested_at)`,
+];
+
 const MIGRATIONS: Migration[] = [
   { name: "001_initial", sql: M001 },
   { name: "002_tenant_tables", sql: M002 },
   { name: "003_auth", sql: M003 },
   { name: "004_support_shipping", sql: M004 },
   { name: "005_mfa_replay", sql: M005 },
+  { name: "006_point_adjustments", sql: M006 },
 ];
 
 /** どの段まで済んだかを覚えておく表 */

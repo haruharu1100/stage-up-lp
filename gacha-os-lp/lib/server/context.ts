@@ -49,10 +49,20 @@ import {
 } from "./session";
 import { scopeFor, type Scope } from "./tenant";
 import { id } from "./ids";
+import { asRole, can, type Permission, type Role } from "@/lib/permissions";
 
 export type Ctx = {
   requestId: string;
   session: Session;
+  /**
+   * 依頼した人の役割。お客様のときは null。
+   *
+   * ★入口の中で、これを見て分岐してもかまいません。
+   *   ただし「通す・断る」の判断は guard に書くこと。
+   *   入口の中に条件を書き足すと、
+   *   次に足す入口で必ず1つ忘れます。
+   */
+  role: Role | null;
   /** この会社ぶんだけを見る入れ物。ここ以外からDBを触らないこと */
   scope: Scope;
   token: string;
@@ -69,6 +79,25 @@ export type Guard = {
   stepUp?: boolean;
   /** 管理者のとき、通す役職。省略すると全員 */
   roles?: string[];
+  /**
+   * この操作に必要な権限。
+   *
+   * ═══════════════════════════════════════════════════════
+   * ★入口には、必ずこれを書くこと
+   * ═══════════════════════════════════════════════════════
+   *
+   *   画面でボタンを消すのは、親切のためです。安全のためではありません。
+   *   ボタンが無くても、入口は住所を知っていれば直接叩けます。
+   *
+   *       curl -X POST /api/console/points/approve ...
+   *
+   *   このとき断れるのは、ここに書いた1行だけです。
+   *
+   *   ★判断のもとは lib/permissions.ts の1枚だけ。
+   *     画面と同じ表を読むので、
+   *     「画面では消えているのに入口は受け付ける」が起きません。
+   */
+  permission?: Permission;
 };
 
 /** 断ったときの返し方。理由は分けるが、中身は明かさない */
@@ -145,17 +174,38 @@ export async function guard(
     );
   }
 
-  /* ── ⑤ 役職 ───────────────────────────────── */
-  if (need.roles && need.roles.length > 0) {
+  /* ── ⑤ 役職と権限 ─────────────────────────
+       ★役割は、必ずDBから読むこと。
+         セッションの中に焼き付けておくと、
+         権限を外した担当者が、ログインし直すまで
+         強いままになります。外した瞬間から効かせます。 */
+  let role: Role | null = null;
+
+  if (session.subjectKind === "ADMIN") {
     const { db } = await import("./db");
     const res = await db().execute({
       sql: `SELECT role FROM app_users WHERE id = ? AND tenant_id = ? LIMIT 1`,
       args: [session.subjectId, session.tenantId],
     });
-    const role = String(
-      (res.rows[0] as Record<string, unknown> | undefined)?.role ?? "",
-    );
-    if (!need.roles.includes(role)) {
+    role = asRole((res.rows[0] as Record<string, unknown> | undefined)?.role);
+  }
+
+  if (need.roles && need.roles.length > 0) {
+    if (role === null || !need.roles.includes(role)) {
+      return deny(requestId, "FORBIDDEN", "この操作は行えません。", 403);
+    }
+  }
+
+  if (need.permission) {
+    /* ★お客様のセッションで、管理者向けの権限を満たさせないこと */
+    if (role === null || !can(role, need.permission)) {
+      /* ★足りない権限の名前を、返事に書かないこと。
+           何が足りないかを教えると、
+           どの役割を狙えばよいかの地図になります。
+           記録には残します（下の console.warn）。 */
+      console.warn(
+        `[guard] denied ${requestId} perm=${need.permission} role=${role ?? "-"}`,
+      );
       return deny(requestId, "FORBIDDEN", "この操作は行えません。", 403);
     }
   }
@@ -168,6 +218,7 @@ export async function guard(
   return {
     requestId,
     session,
+    role,
     scope: scopeFor(session.tenantId),
     token: token as string,
   };

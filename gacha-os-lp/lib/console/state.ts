@@ -44,128 +44,36 @@ import { backtestReport, designedRtp, type GachaSpec } from "@/lib/backtest";
 
 /* ══════════════════════════════════════════════
    権限（RBAC）
+
+   ★ここに表を書き戻さないこと。
+     権限の表は lib/permissions.ts の1枚だけです。
+     画面（ここ）と入口（lib/server/context.ts）が、
+     同じ1枚を読んでいることに意味があります。
+
+     ここに書き戻すと、表が2枚になります。
+     2枚になった日から、
+     「画面では消えているのに、入口は受け付ける」
+     が起こり得ます。ボタンが無いので、誰も気づけません。
    ══════════════════════════════════════════════ */
 
-export type Role =
-  | "VIEWER"
-  | "SUPPORT"
-  | "OPERATOR"
-  | "FINANCE"
-  | "SECURITY"
-  | "SUPER_ADMIN";
+export {
+  ROLE_PERMISSIONS,
+  ROLE_LABEL,
+  PERMISSION_LABEL,
+  PERMISSION_GROUPS,
+  ROLE_ORDER,
+  can,
+  asRole,
+} from "@/lib/permissions";
+export type { Role, Permission } from "@/lib/permissions";
 
-export type Permission =
-  | "gacha.view" | "gacha.edit" | "gacha.publish"
-  | "point.view" | "point.request" | "point.approve"
-  | "fraud.view" | "fraud.act"
-  | "shipping.view" | "shipping.act"
-  | "support.view" | "support.reply"
-  | "security.view" | "audit.view"
-  | "user.suspend" | "settings.edit";
-
-/**
- * 役割ごとにできること。
- *
- * ★ポイントの「申請」と「承認」を、必ず別の権限にしてあること。
- *   1人が両方を持っていると、二人承認が形だけになります。
- *   SUPER_ADMIN だけは両方持ちますが、それでも
- *   「自分が出した申請を自分で承認する」ことは canApprove() で禁じています。
- *
- * ★承認できる人を、必ず2人以上つくること（重要）。
- *   ここを1人にすると、その人が出した申請を承認できる人がいなくなり、
- *   高額のポイント操作が永久に処理できなくなります。
- *   逆に「面倒だから」と自己承認を許すと、二人承認そのものが消えます。
- *
- *   だから、承認できる人が1人しかいない状態では、
- *   そもそも高額の申請を受け付けないようにしてあります
- *   （reducer の POINT_REQUEST を参照）。
- *   運営者には「承認できる人をもう1人つくってください」と伝えます。
- */
-export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
-  VIEWER: ["gacha.view", "point.view", "shipping.view", "support.view"],
-  SUPPORT: [
-    "gacha.view", "point.view", "shipping.view", "shipping.act",
-    "support.view", "support.reply",
-  ],
-  OPERATOR: [
-    "gacha.view", "gacha.edit", "gacha.publish",
-    "point.view", "shipping.view", "shipping.act",
-    "support.view", "support.reply", "fraud.view",
-  ],
-  FINANCE: [
-    "gacha.view", "point.view", "point.request",
-    "shipping.view", "audit.view",
-  ],
-  SECURITY: [
-    "gacha.view", "point.view", "fraud.view", "fraud.act",
-    "security.view", "audit.view", "user.suspend",
-  ],
-  SUPER_ADMIN: [
-    "gacha.view", "gacha.edit", "gacha.publish",
-    "point.view", "point.request", "point.approve",
-    "fraud.view", "fraud.act",
-    "shipping.view", "shipping.act",
-    "support.view", "support.reply",
-    "security.view", "audit.view",
-    "user.suspend", "settings.edit",
-  ],
-};
-
-export const ROLE_LABEL: Record<Role, string> = {
-  VIEWER: "閲覧のみ",
-  SUPPORT: "サポート",
-  OPERATOR: "運営",
-  FINANCE: "経理",
-  SECURITY: "セキュリティ",
-  SUPER_ADMIN: "管理者（全権）",
-};
-
-/**
- * 権限の名前を、日本語で。
- *
- * ★"point.approve" のまま画面に出さないこと。
- *   権限表は、運営者が「この人に何を任せるか」を決めるための表です。
- *   決めるのは、たいてい技術の人ではありません。
- */
-export const PERMISSION_LABEL: Record<Permission, string> = {
-  "gacha.view": "ガチャを見る",
-  "gacha.edit": "ガチャを作る・直す",
-  "gacha.publish": "ガチャを公開する・止める",
-  "point.view": "ポイントを見る",
-  "point.request": "ポイント変更を申請する",
-  "point.approve": "ポイント変更を承認する",
-  "fraud.view": "不正判定を見る",
-  "fraud.act": "不正判定を確定する",
-  "shipping.view": "発送を見る",
-  "shipping.act": "発送を処理する",
-  "support.view": "問い合わせを見る",
-  "support.reply": "問い合わせに返信する",
-  "security.view": "セキュリティを見る",
-  "audit.view": "監査ログを見る",
-  "user.suspend": "会員を停止する",
-  "settings.edit": "設定を変える",
-};
-
-/**
- * 権限表に出す順番と、まとまり。
- *
- * ★危ないものを下に埋めないこと。
- *   お金と個人情報に触れる権限を先に見せます。
- *   「サポートに全部渡してしまっていた」に、その場で気づけるようにです。
- */
-export const PERMISSION_GROUPS: { title: string; items: Permission[] }[] = [
-  { title: "お金（ポイント）", items: ["point.view", "point.request", "point.approve"] },
-  { title: "ガチャ", items: ["gacha.view", "gacha.edit", "gacha.publish"] },
-  { title: "発送", items: ["shipping.view", "shipping.act"] },
-  { title: "問い合わせ", items: ["support.view", "support.reply"] },
-  { title: "不正・セキュリティ", items: ["fraud.view", "fraud.act", "security.view", "audit.view", "user.suspend"] },
-  { title: "設定", items: ["settings.edit"] },
-];
-
-/** 権限表に出す役割の順番（弱い順。強くなっていく様子が見えるように） */
-export const ROLE_ORDER: Role[] = [
-  "VIEWER", "SUPPORT", "OPERATOR", "FINANCE", "SECURITY", "SUPER_ADMIN",
-];
+import {
+  can,
+  ROLE_LABEL,
+  PERMISSION_LABEL,
+  type Role,
+  type Permission,
+} from "@/lib/permissions";
 
 export type Admin = {
   id: string;
@@ -174,10 +82,6 @@ export type Admin = {
   mfaEnabled: boolean;
   lastLogin: string;
 };
-
-export function can(role: Role, p: Permission): boolean {
-  return ROLE_PERMISSIONS[role].includes(p);
-}
 
 /* ══════════════════════════════════════════════
    お客様側の認証（CUSTOMER AUTH）
@@ -1449,6 +1353,7 @@ function addLedger(
    ══════════════════════════════════════════════ */
 
 export type ConsoleAction =
+  | { type: "SESSION"; admin: Admin }
   | { type: "LOGIN"; adminId: string }
   | { type: "MFA_OK" }
   | { type: "LOGOUT" }
@@ -2023,6 +1928,44 @@ export const FLASH_MS = 6000;
 
 function core(s: ConsoleState, a: ConsoleAction): Draft {
   switch (a.type) {
+    /**
+     * サーバーが本人と認めた人を、そのまま入れる。
+     *
+     * ═══════════════════════════════════════════════════════
+     * ★これが本物のログインです
+     * ═══════════════════════════════════════════════════════
+     *
+     *   下の "LOGIN" は、デモの中だけの切り替えです。
+     *   こちらは、サーバー側でクッキーを確かめ、
+     *   DBから役割を読んだ結果だけが入ってきます。
+     *
+     *   ★ここで役割を書き換えないこと。
+     *     画面の都合で role を上書きすると、
+     *     画面には出るのに入口では断られる、という
+     *     いちばん分かりにくい壊れ方をします。
+     *
+     *   ★mfaPassed を true にしてよい理由。
+     *     2段階認証は、ログインの入口（/api/auth/login）で
+     *     すでに通してあります。セッションが在るということは、
+     *     そこを通ったということです。
+     *     ここでもう一度画面に出すと、
+     *     更新するたびに6桁を求められることになります。
+     */
+    case "SESSION": {
+      const found = s.admins.some((x) => x.id === a.admin.id);
+      return {
+        ...s,
+        /* 見本の担当者一覧に、本人を混ぜておく。
+           二人承認の相手として選べるようにするため */
+        admins: found
+          ? s.admins.map((x) => (x.id === a.admin.id ? a.admin : x))
+          : [a.admin, ...s.admins],
+        me: a.admin,
+        mfaPassed: true,
+        flash: null,
+      };
+    }
+
     case "LOGIN": {
       const me = s.admins.find((x) => x.id === a.adminId);
       if (!me) return deny(s, "その管理者は見つかりません。");
