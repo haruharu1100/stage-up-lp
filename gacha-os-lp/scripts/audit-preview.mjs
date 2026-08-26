@@ -52,9 +52,14 @@
  */
 
 import { writeFileSync } from "node:fs";
-import { createHash, createHmac } from "node:crypto";
+import { createHash } from "node:crypto";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+
+/* ★ログインの仕方を、ここに書き写さないこと。
+     入り方が変わるたびに、直し忘れた道具から順に落ちます。
+     入り方を知っているのは scripts/lib/preview-client.mjs だけです。 */
+import { makePreviewClient, mfaCodeFor as mfaCodeOf } from "./lib/preview-client.mjs";
 
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 const BASE = (process.argv[2] ?? "").replace(/\/$/, "");
@@ -151,167 +156,15 @@ function eq(a, b, why) {
 
 /* ═══════════════════════════════════════════════
    ネット越しに触る道具（1人ぶんのクッキー入れ）
+
+   ★中身は scripts/lib/preview-client.mjs にあります。
+     ここに書き写さないこと。ログインの仕方が変わった日に、
+     直し忘れた道具から順に落ちます。
    ═══════════════════════════════════════════════ */
-class Hito {
-  constructor(label) {
-    this.label = label;
-    this.jar = new Map();
-    this.vids = new Set();
-  }
+const Hito = makePreviewClient({ base: BASE, password: PW, db });
 
-  cookie() {
-    return [...this.jar.entries()].map(([k, v]) => `${k}=${v}`).join("; ");
-  }
-
-  async call(path, method = "GET", body, extraHeaders = {}) {
-    const headers = { "content-type": "application/json", ...extraHeaders };
-    const c = this.cookie();
-    if (c) headers.cookie = c;
-    const csrf = this.jar.get("gos_csrf");
-    if (csrf) headers["x-gos-csrf"] = csrf;
-
-    /**
-     * ★必ず、待つ時間の上限を決めること（2026-08-26 に一度これで止まりました）。
-     *
-     *   上限を決めずに fetch を待つと、相手が黙ったときに
-     *   点検そのものが、いつまでも終わらなくなります。
-     *   数百回まとめて叩く場面があるので、1本でも黙れば全部止まります。
-     *
-     *   しかも、たちの悪いことに「失敗」ではなく「無言」です。
-     *   画面には何も出ません。動いているのか死んでいるのか分かりません。
-     *
-     *   ★止まったら、止まったと分かるようにすること。
-     *     30秒で切って、2回だけやり直します。
-     *     それでも黙るなら、それは相手の落ち度として記録します。
-     */
-    const MACHI = Number(process.env.AUDIT_TIMEOUT_MS ?? 30_000);
-    let res = null;
-    let saigo = null;
-    for (let kai = 0; kai < 3; kai++) {
-      try {
-        res = await fetch(`${BASE}${path}`, {
-          method,
-          headers,
-          body: body === undefined ? undefined : JSON.stringify(body),
-          redirect: "manual",
-          signal: AbortSignal.timeout(MACHI),
-        });
-        break;
-      } catch (e) {
-        saigo = e;
-        /* 二重抽選の鍵を使う書き込みは、やり直しても増えません（鍵で守られています） */
-        await new Promise((r) => setTimeout(r, 400 * (kai + 1)));
-      }
-    }
-    if (res === null) {
-      throw new Error(
-        `${method} ${path} が ${MACHI / 1000}秒×3回 返事をしませんでした` +
-          `（${saigo instanceof Error ? saigo.message : String(saigo)}）`,
-      );
-    }
-
-    for (const line of res.headers.getSetCookie?.() ?? []) {
-      const [pair] = line.split(";");
-      const i = pair.indexOf("=");
-      if (i > 0) {
-        const k = pair.slice(0, i).trim();
-        const v = pair.slice(i + 1).trim();
-        if (v === "" || /Max-Age=0/i.test(line)) this.jar.delete(k);
-        else this.jar.set(k, v);
-      }
-    }
-
-    const vid = res.headers.get("x-vercel-id") ?? "";
-    const inst = vid.split("::").pop()?.split("-")[0] ?? "";
-    if (inst) this.vids.add(inst);
-
-    const text = await res.text();
-    let json = null;
-    try {
-      json = JSON.parse(text);
-    } catch {
-      /* HTML が返ることもある（画面そのもの） */
-    }
-    return { status: res.status, json, text, vid, headers: res.headers };
-  }
-
-  /**
-   * ログインする。
-   *
-   * ★認証アプリを登録している担当者は、ログインにも6桁が要ります。
-   *   登録していない担当者に6桁を送っても、無視されるだけです。
-   *   ですから、作れるときは黙って添えます。
-   *
-   *   これをしないと、担当者が認証アプリを登録した瞬間に
-   *   この点検そのものが動かなくなります（実際に一度なりました）。
-   */
-  async login(kind, tenantCode, email) {
-    const code = await mfaCodeFor(email);
-    const r = await this.call("/api/auth/login", "POST", {
-      kind,
-      tenantCode,
-      email,
-      password: PW,
-      ...(code ? { mfaCode: code } : {}),
-    });
-    return r;
-  }
-}
-
-/* ══════════════════════════════════════════════
-   認証アプリの6桁を、必要な人のぶんだけ作る
-   ══════════════════════════════════════════════ */
-
-const B32_ = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
-
-/** その30秒に出るはずの6桁（lib/server/mfa.ts と同じ計算） */
-function totp(secret, counter) {
-  let bits = 0;
-  let value = 0;
-  const bytes = [];
-  for (const c of String(secret).toUpperCase().replace(/=+$/, "")) {
-    const i = B32_.indexOf(c);
-    if (i < 0) continue;
-    value = (value << 5) | i;
-    bits += 5;
-    if (bits >= 8) {
-      bytes.push((value >>> (bits - 8)) & 0xff);
-      bits -= 8;
-    }
-  }
-  const buf = Buffer.alloc(8);
-  buf.writeUInt32BE(Math.floor(counter / 2 ** 32), 0);
-  buf.writeUInt32BE(counter >>> 0, 4);
-  const mac = createHmac("sha1", Buffer.from(bytes)).update(buf).digest();
-  const off = mac[mac.length - 1] & 0x0f;
-  const bin =
-    ((mac[off] & 0x7f) << 24) |
-    ((mac[off + 1] & 0xff) << 16) |
-    ((mac[off + 2] & 0xff) << 8) |
-    (mac[off + 3] & 0xff);
-  return String(bin % 1_000_000).padStart(6, "0");
-}
-
-/**
- * そのメールの人が認証アプリを登録していれば、いまの6桁を返す。
- * 登録していなければ null。
- */
-async function mfaCodeFor(email) {
-  try {
-    const r = await db().execute({
-      sql: `SELECT mfa_secret, mfa_enabled FROM app_users WHERE email = ? LIMIT 1`,
-      args: [email],
-    });
-    const row = r.rows[0];
-    if (!row || Number(row.mfa_enabled ?? 0) !== 1 || !row.mfa_secret) {
-      return null;
-    }
-    return totp(row.mfa_secret, Math.floor(Date.now() / 1000 / 30));
-  } catch {
-    /* お客様など app_users に居ない方は、ここに来ます */
-    return null;
-  }
-}
+/** そのメールの担当者の、いまの6桁（登録していなければ null） */
+const mfaCodeFor = (email) => mfaCodeOf(db, email);
 
 const short = (o) => JSON.stringify(o).slice(0, 220);
 

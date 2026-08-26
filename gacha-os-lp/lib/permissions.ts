@@ -45,6 +45,23 @@ export type Role =
 
 export type Permission =
   | "gacha.view" | "gacha.edit" | "gacha.publish"
+  /**
+   * 売上・粗利を見る。
+   *
+   * ★これを gacha.view で兼ねないこと（2026-08-26 に直しました）。
+   *   以前、売上と粗利は「ガチャを見る権限」で守っているつもりでした。
+   *   ところが VIEWER（閲覧のみ）も gacha.view を持っています。
+   *   つまり、守っているつもりで、誰も締め出していませんでした。
+   *
+   *   売上と粗利は、その会社が
+   *   「いくら売れて、いくら返しているか」がそのまま読める数字です。
+   *   閲覧アカウントは、外の方や短期の方にお渡しすることがあります。
+   *   ガチャの中身が見られることと、経営の数字が見られることは、別の話です。
+   *
+   *   ★「持っているつもり」の権限は、無い権限より危ないです。
+   *     無ければ足しますが、あるつもりでいると、誰も確かめません。
+   */
+  | "revenue.view"
   | "point.view" | "point.request" | "point.approve"
   | "fraud.view" | "fraud.act"
   | "shipping.view" | "shipping.act"
@@ -94,21 +111,38 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     "gacha.view", "point.view", "shipping.view",
     "support.view", "support.reply",
   ],
+  /**
+   * 運営は、売上を見られること。
+   *
+   * ★ここを外さないこと。
+   *   ガチャを止めるかどうかを決めるのは運営です。
+   *   「いくら売れているか」を見ずに止め時を決めろ、というのは無理です。
+   */
   OPERATOR: [
-    "gacha.view", "gacha.edit", "gacha.publish",
+    "gacha.view", "gacha.edit", "gacha.publish", "revenue.view",
     "point.view", "shipping.view", "shipping.act",
     "support.view", "support.reply", "fraud.view",
   ],
   FINANCE: [
-    "gacha.view", "point.view", "point.request",
+    "gacha.view", "revenue.view", "point.view", "point.request",
     "shipping.view", "audit.view",
   ],
+  /**
+   * セキュリティに revenue.view は付けません。
+   *
+   * ★不正を追うのに、売上の総額は要りません。
+   *   要るのは「誰が、いつ、いくら動かしたか」で、それは
+   *   fraud / audit / point の側にあります。
+   *   要らない権限を付けないのは、その人を疑うからではありません。
+   *   その人のアカウントが乗っ取られた日に、
+   *   持ち出されるものを減らすためです。
+   */
   SECURITY: [
     "gacha.view", "point.view", "fraud.view", "fraud.act",
     "security.view", "audit.view", "user.suspend",
   ],
   SUPER_ADMIN: [
-    "gacha.view", "gacha.edit", "gacha.publish",
+    "gacha.view", "gacha.edit", "gacha.publish", "revenue.view",
     "point.view", "point.request", "point.approve",
     "fraud.view", "fraud.act",
     "shipping.view", "shipping.act",
@@ -138,6 +172,7 @@ export const PERMISSION_LABEL: Record<Permission, string> = {
   "gacha.view": "ガチャを見る",
   "gacha.edit": "ガチャを作る・直す",
   "gacha.publish": "ガチャを公開する・止める",
+  "revenue.view": "売上・粗利を見る",
   "point.view": "ポイントを見る",
   "point.request": "ポイント変更を申請する",
   "point.approve": "ポイント変更を承認する",
@@ -161,6 +196,7 @@ export const PERMISSION_LABEL: Record<Permission, string> = {
  *   「サポートに全部渡してしまっていた」に、その場で気づけるようにです。
  */
 export const PERMISSION_GROUPS: { title: string; items: Permission[] }[] = [
+  { title: "お金（売上）", items: ["revenue.view"] },
   { title: "お金（ポイント）", items: ["point.view", "point.request", "point.approve"] },
   { title: "ガチャ", items: ["gacha.view", "gacha.edit", "gacha.publish"] },
   { title: "発送", items: ["shipping.view", "shipping.act"] },

@@ -133,16 +133,24 @@ export async function adminSummary(
   /* 何を見せてよいか。ここで先に決めて、下では迷わない */
   const mieru = {
     gacha: role !== null && can(role, "gacha.view"),
+    /*
+      ★売上・粗利を gacha.view で守らないこと（2026-08-26 に直しました）。
+
+        以前ここは gacha.view で守っていました。
+        ところが VIEWER（閲覧のみ）も gacha.view を持っています。
+        つまり「守っているつもり」で、誰一人として締め出せていませんでした。
+
+        こういう守りは、無いより悪いです。
+        無ければ「守られていない」と分かりますが、
+        あるつもりでいると、もう誰も確かめないからです。
+
+        いまは revenue.view で守ります。持っているのは
+        SUPER_ADMIN・OPERATOR・FINANCE の3つだけです。
+    */
+    revenue: role !== null && can(role, "revenue.view"),
     support: role !== null && can(role, "support.view"),
     fraud: role !== null && can(role, "fraud.view"),
   };
-
-  /*
-    ★売上と粗利は「ガチャを見る権限」で守ること。
-      売上と、いくら返したか（＝粗利）は、
-      経営の中身がそのまま読める数字です。
-      閲覧だけの担当者に、既定で見せてよいものではありません。
-  */
 
   const [
     unshipped,
@@ -183,8 +191,33 @@ export async function adminSummary(
       ★粗利＝ 売った額 − お客様へ返した額（景品の値 ＋ 返したポイント）。
         返した額を引き忘れると、粗利が実際より大きく出ます。
         大きく出た粗利を見て値段を決めると、そのまま損になります。
+
+      ★引いた回数（plays）と、売れた額（revenue）は、権限が別です。
+        回数はガチャの動きなので gacha.view、
+        金額は経営の数字なので revenue.view で守ります。
+        どちらか片方でも見てよい人がいるので、問い合わせは1回にまとめ、
+        返すときに、見せてよいほうだけを取り出します。
+
+      ★引いた回数は COUNT(*) で数えること。play_count を足さないこと。
+        （2026-08-26 に、実際に間違えて直しました）
+
+        draws の play_count は「何回ぶん引いたか」ではありません。
+        lib/server/draw.ts が、そのガチャで何本目の抽選かを
+        1・2・3…と振った通し番号です。
+
+        これを足すと 1+2+3+… になります。
+        Preview の画面には「本日引かれた回数 1,615,504回」と出ました。
+        1回引いただけで、1797回ぶん増えました。
+
+        恐ろしいのは、この数字が「エラー」ではなく
+        「それらしい大きな数」として画面に並ぶことです。
+        誰も気づけません。気づいたのは、
+        実際に1回引いて前後を比べたからです。
+
+        ★通し番号を、数として足さないこと。
+          数えたいときは、行そのものを数えます。
     */
-    mieru.gacha
+    mieru.gacha || mieru.revenue
       ? db().execute({
           sql: `SELECT
                   SUM(CASE WHEN substr(created_at, 1, 10) = ?
@@ -193,8 +226,8 @@ export async function adminSummary(
                            THEN point_spent ELSE 0 END) AS revenue_month,
                   SUM(CASE WHEN substr(created_at, 1, 7) = ?
                            THEN prize_value + point_returned ELSE 0 END) AS returned_month,
-                  SUM(CASE WHEN substr(created_at, 1, 10) = ?
-                           THEN play_count ELSE 0 END) AS plays_today
+                  COUNT(CASE WHEN substr(created_at, 1, 10) = ?
+                             THEN 1 ELSE NULL END) AS plays_today
                 FROM draws
                WHERE tenant_id = ?`,
           args: [kyou, kongetsu, kongetsu, kyou, tenantId],
@@ -279,13 +312,17 @@ export async function adminSummary(
   const f = (fraud?.rows[0] ?? {}) as Record<string, unknown>;
 
   return {
-    revenueToday: draws ? n(d.revenue_today) : null,
-    revenueMonth: draws ? n(d.revenue_month) : null,
-    grossProfitMonth: draws
-      ? n(d.revenue_month) - n(d.returned_month)
-      : null,
+    /*
+      ★draws が読めたことと、その人に見せてよいことは、別です。
+        引いた回数を見たいだけの人のために問い合わせているので、
+        金額はここで、もう一度 revenue.view を確かめてから出します。
+    */
+    revenueToday: draws && mieru.revenue ? n(d.revenue_today) : null,
+    revenueMonth: draws && mieru.revenue ? n(d.revenue_month) : null,
+    grossProfitMonth:
+      draws && mieru.revenue ? n(d.revenue_month) - n(d.returned_month) : null,
 
-    playsToday: draws ? n(d.plays_today) : null,
+    playsToday: draws && mieru.gacha ? n(d.plays_today) : null,
     customersTotal: n(c.total),
     gachasPublished: gachas ? n(g.published) : null,
 
