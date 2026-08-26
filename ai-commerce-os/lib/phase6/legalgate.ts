@@ -1155,6 +1155,11 @@ export type PromotionInput = {
   conditions: Partial<Record<FirstLiveSupplierCondition, AnswerState>>;
   /** 商品単位で Amazon 販売可否を機械確認できるか */
   amazonResaleCheckablePerProduct: boolean;
+  /**
+   * 入口の門（SUPPLIER_ENTRY_GATE）の結果。
+   * 省略したら記録済みの実際の値を見る。**省略時に「通った」ことにはしない。**
+   */
+  entryGateResult?: SupplierEntryGateResult;
 };
 
 export type PromotionResult = {
@@ -1167,12 +1172,18 @@ export type PromotionResult = {
  * 昇格してよいかを判定する。
  * ★ CONDITIONAL は「条件を満たすまで未達」として扱う（YESにしない）。
  * ★ UNKNOWN は当然未達。無回答・未確認を通さない。
+ * ★ 2026-08-26 追加：SUPPLIER_ENTRY_GATE（入口の門）が PASS でなければ、
+ *   7条件を見るまでもなく昇格させない。「そもそも客として認められるか」が先。
  */
 export function canPromoteToFirstLiveSupplier(input: PromotionInput): PromotionResult {
   const missingJa: string[] = [];
   const purchasable = PURCHASABLE_CANDIDATE_CODES.includes(input.supplierCode as never);
   if (!purchasable) {
     missingJa.push('実際に仕入れられる相手ではない（価格比較の情報源は昇格させない）');
+  }
+  const entry = input.entryGateResult ?? supplierEntryGateResult(input.supplierCode);
+  if (entry !== 'PASS') {
+    missingJa.push(`入口の門（SUPPLIER_ENTRY_GATE）：${SUPPLIER_ENTRY_GATE_RESULT_JA[entry]}`);
   }
   for (const key of FIRST_LIVE_SUPPLIER_MIN_CONDITIONS) {
     const v = input.conditions[key] ?? 'UNKNOWN';
@@ -1188,6 +1199,8 @@ export function firstLiveSupplier(): { code: string; labelJa: string } | null {
   for (const s of supplierGateBoard()) {
     if (s.gate !== 'ALLOWED') continue;
     if (!PURCHASABLE_CANDIDATE_CODES.includes(s.waiting.supplierCode as never)) continue;
+    // 入口の門（そもそも客として認められるか）を通っていない相手は接続先にしない。
+    if (supplierEntryGateResult(s.waiting.supplierCode) !== 'PASS') continue;
     return { code: s.waiting.supplierCode, labelJa: s.waiting.labelJa };
   }
   return null;
@@ -1250,3 +1263,199 @@ export function normalizeAnswerInput(raw: string): AnswerState {
  */
 export const LEGAL_GATE_WAITING_PHASE = true;
 export const NEW_FEATURE_DEVELOPMENT_PAUSED = true;
+
+/* ============================================================================
+ * SUPPLIER_ENTRY_GATE（入口の門）
+ *
+ * ユーザー指示 2026-08-26（orosy の教訓を正式ルール化）：
+ *   「APIが使えるか」より先に「そもそも客として認められるか」を確認する。
+ *   入口で NO なら、その時点で調査終了。残りの規約・API調査に時間を使わない。
+ *
+ * orosy で起きたこと：規約13項目（Legal Gate）を読む準備を進めていたが、
+ * その手前の「バイヤー審査基準」で当社（Amazon主販路＝モール）が対象外だった。
+ * つまり**順番を間違えると、通らない相手の規約を読むために時間を使う**。
+ * ========================================================================== */
+
+/** 入口で確認する5つ。この順で見る。5つ目まで通って初めて Legal Gate へ進む。 */
+export const SUPPLIER_ENTRY_GATE_STEPS = [
+  'ACCOUNT_ELIGIBLE',
+  'MALL_SELLER_ALLOWED',
+  'AMAZON_CENTRIC_ALLOWED',
+  'REQUIRED_LICENSES_MET',
+  'SCREENING_CONDITIONS_KNOWN',
+] as const;
+export type SupplierEntryGateStep = (typeof SUPPLIER_ENTRY_GATE_STEPS)[number];
+
+export const SUPPLIER_ENTRY_GATE_STEP_JA: Record<SupplierEntryGateStep, string> = {
+  ACCOUNT_ELIGIBLE: '① 当社の事業形態で会員登録・利用ができるか',
+  MALL_SELLER_ALLOWED: '② モール（Amazon・楽天・Yahoo!等）で販売する事業者でも利用できるか',
+  AMAZON_CENTRIC_ALLOWED: '③ Amazon中心の事業者でも利用できるか',
+  REQUIRED_LICENSES_MET: '④ 法人・古物商など必要な資格を満たしているか',
+  SCREENING_CONDITIONS_KNOWN: '⑤ 審査の条件（審査の有無・期間・落ちる条件）が分かっているか',
+};
+
+/** 入口の門の結果。PASS のときだけ Legal Gate（API・保存・比較・AI利用）へ進む。 */
+export const SUPPLIER_ENTRY_GATE_RESULTS = ['PASS', 'FAIL', 'UNKNOWN'] as const;
+export type SupplierEntryGateResult = (typeof SUPPLIER_ENTRY_GATE_RESULTS)[number];
+
+export const SUPPLIER_ENTRY_GATE_RESULT_JA: Record<SupplierEntryGateResult, string> = {
+  PASS: '入口通過（客として認められる）',
+  FAIL: '入口で不可（この相手は調査終了）',
+  UNKNOWN: '入口が未確認（まずここを確認する）',
+};
+
+export type SupplierEntryGate = {
+  supplierCode: string;
+  labelJa: string;
+  /** 5つのうち、確認できたものだけ入れる。入れていないものは自動的に UNKNOWN。 */
+  answers: Partial<Record<SupplierEntryGateStep, GateAnswer>>;
+};
+
+/**
+ * 入口の門の記録。
+ * ★ 出典3点（原文・出典・確認日）が無い YES は UNKNOWN に落ちる（ルール144・effectiveAnswer）。
+ * ★ 未確認を「たぶん大丈夫」で埋めない（ルール58）。
+ */
+export const SUPPLIER_ENTRY_GATES: SupplierEntryGate[] = [
+  {
+    supplierCode: 'OROSY',
+    labelJa: 'orosy',
+    answers: {
+      ACCOUNT_ELIGIBLE: {
+        key: 'ACCOUNT_ELIGIBLE',
+        questionJa: SUPPLIER_ENTRY_GATE_STEP_JA.ACCOUNT_ELIGIBLE,
+        value: 'NO',
+        conditionJa: null,
+        quoteJa:
+          '■ご利用可能／・実店舗での物販が可能な事業者／・実店舗の開店準備中の事業者／・ネットショップを運営している事業者（下記ご利用いただけない条件を除く）',
+        sourceJa:
+          'orosy ヘルプセンター「バイヤーの利用審査基準について」 https://help.orosy.com/hc/ja/articles/4403961908505 （記事の最終更新 2025-01-22）',
+        checkedAt: '2026-08-26',
+      },
+      MALL_SELLER_ALLOWED: {
+        key: 'MALL_SELLER_ALLOWED',
+        questionJa: SUPPLIER_ENTRY_GATE_STEP_JA.MALL_SELLER_ALLOWED,
+        value: 'NO',
+        conditionJa: null,
+        quoteJa:
+          '■ご利用頂けません／・ネットショップのうち、オープン前、ドロップシッピング、フリマ、モール、オークション、アフィリエイト',
+        sourceJa:
+          'orosy ヘルプセンター「バイヤーの利用審査基準について」 https://help.orosy.com/hc/ja/articles/4403961908505 （記事の最終更新 2025-01-22）',
+        checkedAt: '2026-08-26',
+      },
+      AMAZON_CENTRIC_ALLOWED: {
+        key: 'AMAZON_CENTRIC_ALLOWED',
+        questionJa: SUPPLIER_ENTRY_GATE_STEP_JA.AMAZON_CENTRIC_ALLOWED,
+        value: 'NO',
+        conditionJa: null,
+        quoteJa:
+          '■ご利用頂けません／・ネットショップのうち、オープン前、ドロップシッピング、フリマ、モール、オークション、アフィリエイト',
+        sourceJa:
+          'orosy ヘルプセンター「バイヤーの利用審査基準について」 https://help.orosy.com/hc/ja/articles/4403961908505 （Amazonは「モール」にあたる。当社は実店舗なし・自社ネットショップなし）',
+        checkedAt: '2026-08-26',
+      },
+      SCREENING_CONDITIONS_KNOWN: {
+        key: 'SCREENING_CONDITIONS_KNOWN',
+        questionJa: SUPPLIER_ENTRY_GATE_STEP_JA.SCREENING_CONDITIONS_KNOWN,
+        value: 'YES',
+        conditionJa: null,
+        quoteJa:
+          'アカウント作成後、3営業日以内に審査結果を送信致します。審査結果の詳細については、開示しておりませんのでご了承ください。',
+        sourceJa:
+          'orosy ヘルプセンター「バイヤーの利用審査基準について」 https://help.orosy.com/hc/ja/articles/4403961908505 ／ バイヤーAPI紹介ページ https://wholesale-portal.orosy.com/ （初回発注の前に事業者確認が必要）',
+        checkedAt: '2026-08-26',
+      },
+      // REQUIRED_LICENSES_MET は未確認のまま（入口で不可が確定したため、これ以上調べない）
+    },
+  },
+  {
+    supplierCode: 'NETSEA',
+    labelJa: 'NETSEA（SynaBiz）',
+    // ★ 2026-08-26 時点ですべて未確認。Legal Gate の8問より先に、この4点を確認する。
+    answers: {},
+  },
+];
+
+export type SupplierEntryGateStatus = {
+  gate: SupplierEntryGate;
+  result: SupplierEntryGateResult;
+  /** 不可だった項目（原文つき）。1つでもあれば調査終了。 */
+  failedJa: string[];
+  /** まだ確認できていない項目。 */
+  unknownJa: string[];
+  statusJa: string;
+  /** Legal Gate（API・保存・比較・AI利用）の調査へ進んでよいか */
+  canProceedToLegalGate: boolean;
+};
+
+/**
+ * 入口の門を判定する。
+ * ★ 1つでも NO があれば FAIL。その時点で調査終了（残りは読まない）。
+ * ★ 5つすべてが YES（出典3点つき）のときだけ PASS。
+ * ★ それ以外は UNKNOWN。UNKNOWN のまま Legal Gate へ進まない。
+ */
+export function supplierEntryGateStatus(g: SupplierEntryGate): SupplierEntryGateStatus {
+  const failedJa: string[] = [];
+  const unknownJa: string[] = [];
+
+  for (const step of SUPPLIER_ENTRY_GATE_STEPS) {
+    const a = g.answers[step];
+    const v = a ? effectiveAnswer(a) : 'UNKNOWN';
+    if (v === 'NO') {
+      failedJa.push(`${SUPPLIER_ENTRY_GATE_STEP_JA[step]} → 不可：「${a?.quoteJa ?? ''}」`);
+    } else if (v !== 'YES') {
+      unknownJa.push(SUPPLIER_ENTRY_GATE_STEP_JA[step]);
+    }
+  }
+
+  let result: SupplierEntryGateResult;
+  let statusJa: string;
+  if (failedJa.length > 0) {
+    result = 'FAIL';
+    statusJa = `入口で不可（${failedJa.length}件）。この相手の規約・API調査はここで終了する`;
+  } else if (unknownJa.length > 0) {
+    result = 'UNKNOWN';
+    statusJa = `入口が未確認（${unknownJa.length}/${SUPPLIER_ENTRY_GATE_STEPS.length}件）。まずここを確認する`;
+  } else {
+    result = 'PASS';
+    statusJa = '入口通過。ここで初めて規約・API・保存・比較・AI利用の確認へ進む';
+  }
+
+  return {
+    gate: g,
+    result,
+    failedJa,
+    unknownJa,
+    statusJa,
+    canProceedToLegalGate: result === 'PASS',
+  };
+}
+
+export function supplierEntryGateBoard(): SupplierEntryGateStatus[] {
+  return SUPPLIER_ENTRY_GATES.map(supplierEntryGateStatus);
+}
+
+export function supplierEntryGateResult(supplierCode: string): SupplierEntryGateResult {
+  const g = SUPPLIER_ENTRY_GATES.find((x) => x.supplierCode === supplierCode);
+  if (!g) return 'UNKNOWN';
+  return supplierEntryGateStatus(g).result;
+}
+
+/**
+ * 規約・API調査に着手してよいか。
+ * ★ 入口が PASS のときだけ true。UNKNOWN でも FAIL でも false（時間を使わない）。
+ */
+export function canStartLegalGateResearch(supplierCode: string): boolean {
+  return supplierEntryGateResult(supplierCode) === 'PASS';
+}
+
+/** 入口の門は Legal Gate より前に必ず通す（順番を入れ替えない）。 */
+export const ENTRY_GATE_BEFORE_LEGAL_GATE = true;
+
+/** NETSEA について、8問より先に確認する4点（ユーザー指示 2026-08-26）。 */
+export const NETSEA_ENTRY_QUESTIONS_JA = [
+  '法人・個人事業主の利用可否（当社の事業形態でバイヤー会員になれるか）',
+  'Amazon中心の事業者でも利用できるか',
+  'モール（Amazon・楽天・Yahoo!等）での販売を目的とした仕入が認められるか',
+  '審査条件（審査の有無・必要書類・期間・落ちる条件）',
+] as const;

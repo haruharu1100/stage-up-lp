@@ -15,6 +15,10 @@ import {
   SUPPLIER_GATE_WAY_JA,
   firstLiveSupplier,
   supplierGateBoard,
+  supplierEntryGateBoard,
+  SUPPLIER_ENTRY_GATE_RESULT_JA,
+  SUPPLIER_ENTRY_GATE_STEPS,
+  SUPPLIER_ENTRY_GATE_STEP_JA,
   type GateDisplayState,
 } from '@/lib/phase6/legalgate';
 import { num, pct } from '@/lib/format';
@@ -73,6 +77,8 @@ export default async function VenuesPage() {
 
   // 仕入先の門（Phase 6.5）。通信はしない。誰の返事を待っているかを見せるだけ。
   const gateBoard = supplierGateBoard();
+  // 入口の門（規約より先に見る）。これも表示のみ。外部へは一切つながない。
+  const entryBoard = supplierEntryGateBoard();
   const firstLive = firstLiveSupplier();
 
   return (
@@ -108,6 +114,60 @@ export default async function VenuesPage() {
         自動購入・自動出品ができる市場は <strong>1つもありません</strong>。
         公式APIが使えることを確認できていない市場は、システム側が実行を拒否します。
         {estimated > 0 && <> 手数料が概算のままの設定が {num(estimated)} 件あります（公式の料金ページで実額の確認が必要です）。</>}
+      </div>
+
+      <h2>入口の門（SUPPLIER ENTRY GATE）— そもそも客として認められるか</h2>
+      <p className="lead">
+        規約やAPIを調べる<strong>前に</strong>、この5つを先に確認します。
+        「APIが使えるか」より先に「<strong>そもそも当社が買い手として認めてもらえるか</strong>」を見る、という順番です。
+        ここで1つでも「不可」が出たら、<strong>その相手の調査はその場で終了</strong>します。規約やAPIの確認に時間を使いません。
+      </p>
+      <div className="note" style={{ marginTop: 10 }}>
+        この門を作った理由：orosy で、規約13項目を読む準備を進めていたところ、
+        その手前の「バイヤー審査基準」に<strong>モール（Amazon・楽天・Yahoo!等）だけで販売する事業者は利用できない</strong>と明記されており、
+        当社が対象外だと分かりました（2026-08-26）。順番を間違えると、通らない相手の規約を読むために時間を使ってしまいます。
+      </div>
+      <div className="scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>相手</th>
+              <th>入口の門</th>
+              <th>いまの状態</th>
+              <th>不可だった項目（原文つき）</th>
+              <th>まだ確認できていない項目</th>
+              <th>規約・API調査へ進めるか</th>
+            </tr>
+          </thead>
+          <tbody>
+            {entryBoard.map((e) => (
+              <tr key={e.gate.supplierCode}>
+                <td><strong>{e.gate.labelJa}</strong></td>
+                <td>
+                  <span
+                    className={
+                      e.result === 'PASS' ? 'badge strong' : e.result === 'FAIL' ? 'badge skip' : 'badge est'
+                    }
+                  >
+                    {SUPPLIER_ENTRY_GATE_RESULT_JA[e.result]}
+                  </span>
+                </td>
+                <td className="small">{e.statusJa}</td>
+                <td className="small">
+                  {e.failedJa.length === 0 ? '—' : e.failedJa.map((t, i) => <div key={i}>{t}</div>)}
+                </td>
+                <td className="small muted">
+                  {e.unknownJa.length === 0 ? '—' : e.unknownJa.map((t, i) => <div key={i}>{t}</div>)}
+                </td>
+                <td className="small">{e.canProceedToLegalGate ? '進んでよい' : '進まない'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div className="note" style={{ marginTop: 10 }}>
+        確認する順番：{SUPPLIER_ENTRY_GATE_STEPS.map((k) => SUPPLIER_ENTRY_GATE_STEP_JA[k]).join(' → ')}
+        {' → '}そのあとで規約・API・保存・比較・AI利用（下のLEGAL GATE）。
       </div>
 
       <h2>仕入先の門（LEGAL GATE）— いま誰の返事を待っているか</h2>

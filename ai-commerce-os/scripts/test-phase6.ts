@@ -80,6 +80,14 @@ import {
   OROSY_CHECKLIST_KEYS,
   supplierGateBoard,
   SUPPLIER_GATE_WAITING,
+  ENTRY_GATE_BEFORE_LEGAL_GATE,
+  SUPPLIER_ENTRY_GATE_STEPS,
+  SUPPLIER_ENTRY_GATE_RESULTS,
+  supplierEntryGateBoard,
+  supplierEntryGateResult,
+  supplierEntryGateStatus,
+  canStartLegalGateResearch,
+  NETSEA_ENTRY_QUESTIONS_JA,
   isLiveFetchAllowed,
   LEGAL_CHECK_DEFAULT,
   LEGAL_CHECK_KEYS,
@@ -1172,9 +1180,10 @@ function main(): void {
       DATA_STORAGE: 'YES', PRICE_COMPARISON: 'YES', PURCHASABLE: 'YES', AMAZON_RESALE: 'YES',
     } as const;
     check(
-      '7つすべて可なら最初の接続先にできる',
+      '7つすべて可で入口も通っていれば最初の接続先にできる',
       canPromoteToFirstLiveSupplier({
         supplierCode: 'NETSEA', conditions: { ...allYes }, amazonResaleCheckablePerProduct: false,
+        entryGateResult: 'PASS',
       }).ok === true,
     );
     check(
@@ -1183,6 +1192,7 @@ function main(): void {
         supplierCode: 'NETSEA',
         conditions: { ...allYes, DATA_STORAGE: 'UNKNOWN' },
         amazonResaleCheckablePerProduct: false,
+        entryGateResult: 'PASS',
       }).ok === false,
     );
     check(
@@ -1191,6 +1201,7 @@ function main(): void {
         supplierCode: 'NETSEA',
         conditions: { ...allYes, PRICE_COMPARISON: 'CONDITIONAL' },
         amazonResaleCheckablePerProduct: false,
+        entryGateResult: 'PASS',
       }).ok === false,
     );
     check(
@@ -1199,12 +1210,14 @@ function main(): void {
         supplierCode: 'NETSEA',
         conditions: { ...allYes, AMAZON_RESALE: 'UNKNOWN' },
         amazonResaleCheckablePerProduct: true,
+        entryGateResult: 'PASS',
       }).ok === true,
     );
     check(
       '情報源（バリューコマース）は最初の接続先にしない',
       canPromoteToFirstLiveSupplier({
         supplierCode: 'VALUECOMMERCE', conditions: { ...allYes }, amazonResaleCheckablePerProduct: true,
+        entryGateResult: 'PASS',
       }).ok === false,
     );
     check(
@@ -1213,7 +1226,15 @@ function main(): void {
         supplierCode: 'NETSEA',
         conditions: { ...allYes, INTERNAL_USE: 'UNKNOWN' },
         amazonResaleCheckablePerProduct: false,
+        entryGateResult: 'PASS',
       }).missingJa.length > 0,
+    );
+    // ★ 入口の門を省略したら「通った」ことにはしない。記録済みの実際の値を見る。
+    check(
+      '7つすべて可でも、入口の門が未確認なら昇格させない（NETSEAの現状）',
+      canPromoteToFirstLiveSupplier({
+        supplierCode: 'NETSEA', conditions: { ...allYes }, amazonResaleCheckablePerProduct: false,
+      }).ok === false,
     );
 
     check('orosyの確認項目は13個', OROSY_CHECKLIST_KEYS.length === 13);
@@ -1226,6 +1247,111 @@ function main(): void {
 
     const venuesPage18 = readFile('app/venues/page.tsx');
     check('管理画面が5つの状態で表示する', /GATE_DISPLAY_STATE_JA/.test(venuesPage18));
+  }
+
+  {
+    section('19. 入口の門（SUPPLIER_ENTRY_GATE）— 規約より先に「客として認められるか」');
+
+    check('入口の門は規約確認より先に置く', ENTRY_GATE_BEFORE_LEGAL_GATE === true);
+    check('確認する項目は5つ', SUPPLIER_ENTRY_GATE_STEPS.length === 5);
+    check(
+      '順番は 事業形態 → モール販売 → Amazon中心 → 必要資格 → 審査条件',
+      SUPPLIER_ENTRY_GATE_STEPS.join(',') ===
+        'ACCOUNT_ELIGIBLE,MALL_SELLER_ALLOWED,AMAZON_CENTRIC_ALLOWED,REQUIRED_LICENSES_MET,SCREENING_CONDITIONS_KNOWN',
+    );
+    check('結果は3つ（通過・不可・未確認）', SUPPLIER_ENTRY_GATE_RESULTS.length === 3);
+
+    // orosy＝入口で不可（この教訓からこの門を作った）
+    check('orosyの入口の門は不可', supplierEntryGateResult('OROSY') === 'FAIL');
+    const orosyEntry = supplierEntryGateBoard().find((x) => x.gate.supplierCode === 'OROSY');
+    check('orosyは不可の理由が原文つきで残っている', (orosyEntry?.failedJa.length ?? 0) >= 1);
+    check(
+      'orosyの不可の理由にモールの記載がある',
+      (orosyEntry?.failedJa ?? []).some((s) => s.includes('モール')),
+    );
+    check('orosyは規約・API調査へ進ませない', orosyEntry?.canProceedToLegalGate === false);
+    check('orosyの規約調査は着手禁止', canStartLegalGateResearch('OROSY') === false);
+
+    // NETSEA＝入口が未確認。まずここから。
+    check('NETSEAの入口の門はまだ未確認', supplierEntryGateResult('NETSEA') === 'UNKNOWN');
+    const netseaEntry = supplierEntryGateBoard().find((x) => x.gate.supplierCode === 'NETSEA');
+    check('NETSEAは5つとも未確認', netseaEntry?.unknownJa.length === 5);
+    check(
+      '未確認のまま規約・API調査へ進ませない',
+      canStartLegalGateResearch('NETSEA') === false,
+    );
+    check('NETSEAで先に聞く項目は4つ', NETSEA_ENTRY_QUESTIONS_JA.length === 4);
+    check(
+      'NETSEAの4項目にモール販売目的の仕入可否が入っている',
+      NETSEA_ENTRY_QUESTIONS_JA.some((q) => q.includes('モール')),
+    );
+    check(
+      'NETSEAの4項目にAmazon中心の可否が入っている',
+      NETSEA_ENTRY_QUESTIONS_JA.some((q) => q.includes('Amazon中心')),
+    );
+    check(
+      'NETSEAの4項目に審査条件が入っている',
+      NETSEA_ENTRY_QUESTIONS_JA.some((q) => q.includes('審査条件')),
+    );
+
+    // 知らない相手は「不明」。勝手に通さない。
+    check('記録の無い相手は不明として扱う', supplierEntryGateResult('UNKNOWN_SUPPLIER') === 'UNKNOWN');
+    check('記録の無い相手も調査着手禁止', canStartLegalGateResearch('UNKNOWN_SUPPLIER') === false);
+
+    // 出典3点が無い「可」は入口でも採用しない（ルール144）
+    const noEvidence = supplierEntryGateStatus({
+      supplierCode: 'TEST',
+      labelJa: 'テスト',
+      answers: Object.fromEntries(
+        SUPPLIER_ENTRY_GATE_STEPS.map((k) => [
+          k,
+          { key: k, questionJa: '', value: 'YES', conditionJa: null, quoteJa: null, sourceJa: null, checkedAt: null },
+        ]),
+      ),
+    });
+    check('出典の無い「可」は入口でも通さない', noEvidence.result === 'UNKNOWN');
+
+    // 5つすべてが出典つきYESなら通過
+    const withEvidence = supplierEntryGateStatus({
+      supplierCode: 'TEST',
+      labelJa: 'テスト',
+      answers: Object.fromEntries(
+        SUPPLIER_ENTRY_GATE_STEPS.map((k) => [
+          k,
+          {
+            key: k, questionJa: '', value: 'YES', conditionJa: null,
+            quoteJa: '原文', sourceJa: '出典', checkedAt: '2026-08-26',
+          },
+        ]),
+      ),
+    });
+    check('5つとも出典つきで可なら入口通過', withEvidence.result === 'PASS');
+    check('入口通過なら規約調査へ進んでよい', withEvidence.canProceedToLegalGate === true);
+
+    // 1つでも不可があれば、他が全部可でも不可
+    const oneNo = supplierEntryGateStatus({
+      supplierCode: 'TEST',
+      labelJa: 'テスト',
+      answers: {
+        ...withEvidence.gate.answers,
+        MALL_SELLER_ALLOWED: {
+          key: 'MALL_SELLER_ALLOWED', questionJa: '', value: 'NO', conditionJa: null,
+          quoteJa: 'モール不可', sourceJa: '出典', checkedAt: '2026-08-26',
+        },
+      },
+    });
+    check('1つでも不可があればその時点で調査終了', oneNo.result === 'FAIL');
+    check('不可なら規約調査へ進ませない', oneNo.canProceedToLegalGate === false);
+
+    // 入口が通っていない相手は FIRST_LIVE_SUPPLIER にしない
+    check('入口が通っていなければ最初の接続先にならない', firstLiveSupplier() === null);
+
+    const venuesPage19 = readFile('app/venues/page.tsx');
+    check('管理画面に入口の門を出している', /supplierEntryGateBoard/.test(venuesPage19));
+    check(
+      '管理画面が入口の門を規約の門より先に出している',
+      venuesPage19.indexOf('SUPPLIER ENTRY GATE') < venuesPage19.indexOf('仕入先の門（LEGAL GATE）'),
+    );
   }
 
   // ================================================================

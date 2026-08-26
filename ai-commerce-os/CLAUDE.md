@@ -99,7 +99,24 @@
 > ※ この判定は「**現在の事業形態において**」。事業形態が変われば再評価の余地はあるが、
 > 「事業実態や内容によりご利用をお断りする場合がございます」とあるため、**形だけの店を作って通す方法は取らない**。
 
-> [!danger] `FIRST_LIVE_SUPPLIER` ＝ 最初に Legal Gate を完全通過した Supplier
+> [!danger] `SUPPLIER_ENTRY_GATE` ＝ Legal Gate より先に必ず通す「入口の門」（ユーザー指示 2026-08-26）
+> orosyの教訓を正式ルール化した。**「APIが使えるか」より先に「そもそも客として認められるか」を確認する。**
+> **今後すべての Supplier 候補について、Legal Gate の前に `SUPPLIER_ENTRY_GATE` を必須にする。**
+> 確認順序（`SUPPLIER_ENTRY_GATE_STEPS` / `lib/phase6/legalgate.ts`）：
+> 1. `ACCOUNT_ELIGIBLE` — 当社の事業形態で会員登録・利用ができるか
+> 2. `MALL_SELLER_ALLOWED` — モール（Amazon・楽天・Yahoo!等）で販売する事業者でも利用できるか
+> 3. `AMAZON_CENTRIC_ALLOWED` — Amazon中心の事業者でも利用できるか
+> 4. `REQUIRED_LICENSES_MET` — 法人・古物商など必要な資格を満たしているか
+> 5. `SCREENING_CONDITIONS_KNOWN` — 審査の条件（有無・期間・落ちる条件）が分かっているか
+> 6. **ここを通ってから** API・保存・比較・AI利用等の Legal Gate へ進む
+>
+> **1つでもNOなら `FAIL`。その時点で調査終了。残りの規約・API調査に時間を使わない**（`canStartLegalGateResearch()` が false）。
+> 判定は `PASS` / `FAIL` / `UNKNOWN` の3つ。**原文・出典・確認日の3点が揃ったYESだけがPASSに数えられる**（`UNKNOWN` は PASS にしない）。
+> `ENTRY_GATE_BEFORE_LEGAL_GATE = true`。`/venues` では **入口の門の表を LEGAL GATE の表より上に**出す。
+> - **orosy = `FAIL`**（`ACCOUNT_ELIGIBLE` / `MALL_SELLER_ALLOWED` / `AMAZON_CENTRIC_ALLOWED` がNO）→ `FIRST_LIVE_SUPPLIER` 候補から除外
+> - **NETSEA = `UNKNOWN`**（5項目すべて未確認）→ まず `NETSEA_ENTRY_QUESTIONS_JA` の4問を聞く
+
+> [!danger] `FIRST_LIVE_SUPPLIER` ＝ 入口の門を通り、さらに Legal Gate を完全通過した Supplier
 > **順位でも過去のスコアでも決めない。Gate通過が最優先条件。**
 > 価格比較の情報源（バリューコマース・Yahoo!・楽天）は、通過しても仕入先にはならない
 > （`PURCHASABLE_CANDIDATE_CODES = ['NETSEA', 'OROSY']`）。
@@ -120,13 +137,14 @@
 1. **orosy は人間が入れた結果だけを取り込む。** AIが規約を補完しない。「書いていないから可」と判断しない（ルール58）。13項目すべてを `YES` / `NO` / `CONDITIONAL` / `UNKNOWN` へ正規化する（`normalizeAnswerInput()` / `OROSY_CHECKLIST_KEYS`）。4つ以外の言葉はすべて `UNKNOWN`。
 2. **回答を貼られたら6ステップ。** ①原文を保存 ②質問ごとに4分類 ③条件付きなら条件原文も保存 ④Legal Gate を再計算 ⑤Connector候補順位を更新 ⑥`36_LegalGate回答記録.md` へ記録。
 3. **回答メールを都合よく解釈しない。** 「原則可能ですが、事前承認が必要です」は `YES` ではなく **`CONDITIONAL`**。事前承認が終わるまで `LEGAL_GATE = BLOCKED` を維持する。
-4. **`FIRST_LIVE_SUPPLIER` の最低条件は7つ**（`FIRST_LIVE_SUPPLIER_MIN_CONDITIONS` / `canPromoteToFirstLiveSupplier()`）：`COMMERCIAL_USE` / `INTERNAL_USE` / `AUTOMATED_RETRIEVAL` / `DATA_STORAGE` / `PRICE_COMPARISON` / `PURCHASABLE` がすべて `YES`、かつ `AMAZON_RESALE` が `YES` または商品単位で機械確認可能。**重要条件が UNKNOWN なら通過禁止。CONDITIONAL は可として数えない。**
+4. **`FIRST_LIVE_SUPPLIER` は、まず `SUPPLIER_ENTRY_GATE = PASS` が前提。** 入口の門が `UNKNOWN` / `FAIL` の相手は、Legal Gate を全部満たしていても昇格しない（`canPromoteToFirstLiveSupplier()` / `firstLiveSupplier()`）。そのうえで**最低条件は7つ**（`FIRST_LIVE_SUPPLIER_MIN_CONDITIONS`）：`COMMERCIAL_USE` / `INTERNAL_USE` / `AUTOMATED_RETRIEVAL` / `DATA_STORAGE` / `PRICE_COMPARISON` / `PURCHASABLE` がすべて `YES`、かつ `AMAZON_RESALE` が `YES` または商品単位で機械確認可能。**重要条件が UNKNOWN なら通過禁止。CONDITIONAL は可として数えない。**
 5. **Supplier と Discovery Source を混ぜない。** バリューコマース等は Gate を通過しても `MARKET_INTELLIGENCE` として接続し、**`FIRST_LIVE_SUPPLIER` にはしない**。
 6. **通過後も段階的に。** `FIRST_LIVE_SUPPLIER` が決まった場合のみ再開し、**1商品 → 停止 → 人間確認 → 5商品 → 停止 → 10商品 → 停止 → 47商品**。いきなり全件検索は禁止。
 7. **最初の1商品で確認する12項目**：Supplier検索成功／商品一致／仕入価格／送料／在庫／Amazon販売可否／Amazon想定販売価格／Amazon手数料／保守純利益／保守ROI／MAX BUY PRICE／正式商品URL。**実購入はしない。**
 8. **コード変更は最小限。** 回答待ち中に Sellability Model 改良・新Score追加・新市場Connector追加・自動購入・自動出品へ進まない。最大のボトルネックは Legal Gate。
 9. **ダッシュボードは5状態だけ更新。** `回答待ち` / `人間確認待ち` / `CONDITIONAL` / `BLOCKED` / `PASSED`（`GATE_DISPLAY_STATES`・`/venues`）。
 10. **記録は毎回。** 回答・規約確認ごとに 確認日／出典／原文／判定／条件／Legal Gate結果／次のAction を `36_LegalGate回答記録.md` に保存する。
+11. **新しい仕入先を調べるときは、最初に入口の門の5項目だけを調べる。** 規約・API・レート制限・保存可否は**そのあと**。入口でNOが出たらそこで打ち切り、理由の原文だけ保存する（orosyで13項目を読んだ時間を二度と使わない）。
 
 > **いまは「許可を取ること」が最優先であり、コードを書くことではない。**
 > 候補数を増やすより、**1社だけでも完全に合法・正式に自動接続できる仕入先を確定する**ことが最優先。
