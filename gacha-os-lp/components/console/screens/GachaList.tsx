@@ -1,25 +1,84 @@
 /**
  * ガチャ管理。
  *
- * ★状態を、色と日本語の両方で出すこと。
- *   「PAUSED」とだけ出しても、初めての人には
- *   自分で止めたのか、勝手に止まったのかが分かりません。
+ * ═══════════════════════════════════════════════════════
+ * ★この画面は、数えないこと
+ * ═══════════════════════════════════════════════════════
  *
- * ★公開ボタンは、検証を通していないガチャでは押せないこと。
- *   「危ないかもしれないが、とりあえず出す」を、仕組みとして禁じます。
- *   人の注意力で守るものは、忙しい日に必ず破られます。
+ *   還元率も、売上も、残り口数も、サーバー（lib/server/gachaAdmin.ts）が
+ *   作った値をそのまま出すだけです。ここで足し算・割り算を書かないでください。
+ *   書いた瞬間に、同じ数字を出す場所が2つになります。
+ *
+ *   2026-08-26、画面に 88.0％ と出ているのに、
+ *   実際にお客様へ返っていたのは 18.23％ でした。
+ *   数え方が散らばると、こうなります。
+ *
+ * ═══════════════════════════════════════════════════════
+ * ★還元率を、1つの言葉で呼ばないこと
+ * ═══════════════════════════════════════════════════════
+ *
+ *       設計還元率 … 作ったときの予定
+ *       残数還元率 … 残っている景品 ÷ 残っている口数
+ *       実績還元率 … 実際に引かれた結果（お客様に返った額）
+ *
+ *   3つを「実還元率」とまとめて呼ぶと、
+ *   どれを見て安心したのかが、誰にも分からなくなります。
+ *
+ * ═══════════════════════════════════════════════════════
+ * ★守りを、この画面に置かないこと
+ * ═══════════════════════════════════════════════════════
+ *
+ *   ボタンを隠すのは、親切のためであって、守りではありません。
+ *   「検証していないガチャは公開できない」を本当に守っているのは
+ *   サーバーです。ここで先回りして判断すると、判断が2か所になり、
+ *   いつか必ずずれます。ずれた側が緩ければ、事故になります。
+ *
+ * ★売上が null のとき、0円と書かないこと。
+ *   null は「見せられません」です。0円は「1円も売れていない」です。
+ *   経理でない人の画面に 0円 と出れば、その人は売れていないと報告します。
  */
 
 "use client";
 
-import { useState } from "react";
-import type { ConsoleState, ConsoleAction, ConsoleGacha } from "@/lib/console/state";
+import { useCallback, useMemo, useState } from "react";
+import type { ConsoleState } from "@/lib/console/state";
 import { can } from "@/lib/console/state";
+import type { Rtp } from "@/lib/console/rtp";
+import {
+  EMPTY_FILTER,
+  runGachaAction,
+  useGachaDetail,
+  useGachaList,
+  type GachaActionKind,
+  type GachaFilter,
+  type GachaRow,
+} from "@/lib/console/liveGachas";
 import type { MenuKey } from "../menu";
-import { Badge, Btn, Card, DemoNote, Drawer, KV, RowCard, Rows, Table, Td, Tr, WhatIsThis } from "../ui";
+import {
+  Badge,
+  Btn,
+  Card,
+  Drawer,
+  Empty,
+  ErrorBox,
+  Field,
+  inputClass,
+  KV,
+  RowCard,
+  Rows,
+  Skeleton,
+  Table,
+  Td,
+  Tr,
+  WhatIsThis,
+} from "../ui";
+
+/* ══════════════════════════════════════════════
+   出し方（ここだけ）
+   ══════════════════════════════════════════════ */
 
 const STATUS: Record<
-  ConsoleGacha["status"],
+  string,
   { label: string; tone: "ok" | "warn" | "danger" | "neutral" | "blue" }
 > = {
   DRAFT: { label: "下書き", tone: "neutral" },
@@ -29,76 +88,192 @@ const STATUS: Record<
   SOLD_OUT: { label: "完売", tone: "neutral" },
 };
 
-/** 残数還元率が、どのくらい危ないか */
-function rtpTone(g: ConsoleGacha): "ok" | "warn" | "danger" {
-  if (g.realRtp === 0) return "ok";
-  if (g.realRtp >= 103 || g.marketRtp >= 115) return "danger";
-  if (g.realRtp >= 100 || g.marketRtp >= 108) return "warn";
-  return "ok";
+function StatusBadge({ status }: { status: string }) {
+  /* ★知らない状態を「下書き」に丸めないこと。
+       丸めると、DBに増えた新しい状態が画面から消えます */
+  const s = STATUS[status];
+  if (!s) return <Badge tone="neutral">{status}</Badge>;
+  return <Badge tone={s.tone}>{s.label}</Badge>;
 }
+
+/**
+ * 還元率を、そのまま出す。
+ *
+ * ★出せないときに 0.0% と書かないこと。
+ *   まだ1回も引かれていないガチャの「0％」は、
+ *   還元していないという意味ではありません。分母が無いだけです。
+ */
+function Pct({ r, strong = false }: { r: Rtp; strong?: boolean }) {
+  if (!r.known) {
+    return (
+      <span className="text-note text-slate3" title={r.reason}>
+        —
+      </span>
+    );
+  }
+  return (
+    <span className={`num ${strong ? "font-bold" : ""}`}>
+      {r.percent.toFixed(1)}%
+    </span>
+  );
+}
+
+/** 警告の重さ。色だけに頼らず、日本語も出す */
+function WorstBadge({ g }: { g: GachaRow }) {
+  const w = g.worst.level;
+  if (w === "DANGER") return <Badge tone="danger">危険</Badge>;
+  if (w === "WARN") return <Badge tone="warn">注意</Badge>;
+  if (w === "INFO") return <Badge tone="neutral">データ不足</Badge>;
+  return <Badge tone="ok">問題なし</Badge>;
+}
+
+/**
+ * 売上。
+ * ★見せられない人には、金額の代わりに理由を出すこと。
+ */
+function Money({ v }: { v: number | null }) {
+  if (v === null) {
+    return (
+      <span
+        className="text-note text-slate3"
+        title="売上を見る権限がありません。0円という意味ではありません。"
+      >
+        見せられません
+      </span>
+    );
+  }
+  return <span className="num whitespace-nowrap">{v.toLocaleString()}円</span>;
+}
+
+/** 日時。★分からないものを、それらしい日付で埋めないこと */
+function nichiji(iso: string | null): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}/${p(d.getMonth() + 1)}/${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
+function PublishedAt({ g }: { g: GachaRow }) {
+  if (g.publishedAt) {
+    return <span className="num whitespace-nowrap">{nichiji(g.publishedAt)}</span>;
+  }
+  if (g.status === "PUBLISHED" || g.status === "PAUSED" || g.status === "SOLD_OUT") {
+    /* ★作った日で埋めないこと。埋めた瞬間に、記録ではなく作り話になります */
+    return (
+      <span
+        className="text-note text-slate3"
+        title="この機能を入れる前に公開されたため、記録が残っていません。"
+      >
+        不明
+      </span>
+    );
+  }
+  return <span className="text-note text-slate3">—</span>;
+}
+
+/** 公開前検証の状態 */
+function BacktestBadge({ g }: { g: GachaRow }) {
+  if (!g.backtest.ran) {
+    return (
+      <Badge tone={g.backtest.reason === "SPEC_CHANGED" ? "warn" : "neutral"}>
+        {g.backtest.reason === "SPEC_CHANGED" ? "検証のやり直しが必要" : "検証がまだ"}
+      </Badge>
+    );
+  }
+  const v = g.backtest.verdict;
+  return (
+    <Badge tone={v === "DANGER" ? "danger" : v === "CAUTION" ? "warn" : "ok"}>
+      検証 {v}
+    </Badge>
+  );
+}
+
+/* ══════════════════════════════════════════════
+   本体
+   ══════════════════════════════════════════════ */
 
 export default function GachaList({
   s,
-  dispatch,
   onNav,
 }: {
   s: ConsoleState;
-  dispatch: React.Dispatch<ConsoleAction>;
   onNav: (k: MenuKey) => void;
 }) {
   const me = s.me!;
   const mayPublish = can(me.role, "gacha.publish");
   const mayEdit = can(me.role, "gacha.edit");
 
+  const [filter, setFilter] = useState<GachaFilter>(EMPTY_FILTER);
+  /* 入力のたびに読みにいくと、1文字ごとに通信します。
+     押したときだけ反映します */
+  const [qDraft, setQDraft] = useState("");
+
+  const { state, reload } = useGachaList(filter);
+
   /**
    * いま開いている1件。
    *
-   * ★件そのものではなく、番号だけを持つこと。
-   *   公開・停止を押した瞬間に状態が変わります。件を写して持つと、
-   *   板の中だけ古い状態のまま残り、押しても何も起きていないように見えます。
+   * ★件そのものを写して持たないこと。
+   *   公開・停止を押した瞬間に、状態も還元率も変わります。
+   *   写した値を持つと、板の中だけ古いまま残ります。
    */
   const [openId, setOpenId] = useState<string | null>(null);
-  const open = openId ? (s.gachas.find((g) => g.id === openId) ?? null) : null;
+  const detail = useGachaDetail(openId);
 
-  const alerts = s.gachas.filter(
-    (g) => g.status === "PUBLISHED" && (g.realRtp >= 105 || g.marketRtp >= 110),
+  /** 操作したあとの知らせ（この画面の中だけ） */
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  const afterAction = useCallback(
+    (r: { ok: boolean; message: string }) => {
+      setMsg({ ok: r.ok, text: r.message });
+      /* ★成功したときだけ読み直す、にしないこと。
+           断られた理由が「もう公開済み」のこともあります。
+           そのときは、画面の方が古いので、読み直すのが正解です */
+      reload();
+      detail.reload();
+    },
+    [reload, detail],
   );
-  const paused = s.gachas.filter((g) => g.status === "PAUSED");
+
+  const run = useCallback(
+    async (action: GachaActionKind, gachaId: string, reason?: string) => {
+      setBusy(true);
+      const r = await runGachaAction({ action, gachaId, reason });
+      setBusy(false);
+      afterAction(r);
+    },
+    [afterAction],
+  );
+
+  const data = state.phase === "ok" ? state.data : null;
+  const rows = data?.gachas ?? [];
+
+  const paused = useMemo(() => rows.filter((g) => g.status === "PAUSED"), [rows]);
+  const danger = useMemo(
+    () => rows.filter((g) => g.status === "PUBLISHED" && g.worst.level === "DANGER"),
+    [rows],
+  );
 
   return (
     <>
       <WhatIsThis>
         ガチャを作り、検証し、公開し、必要なら止めます。
         <strong className="font-bold text-slate">検証を通していないガチャは公開できません。</strong>
+        この画面の数字は、すべて登録されているガチャそのものから数えています。
       </WhatIsThis>
 
-      {/*
-        ── 還元率の呼び分け ──
-
-        ★「実還元率」という書き方に戻さないこと。
-          その言葉は、次の3つのどれを指すのか分かりません。
-
-              設計還元率 … 作ったときの予定
-              残数還元率 … 残っている景品 ÷ 残っている口数
-              実績還元率 … 実際に引かれた結果（お客様に返った額）
-
-          2026-08-26、画面に 88.0％ と出ているのに、
-          実際に返っていたのは 18.23％ でした。
-          3つを1つの言葉で呼んでいたことが、気づけなかった一因です。
-
-        ★この一覧の数字は、まだ見本です。
-          本物の3種類は「実績還元率」の画面で見られます。
-          この一覧を本物へ差し替えるのは、次の作業です。
-      */}
+      {/* ── 還元率の呼び分け ── */}
       <div className="rounded-xl border border-blue-ink/25 bg-blue-pale/40 px-5 py-4">
         <p className="text-note leading-[1.9] text-slate2">
           <strong className="font-bold text-slate">還元率は、3種類あります。</strong>
           設計（作ったときの予定）・残数（残っている景品 ÷ 残っている口数）・
           実績（実際にお客様へ返った額）。
           <br />
-          この一覧に出ているのは <strong className="font-bold text-slate">設計</strong> と{" "}
-          <strong className="font-bold text-slate">残数</strong> です。
-          実際にいくら返ったかは、
+          実績は、引かれた回数が少ないうちは「—」と出ます。
+          10回しか引かれていないガチャの数字は、良し悪しの判断に使えないためです。
+          くわしい移り変わりは
           <button
             type="button"
             className="mx-1 font-bold text-blue-ink underline underline-offset-4"
@@ -106,319 +281,578 @@ export default function GachaList({
           >
             実績還元率
           </button>
-          の画面でご確認ください。
+          の画面で見られます。
         </p>
       </div>
 
-      {/* ── 止まっているガチャ ──
-
-          ★1件を5行で書かないこと。
-            もとは、止まった理由を1件ごとに3行の文章で説明していました。
-            止まっているガチャが3つあれば、それだけで画面の半分が
-            ほぼ同じ文章で埋まります。
-            違うのは「どれが」「何%で」の2つだけなので、
-            1行に並べて、詳しくはボタンの先で読みます。 */}
-      {paused.length > 0 && (
-        <Card
-          title="いま止まっているガチャ"
-          note="システムが自動で止めたものも含みます。このまま売り続けると、1口ごとに赤字が増えます。"
+      {/* ── 操作の知らせ ── */}
+      {msg && (
+        <div
+          role="status"
+          className={`flex flex-wrap items-center justify-between gap-3 rounded-xl border px-5 py-4 text-note leading-[1.9] ${
+            msg.ok
+              ? "border-ok/30 bg-ok/10 text-ok-ink"
+              : "border-danger/30 bg-danger/10 text-danger-ink"
+          }`}
         >
-          <ul className="space-y-2">
-            {paused.map((g) => (
-              <li
-                key={g.id}
-                className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 rounded-xl border border-danger/30 bg-danger/8 px-4 py-2.5"
-              >
-                <span className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                  <Badge tone="danger">販売停止中</Badge>
-                  <span className="text-note font-bold text-slate">{g.title}</span>
-                  <span className="num text-note text-danger-ink">
-                    残数還元率 {g.realRtp}% ／ 粗利 {g.profit.toLocaleString()}円
-                  </span>
-                </span>
-                <span className="flex flex-wrap gap-2">
-                  <Btn onClick={() => onNav("rtp")}>くわしく見る</Btn>
-                  <Btn onClick={() => onNav("market")}>相場を見る</Btn>
-                </span>
-              </li>
-            ))}
-          </ul>
-        </Card>
+          <span className="font-bold">{msg.text}</span>
+          <Btn kind="ghost" onClick={() => setMsg(null)}>
+            閉じる
+          </Btn>
+        </div>
       )}
 
-      {/* ── 警告 ── */}
-      {alerts.length > 0 && (
-        <Card title="出しすぎているガチャ" note="止まってはいませんが、放っておくと赤字になります。">
-          <ul className="space-y-3">
-            {alerts.map((g) => (
-              <li
-                key={g.id}
-                className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-warn/35 bg-warn/8 px-4 py-3"
-              >
-                <span className="text-note text-slate2">
-                  <strong className="font-bold text-slate">{g.title}</strong>
-                  <span className="num ml-2 text-warn-ink">残数還元率 {g.realRtp}%</span>
-                </span>
-                {mayPublish && (
-                  <Btn
-                    kind="danger"
-                    onClick={() =>
-                      dispatch({
-                        type: "PAUSE_GACHA",
-                        gachaId: g.id,
-                        reason: `残数還元率 ${g.realRtp}% ／ 相場基準 ${g.marketRtp}% のため停止`,
-                      })
-                    }
-                  >
-                    販売を止める
-                  </Btn>
-                )}
-              </li>
-            ))}
-          </ul>
-        </Card>
-      )}
+      {/* ── 絞り込み ──
 
-      {/* ── 一覧 ── */}
-      <Card
-        title="ガチャ一覧"
-        note={`${s.gachas.length}件`}
-        right={
-          mayEdit ? (
-            <Btn kind="ghost" onClick={() => onNav("builder")}>
-              新しく作る
-            </Btn>
-          ) : undefined
-        }
-      >
-        {/* ★操作ボタンを表の中に並べないこと。
-              ボタンを1列足すと、それだけで数字の列が押し潰されます。
-              しかも行そのものが押せるので、行を開くつもりで
-              「公開する」を押してしまう事故が起きます。
-              操作は、行を押して開いた右の板の中だけに置きます。 */}
-        <Table head={["ガチャ", "状態", "価格", "残り", "設計還元率", "残数還元率", "粗利"]}>
-          {s.gachas.map((g) => (
-            /* ★危ない行に色を付けること。
-                 上の警告で名前を見た人が、一覧の中からその行を
-                 目で探し直さずに済みます。 */
-            <Tr
-              key={g.id}
-              onOpen={() => setOpenId(g.id)}
-              active={openId === g.id}
-              tone={
-                g.status === "PAUSED" || rtpTone(g) === "danger"
-                  ? "danger"
-                  : rtpTone(g) === "warn"
-                    ? "warn"
-                    : undefined
-              }
+          ★画面に届いた配列を絞らないこと。
+            件数が増えた日に、上限で切られた中だけを絞ることになります。
+            出てこないガチャがあっても、画面には何も出ません。 */}
+      <Card title="さがす" note="条件はサーバー側で絞り込みます。">
+        <div className="grid gap-3 md:grid-cols-[1fr_12rem_auto]">
+          <Field label="ガチャ名">
+            <input
+              className={inputClass}
+              value={qDraft}
+              placeholder="名前の一部でさがせます"
+              onChange={(e) => setQDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") setFilter((f) => ({ ...f, q: qDraft }));
+              }}
+            />
+          </Field>
+          <Field label="状態">
+            <select
+              className={inputClass}
+              value={filter.status}
+              onChange={(e) => setFilter((f) => ({ ...f, status: e.target.value }))}
             >
-              <Td className="font-bold text-slate">{g.title}</Td>
-              <Td>
-                <Badge tone={STATUS[g.status].tone}>{STATUS[g.status].label}</Badge>
-              </Td>
-              <Td className="num whitespace-nowrap">{g.price.toLocaleString()}円</Td>
-              <Td className="num whitespace-nowrap">
-                {g.left.toLocaleString()} / {g.total.toLocaleString()}
-              </Td>
-              <Td className="num">{g.designedRtp ? `${g.designedRtp}%` : "-"}</Td>
-              <Td className="num">
-                {g.realRtp ? (
-                  <span
-                    className={
-                      rtpTone(g) === "danger"
-                        ? "font-bold text-danger-ink"
-                        : rtpTone(g) === "warn"
-                          ? "font-bold text-warn-ink"
-                          : "text-ok-ink"
-                    }
-                  >
-                    {g.realRtp}%
-                  </span>
-                ) : (
-                  "-"
-                )}
-              </Td>
-              <Td className="num whitespace-nowrap">
-                <span className={g.profit < 0 ? "font-bold text-danger-ink" : ""}>
-                  {g.profit.toLocaleString()}円
-                </span>
-              </Td>
-            </Tr>
-          ))}
-        </Table>
+              <option value="">すべて</option>
+              <option value="DRAFT">下書き</option>
+              <option value="REVIEW">公開待ち</option>
+              <option value="PUBLISHED">販売中</option>
+              <option value="PAUSED">販売停止中</option>
+              <option value="SOLD_OUT">完売</option>
+            </select>
+          </Field>
+          <div className="flex items-end gap-2">
+            <Btn kind="primary" onClick={() => setFilter((f) => ({ ...f, q: qDraft }))}>
+              さがす
+            </Btn>
+            <Btn
+              kind="ghost"
+              onClick={() => {
+                setQDraft("");
+                setFilter(EMPTY_FILTER);
+              }}
+            >
+              条件を消す
+            </Btn>
+          </div>
+        </div>
 
-        <Rows>
-          {s.gachas.map((g) => (
-            <RowCard key={g.id}>
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="text-note font-bold text-slate">{g.title}</span>
-                <Badge tone={STATUS[g.status].tone}>{STATUS[g.status].label}</Badge>
-              </div>
-              <div className="mt-2 border-t border-edge pt-2">
-                <KV k="価格" v={<span className="num">{g.price.toLocaleString()}円</span>} />
-                <KV
-                  k="残り"
-                  v={
-                    <span className="num">
-                      {g.left.toLocaleString()} / {g.total.toLocaleString()}
-                    </span>
-                  }
-                />
-                <KV k="残数還元率" v={<span className="num">{g.realRtp ? `${g.realRtp}%` : "-"}</span>} />
-                <KV k="粗利" v={<span className="num">{g.profit.toLocaleString()}円</span>} />
-              </div>
-              <div className="mt-3">
-                <Btn onClick={() => setOpenId(g.id)}>中身と操作を開く</Btn>
-              </div>
-            </RowCard>
-          ))}
-        </Rows>
-
-        {!mayPublish && (
-          <p className="mt-4 text-note leading-[1.9] text-slate3">
-            ★いまの担当には、公開・停止の権限がありません。
-            上の担当の切り替えから「運営 太郎」または「運営 次郎」に変えると押せます。
-          </p>
-        )}
+        <label className="mt-3 flex items-center gap-2 text-note text-slate2">
+          <input
+            type="checkbox"
+            checked={filter.onlyAlert}
+            onChange={(e) => setFilter((f) => ({ ...f, onlyAlert: e.target.checked }))}
+          />
+          警告が出ているものだけ
+        </label>
       </Card>
 
-      {/* ── 1件の中身と、操作 ── */}
-      <Drawer
-        open={open !== null}
-        onClose={() => setOpenId(null)}
-        title={open?.title ?? ""}
-        note={open ? `1回 ${open.price.toLocaleString()}円` : undefined}
-        foot={
-          open ? (
-            <Actions g={open} mayPublish={mayPublish} mayEdit={mayEdit} dispatch={dispatch} />
-          ) : undefined
-        }
-      >
-        {open && (
-          <>
-            <div className="flex flex-wrap items-center gap-2">
-              <Badge tone={STATUS[open.status].tone}>{STATUS[open.status].label}</Badge>
-              {open.backtest === null ? (
-                <Badge tone="neutral">公開前の検証がまだ</Badge>
-              ) : (
-                <Badge
-                  tone={
-                    open.backtest === "DANGER"
-                      ? "danger"
-                      : open.backtest === "CAUTION"
-                        ? "warn"
-                        : "ok"
-                  }
-                >
-                  検証 {open.backtest}
-                </Badge>
-              )}
-            </div>
+      {/* ── 読めていないとき ── */}
+      {state.phase === "loading" && (
+        <Card title="ガチャ一覧">
+          <Skeleton rows={5} label="ガチャを読み込んでいます" />
+        </Card>
+      )}
 
-            <div className="rounded-xl border border-edge bg-paper2 px-4 py-3">
-              <KV
-                k="残り口数"
-                v={
-                  <span className="num">
-                    {open.left.toLocaleString()} / {open.total.toLocaleString()}
-                  </span>
+      {state.phase === "ng" && (
+        <ErrorBox what={state.why} code={state.code} onRetry={reload} />
+      )}
+
+      {data && (
+        <>
+          {/* ── 止まっているガチャ ── */}
+          {paused.length > 0 && (
+            <Card
+              title="いま止まっているガチャ"
+              note="システムが自動で止めたものも含みます。このまま売り続けると、1口ごとに赤字が増えます。"
+            >
+              <ul className="space-y-2">
+                {paused.map((g) => (
+                  <li
+                    key={g.id}
+                    className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 rounded-xl border border-danger/30 bg-danger/8 px-4 py-2.5"
+                  >
+                    <span className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                      <Badge tone="danger">販売停止中</Badge>
+                      <span className="text-note font-bold text-slate">{g.title}</span>
+                      {/* ★止めた理由を、必ず一緒に出すこと。
+                            「止まっている」だけでは、直し方が分かりません */}
+                      <span className="text-note text-danger-ink">
+                        {g.pauseReason ?? "理由の記録がありません"}
+                      </span>
+                    </span>
+                    <Btn onClick={() => setOpenId(g.id)}>中身と操作を開く</Btn>
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          )}
+
+          {/* ── 出しすぎているガチャ ── */}
+          {danger.length > 0 && (
+            <Card
+              title="出しすぎているガチャ"
+              note="止まってはいませんが、放っておくと赤字になります。"
+            >
+              <ul className="space-y-3">
+                {danger.map((g) => (
+                  <li
+                    key={g.id}
+                    className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-warn/35 bg-warn/8 px-4 py-3"
+                  >
+                    <span className="text-note leading-[1.9] text-slate2">
+                      <strong className="font-bold text-slate">{g.title}</strong>
+                      <br />
+                      {g.worst.message}
+                    </span>
+                    <Btn onClick={() => setOpenId(g.id)}>中身と操作を開く</Btn>
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          )}
+
+          {/* ── 一覧 ── */}
+          <Card
+            title="ガチャ一覧"
+            note={
+              `${data.total}件` +
+              (data.dangerCount > 0 ? ` ／ 危険 ${data.dangerCount}本` : "") +
+              (data.warnCount > 0 ? ` ／ 注意 ${data.warnCount}本` : "") +
+              (data.unverifiedCount > 0 ? ` ／ 検証がまだ ${data.unverifiedCount}本` : "")
+            }
+            right={
+              mayEdit ? (
+                <Btn kind="ghost" onClick={() => onNav("builder")}>
+                  新しく作る
+                </Btn>
+              ) : undefined
+            }
+          >
+            {rows.length === 0 ? (
+              <Empty
+                why={
+                  filter.q || filter.status || filter.onlyAlert
+                    ? "この条件に当てはまるガチャはありませんでした。"
+                    : "まだガチャが1本も登録されていません。"
+                }
+                next={
+                  filter.q || filter.status || filter.onlyAlert
+                    ? "上の「条件を消す」を押すと、すべてのガチャが出ます。"
+                    : mayEdit
+                      ? "右上の「新しく作る」から、1本目を登録できます。"
+                      : "登録は、運営の担当者にご依頼ください。"
                 }
               />
-              <KV k="設計還元率" v={<span className="num">{open.designedRtp ? `${open.designedRtp}%` : "-"}</span>} />
-              <KV k="残数還元率" v={<span className="num">{open.realRtp ? `${open.realRtp}%` : "-"}</span>} />
-              <KV k="相場基準の還元率" v={<span className="num">{open.marketRtp ? `${open.marketRtp}%` : "-"}</span>} />
-              <KV k="粗利" v={<span className="num">{open.profit.toLocaleString()}円</span>} />
-            </div>
+            ) : (
+              <>
+                {/* ★操作ボタンを表の中に並べないこと。
+                      1列足すだけで数字の列が押し潰されます。
+                      しかも行そのものが押せるので、行を開くつもりで
+                      「公開する」を押してしまう事故が起きます。 */}
+                <Table
+                  head={[
+                    "ガチャ",
+                    "状態",
+                    "価格",
+                    "総口数",
+                    "残口数",
+                    "売上",
+                    "設計還元率",
+                    "残数還元率",
+                    "実績還元率",
+                    "公開日時",
+                    "警告",
+                  ]}
+                >
+                  {rows.map((g) => (
+                    <Tr
+                      key={g.id}
+                      onOpen={() => setOpenId(g.id)}
+                      active={openId === g.id}
+                      tone={
+                        g.status === "PAUSED" || g.worst.level === "DANGER"
+                          ? "danger"
+                          : g.worst.level === "WARN"
+                            ? "warn"
+                            : undefined
+                      }
+                    >
+                      <Td className="font-bold text-slate">{g.title}</Td>
+                      <Td>
+                        <StatusBadge status={g.status} />
+                      </Td>
+                      <Td className="num whitespace-nowrap">{g.price.toLocaleString()}円</Td>
+                      <Td className="num whitespace-nowrap">{g.total.toLocaleString()}</Td>
+                      <Td className="num whitespace-nowrap">{g.leftCount.toLocaleString()}</Td>
+                      <Td>
+                        <Money v={g.revenue} />
+                      </Td>
+                      <Td>
+                        <Pct r={g.designed} />
+                      </Td>
+                      <Td>
+                        <Pct r={g.remaining} />
+                      </Td>
+                      <Td>
+                        <Pct r={g.actual} strong />
+                      </Td>
+                      <Td>
+                        <PublishedAt g={g} />
+                      </Td>
+                      <Td>
+                        <WorstBadge g={g} />
+                      </Td>
+                    </Tr>
+                  ))}
+                </Table>
 
-            {/* ★止まっているなら、そのままにしないこと。
-                  「販売停止中」だけ見せて放置すると、
-                  何を直せば再開できるのかが分かりません */}
-            {open.status === "PAUSED" && (
-              <p className="rounded-xl border border-danger/30 bg-danger/8 px-4 py-3 text-note leading-[1.9] text-danger-ink">
-                販売を止めています。残数還元率か、相場の値上がりが原因です。
-                下の「実績還元率を見る」「相場を見る」で、どちらなのかが分かります。
+                <Rows>
+                  {rows.map((g) => (
+                    <RowCard key={g.id}>
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <span className="text-note font-bold text-slate">{g.title}</span>
+                        <StatusBadge status={g.status} />
+                      </div>
+                      <div className="mt-2 border-t border-edge pt-2">
+                        <KV k="価格" v={<span className="num">{g.price.toLocaleString()}円</span>} />
+                        <KV
+                          k="残口数"
+                          v={
+                            <span className="num">
+                              {g.leftCount.toLocaleString()} / {g.total.toLocaleString()}
+                            </span>
+                          }
+                        />
+                        <KV k="売上" v={<Money v={g.revenue} />} />
+                        <KV k="設計還元率" v={<Pct r={g.designed} />} />
+                        <KV k="残数還元率" v={<Pct r={g.remaining} />} />
+                        <KV k="実績還元率" v={<Pct r={g.actual} strong />} />
+                        <KV k="公開日時" v={<PublishedAt g={g} />} />
+                        <KV k="警告" v={<WorstBadge g={g} />} />
+                      </div>
+                      <div className="mt-3">
+                        <Btn onClick={() => setOpenId(g.id)}>中身と操作を開く</Btn>
+                      </div>
+                    </RowCard>
+                  ))}
+                </Rows>
+              </>
+            )}
+
+            {!data.canSeeRevenue && (
+              <p className="mt-4 text-note leading-[1.9] text-slate3">
+                ★売上の欄が「見せられません」になっています。
+                いまの担当には、売上を見る権限がありません。0円という意味ではありません。
               </p>
             )}
 
-            <div className="flex flex-wrap gap-2">
-              <Btn onClick={() => onNav("rtp")}>実績還元率を見る</Btn>
-              <Btn onClick={() => onNav("market")}>相場を見る</Btn>
-              <Btn onClick={() => onNav("preview")}>お客様の画面で見る</Btn>
-            </div>
-          </>
+            {!mayPublish && (
+              <p className="mt-2 text-note leading-[1.9] text-slate3">
+                ★いまの担当には、公開・停止の権限がありません。中身は見られます。
+              </p>
+            )}
+          </Card>
+        </>
+      )}
+
+      {/* ── 1件の中身と、操作 ── */}
+      <Drawer
+        open={openId !== null}
+        onClose={() => setOpenId(null)}
+        title={detail.state.phase === "ok" ? detail.state.gacha.title : "ガチャ"}
+        note={
+          detail.state.phase === "ok"
+            ? `1回 ${detail.state.gacha.price.toLocaleString()}円`
+            : undefined
+        }
+        foot={
+          detail.state.phase === "ok" ? (
+            <Actions
+              g={detail.state.gacha}
+              mayPublish={mayPublish}
+              mayEdit={mayEdit}
+              busy={busy}
+              onRun={run}
+            />
+          ) : undefined
+        }
+      >
+        {detail.state.phase === "loading" && <Skeleton rows={4} label="中身を読み込んでいます" />}
+        {detail.state.phase === "ng" && (
+          <ErrorBox
+            what={detail.state.why}
+            code={detail.state.code}
+            onRetry={detail.reload}
+          />
+        )}
+        {detail.state.phase === "ok" && (
+          <GachaBody g={detail.state.gacha} onNav={onNav} />
         )}
       </Drawer>
-
-      <DemoNote>
-        ここに並んでいるガチャ・売上・還元率は、すべて架空の見本です。
-        実際にお使いいただくときは、登録したガチャがそのまま並びます。
-      </DemoNote>
     </>
   );
 }
 
+/* ══════════════════════════════════════════════
+   板の中身
+   ══════════════════════════════════════════════ */
+
+function GachaBody({
+  g,
+  onNav,
+}: {
+  g: import("@/lib/console/liveGachas").GachaDetail;
+  onNav: (k: MenuKey) => void;
+}) {
+  return (
+    <>
+      <div className="flex flex-wrap items-center gap-2">
+        <StatusBadge status={g.status} />
+        <BacktestBadge g={g} />
+        <WorstBadge g={g} />
+      </div>
+
+      {/* ★検証がいつのものかを出すこと。
+            「検証 SAFE」だけだと、半年前の検証でも通ったように見えます */}
+      {g.backtest.ran ? (
+        <p className="text-note leading-[1.9] text-slate3">
+          {nichiji(g.backtest.at)} に検証（{g.backtest.engine} ／ 種 {g.backtest.seed}）。
+          運営時の判定は {g.backtest.stress} です。
+          {!g.backtest.current && (
+            <strong className="font-bold text-warn-ink">
+              　検証したあとに構成が変わっています。公開の前にやり直してください。
+            </strong>
+          )}
+        </p>
+      ) : (
+        <p className="text-note leading-[1.9] text-slate3">{g.backtest.message}</p>
+      )}
+
+      <div className="rounded-xl border border-edge bg-paper2 px-4 py-3">
+        <KV
+          k="残り口数"
+          v={
+            <span className="num">
+              {g.leftCount.toLocaleString()} / {g.total.toLocaleString()}
+            </span>
+          }
+        />
+        <KV k="売上" v={<Money v={g.revenue} />} />
+        <KV k="設計還元率" v={<Pct r={g.designed} />} />
+        <KV k="残数還元率" v={<Pct r={g.remaining} />} />
+        <KV k="実績還元率" v={<Pct r={g.actual} strong />} />
+        {/* ★実績は、必ず回数と一緒に出すこと。
+              回数を書かないと、3回ぶんの数字が
+              1万回ぶんと同じ重さで読まれます */}
+        <KV k="引かれた回数" v={<span className="num">{g.plays.toLocaleString()}回</span>} />
+        <KV k="公開日時" v={<PublishedAt g={g} />} />
+        {g.pausedAt && <KV k="停止日時" v={<span className="num">{nichiji(g.pausedAt)}</span>} />}
+        {g.pauseReason && <KV k="停止の理由" v={g.pauseReason} />}
+      </div>
+
+      {/* ★台帳と抽選の記録が食い違っていたら、黙って出さないこと */}
+      {g.ledgerMismatch && (
+        <div className="rounded-xl border border-danger/30 bg-danger/8 px-4 py-3 text-note leading-[1.9] text-danger-ink">
+          <strong className="font-bold">数字が食い違っています。</strong>
+          <br />
+          {g.ledger.note}
+        </div>
+      )}
+
+      {/* ── 警告の中身 ── */}
+      {g.alerts.length > 0 && (
+        <ul className="space-y-2">
+          {g.alerts.map((a, i) => (
+            <li
+              key={i}
+              className={`rounded-xl border px-4 py-3 text-note leading-[1.9] ${
+                a.level === "DANGER"
+                  ? "border-danger/30 bg-danger/8 text-danger-ink"
+                  : a.level === "WARN"
+                    ? "border-warn/35 bg-warn/8 text-warn-ink"
+                    : "border-edge bg-paper2 text-slate2"
+              }`}
+            >
+              {a.message}
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {/* ── 景品の残り ── */}
+      <div>
+        <h3 className="text-note font-bold text-slate2">景品の残り</h3>
+        {g.stock.length === 0 ? (
+          <div className="mt-2">
+            <Empty
+              why="景品がまだ1本も登録されていません。"
+              next="景品を入れないと、検証も公開もできません。「新しく作る」から登録してください。"
+            />
+          </div>
+        ) : (
+          <div className="mt-2 overflow-hidden rounded-xl border border-edge">
+            <table className="w-full border-collapse text-left">
+              <thead>
+                <tr className="border-b border-edge bg-paper2">
+                  {["等級", "景品", "価値", "残り"].map((h) => (
+                    <th key={h} className="px-3 py-2 text-note font-bold text-slate3">
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {g.stock.map((st, i) => (
+                  <tr key={i} className="border-b border-edge2 last:border-0">
+                    <td className="px-3 py-2 text-note font-bold text-slate">{st.grade}</td>
+                    <td className="px-3 py-2 text-note text-slate2">{st.name}</td>
+                    <td className="num px-3 py-2 text-note text-slate2">
+                      {st.value.toLocaleString()}円
+                    </td>
+                    <td className="num px-3 py-2 text-note text-slate2">
+                      {st.left.toLocaleString()} / {st.total.toLocaleString()}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      <div className="flex flex-wrap gap-2">
+        <Btn onClick={() => onNav("rtp")}>実績還元率を見る</Btn>
+        <Btn onClick={() => onNav("market")}>相場を見る</Btn>
+        <Btn onClick={() => onNav("preview")}>お客様の画面で見る</Btn>
+      </div>
+    </>
+  );
+}
+
+/* ══════════════════════════════════════════════
+   操作
+   ══════════════════════════════════════════════ */
+
+/**
+ * 検証・公開・停止・再開。
+ *
+ * ★理由の入力を省かないこと。
+ *   あとから記録を読む人が、いちばん知りたいのは理由です。
+ *   「誰が」「いつ」は自動で残せますが、「なぜ」は本人しか書けません。
+ *
+ * ★押せない理由を、必ず文字で出すこと。
+ *   ボタンが薄いだけだと、壊れているのか、
+ *   自分の権限が足りないのかが分かりません。
+ */
 function Actions({
   g,
   mayPublish,
   mayEdit,
-  dispatch,
+  busy,
+  onRun,
 }: {
-  g: ConsoleGacha;
+  g: import("@/lib/console/liveGachas").GachaDetail;
   mayPublish: boolean;
   mayEdit: boolean;
-  dispatch: React.Dispatch<ConsoleAction>;
+  busy: boolean;
+  onRun: (action: GachaActionKind, gachaId: string, reason?: string) => void;
 }) {
-  if (!mayPublish && !mayEdit) return <span className="text-note text-slate3">権限なし</span>;
+  const [reason, setReason] = useState("");
 
-  if (g.status === "PUBLISHED") {
-    if (!mayPublish) return <span className="text-note text-slate3">権限なし</span>;
+  if (!mayPublish && !mayEdit) {
     return (
-      <Btn
-        kind="danger"
-        onClick={() =>
-          dispatch({ type: "PAUSE_GACHA", gachaId: g.id, reason: "運営判断による一時停止" })
-        }
-      >
-        止める
-      </Btn>
+      <span className="text-note text-slate3">
+        いまの担当には、この操作の権限がありません。
+      </span>
     );
   }
 
-  const blocked = g.backtest === null || g.backtest === "DANGER";
+  const canPublish = g.status === "DRAFT" || g.status === "REVIEW";
+  const canPause = g.status === "PUBLISHED";
+  const canResume = g.status === "PAUSED";
+
   return (
-    <div className="flex flex-col items-start gap-1">
-      {/* ★検証がまだのものは、この場で実行できるようにします。
-          「先に検証してください」とだけ出して、どこで押すのか分からないのが
-          いちばん飛ばされやすい形です */}
+    <div className="w-full space-y-3">
       {mayEdit && (
         <Btn
-          kind={g.backtest === null ? "primary" : "ghost"}
-          onClick={() => dispatch({ type: "RUN_BACKTEST", gachaId: g.id })}
+          kind={g.backtest.ran ? "ghost" : "primary"}
+          disabled={busy}
+          onClick={() => onRun("verify", g.id)}
         >
-          {g.backtest === null ? "検証を実行する" : "検証をやり直す"}
+          {g.backtest.ran ? "検証をやり直す" : "検証を実行する"}
         </Btn>
       )}
-      {mayPublish && (
-        <Btn
-          kind={blocked ? "ghost" : "primary"}
-          disabled={blocked}
-          title={
-            g.backtest === null
-              ? "公開前の検証がまだです"
-              : g.backtest === "DANGER"
-                ? "検証の結果が DANGER です"
-                : undefined
-          }
-          onClick={() => dispatch({ type: "PUBLISH_GACHA", gachaId: g.id })}
-        >
-          公開する
-        </Btn>
+
+      {mayPublish && (canPublish || canPause || canResume) && (
+        <>
+          <Field label="理由" required note="4文字以上。監査ログにそのまま残ります。">
+            <textarea
+              className={inputClass}
+              rows={2}
+              value={reason}
+              placeholder="例：検証SAFEのため公開／残数還元率が高いため停止"
+              onChange={(e) => setReason(e.target.value)}
+            />
+          </Field>
+
+          <div className="flex flex-wrap gap-2">
+            {canPublish && (
+              <Btn
+                kind="primary"
+                disabled={busy || reason.trim().length < 4}
+                onClick={() => onRun("publish", g.id, reason)}
+              >
+                公開する
+              </Btn>
+            )}
+            {canPause && (
+              <Btn
+                kind="danger"
+                disabled={busy || reason.trim().length < 4}
+                onClick={() => onRun("pause", g.id, reason)}
+              >
+                販売を止める
+              </Btn>
+            )}
+            {canResume && (
+              <Btn
+                kind="primary"
+                disabled={busy || reason.trim().length < 4}
+                onClick={() => onRun("resume", g.id, reason)}
+              >
+                販売を再開する
+              </Btn>
+            )}
+          </div>
+        </>
       )}
-      {blocked && (
-        <span className="text-note text-slate3">
-          {g.backtest === null ? "先に検証してください" : "検証の結果が DANGER です"}
-        </span>
+
+      {/* ★「なぜ今それができないのか」を書くこと */}
+      {mayPublish && !canPublish && !canPause && !canResume && (
+        <p className="text-note leading-[1.9] text-slate3">
+          {g.status === "SOLD_OUT"
+            ? "完売しています。売り切れたガチャは、公開も停止もできません。"
+            : "いまの状態では、公開・停止・再開のどれもできません。"}
+        </p>
+      )}
+      {!mayPublish && (
+        <p className="text-note leading-[1.9] text-slate3">
+          公開・停止・再開の権限がありません。検証だけ実行できます。
+        </p>
       )}
     </div>
   );

@@ -597,7 +597,10 @@ function Screen({
       case "dashboard":
         return <Dashboard s={s} onNav={onNav} />;
       case "gacha":
-        return <GachaList s={s} dispatch={dispatch} onNav={onNav} />;
+        /* ★dispatch を渡さないこと。
+             この画面は、見本データではなくサーバーを見ています。
+             画面の中の控えを書き換えても、DBは変わりません。 */
+        return <GachaList s={s} onNav={onNav} />;
       case "builder":
         return <Builder s={s} dispatch={dispatch} onNav={onNav} />;
       case "backtest":
