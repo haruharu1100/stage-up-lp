@@ -27,9 +27,13 @@
  * ★書くときの決まり
  * ═══════════════════════════════════════════════
  *
- *   ・「最短◯日で公開」のような期間の断定を書かないこと。
+ *   ・全体の目安は content/site.ts の deliveryPeriod（制作期間：20〜40日程度）で統一すること。
+ *     ここで独自の日数を書かないこと。書くと、料金セクション・FAQ と食い違います。
+ *
+ *   ・「必ず20日で完成」「40日以内を保証」のような断定・保証は書かないこと。
  *     決済会社の審査や、商品点数や、先方の準備で必ず変わります。
  *     書いた瞬間に、守れない約束になります（景品表示法）。
+ *     だから label（目安）と note（前後する・正式納期は要件確認後）は必ずセットで出します。
  *
  *   ・ステップは、どちらも4つまで。増やさないこと（2026-08-22）。
  *
@@ -52,6 +56,7 @@ import Reveal from "../ui/Reveal";
 import Section from "../ui/Section";
 import { jp } from "@/lib/jp";
 import { OS } from "@/lib/text";
+import { deliveryPeriod } from "@/content/site";
 
 type Step = {
   code: string;
@@ -241,14 +246,15 @@ export default function Onboarding() {
       </Reveal>
 
       {/*
-        ★期間の断定を書かないこと。
-          決済会社の審査、商品点数、移行元の作りで必ず変わります。
-          「最短◯日」と書いた時点で、守れない約束になります（景品表示法）。
+        ★期間の目安は deliveryPeriod ひとつに集約しています（content/site.ts）。
+          ここで独自の日数を書かないこと。料金セクション・FAQ と食い違います。
+          label と note は必ずセットで出すこと。note を外すと
+          「必ず20〜40日で終わる」という約束に読めてしまいます（景品表示法）。
       */}
       <Reveal delay={0.06}>
         <p className="mt-6 text-note leading-[1.95] text-pretty text-slate3 sm:mt-9">
           {jp(
-            "かかる期間は、商品点数・決済会社の審査・移行元の作りによって変わります。最初の相談の時点で、そちらの条件での見込みをお伝えします。",
+            `${deliveryPeriod.label}。${deliveryPeriod.note}かかる期間は、商品点数・決済会社の審査・移行元の作りによっても変わります。最初の相談の時点で、そちらの条件での見込みをお伝えします。`,
           )}
         </p>
         {/*

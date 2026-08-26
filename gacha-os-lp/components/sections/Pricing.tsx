@@ -2,7 +2,7 @@ import Section from "../ui/Section";
 import Reveal from "../ui/Reveal";
 import ViewTracker from "../ui/ViewTracker";
 import TrackedLink from "../ui/TrackedLink";
-import { baseFeatures as raw_baseFeatures, pricingStructure as raw_pricingStructure } from "@/content/site";
+import { baseFeatures as raw_baseFeatures, pricingStructure as raw_pricingStructure, deliveryPeriod } from "@/content/site";
 /*
   ★このデータは「ただの日本語」で持つこと。
     折り返しを止めるための見えない文字（U+2060 など）を混ぜないこと。
@@ -280,6 +280,23 @@ export default function Pricing() {
             自社の場合の費用を相談する
           </a>
         </MoreDetail>
+      </Reveal>
+
+      {/* ── 納品の目安（★必須表示） ──────────────────────────
+       *   料金だけを見て問い合わせる人にも、期間が分かるようにするための箱です。
+       *   文言は content/site.ts の deliveryPeriod ひとつに集約しています。
+       *   ★label と note は必ずセットで出すこと。note を外すと
+       *     「20〜40日で必ず終わる」という約束に読めてしまい、景品表示法上まずいです。
+       *   ★この箱は scripts/check-launch.mjs の DELIVERY_PERIOD_REQUIRED が
+       *     見張っています。消すと公開前チェックが止まります。
+       */}
+      <Reveal delay={0.09} className="mt-4">
+        <div className="rounded-2xl border border-edge bg-white p-6 sm:p-7">
+          <p className="text-h3 font-semibold text-slate">
+            {deliveryPeriod.label}
+          </p>
+          <p className="mt-3 text-note text-slate2">{deliveryPeriod.note}</p>
+        </div>
       </Reveal>
 
       {/* ── OPTION（名前のチップと内訳の二重表示をやめ、内訳1本にまとめて畳む） ── */}

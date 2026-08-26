@@ -216,6 +216,112 @@ function stripComments(source) {
   return out;
 }
 
+/* ────────────────────────────────
+   納品の目安が、消えていないか（DELIVERY_PERIOD_REQUIRED）
+   ────────────────────────────────
+
+   ★なぜ機械に見張らせるのか（2026-08-26）
+
+     「いつ使えるようになるのか」は、料金の次に必ず聞かれることです。
+     ところが以前は、料金のそばに「約1〜3か月」、導入の流れに
+     「あらかじめ日数をお約束することはしていません」と書いてあり、
+     同じサイトの中で答えが食い違っていました。
+     見た人は、どちらを信じればいいのか分かりません。
+
+     文言そのものは content/site.ts の deliveryPeriod ひとつに集約しました。
+     しかし集約しただけでは、あとから「ここは要らない」と外されて終わります。
+     だから「必ず出す場所」と「書いてはいけない言い方」を、ここで固定します。
+
+   ★3つを見ます。
+     ① deliveryPeriod が、決めたとおりの言い方で残っているか
+     ② 必ず出す場所（料金・導入の流れ・FAQ・構造化データ・営業資料）に出ているか
+     ③ 断定・保証（「必ず20日で完成」「40日以内を保証」）を書いていないか
+        ＋ 昔の食い違う言い方（1〜3か月／数週間／日数はお約束しない）が
+          復活していないか
+
+   ★新しく期間を書く場所を作ったら、MUST_SHOW に1行足すこと。 */
+const DELIVERY = {
+  label: "制作期間：20〜40日程度",
+  noteMust: "正式な納期は要件確認後にご案内します",
+  /** ここに出ていなければ落とす。file と、そこに必ず含まれる文字列 */
+  mustShow: [
+    { file: "content/site.ts", needs: ["deliveryPeriod", "契約してからどのくらいで利用できますか"], why: "FAQ" },
+    { file: "components/sections/Pricing.tsx", needs: ["deliveryPeriod.label", "deliveryPeriod.note"], why: "料金セクション" },
+    { file: "components/sections/Flow.tsx", needs: ["deliveryPeriod.label", "deliveryPeriod.note"], why: "導入までの流れ" },
+    { file: "app/layout.tsx", needs: ["deliveryLeadTime"], why: "構造化データ" },
+    { file: "app/sales/page.tsx", needs: ["deliveryPeriod.label", "deliveryPeriod.note"], why: "営業資料ページ" },
+    { file: "app/contact/thanks/page.tsx", needs: ["deliveryPeriod.label", "deliveryPeriod.note"], why: "送信完了ページ" },
+  ],
+  /** 書いてはいけない言い方（画面に出る文字だけを見る） */
+  banned: [
+    { word: "必ず20日", why: "納期の断定・保証は不可（景品表示法）" },
+    { word: "20日で完成", why: "納期の断定・保証は不可（景品表示法）" },
+    { word: "40日以内を保証", why: "納期の断定・保証は不可（景品表示法）" },
+    { word: "40日以内に納品", why: "納期の断定・保証は不可（景品表示法）" },
+    { word: "1〜3か月", why: "古い納期表現。制作期間：20〜40日程度 と食い違います" },
+    { word: "1〜3ヶ月", why: "古い納期表現。制作期間：20〜40日程度 と食い違います" },
+    { word: "数週間", why: "古い納期表現。制作期間：20〜40日程度 と食い違います" },
+    { word: "日数をお約束", why: "古い方針。いまは 20〜40日程度 を目安として出します" },
+    { word: "日数はお約束", why: "古い方針。いまは 20〜40日程度 を目安として出します" },
+    { word: "最短◯日", why: "納期の断定・保証は不可（景品表示法）" },
+  ],
+};
+
+function checkDeliveryPeriod() {
+  const problems = [];
+
+  /* ① 決めた言い方が残っているか */
+  let siteSrc = "";
+  try {
+    siteSrc = readFileSync(join(root, "content", "site.ts"), "utf8");
+  } catch {
+    problems.push("content/site.ts が読めません。");
+  }
+  if (siteSrc && !siteSrc.includes(DELIVERY.label)) {
+    problems.push(`content/site.ts に「${DELIVERY.label}」がありません。`);
+  }
+  if (siteSrc && !siteSrc.includes(DELIVERY.noteMust)) {
+    problems.push(
+      `content/site.ts に「${DELIVERY.noteMust}」がありません（目安だけを出すと、約束に読まれます）。`,
+    );
+  }
+
+  /* ② 必ず出す場所に出ているか */
+  for (const m of DELIVERY.mustShow) {
+    let src = "";
+    try {
+      src = readFileSync(join(root, m.file), "utf8");
+    } catch {
+      problems.push(`${m.file} が見つかりません（${m.why}）。`);
+      continue;
+    }
+    const kept = stripComments(src).join("\n");
+    for (const n of m.needs) {
+      if (!kept.includes(n)) {
+        problems.push(`${m.file}（${m.why}）に「${n}」が出ていません。`);
+      }
+    }
+  }
+
+  /* ③ 断定・保証や、古い言い方が復活していないか */
+  for (const d of COPY_DIRS) {
+    for (const file of walk(join(root, d))) {
+      const lines = stripComments(readFileSync(file, "utf8"));
+      lines.forEach((line, i) => {
+        for (const b of DELIVERY.banned) {
+          if (line.includes(b.word)) {
+            problems.push(
+              `${relative(root, file)}:${i + 1}「${b.word}」… ${b.why}`,
+            );
+          }
+        }
+      });
+    }
+  }
+
+  return problems;
+}
+
 function checkPhrases() {
   const hits = [];
   for (const d of COPY_DIRS) {
@@ -284,6 +390,29 @@ if (phraseHits.length === 0) {
     code: "BANNED_PHRASE",
     label: "使ってはいけない表現",
     fix: "証明できない優位性の主張や、絶対保証の言い切りを、事実ベースの表現に書き換えてください。",
+    envs: ["（環境変数ではなく、本文の修正が必要です）"],
+  });
+}
+
+/* 納品の目安（必須表示） */
+const deliveryProblems = checkDeliveryPeriod();
+if (deliveryProblems.length === 0) {
+  console.log(
+    `  ${C.green("✓")} 納品の目安（${DELIVERY.label}）が、必要な場所すべてに出ています`,
+  );
+} else {
+  console.log(
+    `  ${C.red("✗")} 納品の目安に問題 ${deliveryProblems.length}件  ${C.dim("[DELIVERY_PERIOD_REQUIRED]")}`,
+  );
+  for (const p of deliveryProblems) console.log(C.red(`      ${p}`));
+  failures.push({
+    code: "DELIVERY_PERIOD_REQUIRED",
+    label: "納品の目安（制作期間：20〜40日程度）",
+    problem: "納品の目安が、消えているか、食い違っています。",
+    fix:
+      "content/site.ts の deliveryPeriod を使って、料金セクション・導入までの流れ・FAQ・" +
+      "構造化データ・営業資料・送信完了ページに、label と note をセットで出してください。" +
+      "「必ず20日で完成」「40日以内を保証」のような断定・保証は書かないでください。",
     envs: ["（環境変数ではなく、本文の修正が必要です）"],
   });
 }

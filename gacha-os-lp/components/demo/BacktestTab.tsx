@@ -136,7 +136,7 @@ export default function BacktestTab() {
 
         <p className="mt-5 text-[11.5px] leading-[1.95] text-white/45">
           設計時の還元率が {report.designedRtp.toFixed(1)}% でも、当選の順番や相場の動きによって、
-          販売中の「残っている景品 ÷ 残っている口数」で見た実還元率は変わります。
+          販売中の「残っている景品 ÷ 残っている口数」で見た残数還元率は変わります。
           各シナリオは当選順を {RUNS} 通り変えて回し、中央値だけでなく
           「何回が赤字になったか」まで見て判定しています。
           同じ設定と同じ SEED なら、何度実行しても同じ結果になります。
@@ -182,7 +182,7 @@ export default function BacktestTab() {
 
         <div className="mt-3.5 grid gap-2 sm:grid-cols-3">
           {[
-            { v: "SAFE" as Verdict, d: `実還元率の中央値が ${THRESHOLD.caution}% 未満で、赤字になった回がほぼない` },
+            { v: "SAFE" as Verdict, d: `残数還元率の中央値が ${THRESHOLD.caution}% 未満で、赤字になった回がほぼない` },
             {
               v: "CAUTION" as Verdict,
               d: `${THRESHOLD.caution}% 以上、赤字確率が ${pct(THRESHOLD.lossRateMedium)} 以上、または売れ残りが大きい`,
@@ -222,7 +222,7 @@ export default function BacktestTab() {
         </div>
 
         <p className="mt-4 text-[11px] leading-[1.9] text-white/40">
-          終盤は、上位賞が1本残っているだけで実還元率が必ず跳ね上がります。
+          終盤は、上位賞が1本残っているだけで残数還元率が必ず跳ね上がります。
           残り40口なら、その枠の売上は「口数 × 料金」しかないためです。
           これは構成の良し悪しではなく計算上そうなるものなので、通常運営とは分けて表示しています。
           売上・粗利・売れ残りは最後まで計算しています。
@@ -340,7 +340,7 @@ function Row({ r }: { r: ScenarioResult }) {
         </div>
 
         <div className="num mt-2.5 grid grid-cols-2 gap-x-4 gap-y-1.5 text-[10.5px] sm:grid-cols-3">
-          <Kv k="実還元率 中央値" v={`${d.rtpMedian.toFixed(1)}%`} />
+          <Kv k="残数還元率 中央値" v={`${d.rtpMedian.toFixed(1)}%`} />
           <Kv k="P90" v={`${d.rtpP90.toFixed(1)}%`} />
           <Kv k="P95" v={`${d.rtpP95.toFixed(1)}%`} />
           <Kv k="最悪値" v={`${d.rtpWorst.toFixed(1)}%`} warn />
@@ -362,7 +362,7 @@ function Row({ r }: { r: ScenarioResult }) {
         {!d.profitVaries && (
           <p className="mt-2 text-[10px] leading-[1.8] text-white/30">
             この想定では最後まで売り切るため、出ていく景品は当選順に関係なく同じです。
-            そのため粗利はばらつきません。ばらつくのは、販売中の実還元率と、その途中で止める判断のほうです。
+            そのため粗利はばらつきません。ばらつくのは、販売中の残数還元率と、その途中で止める判断のほうです。
           </p>
         )}
       </div>
@@ -378,7 +378,7 @@ function Row({ r }: { r: ScenarioResult }) {
           </span>
           {eg.reached && (
             <span className="num ml-auto text-[10.5px] text-white/45">
-              終盤の実還元率 中央値 {eg.rtpMedian.toFixed(0)}% ／ 最悪 {eg.rtpWorst.toFixed(0)}%
+              終盤の残数還元率 中央値 {eg.rtpMedian.toFixed(0)}% ／ 最悪 {eg.rtpWorst.toFixed(0)}%
             </span>
           )}
         </div>

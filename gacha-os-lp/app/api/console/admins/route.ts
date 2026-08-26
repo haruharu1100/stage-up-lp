@@ -61,17 +61,39 @@ export async function GET(req: NextRequest) {
       args: [gate.session.tenantId],
     });
 
+    /**
+     * いま使える SUPER ADMIN が、何人いるか。
+     *
+     * ★止まっている人を数に入れないこと。
+     *   止まっている人は、入れません。
+     *   数えてしまうと「もう1人いる」と思い込んだまま、
+     *   最後の1人を降格して、誰も入れない会社ができます。
+     *
+     * ★この数は、画面でボタンを押せなくするために使います。
+     *   守りそのものは lib/server/adminManage.ts にあります。
+     *   画面は「押す前に気づける」ようにするためだけのものです。
+     */
+    const activeSuperAdmins = r.rows.filter((raw) => {
+      const row = raw as unknown as Record<string, unknown>;
+      return (
+        String(row.role ?? "") === "SUPER_ADMIN" &&
+        String(row.status ?? "ACTIVE") !== "SUSPENDED"
+      );
+    }).length;
+
     const admins = r.rows.map((raw) => {
       const row = raw as unknown as Record<string, unknown>;
       const machi = Number(row.must_change_password ?? 0) === 1;
       const kigen = row.temp_password_expires_at;
+      const role = String(row.role ?? "VIEWER");
+      const status = String(row.status ?? "ACTIVE");
 
       return {
         id: String(row.id),
         name: String(row.name ?? ""),
         email: String(row.email ?? ""),
-        role: String(row.role ?? "VIEWER"),
-        status: String(row.status ?? "ACTIVE"),
+        role,
+        status,
         mfaEnabled: Number(row.mfa_enabled ?? 0) === 1,
         mfaRequired: Number(row.mfa_required ?? 0) === 1,
 
@@ -90,11 +112,29 @@ export async function GET(req: NextRequest) {
 
         /* ★自分自身には発行できません。画面側で押せなくするための印 */
         isMe: String(row.id) === gate.session.subjectId,
+
+        /**
+         * この方が「最後の管理者」かどうか。
+         *
+         * ★true のとき、降格も停止も断ります。
+         *   これを外すと、誰も権限を戻せない会社ができます。
+         */
+        isLastSuperAdmin:
+          role === "SUPER_ADMIN" &&
+          status !== "SUSPENDED" &&
+          activeSuperAdmins <= 1,
       };
     });
 
     return NextResponse.json(
-      { ok: true, requestId: gate.requestId, admins },
+      {
+        ok: true,
+        requestId: gate.requestId,
+        admins,
+        activeSuperAdmins,
+        /** 画面で使う、いまの自分のID（自分自身への操作を止めるため） */
+        meId: gate.session.subjectId,
+      },
       { status: 200 },
     );
   } catch (e) {

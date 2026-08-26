@@ -35,7 +35,7 @@ export const demoKpi = {
   monthlySalesYen: 12_840_000,
   /** 公開中のガチャ本数 */
   publishedGacha: 18,
-  /** 市場価格ベースの実還元率（最大値） */
+  /** 市場価格ベースの残数還元率（最大値） */
   realRtpMaxPct: 108.7,
   /** 未発送の件数 */
   unshipped: 26,

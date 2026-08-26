@@ -23,10 +23,10 @@ const kpis = [
 ];
 
 const gauges = [
-  { label: "設定時還元率", value: "100.5%", pct: 50, tone: "text-slate3", bar: "bg-slate3/45" },
-  { label: "残数ベース還元率", value: "103.2%", pct: 68, tone: "text-warn-ink", bar: "bg-warn" },
+  { label: "設計還元率", value: "100.5%", pct: 50, tone: "text-slate3", bar: "bg-slate3/45" },
+  { label: "残数還元率", value: "103.2%", pct: 68, tone: "text-warn-ink", bar: "bg-warn" },
   {
-    label: "市場価格ベース実還元率",
+    label: "市場価格ベース残数還元率",
     value: "108.7%",
     pct: 92,
     tone: "text-danger-ink",
@@ -174,7 +174,7 @@ export default function DashboardMock({ compact = false }: { compact?: boolean }
           <div className="mt-3 flex items-center gap-3 rounded-xl border border-danger/30 bg-danger/[0.07] px-4 py-3">
             <span className="h-2 w-2 shrink-0 rounded-full bg-danger animate-pulseline" />
             <p className="min-w-0 flex-1 text-[11px] leading-[1.6] text-danger-ink sm:truncate sm:text-[12px]">
-              警告：#128 スニーカーBOX の市場価格ベース実還元率が 108.7% に上昇
+              警告：#128 スニーカーBOX の市場価格ベース残数還元率が 108.7% に上昇
             </p>
             <span className="shrink-0 rounded-lg bg-danger-ink px-3 py-1.5 text-[11px] font-semibold text-white">
               販売停止
@@ -187,7 +187,7 @@ export default function DashboardMock({ compact = false }: { compact?: boolean }
               <div className="grid grid-cols-[2fr_1fr_1fr_auto] gap-2 border-b border-edge2 bg-paper2 px-4 py-2.5 text-[10px] text-slate3">
                 <span>ガチャ</span>
                 <span>残口数</span>
-                <span className="text-right">実還元率</span>
+                <span className="text-right">残数還元率</span>
                 <span className="w-12 text-right">状態</span>
               </div>
               {rows.map((r) => (

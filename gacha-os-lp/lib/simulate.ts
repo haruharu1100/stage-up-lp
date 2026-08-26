@@ -289,16 +289,16 @@ export function buildGacha(opts: {
 export type RtpState = {
   /** 設計時の還元率 */
   designed: number;
-  /** 残数ベース還元率 */
+  /** 残数還元率 */
   remaining: number;
-  /** 市場価格ベース実還元率 */
+  /** 市場価格ベース残数還元率 */
   market: number;
   leftSlots: number;
   leftValue: number;
 };
 
 /**
- * 消化状況と相場変動から、いまの実還元率を再計算する。
+ * 消化状況と相場変動から、いまの残数還元率を再計算する。
  * drawnRatio: 消化した口数の割合 (0-1)
  * topTaken: 上位賞（S/A）のうち払い出し済みの割合 (0-1)
  * marketShift: 市場価格の変動率 (%) 例: +18 なら 18%上昇

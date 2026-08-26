@@ -54,7 +54,7 @@ const spine = [
   { code: "BACKTEST", label: "公開前に赤字リスクを試す", side: "os" },
   { code: "APPROVE", label: "内容を見て、人が承認", side: "human" },
   { code: "CUSTOMER GACHA", label: "お客様の画面に公開", side: "customer" },
-  { code: "REAL RTP", label: "販売中の実還元率を監視", side: "os" },
+  { code: "REAL RTP", label: "販売中の残数還元率を監視", side: "os" },
   { code: "SHIPPING", label: "発送依頼と伝票データ", side: "os" },
   { code: "SUPPORT", label: "定型の問い合わせに回答", side: "os" },
 ];
@@ -512,7 +512,7 @@ function ActOne() {
               <ul className="mt-2.5 space-y-1 text-note text-slate2">
                 <li>・1回 500円 / 総口数 1,000口</li>
                 <li>{jp("・S / A / B / C とラストワン賞")}</li>
-                <li>{jp("・設定還元率 94.8%")}</li>
+                <li>{jp("・設計還元率 94.8%")}</li>
               </ul>
               <p className="mt-2.5 text-note leading-[1.8] text-slate2">
                 {jp(
@@ -665,7 +665,7 @@ function ActTwo({ reduce }: { reduce: boolean }) {
         {/* 出てくる数字 */}
         <div className="flex flex-col gap-3">
           <div className="rounded-2xl border border-edge bg-white p-5 shadow-lift sm:p-6">
-            <p className="num text-label text-slate3">設定還元率</p>
+            <p className="num text-label text-slate3">設計還元率</p>
             <p className="num mt-3 text-[44px] font-bold leading-none tracking-tight text-blue-ink sm:text-[56px]">
               94.8<span className="text-[26px] sm:text-[32px]">%</span>
             </p>

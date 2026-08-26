@@ -12,7 +12,7 @@ import {
 const MODULES: { label: string; sub: string; accent: string; pos: [number, number, number] }[] =
   [
     { label: "AIガチャ設計", sub: "AI ENGINE", accent: "#60A5FA", pos: [-4.05, 1.72, 1.5] },
-    { label: "実還元率", sub: "REAL TIME RTP", accent: "#EAB308", pos: [4.15, 1.15, 1.15] },
+    { label: "残数還元率", sub: "REAL TIME RTP", accent: "#EAB308", pos: [4.15, 1.15, 1.15] },
     { label: "市場価格更新", sub: "PRICE ENGINE", accent: "#22D3EE", pos: [-4.35, -0.62, 0.6] },
     { label: "発送自動化", sub: "SHIPPING ENGINE", accent: "#34D399", pos: [4.0, -1.05, 1.7] },
     { label: "AI顧客対応", sub: "AI CUSTOMER SUPPORT", accent: "#C8A96A", pos: [-1.1, -2.55, 2.2] },
@@ -20,7 +20,7 @@ const MODULES: { label: string; sub: string; accent: string; pos: [number, numbe
 
 /**
  * データが流れる順路。
- * ガチャ設計 → 市場価格 → 実還元率 → 発送 → AI顧客対応。
+ * ガチャ設計 → 市場価格 → 残数還元率 → 発送 → AI顧客対応。
  * 読ませる情報ではなく「つながって動いている」ことだけを伝える。
  */
 const CHAIN: { from: number; to: number; label: string; accent: string }[] = [

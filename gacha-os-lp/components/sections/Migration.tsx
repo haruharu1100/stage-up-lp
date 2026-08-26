@@ -70,7 +70,7 @@ const WAYS = [
   {
     code: "HYBRID",
     ja: "部分導入",
-    d: "既存システムを残し、AIガチャ設計・実還元率・発送管理など、必要な部分だけを使います。",
+    d: "既存システムを残し、AIガチャ設計・残数還元率・発送管理など、必要な部分だけを使います。",
     url: "既存サイト ＋ 管理機能",
   },
 ];
@@ -163,7 +163,7 @@ export default function Migration() {
             <p className="text-body text-pretty leading-[1.95] text-slate">
               現在お使いのドメインを維持したまま、<span className="nb">AI GACHA OS</span>へ移行できる構成があります。
               {/* 機能名は途中で割らせない。1024/768/375px で「問い合／わせ」と切れていました */}
-              お客様はこれまでと同じURLからアクセスし、運営側では、AIガチャ設計・実還元率・価格監視・発送管理・
+              お客様はこれまでと同じURLからアクセスし、運営側では、AIガチャ設計・残数還元率・価格監視・発送管理・
               <span className="whitespace-nowrap">AI問い合わせ対応</span>
               などを使えるようにします。
             </p>

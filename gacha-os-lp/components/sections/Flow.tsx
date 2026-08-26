@@ -1,6 +1,7 @@
 import Section from "../ui/Section";
 import Reveal from "../ui/Reveal";
 import { MoreDetail } from "../ui/Act";
+import { deliveryPeriod } from "@/content/site";
 /*
   ★このデータは「ただの日本語」で持つこと。
     折り返しを止めるための見えない文字（U+2060 など）を混ぜないこと。
@@ -12,9 +13,12 @@ import { MoreDetail } from "../ui/Act";
  * 導入すると何が起きるかの時間軸。
  *
  * ★期間の表示について（景品表示法）
- * 　「2週間で公開」のような所要日数はここに書きません。
- * 　必要な作業量は、移行の有無・独自機能・決済の審査状況で大きく変わるためです。
- * 　DAY 1 だけは「初回のヒアリング」の意味で使い、それ以降の段階に日数を振りません。
+ * 　全体の目安は content/site.ts の deliveryPeriod（制作期間：20〜40日程度）で統一します。
+ * 　このセクション末尾の「期間について」で、必ず label と note をセットで出すこと。
+ * 　一方で、各段階（SETUP / TEST / LAUNCH）に個別の日数は振りません。
+ * 　工程ごとの作業量は、移行の有無・独自機能・決済の審査状況で大きく変わるためです。
+ * 　「必ず20日で完成」「40日以内を保証」のような断定・保証は書かないこと。
+ * 　DAY 1 だけは「初回のヒアリング」の意味で使います。
  */
 const STAGES: { code: string; title: string; body: string }[] = [
   {
@@ -104,7 +108,8 @@ export default function Flow() {
           <span className="mr-3 inline-block rounded-full border border-edge bg-white px-3.5 py-1 text-note leading-normal text-blue-ink">
             期間について
           </span>
-          かかる期間は、既存サイトからの移行の有無・独自機能・決済の審査状況によって変わります。あらかじめ日数をお約束することはしていません。ご要件をうかがったうえで、想定される進め方と目安をお伝えします。
+          <span className="font-bold text-slate">{deliveryPeriod.label}</span>
+          。{deliveryPeriod.note}
         </p>
       </Reveal>
 

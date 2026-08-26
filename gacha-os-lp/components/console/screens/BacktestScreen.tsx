@@ -43,7 +43,7 @@ import {
   type Verdict,
 } from "@/lib/backtest";
 import type { MenuKey } from "../menu";
-import { Badge, Btn, Card, KV, RowCard, Rows, Stat, Table, Td, WhatIsThis } from "../ui";
+import { Badge, Btn, Card, DemoNote, KV, RowCard, Rows, Stat, Table, Td, WhatIsThis } from "../ui";
 
 const TONE: Record<Verdict, "ok" | "warn" | "danger"> = {
   SAFE: "ok",
@@ -199,7 +199,7 @@ export default function BacktestScreen({
                   {report.overall === "DANGER"
                     ? "この構成のままでは公開できません。上位賞の価値を下げるか、口数か料金を見直してください。"
                     : report.overall === "CAUTION"
-                      ? "公開はできます。当選順によっては還元率が上がるので、実還元率モニタを毎日見てください。"
+                      ? "公開はできます。当選順によっては還元率が上がるので、実績還元率モニタを毎日見てください。"
                       : "この構成のまま公開できます。"}
                 </p>
               </div>
@@ -315,6 +315,11 @@ export default function BacktestScreen({
           ))}
         </ul>
       </Card>
+
+      <DemoNote>
+        この画面のガチャ・景品・当たり本数は、すべて架空の見本です。
+        実際にお使いいただくときは、登録したガチャの中身をそのまま計算します。
+      </DemoNote>
     </>
   );
 }

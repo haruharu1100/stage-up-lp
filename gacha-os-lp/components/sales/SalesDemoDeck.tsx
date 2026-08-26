@@ -160,7 +160,7 @@ export default function SalesDemoDeck() {
                       : s.code === "AI BUILDER"
                         ? "ガチャ設計"
                         : s.code === "REAL RTP"
-                          ? "実還元率"
+                          ? "残数還元率"
                           : s.code === "SHIPPING"
                             ? "発送"
                             : s.code === "AI OPERATOR"

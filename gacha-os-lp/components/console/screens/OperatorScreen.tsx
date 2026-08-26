@@ -67,15 +67,32 @@ export default function OperatorScreen({
       {/* ── 今日のまとめ ── */}
       <Card title="今日のご報告" note={`${s.me?.name ?? ""} さん向け。${NOW} 時点。`}>
         <div className="space-y-4">
-          <p className="text-note leading-[2] text-slate2">
-            いま販売中のガチャは
-            <strong className="font-bold text-slate"> {sm.publishedCount}本 </strong>
-            です。本日の売上は
-            <span className="num font-bold text-slate"> {sm.revenueToday.toLocaleString()}円</span>
-            、引かれた回数は
-            <span className="num font-bold text-slate"> {sm.playsToday.toLocaleString()}回</span>
-            でした。
-          </p>
+          {/*
+            ★売上・回数・販売中の本数は、まだ見本の数字です。
+              集計につながっていません。
+
+              ここを、下の「注文と発送」（本物）と同じ見た目で並べないこと。
+              同じ見た目で並べると、全部が本物に見えます。
+              いちばん困るのは、見本の売上を本物だと思って
+              仕入れや値付けを決めてしまうことです。
+
+              だから、見本のほうにだけ枠と札を付けて、
+              ★どこまでが本物か が一目で分かるようにします。
+          */}
+          <div className="rounded-xl border border-dashed border-edge2 bg-paper2 px-4 py-3">
+            <span className="mb-2 inline-block rounded-md border border-edge2 bg-paper px-2 py-0.5 text-[11px] font-bold text-slate3">
+              ここから3つは見本の数字（集計に未接続）
+            </span>
+            <p className="text-note leading-[2] text-slate2">
+              いま販売中のガチャは
+              <strong className="font-bold text-slate"> {sm.publishedCount}本 </strong>
+              です。本日の売上は
+              <span className="num font-bold text-slate"> {sm.revenueToday.toLocaleString()}円</span>
+              、引かれた回数は
+              <span className="num font-bold text-slate"> {sm.playsToday.toLocaleString()}回</span>
+              でした。
+            </p>
+          </div>
 
           {/* ★注文と発送は、実データの数をそのまま読み上げる */}
           {live.phase === "ok" ? (
@@ -162,7 +179,10 @@ export default function OperatorScreen({
           分からないことを隠すのと同じくらい、たちが悪いです。
           数えた結果だけを出します。
       */}
-      <Card title="いま分かっていないこと" note="推測で埋めず、そのまま出しています。">
+      <Card
+        title="いま分かっていないこと"
+        note="推測で埋めず、そのまま出しています。（相場は見本のデータです）"
+      >
         {sm.marketStale === 0 ? (
           <p className="text-note leading-[1.85] text-slate3">
             いまは、取れていない項目はありません。
@@ -217,6 +237,14 @@ function why(to: string): string {
       return "箱はできていますが、まだ出ていません。お客様をお待たせしています。まとめて片づけるのが早いです。";
     case "orders":
       return "頼まれたのに、まだ箱に入れていない商品があります。ここを溜めると「注文したのに何も来ない」の問い合わせになります。支払の確認待ちも、この画面です。";
+    case "rtp":
+      /*
+       * ★これを、いちばん強い言い方で書くこと。
+       *   2026-08-26、設計88％のガチャが、実際には18.23％しか
+       *   返していませんでした。500回ぶん売れきってから気づきました。
+       *   発送の遅れは取り返せますが、これは取り返せません。
+       */
+      return "設計した還元率と、実際にお返しした額がずれています。ずれたまま売り続けると、売れた数だけ被害が増えます。しかも、あとから取り返せません。今日いちばんに見てください。";
     case "market":
       return "相場が取れていない景品があります。還元率を古い値で計算しているので、いまの数字は当てになりません。先に取り直してください。";
     default:

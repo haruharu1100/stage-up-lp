@@ -40,7 +40,7 @@ export default function Footer() {
             {[
               { label: "3分ツアー", href: "/#tour" },
               { label: "機能一覧", href: "/#os" },
-              { label: "実還元率", href: "/#rtp" },
+              { label: "残数還元率", href: "/#rtp" },
               { label: "導入効果の試算", href: "/#roi" },
               { label: "お客様の画面", href: "/#play" },
               { label: "セキュリティ", href: "/#security" },

@@ -28,6 +28,8 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { guard, passed, internalError } from "@/lib/server/context";
 import { countUnassignedItems, countUnshipped } from "@/lib/server/shipments";
+import { can } from "@/lib/permissions";
+import { rtpDangers } from "@/lib/server/rtpMonitor";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -63,6 +65,25 @@ export async function GET(req: NextRequest) {
     const o = (orders.rows[0] ?? {}) as Record<string, unknown>;
     const n = (v: unknown) => Number(v ?? 0);
 
+    /**
+     * 還元率の異常。
+     *
+     * ★なぜ、ここに混ぜるのか。
+     *   「今日やること」は1か所で作ると決めています。
+     *   還元率だけ別の入口から取ると、ダッシュボードとAIオペレーターで
+     *   出る・出ないが分かれます。
+     *
+     * ★ただし、権限は別に確かめること。
+     *   この入口は「発送を見る権限」で通しています。
+     *   還元率は売上と粗利がそのまま読める数字なので、
+     *   ガチャを見る権限が無い担当者には返しません。
+     *
+     * ★見せられないときは null にすること。0 にしないこと。
+     *   0 だと「異常なし」と読めます。「見ていない」とは別物です。
+     */
+    const mayRtp = gate.role !== null && can(gate.role, "gacha.view");
+    const dangers = mayRtp ? await rtpDangers(tenantId) : null;
+
     return NextResponse.json({
       ok: true,
       requestId: gate.requestId,
@@ -74,6 +95,15 @@ export async function GET(req: NextRequest) {
       ordersPending: n(o.pending),
       ordersUnpaid: n(o.unpaid),
       ordersToday: n(o.today),
+
+      /** 還元率が危ない・注意のガチャ。見る権限が無ければ null */
+      rtpAlerts: dangers,
+      rtpDangerCount: dangers
+        ? dangers.filter((d) => d.level === "DANGER").length
+        : null,
+      rtpWarnCount: dangers
+        ? dangers.filter((d) => d.level === "WARN").length
+        : null,
     });
   } catch (e) {
     return internalError(gate.requestId, "console-summary", e);

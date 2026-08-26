@@ -49,7 +49,12 @@ import {
 } from "./session";
 import { scopeFor, type Scope } from "./tenant";
 import { id } from "./ids";
-import { asRole, can, type Permission, type Role } from "@/lib/permissions";
+import {
+  ROLE_PERMISSIONS,
+  can,
+  type Permission,
+  type Role,
+} from "@/lib/permissions";
 
 export type Ctx = {
   requestId: string;
@@ -175,6 +180,52 @@ export async function guard(
   need: Guard = {},
 ): Promise<Ctx | NextResponse> {
   const requestId = id("req");
+
+  /**
+   * ═══════════════════════════════════════════════════════
+   * ★DBが答えなかったときに、投げっぱなしにしないこと
+   * ═══════════════════════════════════════════════════════
+   *
+   *   2026-08-26、わざと壊す試験（tests/failInjection.test.ts）で
+   *   分かりました。DBが答えないと、門番の中で起きた失敗が、
+   *   そのまま外へ飛び出していました。
+   *
+   *   飛び出したものは、いまは Next.js が受け止めて 500 にします。
+   *   ★つまり、いまは「たまたま」通らない状態です。
+   *
+   *   たまたま、では困ります。理由は2つあります。
+   *
+   *     ① 呼ぶ側が包んだ瞬間に、意味が反転します。
+   *        「落ちないようにしておこう」と、よかれと思って
+   *        まわりを try で包み、失敗したときに先へ進めてしまうと、
+   *        DBが不調な数分間、誰でも入れる状態ができます。
+   *        書いた人に悪気はありません。だから起きます。
+   *
+   *     ② requestId が残りません。
+   *        あとから「あのとき何が起きたか」を追えなくなります。
+   *
+   *   ★だから、ここで自分から断ります。
+   *     分からないときは通さない。これを、外の親切に任せない。
+   */
+  try {
+    return await guardHonbun(req, need, requestId);
+  } catch (e) {
+    /* ★中身は返さないこと。DBの都合を、外へ見せる必要はありません */
+    console.error(`[guard] ${requestId} 確認ができませんでした`, e);
+    return deny(
+      requestId,
+      "SERVICE_UNAVAILABLE",
+      "ただいま確認ができません。少し時間をおいてから、もう一度お試しください。",
+      503,
+    );
+  }
+}
+
+async function guardHonbun(
+  req: NextRequest,
+  need: Guard,
+  requestId: string,
+): Promise<Ctx | NextResponse> {
   const token = req.cookies.get(SESSION_COOKIE)?.value;
 
   /* ── ① いま誰か ───────────────────────────── */
@@ -266,12 +317,73 @@ export async function guard(
   if (session.subjectKind === "ADMIN") {
     const { db } = await import("./db");
     const res = await db().execute({
-      sql: `SELECT role, must_change_password, mfa_required, mfa_enabled
+      sql: `SELECT role, status, locked_until,
+                   must_change_password, mfa_required, mfa_enabled
               FROM app_users WHERE id = ? AND tenant_id = ? LIMIT 1`,
       args: [session.subjectId, session.tenantId],
     });
     const me = res.rows[0] as Record<string, unknown> | undefined;
-    role = asRole(me?.role);
+
+    /* ═══════════════════════════════════════════
+       ★分からないときは、通さない
+       ═══════════════════════════════════════════
+
+         2026-08-26、公開先の総点検で見つかりました。
+
+         担当者の行が読めなかったとき（消された・別会社・DBが答えない）、
+         ここは asRole() を通していました。asRole() は
+         「知らない値なら VIEWER」という作りです。
+         表示のための道具としては正しい形です。
+         ですが、門番がこれを使うと、意味が変わります。
+
+             行が読めない → 役割が分からない → ★VIEWER として通す
+
+         VIEWER は、ガチャ・ポイント・発送・問い合わせを「見る」人です。
+         つまり、消したはずの担当者が、手元に残ったクッキーだけで、
+         会社の中身を読み続けられます。DBが一瞬答えなかっただけでも、
+         同じことが起きます。
+
+         「分からない」は「大丈夫」ではありません。
+         読めないなら断る。ここを、いちばん厳しい側に倒します。 */
+    if (!me) {
+      return deny(
+        requestId,
+        "UNAUTHENTICATED",
+        "ログインが必要です。",
+        401,
+      );
+    }
+
+    const nokoriRole = String(me.role ?? "");
+    if (!(nokoriRole in ROLE_PERMISSIONS)) {
+      /* 知らない役割が入っていた。読めなかったのと同じ扱いにします */
+      console.warn(`[guard] unknown role ${requestId} role=${nokoriRole}`);
+      return deny(requestId, "FORBIDDEN", "この操作は行えません。", 403);
+    }
+    role = nokoriRole as Role;
+
+    /* ★利用を止めた担当者を、開きっぱなしの画面で働かせないこと。
+         止めるのは、たいてい「今すぐ止めたい」ときです。
+         ログインし直すまで有効、では止めたことになりません。 */
+    if (String(me.status ?? "ACTIVE") !== "ACTIVE") {
+      return deny(
+        requestId,
+        "ACCOUNT_SUSPENDED",
+        "このアカウントは、現在ご利用いただけません。",
+        403,
+      );
+    }
+
+    /* ★締め出し中（何度も間違えた・管理者が鍵をかけた）も同じ */
+    const lock = me.locked_until ? Date.parse(String(me.locked_until)) : NaN;
+    if (Number.isFinite(lock) && lock > Date.now()) {
+      return deny(
+        requestId,
+        "ACCOUNT_LOCKED",
+        "このアカウントは、現在ご利用いただけません。",
+        403,
+      );
+    }
 
     /* ── 入る前に済ませてもらうこと ─────────────
          ★画面で止めるだけにしないこと。

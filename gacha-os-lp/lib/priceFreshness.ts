@@ -5,12 +5,12 @@
  * ★このファイルが存在する理由（いちばん危ない不具合を止めるため）
  * ────────────────────────────────────────────
  *
- * 実還元率は「残っている景品の価値 ÷ 残りの売上」で計算します。
+ * 残数還元率は「残っている景品の価値 ÷ 残りの売上」で計算します。
  * このうち「景品の価値」は、外部から取り込んだ市場価格です。
  *
  * ここで、価格の取得に失敗したとします。
  * 何も考えずに作ると、システムは**前回取り込んだ古い価格**を使って計算を続け、
- * 画面には「実還元率 94% ／ SAFE」と、いつもと同じ顔で表示されます。
+ * 画面には「残数還元率 94% ／ SAFE」と、いつもと同じ顔で表示されます。
  *
  * これが最悪の状態です。
  * 運営者は「今日も安全だ」と思って販売を続けますが、
@@ -20,8 +20,8 @@
  * だからこの製品では、価格が古い・取れないときは
  * 「安全です」と言わずに、はっきり「わかりません」と言います。
  *
- *   価格が新しい   → 実還元率を計算して表示する（SAFE / CAUTION / DANGER）
- *   価格が古い     → STALE。実還元率は UNKNOWN。安全とは表示しない
+ *   価格が新しい   → 残数還元率を計算して表示する（SAFE / CAUTION / DANGER）
+ *   価格が古い     → STALE。残数還元率は UNKNOWN。安全とは表示しない
  *   価格が取れない → UNKNOWN。同上
  *
  * 安全側に倒して失敗する、という意味で SAFE FAIL と呼びます。
@@ -29,7 +29,7 @@
 
 export type Freshness = "FRESH" | "STALE" | "UNKNOWN";
 
-/** 実還元率の判定。価格が古いときは数字を出さず UNKNOWN にする。 */
+/** 残数還元率の判定。価格が古いときは数字を出さず UNKNOWN にする。 */
 export type RtpVerdict = "SAFE" | "CAUTION" | "DANGER" | "UNKNOWN";
 
 /**
@@ -41,7 +41,7 @@ export type RtpVerdict = "SAFE" | "CAUTION" | "DANGER" | "UNKNOWN";
  */
 export const STALE_AFTER_HOURS = 24 * 8;
 
-/** 実還元率のしきい値（バックテストと同じ基準を使う） */
+/** 残数還元率のしきい値（バックテストと同じ基準を使う） */
 export const RTP_CAUTION = 105;
 export const RTP_DANGER = 110;
 
@@ -71,7 +71,7 @@ export function priceFreshness(
       ageHours: null,
       label: "PRICE DATA UNKNOWN",
       reason:
-        "市場価格をまだ一度も取り込めていません。実還元率は計算できないため、安全とも危険とも表示しません。",
+        "市場価格をまだ一度も取り込めていません。残数還元率は計算できないため、安全とも危険とも表示しません。",
     };
   }
 
@@ -83,7 +83,7 @@ export function priceFreshness(
       ageHours: null,
       label: "PRICE DATA UNKNOWN",
       reason:
-        "市場価格の取得時刻が読み取れませんでした。実還元率は計算できないため、安全とも危険とも表示しません。",
+        "市場価格の取得時刻が読み取れませんでした。残数還元率は計算できないため、安全とも危険とも表示しません。",
     };
   }
 
@@ -96,7 +96,7 @@ export function priceFreshness(
       ageHours: null,
       label: "PRICE DATA UNKNOWN",
       reason:
-        "市場価格の取得時刻が未来になっています。取り込みが正しく行われていないため、実還元率は表示しません。",
+        "市場価格の取得時刻が未来になっています。取り込みが正しく行われていないため、残数還元率は表示しません。",
     };
   }
 
@@ -106,7 +106,7 @@ export function priceFreshness(
       state: "STALE",
       ageHours,
       label: "PRICE DATA STALE",
-      reason: `市場価格が ${days} 日間 更新されていません。この価格で計算した実還元率は現状と合っていない可能性があるため、UNKNOWN として扱います。`,
+      reason: `市場価格が ${days} 日間 更新されていません。この価格で計算した残数還元率は現状と合っていない可能性があるため、UNKNOWN として扱います。`,
     };
   }
 
@@ -114,12 +114,12 @@ export function priceFreshness(
     state: "FRESH",
     ageHours,
     label: "PRICE DATA FRESH",
-    reason: "市場価格は最新です。実還元率はこの価格で計算しています。",
+    reason: "市場価格は最新です。残数還元率はこの価格で計算しています。",
   };
 }
 
 /**
- * 実還元率の判定。
+ * 残数還元率の判定。
  *
  * ★ここが SAFE FAIL の実体です。
  * 価格が FRESH でない限り、たとえ計算結果が 94%（＝いつもなら SAFE）でも

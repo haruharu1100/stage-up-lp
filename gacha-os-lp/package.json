@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev -p 3210",
-    "build": "node scripts/check-draw-rng.mjs && node scripts/check-regression.mjs && node scripts/check-launch.mjs && next build",
+    "build": "node scripts/check-draw-rng.mjs && node scripts/check-cache.mjs && node scripts/check-regression.mjs && node scripts/check-launch.mjs && next build",
     "start": "next start",
     "lint": "next lint",
     "test": "node scripts/run-tests.mjs",

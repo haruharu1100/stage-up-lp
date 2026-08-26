@@ -37,7 +37,7 @@ import {
 } from "../lib/backtest";
 import { demoBacktestSpec } from "../content/demoData";
 
-/** 実還元率など「％」の許容誤差。0.05ポイントまでのズレしか認めない */
+/** 残数還元率など「％」の許容誤差。0.05ポイントまでのズレしか認めない */
 const PCT_TOLERANCE = 0.05;
 
 const report = backtestReport(demoBacktestSpec);
@@ -124,7 +124,7 @@ test("通常シナリオ: SAFE / 中央値 93.3% / 赤字0回 / 粗利 +108,800�
   pct(s.peakRtp, 93.333333, "peakRtp");
   pct(s.distribution.rtpPeakMedian, 98.642384, "rtpPeakMedian");
 
-  // 判定に使うのは、消化70%時点の実還元率
+  // 判定に使うのは、消化70%時点の残数還元率
   pct(s.distribution.rtpMedian, 93.333333, "rtpMedian");
   pct(s.distribution.rtpP90, 104.666667, "rtpP90");
   pct(s.distribution.rtpP95, 106.875, "rtpP95");
@@ -261,7 +261,7 @@ test("販売速度低下シナリオ: CAUTION / 赤字確率 14.5% / 最悪 −8
 
   assert.equal(s.revenue, 720_000); // 800口 × 45% = 360口 × 2,000円
   // 代表として見せる1回は「中央値の回」。2.0.0 で並べ替えの基準が
-  // 「途中の最大値」から「消化70%時点の実還元率」に変わったため、
+  // 「途中の最大値」から「消化70%時点の残数還元率」に変わったため、
   // どの回を代表に選ぶかが変わり、金額も入れ替わっている
   assert.equal(s.payout, 675_000);
   assert.equal(s.leftoverValue, 816_200);

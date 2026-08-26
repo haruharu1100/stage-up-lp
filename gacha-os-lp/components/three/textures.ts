@@ -204,7 +204,7 @@ export function makeDashboardTexture(): THREE.Texture {
   c.fill();
   c.fillStyle = "#FFD7D7";
   c.font = `600 19px ${JP}`;
-  c.fillText("警告：スニーカーBOX #128 の市場価格ベース実還元率が 108.7% に上昇", 316, 606);
+  c.fillText("警告：スニーカーBOX #128 の市場価格ベース残数還元率が 108.7% に上昇", 316, 606);
   rr(c, 1104, 578, 136, 42, 10);
   c.fillStyle = "rgba(239,68,68,0.85)";
   c.fill();

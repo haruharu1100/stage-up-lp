@@ -162,8 +162,8 @@ await budget(page, "ダッシュボード → 発送", 2, async (p) => {
   await navTo(p, "発送管理");
   return 1;
 });
-await budget(page, "ダッシュボード → 危険なガチャ（実還元率）", 2, async (p) => {
-  await navTo(p, "実還元率");
+await budget(page, "ダッシュボード → 危険なガチャ（実績還元率）", 2, async (p) => {
+  await navTo(p, "実績還元率");
   return 1;
 });
 await budget(page, "AIガチャ作成をはじめる", 1, async (p) => {

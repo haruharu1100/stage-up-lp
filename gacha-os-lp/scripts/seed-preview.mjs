@@ -66,10 +66,15 @@ const CUSTOMERS = [
   { no: 5, name: "架空 五郎", points: 900 },
 ];
 
+/* ★還元率は「％」で書くこと（92％なら 92。0.92 ではありません）。
+   2026-08-26、ここが 0.92 だったために、設計88％のガチャが
+   実際には18.2％しか返していませんでした。
+   いまは lib/console/draw.ts の normalizeRtp が直してくれますが、
+   直されたことが警告として出ます。最初から％で書いてください。 */
 const GACHAS = [
-  { title: "スタンダードガチャ", price: 500, total: 300, designedRtp: 0.92 },
-  { title: "プレミアムガチャ", price: 3_000, total: 120, designedRtp: 0.95 },
-  { title: "お試しガチャ", price: 100, total: 500, designedRtp: 0.88 },
+  { title: "スタンダードガチャ", price: 500, total: 300, designedRtp: 92 },
+  { title: "プレミアムガチャ", price: 3_000, total: 120, designedRtp: 95 },
+  { title: "お試しガチャ", price: 100, total: 500, designedRtp: 88 },
 ];
 
 function stop(why) {

@@ -28,6 +28,15 @@
  *       ⑨ 役割の制限が、画面だけでなく入口でも効いていること
  *       ⑩ 仮パスワードが「1回きり・期限つき」のままであること
        ⑪ DBから読んだ中身が、いつも「いまの中身」であること
+ *       ⑫ 分からないときに、通してしまわないこと
+ *
+ *   ★⑫を足した理由（2026-08-26、公開先の総点検で見つけました）。
+ *     門番は、担当者の役割を毎回DBから読み直していました。
+ *     ですが、読めなかったときに asRole() を通していました。
+ *     asRole() は「知らない値なら VIEWER」という作りです。
+ *     つまり、行が消えていても・別会社でも・DBが一瞬答えなくても、
+ *     VIEWER として通っていました。VIEWER は会社の中身を全部読めます。
+ *     「分からない」は「大丈夫」ではありません。読めないなら断ります。
  *
  *   ★⑨を足した理由。
  *     画面のボタンを消しても、入口の住所を知っていれば直接叩けます。
@@ -92,7 +101,12 @@ const FILES = [
   { file: "tests/pointsApi.test.ts", what: "ポイントの入口（二人承認・二度押し・追加の本人確認）" },
   { file: "tests/customerStepUp.test.ts", what: "お客様の追加の本人確認（住所変更・高額の発送依頼を本当に止めるか）" },
   { file: "tests/dbFreshRead.test.ts", what: "DBの読み取りが、いつも「いまの中身」であること（古い答えの使い回し防止）" },
+  { file: "tests/failClosed.test.ts", what: "分からないときに通さないこと（役割が読めない・止めた人・締め出し中）" },
+  { file: "tests/failInjection.test.ts", what: "DBが壊れたときに「0件」「問題なし」と答えないこと（わざと壊す試験）" },
+  { file: "tests/rtpUnit.test.ts", what: "画面に出した還元率どおりの額が、本当にお客様へ返ること（単位の取り違え防止）" },
+  { file: "tests/rtpMonitor.test.ts", what: "還元率3種（設計・残数・実績）を混ぜないこと。88％と0.88の取り違え／分からないときに0％を出さないこと" },
   { file: "tests/passwordChange.test.ts", what: "パスワード（仮パスワードの寿命・強制変更・平文を残さない）" },
+  { file: "tests/adminManage.test.ts", what: "担当者の権限変更・利用停止（自分は下げられない／最後の管理者は守る／他社は見つからない／止めたらその場でログアウト）" },
   { file: "tests/returnTo.test.ts", what: "ログイン後の戻り先（外のサイトへ飛ばさない）" },
   { file: "tests/noFixedNumbers.test.ts", what: "画面の数字が決め打ちに戻っていないか" },
   { file: "tests/noInvisibleChars.test.ts", what: "見えない文字の混入" },

@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Inter, Noto_Sans_JP, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
-import { site, seoKeywords, faqs } from "@/content/site";
+import { site, seoKeywords, faqs, deliveryPeriod } from "@/content/site";
 import SmoothScroll from "@/components/SmoothScroll";
 import Analytics from "@/components/Analytics";
 
@@ -72,7 +72,16 @@ const jsonLd = [
       priceCurrency: "JPY",
       price: "29800",
       description:
-        "月額 29,800円〜（税別・目安）。初期構築は 40万円〜（税別・目安）。要件により変動します。",
+        "月額 29,800円〜（税別・目安）。初期構築は 40万円〜（税別・目安）。要件により変動します。" +
+        `${deliveryPeriod.label}。${deliveryPeriod.note}`,
+      /* ★納品の目安。画面表示（料金セクション・FAQ・導入の流れ）と必ず同じ値にすること。
+         検索エンジン側にだけ違う日数が出ている状態を作らないための一本化です。 */
+      deliveryLeadTime: {
+        "@type": "QuantitativeValue",
+        minValue: deliveryPeriod.minDays,
+        maxValue: deliveryPeriod.maxDays,
+        unitCode: "DAY",
+      },
     },
   },
   {

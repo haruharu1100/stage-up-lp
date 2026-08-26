@@ -16,7 +16,7 @@ import { useState } from "react";
 import type { ConsoleState, ConsoleAction, ConsoleGacha } from "@/lib/console/state";
 import { can } from "@/lib/console/state";
 import type { MenuKey } from "../menu";
-import { Badge, Btn, Card, Drawer, KV, RowCard, Rows, Table, Td, Tr, WhatIsThis } from "../ui";
+import { Badge, Btn, Card, DemoNote, Drawer, KV, RowCard, Rows, Table, Td, Tr, WhatIsThis } from "../ui";
 
 const STATUS: Record<
   ConsoleGacha["status"],
@@ -29,7 +29,7 @@ const STATUS: Record<
   SOLD_OUT: { label: "完売", tone: "neutral" },
 };
 
-/** 実還元率が、どのくらい危ないか */
+/** 残数還元率が、どのくらい危ないか */
 function rtpTone(g: ConsoleGacha): "ok" | "warn" | "danger" {
   if (g.realRtp === 0) return "ok";
   if (g.realRtp >= 103 || g.marketRtp >= 115) return "danger";
@@ -72,6 +72,44 @@ export default function GachaList({
         <strong className="font-bold text-slate">検証を通していないガチャは公開できません。</strong>
       </WhatIsThis>
 
+      {/*
+        ── 還元率の呼び分け ──
+
+        ★「実還元率」という書き方に戻さないこと。
+          その言葉は、次の3つのどれを指すのか分かりません。
+
+              設計還元率 … 作ったときの予定
+              残数還元率 … 残っている景品 ÷ 残っている口数
+              実績還元率 … 実際に引かれた結果（お客様に返った額）
+
+          2026-08-26、画面に 88.0％ と出ているのに、
+          実際に返っていたのは 18.23％ でした。
+          3つを1つの言葉で呼んでいたことが、気づけなかった一因です。
+
+        ★この一覧の数字は、まだ見本です。
+          本物の3種類は「実績還元率」の画面で見られます。
+          この一覧を本物へ差し替えるのは、次の作業です。
+      */}
+      <div className="rounded-xl border border-blue-ink/25 bg-blue-pale/40 px-5 py-4">
+        <p className="text-note leading-[1.9] text-slate2">
+          <strong className="font-bold text-slate">還元率は、3種類あります。</strong>
+          設計（作ったときの予定）・残数（残っている景品 ÷ 残っている口数）・
+          実績（実際にお客様へ返った額）。
+          <br />
+          この一覧に出ているのは <strong className="font-bold text-slate">設計</strong> と{" "}
+          <strong className="font-bold text-slate">残数</strong> です。
+          実際にいくら返ったかは、
+          <button
+            type="button"
+            className="mx-1 font-bold text-blue-ink underline underline-offset-4"
+            onClick={() => onNav("rtp")}
+          >
+            実績還元率
+          </button>
+          の画面でご確認ください。
+        </p>
+      </div>
+
       {/* ── 止まっているガチャ ──
 
           ★1件を5行で書かないこと。
@@ -95,7 +133,7 @@ export default function GachaList({
                   <Badge tone="danger">販売停止中</Badge>
                   <span className="text-note font-bold text-slate">{g.title}</span>
                   <span className="num text-note text-danger-ink">
-                    実還元率 {g.realRtp}% ／ 粗利 {g.profit.toLocaleString()}円
+                    残数還元率 {g.realRtp}% ／ 粗利 {g.profit.toLocaleString()}円
                   </span>
                 </span>
                 <span className="flex flex-wrap gap-2">
@@ -119,7 +157,7 @@ export default function GachaList({
               >
                 <span className="text-note text-slate2">
                   <strong className="font-bold text-slate">{g.title}</strong>
-                  <span className="num ml-2 text-warn-ink">実還元率 {g.realRtp}%</span>
+                  <span className="num ml-2 text-warn-ink">残数還元率 {g.realRtp}%</span>
                 </span>
                 {mayPublish && (
                   <Btn
@@ -128,7 +166,7 @@ export default function GachaList({
                       dispatch({
                         type: "PAUSE_GACHA",
                         gachaId: g.id,
-                        reason: `実還元率 ${g.realRtp}% ／ 相場基準 ${g.marketRtp}% のため停止`,
+                        reason: `残数還元率 ${g.realRtp}% ／ 相場基準 ${g.marketRtp}% のため停止`,
                       })
                     }
                   >
@@ -158,7 +196,7 @@ export default function GachaList({
               しかも行そのものが押せるので、行を開くつもりで
               「公開する」を押してしまう事故が起きます。
               操作は、行を押して開いた右の板の中だけに置きます。 */}
-        <Table head={["ガチャ", "状態", "価格", "残り", "設計還元率", "実還元率", "粗利"]}>
+        <Table head={["ガチャ", "状態", "価格", "残り", "設計還元率", "残数還元率", "粗利"]}>
           {s.gachas.map((g) => (
             /* ★危ない行に色を付けること。
                  上の警告で名前を見た人が、一覧の中からその行を
@@ -227,7 +265,7 @@ export default function GachaList({
                     </span>
                   }
                 />
-                <KV k="実還元率" v={<span className="num">{g.realRtp ? `${g.realRtp}%` : "-"}</span>} />
+                <KV k="残数還元率" v={<span className="num">{g.realRtp ? `${g.realRtp}%` : "-"}</span>} />
                 <KV k="粗利" v={<span className="num">{g.profit.toLocaleString()}円</span>} />
               </div>
               <div className="mt-3">
@@ -288,7 +326,7 @@ export default function GachaList({
                 }
               />
               <KV k="設計還元率" v={<span className="num">{open.designedRtp ? `${open.designedRtp}%` : "-"}</span>} />
-              <KV k="実還元率" v={<span className="num">{open.realRtp ? `${open.realRtp}%` : "-"}</span>} />
+              <KV k="残数還元率" v={<span className="num">{open.realRtp ? `${open.realRtp}%` : "-"}</span>} />
               <KV k="相場基準の還元率" v={<span className="num">{open.marketRtp ? `${open.marketRtp}%` : "-"}</span>} />
               <KV k="粗利" v={<span className="num">{open.profit.toLocaleString()}円</span>} />
             </div>
@@ -298,19 +336,24 @@ export default function GachaList({
                   何を直せば再開できるのかが分かりません */}
             {open.status === "PAUSED" && (
               <p className="rounded-xl border border-danger/30 bg-danger/8 px-4 py-3 text-note leading-[1.9] text-danger-ink">
-                販売を止めています。実還元率か、相場の値上がりが原因です。
-                下の「実還元率を見る」「相場を見る」で、どちらなのかが分かります。
+                販売を止めています。残数還元率か、相場の値上がりが原因です。
+                下の「実績還元率を見る」「相場を見る」で、どちらなのかが分かります。
               </p>
             )}
 
             <div className="flex flex-wrap gap-2">
-              <Btn onClick={() => onNav("rtp")}>実還元率を見る</Btn>
+              <Btn onClick={() => onNav("rtp")}>実績還元率を見る</Btn>
               <Btn onClick={() => onNav("market")}>相場を見る</Btn>
               <Btn onClick={() => onNav("preview")}>お客様の画面で見る</Btn>
             </div>
           </>
         )}
       </Drawer>
+
+      <DemoNote>
+        ここに並んでいるガチャ・売上・還元率は、すべて架空の見本です。
+        実際にお使いいただくときは、登録したガチャがそのまま並びます。
+      </DemoNote>
     </>
   );
 }

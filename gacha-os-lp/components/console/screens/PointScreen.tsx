@@ -36,7 +36,7 @@ import {
   canApprove,
   pointsReconcile,
 } from "@/lib/console/state";
-import { Badge, Btn, Card, Field, KV, Stat, WhatIsThis, inputClass } from "../ui";
+import { Badge, Btn, Card, DemoNote, Field, KV, Stat, WhatIsThis, inputClass } from "../ui";
 
 export default function PointScreen({
   s,
@@ -280,6 +280,11 @@ export default function PointScreen({
           </ul>
         )}
       </Card>
+
+      <DemoNote>
+        ここに出ている申請・残高・履歴は、すべて架空の見本です。
+        実際にお使いいただくときは、本物の申請と残高が並びます。
+      </DemoNote>
     </>
   );
 }

@@ -217,6 +217,25 @@ export async function drawOnceServer(args: {
     const pointAfter = pointBefore - price + pointReturned;
     const leftAfter = leftBefore - 1;
 
+    /**
+     * この1回で、お客様へ実際にお返しした価値。
+     *
+     * ★ここを out.value だけにしないこと（2026-08-26 修正）。
+     *
+     *   S・A・B賞は現物なので、お返しした価値 ＝ 景品の価値（out.value）。
+     *   C・D賞はポイントでお返しするので out.points と out.value は同じ額です。
+     *   ところが「はずれ（-）」だけは out.value が 0 なのに、
+     *   参加ポイント（out.points）を実際にお返ししています。
+     *
+     *   以前はここで out.value を足していたので、はずれが出るたびに
+     *   gachas.paid_value が、実際より少ない額で記録されていました。
+     *   その集計値を信じて還元率を出すと、実際より低く見えます。
+     *
+     *   ★受け取り方（現物かポイントか）で、どちらか片方だけを数えること。
+     *     両方足すと、今度は二重に数えてしまいます。
+     */
+    const returnedValue = needsShipping ? out.value : pointReturned;
+
     /* ── ⑥ 減らす（条件付き。読んでから減らす、をしない） ───── */
     const decGacha = await tx.execute({
       sql: `UPDATE gachas
@@ -226,7 +245,7 @@ export async function drawOnceServer(args: {
                    status     = CASE WHEN left_count - 1 <= 0 THEN 'SOLD_OUT' ELSE status END
              WHERE tenant_id = ? AND id = ?
                AND status = 'PUBLISHED' AND left_count > 0`,
-      args: [price, out.value, args.tenantId, args.gachaId],
+      args: [price, returnedValue, args.tenantId, args.gachaId],
     });
     if (Number(decGacha.rowsAffected) !== 1) {
       throw new DrawError(

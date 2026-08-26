@@ -49,7 +49,7 @@ const QUALITY_DETAIL: { t: string; d: string }[] = [
   },
   {
     t: "価格データの鮮度チェック",
-    d: `市場価格には FRESH ／ STALE ／ UNKNOWN の状態を持たせ、最終更新から ${STALE_AFTER_DAYS} 日を過ぎた価格は「古い」として扱います。古い価格のときは実還元率の数字を出しません。`,
+    d: `市場価格には FRESH ／ STALE ／ UNKNOWN の状態を持たせ、最終更新から ${STALE_AFTER_DAYS} 日を過ぎた価格は「古い」として扱います。古い価格のときは残数還元率の数字を出しません。`,
   },
   {
     t: "抽選の記録",

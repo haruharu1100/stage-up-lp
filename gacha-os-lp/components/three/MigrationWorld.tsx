@@ -68,7 +68,7 @@ export const MIGRATION_BEATS: MigrationBeat[] = [
     at: 0.62,
     tag: "NEW ADMIN",
     title: "変わるのは、管理側だけ",
-    body: "AIガチャ設計・公開前バックテスト・実還元率・価格監視・発送管理・AI問い合わせが、そのまま使えるようになります。",
+    body: "AIガチャ設計・公開前バックテスト・残数還元率・価格監視・発送管理・AI問い合わせが、そのまま使えるようになります。",
   },
   {
     at: 0.82,

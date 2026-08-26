@@ -23,7 +23,7 @@
  *
  *   「引ける」ことより、「引いたら何が動くか」を見ていただくためです。
  *
- *   1回引くと、残り口数・売上・粗利・実還元率・お客様の残高が動き、
+ *   1回引くと、残り口数・売上・粗利・実績還元率・お客様の残高が動き、
  *   当たれば発送依頼が1件増えます。
  *   その全部を、他の画面を回って確かめられます。
  *
@@ -179,7 +179,7 @@ export default function PreviewScreen({
 
           <div className="mt-4 flex flex-wrap gap-2">
             <Btn onClick={() => onNav("gacha")}>残り口数を見る</Btn>
-            <Btn onClick={() => onNav("rtp")}>実還元率を見る</Btn>
+            <Btn onClick={() => onNav("rtp")}>実績還元率を見る</Btn>
             <Btn onClick={() => onNav("shipping")}>発送依頼を見る</Btn>
             <Btn onClick={() => onNav("customers")}>お客様の残高を見る</Btn>
           </div>

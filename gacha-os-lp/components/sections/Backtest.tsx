@@ -200,7 +200,7 @@ export default function Backtest() {
                 </span>
               </div>
 
-              <p className="num mt-5 text-label text-white/35">実還元率 中央値</p>
+              <p className="num mt-5 text-label text-white/35">残数還元率 中央値</p>
               <p className={`num mt-2 text-h3 font-bold ${t.text}`}>
                 {d.rtpMedian.toFixed(1)}
                 <span className="text-[0.5em] opacity-70">%</span>

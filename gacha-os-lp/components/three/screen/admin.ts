@@ -39,7 +39,7 @@ export const ADMIN_SCREENS = [
   { key: "dashboard", label: "DASHBOARD", ja: "ダッシュボード" },
   { key: "design", label: "AI GACHA DESIGN", ja: "AIガチャ設計" },
   { key: "backtest", label: "BACKTEST", ja: "公開前バックテスト" },
-  { key: "rtp", label: "REAL RTP", ja: "実還元率モニタ" },
+  { key: "rtp", label: "REAL RTP", ja: "実績還元率モニタ" },
   { key: "shipping", label: "SHIPPING", ja: "発送管理" },
   { key: "operator", label: "AI OPERATOR", ja: "AI問い合わせ対応" },
 ] as const;
@@ -206,11 +206,11 @@ function dashboard(c: Ctx, t: number) {
   const last = pts[pts.length - 1];
   dot(c, last[0], last[1], 5.5, "#fff", 0.8);
 
-  // 実還元率
+  // 残数還元率
   const rx = CX + CW * 0.62 + 10;
   const rw = CW * 0.38 - 10;
   panel(c, rx, gy, rw, 268, 16);
-  text(c, "実還元率 / 販売中", rx + 24, gy + 36, { size: 17, color: UI.text2 });
+  text(c, "残数還元率 / 販売中", rx + 24, gy + 36, { size: 17, color: UI.text2 });
   const gauges = [
     { l: "設定時", v: 100.5, col: UI.text2, p: 0.5 },
     { l: "残数ベース", v: 103.2, col: UI.warn, p: 0.68 },
@@ -244,7 +244,7 @@ function dashboard(c: Ctx, t: number) {
   dot(c, CX + 34, ay + 37, 7, UI.danger, pulse);
   text(
     c,
-    "市場価格の上昇で、スニーカーBOX #128 の実還元率が 108.7% になりました",
+    "市場価格の上昇で、スニーカーBOX #128 の残数還元率が 108.7% になりました",
     CX + 58,
     ay + 44,
     { size: 18, weight: 600, color: "#FFD9D9" }
@@ -520,7 +520,7 @@ function backtest(c: Ctx, t: number) {
   const rx = CX + CW * 0.66 + 10;
   const rw = CW * 0.34 - 10;
   const stats: [string, string, string][] = [
-    ["実還元率 中央値", (94.8).toFixed(1) + "%", UI.ok],
+    ["残数還元率 中央値", (94.8).toFixed(1) + "%", UI.ok],
     ["最悪ケース", "112.4%", UI.warn],
     ["赤字になった割合", "1.8%", UI.ok],
     ["ラストワンまでの平均", "874 口", UI.text],
@@ -589,7 +589,7 @@ function realRtp(c: Ctx, t: number) {
 
   // 3本のゲージ
   const gauges = [
-    { l: "設定時の還元率", v: 100.5, col: UI.text2, p: 0.5, note: "作ったときの計算" },
+    { l: "設計還元率", v: 100.5, col: UI.text2, p: 0.5, note: "作ったときの計算" },
     { l: "残数ベース", v: 103.2, col: UI.warn, p: 0.68, note: "売れ残りを反映" },
     {
       l: "市場価格ベース",
@@ -625,7 +625,7 @@ function realRtp(c: Ctx, t: number) {
   // 推移
   const gy = TOP_H + 336;
   panel(c, CX, gy, CW * 0.64 - 10, 296, 16);
-  text(c, "実還元率の推移 / スニーカーBOX #128", CX + 26, gy + 38, {
+  text(c, "残数還元率の推移 / スニーカーBOX #128", CX + 26, gy + 38, {
     size: 17,
     color: UI.text2,
   });
@@ -999,7 +999,7 @@ const PUBLISH_STEPS: [string, string][] = [
   ["ガチャを保存", "設計・賞の内訳・口数を確定"],
   ["在庫と賞を引き当て", "重複しないように押さえる"],
   ["お客様のサイトへ公開", "example-gacha.jp に掲載"],
-  ["監視をはじめる", "実還元率と残数を見はじめる"],
+  ["監視をはじめる", "残数還元率と残数を見はじめる"],
 ];
 
 function publish(c: Ctx, t: number) {

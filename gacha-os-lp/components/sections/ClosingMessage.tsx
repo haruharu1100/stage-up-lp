@@ -28,7 +28,7 @@ const FinaleWorld = dynamic(() => import("../three/FinaleWorld"), {
 const SCOPE = [
   "ガチャ設計",
   "価格監視",
-  "実還元率",
+  "残数還元率",
   "発送",
   "問い合わせ",
   "分析",

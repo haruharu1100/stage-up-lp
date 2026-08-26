@@ -293,7 +293,7 @@ export default function DemoConsole() {
             <div className="mx-2.5 mt-6 rounded-xl border border-danger/30 bg-danger/[0.08] p-3">
               <p className="text-[10px] text-danger">要対応</p>
               <p className="mt-1.5 text-[11px] leading-[1.7] text-[#FFD7D7]">
-                実還元率が しきい値を超えているガチャが {danger.length} 本あります
+                残数還元率が しきい値を超えているガチャが {danger.length} 本あります
               </p>
             </div>
           )}
@@ -483,7 +483,7 @@ function Dash({
           <div className="flex min-w-0 flex-1 items-start gap-3 sm:items-center">
             <span className="mt-[7px] h-2 w-2 shrink-0 rounded-full bg-danger animate-pulseline sm:mt-0" />
             <p className="min-w-0 flex-1 text-[12px] leading-[1.8] text-[#FFD7D7]">
-              警告：{a.id} {a.name} の市場価格ベース実還元率が{" "}
+              警告：{a.id} {a.name} の市場価格ベース残数還元率が{" "}
               <span className="num font-bold">{a.market.toFixed(1)}%</span>{" "}
               に上昇しました（しきい値 105%）
             </p>
@@ -526,7 +526,7 @@ function Dash({
         <Card title="CURRENT REAL RTP / #128">
           <div className="space-y-4 p-5">
             {[
-              { l: "設定時還元率", v: gachas[0].designed },
+              { l: "設計還元率", v: gachas[0].designed },
               { l: "残数ベース", v: gachas[0].remaining },
               { l: "市場価格ベース", v: gachas[0].market },
             ].map((g) => {
@@ -586,7 +586,7 @@ function GachaList({
             <span>ガチャ名</span>
             <span className="text-right">1回料金</span>
             <span className="text-right">残 / 総口数</span>
-            <span className="text-right">実還元率</span>
+            <span className="text-right">残数還元率</span>
             <span>状態</span>
             <span className="text-right">操作</span>
           </div>
@@ -1157,7 +1157,7 @@ type AiMsg =
 
 const QUESTIONS = [
   "今日危険なガチャは？",
-  "実還元率110%超えは？",
+  "残数還元率110%超えは？",
   "未発送は何件？",
   "売上が悪いガチャは？",
   "価格高騰している商品は？",
@@ -1180,8 +1180,8 @@ function answer(q: Question, gachas: Gacha[]): AiCard {
         tone: danger.length ? "danger" : "ok",
         badge: "RTP ALERT",
         headline: danger.length
-          ? `公開中${live.length}本のうち、${danger.length}本が危険水域（市場価格ベース実還元率105%以上）です。`
-          : `公開中${live.length}本すべて、市場価格ベースの実還元率は105%未満です。危険水域のガチャはありません。`,
+          ? `公開中${live.length}本のうち、${danger.length}本が危険水域（市場価格ベース残数還元率105%以上）です。`
+          : `公開中${live.length}本すべて、市場価格ベースの残数還元率は105%未満です。危険水域のガチャはありません。`,
         rows: danger.length
           ? danger.map((g) => ({
               l: `${g.id} ${g.name}`,
@@ -1200,7 +1200,7 @@ function answer(q: Question, gachas: Gacha[]): AiCard {
             ]
           : undefined,
         reason:
-          "設計時の還元率ではなく、「残っている景品 ÷ 残っている口数」で再計算した実還元率に、登録済みの市場価格を掛けて判定しています。上位賞が早く抜けた、または景品の相場が上がった場合に105%を超えます。",
+          "設計時の還元率ではなく、「残っている景品 ÷ 残っている口数」で再計算した残数還元率に、登録済みの市場価格を掛けて判定しています。上位賞が早く抜けた、または景品の相場が上がった場合に105%を超えます。",
         actions: danger.length
           ? [
               `${danger[0].id} は残${danger[0].left}口。この条件のまま売り切ると粗利を大きく圧迫するため、販売停止を検討してください。`,
@@ -1210,7 +1210,7 @@ function answer(q: Question, gachas: Gacha[]): AiCard {
           : ["対応は不要です。次回の価格更新（毎日04:00想定）後に再確認してください。"],
       };
 
-    case "実還元率110%超えは？":
+    case "残数還元率110%超えは？":
       return {
         tone: over110.length ? "danger" : "ok",
         badge: "RTP > 110%",
@@ -1231,7 +1231,7 @@ function answer(q: Question, gachas: Gacha[]): AiCard {
                 : "ok") as Tone,
           })),
         reason:
-          "110%は「景品の価値が売上を10%上回っている」状態です。実還元率は残数と市場価格の両方で動くため、公開後も毎日変わります。",
+          "110%は「景品の価値が売上を10%上回っている」状態です。残数還元率は残数と市場価格の両方で動くため、公開後も毎日変わります。",
         actions: over110.length
           ? [
               "対象ガチャを停止し、構成を組み直してから再公開してください。",
@@ -1306,9 +1306,9 @@ function answer(q: Question, gachas: Gacha[]): AiCard {
           };
         }),
         reason:
-          "景品の相場が上がると、同じ構成のままでも実還元率が上がり、利益が減ります。価格データは、正式に利用可能なデータソース・API・許諾済みデータと接続する前提で設計しています。",
+          "景品の相場が上がると、同じ構成のままでも残数還元率が上がり、利益が減ります。価格データは、正式に利用可能なデータソース・API・許諾済みデータと接続する前提で設計しています。",
         actions: [
-          "高騰した景品を含むガチャの実還元率を、先に確認してください。",
+          "高騰した景品を含むガチャの残数還元率を、先に確認してください。",
           "値上がり分が大きい景品は、別ガチャの目玉に回すと訴求を強くできます。",
           "更新頻度（既定1日1回）は運営に合わせて調整できます。",
         ],
@@ -1325,7 +1325,7 @@ function answer(q: Question, gachas: Gacha[]): AiCard {
           level: "最優先",
           tone: "danger",
           title: `${top.id} ${top.name} の販売可否を決める`,
-          detail: `市場価格ベースの実還元率が ${top.market.toFixed(1)}%。残 ${top.left} 口。停止・景品差し替え・口数調整のいずれかを選んでください。`,
+          detail: `市場価格ベースの残数還元率が ${top.market.toFixed(1)}%。残 ${top.left} 口。停止・景品差し替え・口数調整のいずれかを選んでください。`,
           meta: "粗利への影響が最も大きい",
           cost: "5分",
         });
@@ -1336,7 +1336,7 @@ function answer(q: Question, gachas: Gacha[]): AiCard {
           level: "高",
           tone: "warn",
           title: `${risenTop.name} の登録価格を更新する`,
-          detail: `仕入時 ${jpy(risenTop.bought)} に対し現在 ${jpy(risenTop.now)}（+${up.toFixed(1)}%）。この景品を含む全ガチャの実還元率が再計算されます。`,
+          detail: `仕入時 ${jpy(risenTop.bought)} に対し現在 ${jpy(risenTop.now)}（+${up.toFixed(1)}%）。この景品を含む全ガチャの残数還元率が再計算されます。`,
           meta: "他ガチャにも波及する",
           cost: "3分",
         });
@@ -1375,7 +1375,7 @@ function answer(q: Question, gachas: Gacha[]): AiCard {
         headline: `今日やることは ${tasks.length} 件です。上から順に進めれば、重要なものから片づきます。`,
         tasks,
         reason:
-          "実還元率・市場価格・発送・問い合わせ・広告の5つを毎朝スキャンし、しきい値を超えたものだけを、粗利への影響が大きい順に並べています。何も超えていない日は「対応なし」と表示されます。",
+          "残数還元率・市場価格・発送・問い合わせ・広告の5つを毎朝スキャンし、しきい値を超えたものだけを、粗利への影響が大きい順に並べています。何も超えていない日は「対応なし」と表示されます。",
         actions: [
           "上から順に進めれば、判断が必要なものが先に終わります。",
           "しきい値と並び順の基準は、運営方針に合わせて変更できます。",

@@ -170,7 +170,7 @@ export default function Dashboard({
                 : "出しすぎているガチャはありません。"
             }
             to="rtp"
-            cta="実還元率を見る"
+            cta="実績還元率を見る"
             onNav={onNav}
           />
           <StatusCard

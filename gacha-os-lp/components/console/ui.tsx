@@ -512,6 +512,61 @@ export function DemoNote({ children }: { children: ReactNode }) {
   );
 }
 
+/**
+ * 「この画面の数字は、まだどこにもつながっていません」を、
+ * いちばん上で、いちばん先に言うための印。
+ *
+ * ═══════════════════════════════════════════════════════
+ * ★なぜ、下ではなく上に置くのか（2026-08-26、公開先の総点検）
+ * ═══════════════════════════════════════════════════════
+ *
+ *   断り書きは、これまで画面のいちばん下に置いていました。
+ *   文章は正しく、嘘も書いていません。
+ *
+ *   ですが、人は上から読みます。
+ *   そして、数字を見た時点で判断を終えます。
+ *
+ *       上：「この7日間の売上 949,500円」
+ *       …（グラフ、表、内訳）…
+ *       下：「ここに出ている数字は、すべて架空です」
+ *
+ *   下まで読む人は、上の数字を疑った人だけです。
+ *   疑わなかった人は、架空の売上を本物として持ち帰ります。
+ *   商談の場なら、その場で「すごいですね」と言われて終わります。
+ *
+ *   ★断り書きは、数字より先に出すこと。
+ *     後から出す断り書きは、断り書きではなく言い訳です。
+ *
+ * ★つながったら、この印を消すこと。
+ *   消し忘れると、今度は本物の数字が「架空です」と言われます。
+ *   それは、もっと悪いです。
+ */
+export function NotConnected({
+  what,
+  children,
+}: {
+  /** 何がつながっていないのか（例：「相場の取り込み」） */
+  what: string;
+  children?: ReactNode;
+}) {
+  return (
+    <div className="rounded-xl border-2 border-dashed border-warn/50 bg-warn/10 px-4 py-4">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="rounded-md bg-warn-ink px-2 py-1 text-[11px] font-bold tracking-wide text-white">
+          未接続（見本のデータ）
+        </span>
+        <span className="text-note font-bold text-warn-ink">{what}</span>
+      </div>
+      <p className="mt-2 text-note leading-[1.9] text-warn-ink">
+        この画面に出ている数字は、
+        <strong className="font-bold">すべて架空の見本</strong>
+        です。実際の売上・在庫・相場ではありません。
+        {children ? <> {children}</> : null}
+      </p>
+    </div>
+  );
+}
+
 /** まだ作っていない機能を、作ってあるように見せないための印 */
 export function Planned({ children }: { children: ReactNode }) {
   return (

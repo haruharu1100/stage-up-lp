@@ -157,6 +157,57 @@ export function seedOf(text: string): number {
 const SHIPPED: Grade[] = ["S", "A", "B"];
 
 /**
+ * 還元率の「単位」をそろえる。
+ *
+ * ═══════════════════════════════════════════════════════
+ * ★2026-08-26 公開環境の総点検で見つかった不具合
+ * ═══════════════════════════════════════════════════════
+ *
+ *   このシステムの中では、還元率は「％」で書く決まりです。
+ *
+ *       88 と書けば 88％
+ *
+ *   ところが、データを用意する側が
+ *
+ *       0.88
+ *
+ *   と書いていました。人の目には、どちらも「88パーセント」に見えます。
+ *   計算する側は、そうは読みません。0.88％ として計算します。
+ *
+ *   ★これが何を起こしたか（Preview環境で実際に測った数字）
+ *
+ *       設計した還元率   88.0％
+ *       実際の還元率     18.2％
+ *
+ *   D賞（ポイントでお返しする等級）は 1pt になり、
+ *   S〜C賞は、値段の下限である100円に貼りついていました。
+ *
+ *   画面には「設計還元率 88％」と出ます。出ているのに、そうなりません。
+ *   ★これは、お客様に返すお金の額が、表示と食い違うということです。
+ *     数字が小さくなる方向だったので、なおさら気づきにくいものでした。
+ *
+ *   ですので、ここで単位をそろえます。
+ *   0より大きく1.5以下の値は「比率で書かれた」と見なして100倍します。
+ *   還元率1.5％以下のガチャは、そもそも作ってはいけないので、
+ *   本物の1.2％と取り違える心配はありません。
+ *
+ *   ★直したあとも、書いた人に気づいてもらうために、必ず記録を残します。
+ *     黙って直すと、次のデータも同じ書き方で入ってきます。
+ */
+export function normalizeRtp(designedRtp: number): number {
+  if (!Number.isFinite(designedRtp) || designedRtp <= 0) return 95;
+  if (designedRtp <= 1.5) {
+    console.warn(
+      `[rtp] 還元率が ${designedRtp} で入っています。` +
+        `このシステムは「％」で受け取ります（88％なら 88）。` +
+        `${designedRtp * 100} として計算しますが、データ側を直してください。`,
+    );
+    return designedRtp * 100;
+  }
+  return designedRtp;
+}
+
+/**
  * このガチャの箱に、どの等級が何本入っているか。
  *
  * 等級ごとの本数と価値は、ガチャを作ったときの設計から出します
@@ -169,7 +220,7 @@ export function poolOf(
   total: number,
   designedRtp: number,
 ): { grade: Grade; name: string; value: number; count: number }[] {
-  const spec = buildSpec(title, price, total, 1, designedRtp || 95);
+  const spec = buildSpec(title, price, total, 1, normalizeRtp(designedRtp));
   return spec.prizes.map((p) => ({
     grade: p.grade as Grade,
     name: p.name,

@@ -23,9 +23,17 @@
 
 import type { ConsoleState } from "@/lib/console/state";
 import { summary } from "@/lib/console/state";
-import { Badge, Card, DemoNote, KV, RowCard, Rows, Stat, Table, Td, WhatIsThis } from "../ui";
+import { Badge, Card, DemoNote, KV, NotConnected, RowCard, Rows, Stat, Table, Td, WhatIsThis } from "../ui";
 
-/** 直近7日（すべて架空の数字） */
+/**
+ * 直近7日（すべて架空の数字）。
+ *
+ * ★日付が 8/16〜8/22 で止まっていることに、必ず気づけるようにすること。
+ *   ここは、集計につながるまでの見本です。
+ *   つながっていないのに「直近7日」と書いてあると、
+ *   時間がたつほど、本物らしく見えて危なくなります。
+ *   だから、画面のいちばん上で先に「未接続」と言います。
+ */
 const DAYS = [
   { d: "8/16", revenue: 96_200, profit: 12_800 },
   { d: "8/17", revenue: 121_400, profit: 16_100 },
@@ -45,6 +53,12 @@ export default function AnalyticsScreen({ s }: { s: ConsoleState }) {
 
   return (
     <>
+      {/* ★ここを下へ動かさないこと。数字より先に言わないと、意味がありません */}
+      <NotConnected what={`売上・粗利の集計（表示は ${DAYS[0].d}〜${DAYS[DAYS.length - 1].d} の見本で固定）`}>
+        実際にお使いいただくときは、その日の売上・還元・粗利を自動で集計します。
+        いまは、その集計が つながっていない状態です。
+      </NotConnected>
+
       <WhatIsThis>
         売上と粗利の推移を見ます。
         <strong className="font-bold text-slate">売上が伸びていても、粗利が減っていれば危ない状態です。</strong>
@@ -115,7 +129,7 @@ export default function AnalyticsScreen({ s }: { s: ConsoleState }) {
 
       {/* ── ガチャごと ── */}
       <Card title="ガチャごとの成績" note="売上ではなく、粗利の順に並べています。">
-        <Table head={["ガチャ", "状態", "売上", "粗利", "粗利率", "実還元率"]}>
+        <Table head={["ガチャ", "状態", "売上", "粗利", "粗利率", "残数還元率"]}>
           {[...s.gachas]
             .filter((g) => g.revenue > 0)
             .sort((a, b) => b.profit - a.profit)
@@ -157,7 +171,7 @@ export default function AnalyticsScreen({ s }: { s: ConsoleState }) {
                 <div className="mt-2 border-t border-edge pt-2">
                   <KV k="売上" v={<span className="num">{g.revenue.toLocaleString()}円</span>} />
                   <KV k="粗利" v={<span className="num">{g.profit.toLocaleString()}円</span>} />
-                  <KV k="実還元率" v={<span className="num">{g.realRtp.toFixed(1)}%</span>} />
+                  <KV k="残数還元率" v={<span className="num">{g.realRtp.toFixed(1)}%</span>} />
                 </div>
               </RowCard>
             ))}

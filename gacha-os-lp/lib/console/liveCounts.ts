@@ -21,6 +21,15 @@
 
 import { useEffect, useState } from "react";
 
+/** 還元率が危ないガチャ1本ぶん */
+export type RtpAlertSummary = {
+  gachaId: string;
+  title: string;
+  level: "WARN" | "DANGER" | "INFO" | "OK";
+  message: string;
+  advice?: string;
+};
+
 export type LiveCounts = {
   unshippedShipments: number;
   unassignedItems: number;
@@ -28,6 +37,14 @@ export type LiveCounts = {
   ordersPending: number;
   ordersUnpaid: number;
   ordersToday: number;
+
+  /**
+   * 還元率が危ない・注意のガチャ。
+   *
+   * ★見る権限が無いときは null にすること。空配列にしないこと。
+   *   空配列は「異常なし」と読めます。「見ていない」とは別物です。
+   */
+  rtpAlerts: RtpAlertSummary[] | null;
 };
 
 export type LiveCountsState =
@@ -82,6 +99,9 @@ export function useLiveCounts(on = true): LiveCountsState {
             ordersPending: Number(data.ordersPending ?? 0),
             ordersUnpaid: Number(data.ordersUnpaid ?? 0),
             ordersToday: Number(data.ordersToday ?? 0),
+            /* ★?? [] にしないこと。null（見る権限が無い）を
+                 空っぽ（異常なし）に化けさせてしまいます */
+            rtpAlerts: Array.isArray(data.rtpAlerts) ? data.rtpAlerts : null,
           },
         });
       } catch {
@@ -135,6 +155,32 @@ export function liveTodos(state: LiveCountsState): LiveTodo[] {
   if (state.phase !== "ok") return [];
   const c = state.counts;
   const out: LiveTodo[] = [];
+
+  /**
+   * 還元率の異常は、いちばん上に出す。
+   *
+   * ★なぜ、発送や支払より先なのか。
+   *   発送が1日遅れても、遅れただけです。あとから取り返せます。
+   *   還元率がずれたまま売り続けると、
+   *   お客様への還元が約束より少ないまま、売れた数だけ被害が増えます。
+   *   これは、あとから取り返せません。
+   *
+   *   2026-08-26 に見つかった 88％→18.23％ は、
+   *   500回ぶん売れきってから気づきました。
+   *   1回目で気づける場所を、ここに作ります。
+   *
+   * ★INFO（データ不足）は出さないこと。
+   *   毎日出る用件は、読まれなくなります。
+   */
+  for (const a of c.rtpAlerts ?? []) {
+    if (a.level !== "DANGER" && a.level !== "WARN") continue;
+    out.push({
+      urgency: a.level === "DANGER" ? "MUST" : "SHOULD",
+      label: `還元率の異常：${a.title}`,
+      count: 1,
+      to: "rtp",
+    });
+  }
 
   /* 支払の確認は、待たせるほど「入金したのに届かない」の問い合わせになります */
   if (c.ordersUnpaid > 0) {

@@ -12,6 +12,7 @@ import CustomerPlay from "@/components/sections/CustomerPlay";
 import RoleFlow from "@/components/sections/RoleFlow";
 import Problems from "@/components/sections/Problems";
 import Diagnose from "@/components/sections/Diagnose";
+import ActualRtp from "@/components/sections/ActualRtp";
 import RtpMonitor from "@/components/sections/RtpMonitor";
 import PriceShock from "@/components/sections/PriceShock";
 import Backtest from "@/components/sections/Backtest";
@@ -184,7 +185,7 @@ export default function Home() {
           ══════════════════════════════════════════
 
             前は、金額と始め方を見たあとに
-              診断 → 実還元率の監視 → 相場の急騰 → 信号機 →
+              診断 → 残数還元率の監視 → 相場の急騰 → 信号機 →
               RUSH → 発送 → AI問い合わせ → 管理画面
             が、そのまま画面に出ていました。8つです。
 
@@ -214,10 +215,26 @@ export default function Home() {
         <DetailBlock
           label="販売中に、システムが何を見張っているのかを見る"
           note={jp(
-            "実還元率・相場の急騰・信号機の判定と、RUSH演出の考え方まで。赤字を先に見つけるための仕組みです。",
+            "設計・残数・実績の3つの還元率、相場の急騰、信号機の判定と、RUSH演出の考え方まで。赤字を先に見つけるための仕組みです。",
           )}
-          ids={["rtp", "shock", "price", "signals", "rush"]}
+          ids={["actual-rtp", "rtp", "shock", "price", "signals", "rush"]}
         >
+          {/*
+            ★ActualRtp を RtpMonitor より前に置いていること（2026-08-26）。
+
+              RtpMonitor が見せているのは「これから」の数字
+              （設計・残数・市場価格ベース）です。
+              ActualRtp が見せるのは「すでに起きたこと」です。
+
+              2026-08-26、管理画面に 設計 88.0％ と出ているのに、
+              実際にお客様へ返っていたのは 18.23％ でした。
+              記録は最初からあったのに、それを見る画面が無かったので
+              誰も気づけませんでした。
+
+              「予定の数字だけを信じないでください」を先に言ってから、
+              予定の数字の話をします。順番を入れ替えないこと。
+          */}
+          <ActualRtp />
           <RtpMonitor />
           <PriceShock />
           {/* 緑・黄・赤・UNKNOWN。分からないものを「安全」とは表示しない */}

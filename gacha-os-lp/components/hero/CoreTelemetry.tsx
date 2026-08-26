@@ -26,7 +26,7 @@ const STEPS: Step[] = [
   { code: "TARGET RTP", ja: "目標還元率", value: "93.2%", tone: "blue" },
   { code: "BACKTEST", ja: "公開前に試す", value: "200通り", tone: "blue" },
   { code: "MARKET", ja: "景品が高騰したら", value: "+25%", tone: "warn" },
-  { code: "REAL RTP", ja: "そのときの実還元率", value: "112.4%", tone: "danger" },
+  { code: "REAL RTP", ja: "そのときの残数還元率", value: "112.4%", tone: "danger" },
   { code: "STOP ALERT", ja: "公開前に気づける", value: "赤字", tone: "danger" },
   { code: "APPROVE", ja: "直して承認", value: "SAFE", tone: "ok" },
   { code: "LIVE", ja: "販売開始", value: "公開中", tone: "ok" },

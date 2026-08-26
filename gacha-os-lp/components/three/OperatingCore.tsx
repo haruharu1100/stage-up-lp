@@ -30,7 +30,7 @@ export const CORE_MODULES: CoreModule[] = [
   { id: "gacha", label: "AI GACHA", ja: "ガチャ設計", color: "#2563EB" },
   { id: "price", label: "PRICE", ja: "市場価格", color: "#0891B2" },
   { id: "backtest", label: "BACKTEST", ja: "事前検証", color: "#4F46E5" },
-  { id: "rtp", label: "REAL RTP", ja: "実還元率", color: "#0284C7" },
+  { id: "rtp", label: "REAL RTP", ja: "残数還元率", color: "#0284C7" },
   { id: "shipping", label: "SHIPPING", ja: "発送", color: "#0D9488" },
   { id: "support", label: "SUPPORT", ja: "問い合わせ", color: "#7C3AED" },
 ];

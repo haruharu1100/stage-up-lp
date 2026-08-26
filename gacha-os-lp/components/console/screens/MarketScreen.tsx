@@ -20,7 +20,7 @@
 
 "use client";
 
-import { Badge, Card, DemoNote, KV, RowCard, Rows, Stat, Table, Td, WhatIsThis } from "../ui";
+import { Badge, Card, DemoNote, KV, NotConnected, RowCard, Rows, Stat, Table, Td, WhatIsThis } from "../ui";
 /* ★一覧をここに書き戻さないこと。
      ダッシュボードも同じ一覧を見ています。
      ここに別の一覧を置くと、2つの画面が違うことを言い始めます。 */
@@ -38,6 +38,12 @@ export default function MarketScreen() {
 
   return (
     <>
+      {/* ★ここを下へ動かさないこと。数字より先に言わないと、意味がありません */}
+      <NotConnected what="相場の取り込み（相場元のサービスに未接続）">
+        実際にお使いいただくときは、ご指定の相場元から1時間ごとに自動で取り込みます。
+        いまは、その取り込みが つながっていない状態です。
+      </NotConnected>
+
       <WhatIsThis>
         景品の仕入れ値が、作ったときからどれだけ動いたかを見ます。
         <strong className="font-bold text-slate">値上がりは、ガチャを1つも変えなくても還元率を押し上げます。</strong>

@@ -37,6 +37,29 @@ import { SECURITY_EVENT_LABEL } from "@/lib/console/state";
 import { verifyAudit, type VerifyResult } from "@/lib/console/audit";
 import { Badge, Btn, Card, DemoNote, KV, RowCard, Rows, Stat, Table, Td, WhatIsThis } from "../ui";
 
+/**
+ * サーバーに本当に残っている記録の、検証結果。
+ *
+ * ★下の「試してみる（デモ専用）」と、混ぜないこと。
+ *   あちらは、この画面の中で作った見本を確かめています。
+ *   こちらは、サーバーの audit_events を1件目から計算し直します。
+ *   見た目が似ているので、必ず別のカードに分けて、
+ *   どちらを見ているのかを、書いておきます。
+ */
+type ServerVerify =
+  | { phase: "idle" }
+  | { phase: "loading" }
+  | {
+      phase: "done";
+      verified: boolean;
+      checked: number;
+      brokenAt: number | null;
+      detail: string | null;
+      checkedAt: string;
+    }
+  /** ★「調べられなかった」を「問題なし」と混同しないための状態 */
+  | { phase: "error"; why: string };
+
 export default function SecurityCenter({
   s,
   dispatch,
@@ -45,6 +68,36 @@ export default function SecurityCenter({
   dispatch: React.Dispatch<ConsoleAction>;
 }) {
   const [result, setResult] = useState<VerifyResult | null>(null);
+  const [sv, setSv] = useState<ServerVerify>({ phase: "idle" });
+
+  /**
+   * サーバーの記録を、サーバー側で計算し直してもらう。
+   *
+   * ★ここをブラウザで計算しないこと。
+   *   記録を全部ブラウザへ送ることになります。
+   *   監査ログには「誰が・いつ・何を」が全部入っています。
+   */
+  async function serverVerify() {
+    setSv({ phase: "loading" });
+    try {
+      const res = await fetch("/api/console/audit/verify", { cache: "no-store" });
+      if (!res.ok) {
+        setSv({ phase: "error", why: `サーバーが ${res.status} を返しました` });
+        return;
+      }
+      const d = await res.json();
+      setSv({
+        phase: "done",
+        verified: Boolean(d.verified),
+        checked: Number(d.checked ?? 0),
+        brokenAt: d.brokenAt == null ? null : Number(d.brokenAt),
+        detail: d.detail == null ? null : String(d.detail),
+        checkedAt: String(d.checkedAt ?? ""),
+      });
+    } catch (e) {
+      setSv({ phase: "error", why: e instanceof Error ? e.message : "つながりません" });
+    }
+  }
 
   return (
     <>
@@ -56,10 +109,68 @@ export default function SecurityCenter({
       {/* ── 止めた操作 ── */}
       <BlockedList events={s.securityEvents} />
 
-      {/* ── 監査ログの検証 ── */}
+      {/* ══════════════════════════════════════════════
+          ★本物の記録の検証（サーバーの audit_events）
+          ══════════════════════════════════════════════ */}
       <Card
-        title="監査ログの検証（AUDIT VERIFY）"
-        note="保存されている値を信じず、最初の1件から計算し直して突き合わせます。"
+        title="サーバーに残っている記録の検証（本番と同じ）"
+        note="この会社の記録を、1件目から計算し直して突き合わせます。画面の中の見本ではありません。"
+      >
+        <div className="flex flex-wrap gap-2">
+          <Btn kind="primary" onClick={serverVerify} disabled={sv.phase === "loading"}>
+            {sv.phase === "loading" ? "確かめています…" : "サーバーの記録を検証する"}
+          </Btn>
+        </div>
+
+        {sv.phase === "done" && (
+          <div
+            className={`mt-4 rounded-xl border px-4 py-4 ${
+              sv.verified ? "border-ok/30 bg-ok/10" : "border-danger/30 bg-danger/10"
+            }`}
+          >
+            {sv.verified ? (
+              <>
+                <Badge tone="ok">PASS ／ 書き換えは見つかりませんでした</Badge>
+                <p className="mt-2 text-note leading-[1.9] text-ok-ink">
+                  サーバーに残っている
+                  <span className="num font-bold"> {sv.checked.toLocaleString()}件 </span>
+                  すべてについて、記録された当時の内容から計算し直した値と、
+                  保存されている値が一致しました。
+                </p>
+              </>
+            ) : (
+              <>
+                <Badge tone="danger">TAMPER DETECTED ／ 書き換えを検知しました</Badge>
+                <p className="mt-2 text-note font-bold leading-[1.9] text-danger-ink">
+                  {sv.detail}
+                </p>
+                <p className="mt-2 text-note leading-[1.9] text-danger-ink/85">
+                  {sv.brokenAt}番目より前の {sv.checked.toLocaleString()}件は、
+                  記録された当時のままです。
+                </p>
+              </>
+            )}
+          </div>
+        )}
+
+        {/* ★「調べられなかった」を、緑で出さないこと */}
+        {sv.phase === "error" && (
+          <div className="mt-4 rounded-xl border border-warn/30 bg-warn/10 px-4 py-4">
+            <Badge tone="warn">確かめられませんでした</Badge>
+            <p className="mt-2 text-note leading-[1.9] text-warn-ink">
+              {sv.why}
+              <br />
+              ★これは「問題なし」ではありません。「分からない」です。
+              もう一度お試しいただき、それでも同じなら、ご連絡ください。
+            </p>
+          </div>
+        )}
+      </Card>
+
+      {/* ── 監査ログの検証（この画面の中の見本） ── */}
+      <Card
+        title="監査ログの検証（この画面の中の見本／デモ専用）"
+        note="上のカードとは別のものを見ています。ここは、書き換えを試せるようにした見本です。"
       >
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
           <Stat label="記録の件数" value={s.audit.length} unit="件" />

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import { deliveryPeriod } from "@/content/site";
 
 export const metadata: Metadata = {
   title: "送信しました | AI GACHA OS",
@@ -28,6 +29,18 @@ export default function ContactThanks() {
           内容を確認のうえ、担当者からご連絡します。
           お急ぎの場合は、その旨をメールでお知らせください。
         </p>
+        {/* ★納品の目安（必須表示）。
+               問い合わせた直後の人が、いちばん「いつ使えるのか」を知りたがります。
+               LP と同じ文言を deliveryPeriod から出すこと。
+               label と note は必ずセットで（景品表示法）。 */}
+        <div className="mt-6 rounded-xl border border-white/10 bg-white/[0.03] p-5 text-left">
+          <p className="text-[13px] font-bold text-white/90">
+            {deliveryPeriod.label}
+          </p>
+          <p className="mt-2 text-[12px] leading-[1.9] text-mute">
+            {deliveryPeriod.note}
+          </p>
+        </div>
         <div className="mt-8 flex flex-col gap-2.5 sm:flex-row sm:justify-center">
           <Link href="/" className="btn btn-primary">
             サイトへ戻る

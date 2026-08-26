@@ -87,3 +87,4 @@ logs/
 .tmp/
 tmp/
 .DS_Store
+.env*

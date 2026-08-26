@@ -607,7 +607,9 @@ function Screen({
       case "products":
         return <ProductsScreen />;
       case "rtp":
-        return <RtpScreen s={s} dispatch={dispatch} />;
+        /* ★見本データではなく、サーバーの抽選記録から計算します。
+             だから、この画面はデモの状態（s）を受け取りません。 */
+        return <RtpScreen />;
       case "market":
         return <MarketScreen />;
       case "analytics":

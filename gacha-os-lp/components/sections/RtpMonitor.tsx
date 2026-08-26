@@ -75,7 +75,7 @@ function Gauge({
       {/*
         ★横に並べたまま固定しないこと。
           768px ではカードが219pxしかなく、
-          「市場価格ベース実還元率」＋「87.8%」は横に並びません。
+          「市場価格ベース残数還元率」＋「87.8%」は横に並びません。
           並べたままだと数字が枠の外へ80px以上はみ出して読めなくなります
           （実際にそうなっていた）。
           入りきらないときは、数字を次の行に落とします。
@@ -144,7 +144,7 @@ export default function RtpMonitor() {
         <>
           {jp("設定した還元率ではなく、")}
           <br />
-          <span className="text-gradient-royal">{jp("いまの実還元率")}</span>
+          <span className="text-gradient-royal">{jp("いまの残数還元率")}</span>
           {jp("を見る。")}
         </>
       }
@@ -176,9 +176,9 @@ export default function RtpMonitor() {
                   {worst >= 115
                     ? "緊急警告：ただちに販売停止を検討してください"
                     : worst >= 110
-                      ? "赤警告：実還元率が110%を超えています"
+                      ? "赤警告：残数還元率が110%を超えています"
                       : worst >= 105
-                        ? "黄色警告：実還元率が105%を超えています"
+                        ? "黄色警告：残数還元率が105%を超えています"
                         : "正常：しきい値の範囲内です"}
                 </p>
                 <p className="num mt-2 text-note text-slate2 sm:mt-3">
@@ -200,18 +200,18 @@ export default function RtpMonitor() {
 
           <div className="grid gap-3 sm:grid-cols-3 sm:gap-4">
             <Gauge
-              label={jp("設定時還元率")}
+              label={jp("設計還元率")}
               sub="DESIGNED"
               value={state.designed}
             />
             <Gauge
-              label={jp("残数ベース還元率")}
+              label={jp("残数還元率")}
               sub="REMAINING BASED"
               value={state.remaining}
               emphasize
             />
             <Gauge
-              label={jp("市場価格ベース実還元率")}
+              label={jp("市場価格ベース残数還元率")}
               sub="MARKET BASED"
               value={state.market}
               emphasize

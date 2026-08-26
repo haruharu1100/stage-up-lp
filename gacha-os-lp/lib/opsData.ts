@@ -29,7 +29,7 @@ export type CloseReason =
 
 /** 停止の引き金 */
 export type StopTrigger =
-  | "実還元率の超過"
+  | "残数還元率の超過"
   | "相場の高騰"
   | "在庫・仕入れの都合"
   | "不具合・問い合わせ"
@@ -49,7 +49,7 @@ export type GachaRecord = {
   /** 総口数 */
   totalSlots: number;
 
-  /** 設定時還元率（％）＝ 公開前に設計した数値 */
+  /** 設計還元率（％）＝ 公開前に設計した数値 */
   designedRtp: number;
 
   publishedAt: string | null;
@@ -101,12 +101,12 @@ export type BacktestSnapshot = {
   predictedLossRate: number;
   /** 予測した利益（円）＝ 通常シナリオの中央値 */
   predictedProfit: number;
-  /** 予測した実還元率（％）＝ 通常シナリオの中央値 */
+  /** 予測した残数還元率（％）＝ 通常シナリオの中央値 */
   predictedRtp: number;
   /** 悪い方から5%の予測利益（円）。「最悪これくらい」の目安 */
   predictedProfitP95Loss: number;
 
-  /** いちばん悪いシナリオの実還元率（％） */
+  /** いちばん悪いシナリオの残数還元率（％） */
   worstScenarioRtp: number;
   /** シナリオ別の判定（key → 判定） */
   byScenario: Record<
@@ -137,9 +137,9 @@ export type GachaOutcome = {
   /** 利益（円）＝ 売上 − 景品 */
   profit: number;
 
-  /** 実還元率の最大値（％） */
+  /** 残数還元率の最大値（％） */
   realRtpMax: number;
-  /** 終了時点の実還元率（％） */
+  /** 終了時点の残数還元率（％） */
   realRtpFinal: number;
 
   /** 完売までにかかった日数（完売しなかったら null） */
@@ -158,7 +158,7 @@ export type GachaOutcome = {
 
 /* ────────────────────────────────
    4. 1日ごとの記録（子）
-   販売速度・実還元率の推移を見るための時系列
+   販売速度・残数還元率の推移を見るための時系列
    ──────────────────────────────── */
 export type GachaDailyRecord = {
   gachaId: string;
@@ -177,7 +177,7 @@ export type GachaDailyRecord = {
 
   /** その日の終わりに残っている景品の価値（円） */
   remainingValue: number;
-  /** その日の終わりの実還元率（％） */
+  /** その日の終わりの残数還元率（％） */
   realRtp: number;
 
   /** その日の問い合わせ件数 */
@@ -218,7 +218,7 @@ export type StopDecisionRecord = {
   /** 自動停止か、人の判断か */
   kind: "自動" | "手動";
   trigger: StopTrigger;
-  /** 判断した時点の実還元率（％） */
+  /** 判断した時点の残数還元率（％） */
   rtpAtDecision: number;
   /** 判断した時点の消化率（％） */
   soldPctAtDecision: number;
@@ -251,9 +251,9 @@ export type BacktestAccuracy = {
   missDirection: "一致" | "厳しすぎ" | "甘すぎ";
 
   /* ── 数字の答え合わせ ── */
-  /** 予測した実還元率（％） */
+  /** 予測した残数還元率（％） */
   predictedRtp: number;
-  /** 実際の実還元率の最大値（％） */
+  /** 実際の残数還元率の最大値（％） */
   actualRtp: number;
   /** 予測と実績の差（％ポイント）。プラスなら実績のほうが悪かった */
   rtpGap: number;
@@ -310,7 +310,7 @@ export type AccuracyBucket = {
   /** 甘すぎた割合（0〜1）。ここが高い区分がいちばん危ない */
   tooLooseRate: number;
 
-  /** 実還元率のズレの平均（％ポイント）。プラスなら実績のほうが悪い */
+  /** 残数還元率のズレの平均（％ポイント）。プラスなら実績のほうが悪い */
   avgRtpGap: number;
   /** 利益のズレの平均（円）。マイナスなら実績のほうが悪い */
   avgProfitGap: number;

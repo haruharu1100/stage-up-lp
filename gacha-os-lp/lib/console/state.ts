@@ -808,7 +808,7 @@ export const PREVIEW_USER_ID = "GD-0001";
  *   「いま売っている」と誤解される可能性があり、権利の問題も出ます。
  *
  * ★数字は、オンラインガチャの実際の水準に収めること。
- *   実還元率が 90〜105% から外れた数字を出すと、
+ *   残数還元率が 90〜105% から外れた数字を出すと、
  *   「この会社は相場を知らない」と読まれます。
  */
 export const DEMO_ADMINS: Admin[] = [
@@ -2114,7 +2114,7 @@ function core(s: ConsoleState, a: ConsoleAction): Draft {
             : verdict === "CAUTION"
               ? {
                   kind: "warn",
-                  text: `「${g.title}」は【設計】CAUTION です。公開はできますが、実還元率モニタを毎日見てください。`,
+                  text: `「${g.title}」は【設計】CAUTION です。公開はできますが、実績還元率モニタを毎日見てください。`,
                 }
               : {
                   kind: "ok",
@@ -2361,7 +2361,7 @@ function core(s: ConsoleState, a: ConsoleAction): Draft {
      *     ・残り口数が1つ減る
      *     ・等級ごとの在庫が1本減る
      *     ・売上と粗利が動く
-     *     ・実還元率が変わる
+     *     ・実績還元率が変わる
      *     ・当たった方には発送依頼ができる
      *     ・抽選の記録が1件残る
      *
@@ -2423,8 +2423,8 @@ function core(s: ConsoleState, a: ConsoleAction): Draft {
         nth,
       );
 
-      /* 実還元率を計算し直す。
-         いままでにお返しした金額 ＝ これまでの売上 × これまでの実還元率 */
+      /* 実績還元率を計算し直す。
+         いままでにお返しした金額 ＝ これまでの売上 × これまでの実績還元率 */
       const paidBefore = g.revenue * (g.realRtp / 100);
       const revenueAfter = g.revenue + g.price;
       const paidAfter = paidBefore + out.value;

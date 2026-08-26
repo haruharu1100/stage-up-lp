@@ -6,6 +6,7 @@ import {
   timeModel,
   timeModelNote,
   tourSteps,
+  deliveryPeriod,
   type PricePlan,
 } from "@/content/site";
 import {
@@ -304,6 +305,18 @@ export default function SalesPage() {
                 },
               ]}
             />
+          </div>
+          {/* ★納品の目安（必須表示）。
+                 営業資料でも、LP と同じ言い方に必ずそろえること。
+                 資料だけ違う日数になっていると、商談の場で食い違いが起きます。
+                 label と note は必ずセットで出すこと（景品表示法）。 */}
+          <div className="mt-6 rounded-xl border border-white/12 bg-white/[0.03] p-5">
+            <p className="text-[13px] font-bold text-white/90">
+              {deliveryPeriod.label}
+            </p>
+            <p className="mt-2 text-[11px] leading-[1.9] text-white/55">
+              {deliveryPeriod.note}
+            </p>
           </div>
           <p className="mt-4 text-[11px] leading-[1.9] text-white/55">
             ※ 表示は税別・目安金額です。要件・移行の有無・演出の量・件数によって変動します。決済手数料・AWS利用料・ドメイン費用は別途実費です。

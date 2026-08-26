@@ -25,7 +25,7 @@ import CustomerPlay from "@/components/sections/CustomerPlay";
 export const metadata: Metadata = {
   title: "無料デモ",
   description:
-    "AI GACHA OS のデモです。運営者側（ガチャ設計・公開前バックテスト・実還元率モニタ・発送管理）と、お客様側（ガチャを引く・当選・発送依頼）の両方をそのまま操作できます。",
+    "AI GACHA OS のデモです。運営者側（ガチャ設計・公開前バックテスト・実績還元率モニタ・発送管理）と、お客様側（ガチャを引く・当選・発送依頼）の両方をそのまま操作できます。",
   robots: { index: false, follow: true },
 };
 

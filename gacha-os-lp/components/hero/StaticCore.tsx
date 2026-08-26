@@ -12,7 +12,7 @@ const MODULES = [
   { label: "AI GACHA", ja: "ガチャ設計", color: "#2563EB" },
   { label: "PRICE", ja: "市場価格", color: "#0891B2" },
   { label: "BACKTEST", ja: "事前検証", color: "#4F46E5" },
-  { label: "REAL RTP", ja: "実還元率", color: "#0284C7" },
+  { label: "REAL RTP", ja: "残数還元率", color: "#0284C7" },
   { label: "SHIPPING", ja: "発送", color: "#0D9488" },
   { label: "SUPPORT", ja: "問い合わせ", color: "#7C3AED" },
 ];

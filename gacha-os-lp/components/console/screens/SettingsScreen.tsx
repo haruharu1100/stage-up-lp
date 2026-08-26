@@ -39,6 +39,7 @@ import {
 } from "@/lib/console/state";
 import { Badge, Card, DemoNote, Field, KV, RowCard, Rows, Table, Td, WhatIsThis, inputClass } from "../ui";
 import TempPasswordPanel from "../TempPasswordPanel";
+import AdminsPanel from "../AdminsPanel";
 
 /** 実装状況の3区分 */
 type Ready = "AVAILABLE" | "OPTION" | "PLANNED";
@@ -154,40 +155,27 @@ export default function SettingsScreen({
           <Row ready="OPTION" label="パスワードを使わないログイン" note="ハードウェアキー方式。ご要望に応じて構成します。" />
         </ul>
 
-        <div className="mt-5">
-          <p className="text-note font-bold text-slate2">いまの管理者</p>
-          <Table head={["名前", "役割", "2段階認証", "最終ログイン"]}>
-            {s.admins.map((a) => (
-              <tr key={a.id}>
-                <Td className="font-bold text-slate">{a.name}</Td>
-                <Td>{ROLE_LABEL[a.role]}</Td>
-                <Td>
-                  <Badge tone={a.mfaEnabled ? "ok" : "warn"}>
-                    {a.mfaEnabled ? "設定済み" : "未設定"}
-                  </Badge>
-                </Td>
-                <Td className="num whitespace-nowrap">{a.lastLogin}</Td>
-              </tr>
-            ))}
-          </Table>
-          <Rows>
-            {s.admins.map((a) => (
-              <RowCard key={a.id}>
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <span className="text-note font-bold text-slate">{a.name}</span>
-                  <Badge tone={a.mfaEnabled ? "ok" : "warn"}>
-                    {a.mfaEnabled ? "2段階認証あり" : "2段階認証なし"}
-                  </Badge>
-                </div>
-                <div className="mt-2 border-t border-edge pt-2">
-                  <KV k="役割" v={ROLE_LABEL[a.role]} />
-                  <KV k="最終ログイン" v={<span className="num">{a.lastLogin}</span>} />
-                </div>
-              </RowCard>
-            ))}
-          </Rows>
-        </div>
+        {/*
+          ★ここに「いまの管理者」の表を、もう一度書かないこと。
+            以前ここには、見本データの管理者一覧が並んでいました。
+            すぐ下の「担当者の管理」は本物のデータなので、
+            2つ並ぶと、どちらが本当か分からなくなります。
+            人数が違って見えた日に、運営の方は必ず混乱します。
+            本物の一覧は1か所だけにします。
+        */}
       </Card>
+
+      {/*
+        ── 担当者の管理（権限変更・利用停止） ──
+
+        ★退職者を止める入口です。
+          仕組みは前から動いていましたが、押す場所がありませんでした。
+          押す場所が無いと、アカウントは放置されます。
+
+        ★settings.edit を持つ人にだけ出すこと。
+          この画面に入れる人は、自分以外の権限を変えられます。
+      */}
+      {mayEdit && <AdminsPanel />}
 
       {/*
         ── 仮パスワードの再発行 ──
