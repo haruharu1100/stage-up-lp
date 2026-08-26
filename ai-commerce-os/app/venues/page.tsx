@@ -11,9 +11,11 @@ import {
   type UsageVerdict,
 } from '@/lib/venuepermissions';
 import {
+  GATE_DISPLAY_STATE_JA,
   SUPPLIER_GATE_WAY_JA,
   firstLiveSupplier,
   supplierGateBoard,
+  type GateDisplayState,
 } from '@/lib/phase6/legalgate';
 import { num, pct } from '@/lib/format';
 
@@ -30,6 +32,16 @@ const CONNECTOR_JA: Record<string, string> = {
 function TermsBadge({ status }: { status: string }) {
   const cls = status === 'VERIFIED' ? 'badge strong' : status === 'BLOCKED' ? 'badge skip' : 'badge est';
   return <span className={cls}>{TERMS_STATUS_JA[status] ?? status}</span>;
+}
+
+/**
+ * 仕入先の門の状態は5つだけ表示する（回答待ち／人間確認待ち／条件付き／不可／通過）。
+ * 「通過」以外はすべて接続禁止。条件付きも、条件を満たしきるまでは通過にしない。
+ */
+function GateStateBadge({ state }: { state: GateDisplayState }) {
+  const cls =
+    state === 'PASSED' ? 'badge strong' : state === 'CONDITIONAL' ? 'badge est' : 'badge skip';
+  return <span className={cls}>{GATE_DISPLAY_STATE_JA[state]}</span>;
 }
 
 /** 日付は「いつ確認したか」だけ分かればよい。時刻まで出すと表が読みにくくなる。 */
@@ -139,9 +151,7 @@ export default async function VenuesPage() {
                 <td className="small">{num(s.no)}</td>
                 <td className="small">{num(s.unknown)}</td>
                 <td>
-                  <span className={s.gate === 'ALLOWED' ? 'badge strong' : 'badge skip'}>
-                    {s.gate === 'ALLOWED' ? '通過' : '止めている'}
-                  </span>
+                  <GateStateBadge state={s.display} />
                 </td>
                 <td className="small muted">{s.waiting.docJa}</td>
               </tr>

@@ -8,10 +8,11 @@
    - 06_商品大量生成とパイプライン / 07_価格戦略設計 / 08_仕入先ネットワークと勝ち筋拡張
    - 09_Phase1実装記録 / 10_Phase2実装記録 / 11_Phase3実装記録 / 12_Phase3.5実装記録
      / 13_Phase3.6実装記録 / 14_Phase3.7実装記録 / 15_Phase3.8実装記録
-   - **32_問い合わせ文案_YahooとRakuten / 35_orosy規約チェックリスト_人間確認用**
+   - **36_LegalGate回答記録 / 32_問い合わせ文案_YahooとRakuten / 35_orosy規約チェックリスト_人間確認用**
      （**いまの最前線。2026-08-26 にユーザー指示で新規コード開発は停止し、法務Gate突破に一本化した。
+     36 = 回答・規約確認の唯一の台帳。回答が届いたら必ずここへ追記する（確認日／出典／原文／判定／条件／Gate結果／次のAction）。
      32 = NETSEA（必須8問・最終版）／バリューコマース（最終版）／Yahoo!／楽天の4通。送信は人間。
-     35 = orosy は問い合わせではなく、人がブラウザで規約を読んで13項目に YES/NO/UNKNOWN を入れる。
+     35 = orosy は問い合わせではなく、人がブラウザで規約を読んで13項目に YES/NO/CONDITIONAL/UNKNOWN を入れる。
      突破の順番は NETSEA → バリューコマース → orosy → Yahoo! → 楽天。
      ★ただし順番では決めない。最初に Gate を完全通過した仕入先が `FIRST_LIVE_SUPPLIER`**）
    - **34_Phase6.5_Source分類の修正とTOP5二本立て / 33_Phase6.5_候補の採点とTOP5 / 31_Phase6.5_仕入データ源の探索_採点基準**
@@ -102,6 +103,24 @@
 > - **未回答は UNKNOWN として数える**（無返信を許可の根拠にしない・ルール58）
 > - NETSEA の **Q6（Amazon販売可否）は全体で一括YESにしない**。個別確認が必要なら商品ごとの
 >   `product_marketplace_policy` を人が埋めるまで Amazon Route へ流さない（`POLICY_REVIEW_REQUIRED`）
+
+### 回答待ちフェーズの運用ルール10ヶ条（ユーザー指示 2026-08-26・以後のセッションでも守る）
+
+`LEGAL_GATE_WAITING_PHASE = true` / `NEW_FEATURE_DEVELOPMENT_PAUSED = true`（`lib/phase6/legalgate.ts`）。
+
+1. **orosy は人間が入れた結果だけを取り込む。** AIが規約を補完しない。「書いていないから可」と判断しない（ルール58）。13項目すべてを `YES` / `NO` / `CONDITIONAL` / `UNKNOWN` へ正規化する（`normalizeAnswerInput()` / `OROSY_CHECKLIST_KEYS`）。4つ以外の言葉はすべて `UNKNOWN`。
+2. **回答を貼られたら6ステップ。** ①原文を保存 ②質問ごとに4分類 ③条件付きなら条件原文も保存 ④Legal Gate を再計算 ⑤Connector候補順位を更新 ⑥`36_LegalGate回答記録.md` へ記録。
+3. **回答メールを都合よく解釈しない。** 「原則可能ですが、事前承認が必要です」は `YES` ではなく **`CONDITIONAL`**。事前承認が終わるまで `LEGAL_GATE = BLOCKED` を維持する。
+4. **`FIRST_LIVE_SUPPLIER` の最低条件は7つ**（`FIRST_LIVE_SUPPLIER_MIN_CONDITIONS` / `canPromoteToFirstLiveSupplier()`）：`COMMERCIAL_USE` / `INTERNAL_USE` / `AUTOMATED_RETRIEVAL` / `DATA_STORAGE` / `PRICE_COMPARISON` / `PURCHASABLE` がすべて `YES`、かつ `AMAZON_RESALE` が `YES` または商品単位で機械確認可能。**重要条件が UNKNOWN なら通過禁止。CONDITIONAL は可として数えない。**
+5. **Supplier と Discovery Source を混ぜない。** バリューコマース等は Gate を通過しても `MARKET_INTELLIGENCE` として接続し、**`FIRST_LIVE_SUPPLIER` にはしない**。
+6. **通過後も段階的に。** `FIRST_LIVE_SUPPLIER` が決まった場合のみ再開し、**1商品 → 停止 → 人間確認 → 5商品 → 停止 → 10商品 → 停止 → 47商品**。いきなり全件検索は禁止。
+7. **最初の1商品で確認する12項目**：Supplier検索成功／商品一致／仕入価格／送料／在庫／Amazon販売可否／Amazon想定販売価格／Amazon手数料／保守純利益／保守ROI／MAX BUY PRICE／正式商品URL。**実購入はしない。**
+8. **コード変更は最小限。** 回答待ち中に Sellability Model 改良・新Score追加・新市場Connector追加・自動購入・自動出品へ進まない。最大のボトルネックは Legal Gate。
+9. **ダッシュボードは5状態だけ更新。** `回答待ち` / `人間確認待ち` / `CONDITIONAL` / `BLOCKED` / `PASSED`（`GATE_DISPLAY_STATES`・`/venues`）。
+10. **記録は毎回。** 回答・規約確認ごとに 確認日／出典／原文／判定／条件／Legal Gate結果／次のAction を `36_LegalGate回答記録.md` に保存する。
+
+> **いまは「許可を取ること」が最優先であり、コードを書くことではない。**
+> 候補数を増やすより、**1社だけでも完全に合法・正式に自動接続できる仕入先を確定する**ことが最優先。
 
 **（以下は Phase 6.5 SUPPLIER DATA SOURCE DISCOVERY の調査結果。分類修正済み 2026-08-26。）**
 

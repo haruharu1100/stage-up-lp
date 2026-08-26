@@ -1012,6 +1012,24 @@ export const SUPPLIER_GATE_WAITING: SupplierGateWaiting[] = [
   },
 ];
 
+/** 画面に出す5状態。BLOCKED を細かく分けて、次に誰が動くのかを分かるようにする。 */
+export const GATE_DISPLAY_STATES = [
+  'WAITING_ANSWER',
+  'WAITING_HUMAN_CHECK',
+  'CONDITIONAL',
+  'BLOCKED',
+  'PASSED',
+] as const;
+export type GateDisplayState = (typeof GATE_DISPLAY_STATES)[number];
+
+export const GATE_DISPLAY_STATE_JA: Record<GateDisplayState, string> = {
+  WAITING_ANSWER: '回答待ち',
+  WAITING_HUMAN_CHECK: '人間確認待ち',
+  CONDITIONAL: '条件付き',
+  BLOCKED: '不可',
+  PASSED: '通過',
+};
+
 export type SupplierGateStatus = {
   waiting: SupplierGateWaiting;
   answered: number;
@@ -1021,12 +1039,16 @@ export type SupplierGateStatus = {
   unknown: number;
   /** ALLOWED になるのは、必要な質問がすべて可（条件付きなら条件を実装済み）になったときだけ。 */
   gate: LegalUsageGate;
+  display: GateDisplayState;
   statusJa: string;
 };
 
 /**
  * 待ち状況を1件ぶん集計する。
  * 未回答は UNKNOWN として数える（無返信を許可の根拠にしない・ルール58）。
+ *
+ * ★「原則可能ですが事前承認が必要です」は YES ではなく CONDITIONAL。
+ *   承認が終わるまで LEGAL_GATE = BLOCKED を保つ（ユーザー指示 2026-08-26）。
  */
 export function supplierGateStatus(w: SupplierGateWaiting): SupplierGateStatus {
   const eff = w.answers.map(effectiveAnswer);
@@ -1038,22 +1060,27 @@ export function supplierGateStatus(w: SupplierGateWaiting): SupplierGateStatus {
   const unknown = answeredUnknown + missing;
 
   let gate: LegalUsageGate = 'BLOCKED';
+  let display: GateDisplayState;
   let statusJa: string;
   if (no > 0) {
+    display = 'BLOCKED';
     statusJa = `不可の回答が${no}件。この相手では接続しない`;
   } else if (unknown > 0) {
+    display = w.way === 'HUMAN_READ_TERMS' ? 'WAITING_HUMAN_CHECK' : 'WAITING_ANSWER';
     statusJa =
       w.way === 'HUMAN_READ_TERMS'
         ? `人間確認待ち（未確定 ${unknown}/${w.requiredCount}）`
         : `回答待ち（未回答 ${unknown}/${w.requiredCount}）`;
   } else if (conditional > 0) {
-    statusJa = `条件付きで可が${conditional}件。条件を安全装置として実装してから通過にする`;
+    display = 'CONDITIONAL';
+    statusJa = `条件付きで可が${conditional}件。条件を満たしきるまでBLOCKEDのまま`;
   } else {
     gate = 'ALLOWED';
+    display = 'PASSED';
     statusJa = `必要な${w.requiredCount}件すべて可。門を通過`;
   }
 
-  return { waiting: w, answered: eff.length, yes, conditional, no, unknown, gate, statusJa };
+  return { waiting: w, answered: eff.length, yes, conditional, no, unknown, gate, display, statusJa };
 }
 
 export function supplierGateBoard(): SupplierGateStatus[] {
@@ -1069,6 +1096,67 @@ export function supplierGateBoard(): SupplierGateStatus[] {
  */
 export const PURCHASABLE_CANDIDATE_CODES = ['NETSEA', 'OROSY'] as const;
 
+/**
+ * FIRST_LIVE_SUPPLIER へ昇格するための最低条件（ユーザー指示 2026-08-26）。
+ * ★ここが1つでも UNKNOWN なら昇格させない。
+ * ★AMAZON_RESALE だけは「商品単位で機械確認できる」なら代替として認める。
+ */
+export const FIRST_LIVE_SUPPLIER_MIN_CONDITIONS = [
+  'COMMERCIAL_USE',
+  'INTERNAL_USE',
+  'AUTOMATED_RETRIEVAL',
+  'DATA_STORAGE',
+  'PRICE_COMPARISON',
+  'PURCHASABLE',
+  'AMAZON_RESALE',
+] as const;
+export type FirstLiveSupplierCondition = (typeof FIRST_LIVE_SUPPLIER_MIN_CONDITIONS)[number];
+
+export const FIRST_LIVE_SUPPLIER_CONDITION_JA: Record<FirstLiveSupplierCondition, string> = {
+  COMMERCIAL_USE: '商用で使ってよい',
+  INTERNAL_USE: '社内の業務分析に使ってよい',
+  AUTOMATED_RETRIEVAL: 'プログラムで自動取得してよい',
+  DATA_STORAGE: '取得データを社内に保存してよい',
+  PRICE_COMPARISON: '他市場と価格を比較してよい',
+  PURCHASABLE: 'そこから実際に仕入れられる',
+  AMAZON_RESALE: 'Amazonで販売してよい（または商品単位で機械確認できる）',
+};
+
+/** AMAZON_RESALE の代替＝商品ごとに販売可否を機械で確認できるならYES扱いにできる。 */
+export type PromotionInput = {
+  supplierCode: string;
+  conditions: Partial<Record<FirstLiveSupplierCondition, AnswerState>>;
+  /** 商品単位で Amazon 販売可否を機械確認できるか */
+  amazonResaleCheckablePerProduct: boolean;
+};
+
+export type PromotionResult = {
+  supplierCode: string;
+  ok: boolean;
+  missingJa: string[];
+};
+
+/**
+ * 昇格してよいかを判定する。
+ * ★ CONDITIONAL は「条件を満たすまで未達」として扱う（YESにしない）。
+ * ★ UNKNOWN は当然未達。無回答・未確認を通さない。
+ */
+export function canPromoteToFirstLiveSupplier(input: PromotionInput): PromotionResult {
+  const missingJa: string[] = [];
+  const purchasable = PURCHASABLE_CANDIDATE_CODES.includes(input.supplierCode as never);
+  if (!purchasable) {
+    missingJa.push('実際に仕入れられる相手ではない（価格比較の情報源は昇格させない）');
+  }
+  for (const key of FIRST_LIVE_SUPPLIER_MIN_CONDITIONS) {
+    const v = input.conditions[key] ?? 'UNKNOWN';
+    if (v === 'YES') continue;
+    if (key === 'AMAZON_RESALE' && input.amazonResaleCheckablePerProduct) continue;
+    const stateJa = ANSWER_STATE_JA[v];
+    missingJa.push(`${FIRST_LIVE_SUPPLIER_CONDITION_JA[key]}：${stateJa}`);
+  }
+  return { supplierCode: input.supplierCode, ok: missingJa.length === 0, missingJa };
+}
+
 export function firstLiveSupplier(): { code: string; labelJa: string } | null {
   for (const s of supplierGateBoard()) {
     if (s.gate !== 'ALLOWED') continue;
@@ -1081,3 +1169,57 @@ export function firstLiveSupplier(): { code: string; labelJa: string } | null {
 /** 通過しても、まず読むだけ。1件 → 5件 → 10件 → 47件の順で広げる。 */
 export const FIRST_LIVE_SUPPLIER_READ_ONLY = true;
 export const FIRST_LIVE_SUPPLIER_STAGES = [1, 5, 10, 47] as const;
+
+/**
+ * orosy のチェックリスト13項目（人がブラウザで読んで入れる）。
+ * ★ 人が入れた値だけを取り込む。AIが規約を補完しない。
+ * ★「書いていない」は UNKNOWN。可にはしない（ルール58）。
+ */
+export const OROSY_CHECKLIST_KEYS = [
+  'BUSINESS_USE_ALLOWED',
+  'RESALE_ALLOWED',
+  'AMAZON_SALE_ALLOWED',
+  'EXTERNAL_MALL_SALE_ALLOWED',
+  'AUTOMATED_RETRIEVAL_ALLOWED',
+  'API_CSV_FEED_AVAILABLE',
+  'DATA_STORAGE_ALLOWED',
+  'DATA_PROCESSING_ALLOWED',
+  'PRICE_COMPARISON_ALLOWED',
+  'STOCK_DATA_ALLOWED',
+  'JAN_GTIN_AVAILABLE',
+  'PRODUCT_URL_USE_ALLOWED',
+  'IMAGE_USE_ALLOWED',
+] as const;
+export type OrosyChecklistKey = (typeof OROSY_CHECKLIST_KEYS)[number];
+
+export const OROSY_CHECKLIST_JA: Record<OrosyChecklistKey, string> = {
+  BUSINESS_USE_ALLOWED: '法人・事業利用',
+  RESALE_ALLOWED: '転売（再販）',
+  AMAZON_SALE_ALLOWED: 'Amazon販売',
+  EXTERNAL_MALL_SALE_ALLOWED: '外部モール販売',
+  AUTOMATED_RETRIEVAL_ALLOWED: '自動データ取得',
+  API_CSV_FEED_AVAILABLE: 'API・CSV・Feed',
+  DATA_STORAGE_ALLOWED: 'データ保存',
+  DATA_PROCESSING_ALLOWED: '商品情報の加工',
+  PRICE_COMPARISON_ALLOWED: '価格比較',
+  STOCK_DATA_ALLOWED: '在庫データ',
+  JAN_GTIN_AVAILABLE: 'JAN・GTIN',
+  PRODUCT_URL_USE_ALLOWED: '商品URL利用',
+  IMAGE_USE_ALLOWED: '画像利用',
+};
+
+/** 人が書いた文字を4分類へ正規化する。読めない書き方は UNKNOWN（推測しない）。 */
+export function normalizeAnswerInput(raw: string): AnswerState {
+  const s = raw.trim().toUpperCase();
+  if (s === 'YES' || s === '可' || s === 'OK' || s === '○' || s === '◯') return 'YES';
+  if (s === 'NO' || s === '不可' || s === 'NG' || s === '×') return 'NO';
+  if (s === 'CONDITIONAL' || s === '条件付き' || s === '条件付きで可' || s === '△') return 'CONDITIONAL';
+  return 'UNKNOWN';
+}
+
+/**
+ * 回答待ちフェーズの固定（ユーザー指示 2026-08-26）。
+ * 許可を取ることが最優先で、コードを書くことではない。
+ */
+export const LEGAL_GATE_WAITING_PHASE = true;
+export const NEW_FEATURE_DEVELOPMENT_PAUSED = true;

@@ -64,13 +64,20 @@ import {
   EBAY_CONTENT_MAY_ENTER_AI_LEARNING,
   EBAY_JAPAN_MARKETPLACE_EXISTS,
   ANSWER_STATES,
+  canPromoteToFirstLiveSupplier,
   effectiveAnswer,
   effectiveValue,
   evaluateLegalGate,
   firstLiveSupplier,
+  FIRST_LIVE_SUPPLIER_MIN_CONDITIONS,
   FIRST_LIVE_SUPPLIER_READ_ONLY,
   FIRST_LIVE_SUPPLIER_STAGES,
+  GATE_DISPLAY_STATES,
   HUMAN_TODOS,
+  LEGAL_GATE_WAITING_PHASE,
+  NEW_FEATURE_DEVELOPMENT_PAUSED,
+  normalizeAnswerInput,
+  OROSY_CHECKLIST_KEYS,
   supplierGateBoard,
   SUPPLIER_GATE_WAITING,
   isLiveFetchAllowed,
@@ -1109,6 +1116,89 @@ function main(): void {
 
     const venuesPage = readFile('app/venues/page.tsx');
     check('管理画面に待ち状況が出る', /supplierGateBoard\(\)/.test(venuesPage));
+  }
+
+  // ================================================================
+  section('18. 回答待ちフェーズの固定と、最初の接続先の最低条件（Phase 6.5b）');
+  // ================================================================
+  {
+    check('いまは回答待ちフェーズ', LEGAL_GATE_WAITING_PHASE === true);
+    check('新しい機能開発は止めている', NEW_FEATURE_DEVELOPMENT_PAUSED === true);
+
+    check('画面に出す状態は5つ', GATE_DISPLAY_STATES.length === 5);
+    check(
+      '状態は回答待ち・人間確認待ち・条件付き・不可・通過',
+      GATE_DISPLAY_STATES.join(',') ===
+        'WAITING_ANSWER,WAITING_HUMAN_CHECK,CONDITIONAL,BLOCKED,PASSED',
+    );
+
+    const board18 = supplierGateBoard();
+    const orosy = board18.find((b) => b.waiting.supplierCode === 'OROSY');
+    const netsea = board18.find((b) => b.waiting.supplierCode === 'NETSEA');
+    check('orosyは人間の規約確認待ち', orosy?.display === 'WAITING_HUMAN_CHECK');
+    check('NETSEAは返事待ち', netsea?.display === 'WAITING_ANSWER');
+    check('通過している相手はまだ0件', board18.every((b) => b.display !== 'PASSED'));
+
+    check('最低条件は7つ', FIRST_LIVE_SUPPLIER_MIN_CONDITIONS.length === 7);
+    const allYes = {
+      COMMERCIAL_USE: 'YES', INTERNAL_USE: 'YES', AUTOMATED_RETRIEVAL: 'YES',
+      DATA_STORAGE: 'YES', PRICE_COMPARISON: 'YES', PURCHASABLE: 'YES', AMAZON_RESALE: 'YES',
+    } as const;
+    check(
+      '7つすべて可なら最初の接続先にできる',
+      canPromoteToFirstLiveSupplier({
+        supplierCode: 'NETSEA', conditions: { ...allYes }, amazonResaleCheckablePerProduct: false,
+      }).ok === true,
+    );
+    check(
+      '1つでも不明なら通過禁止',
+      canPromoteToFirstLiveSupplier({
+        supplierCode: 'NETSEA',
+        conditions: { ...allYes, DATA_STORAGE: 'UNKNOWN' },
+        amazonResaleCheckablePerProduct: false,
+      }).ok === false,
+    );
+    check(
+      '条件付きで可は「可」として数えない',
+      canPromoteToFirstLiveSupplier({
+        supplierCode: 'NETSEA',
+        conditions: { ...allYes, PRICE_COMPARISON: 'CONDITIONAL' },
+        amazonResaleCheckablePerProduct: false,
+      }).ok === false,
+    );
+    check(
+      'Amazon販売可否は商品ごとに機械で確認できるなら通してよい',
+      canPromoteToFirstLiveSupplier({
+        supplierCode: 'NETSEA',
+        conditions: { ...allYes, AMAZON_RESALE: 'UNKNOWN' },
+        amazonResaleCheckablePerProduct: true,
+      }).ok === true,
+    );
+    check(
+      '情報源（バリューコマース）は最初の接続先にしない',
+      canPromoteToFirstLiveSupplier({
+        supplierCode: 'VALUECOMMERCE', conditions: { ...allYes }, amazonResaleCheckablePerProduct: true,
+      }).ok === false,
+    );
+    check(
+      '通せない理由が日本語で出る',
+      canPromoteToFirstLiveSupplier({
+        supplierCode: 'NETSEA',
+        conditions: { ...allYes, INTERNAL_USE: 'UNKNOWN' },
+        amazonResaleCheckablePerProduct: false,
+      }).missingJa.length > 0,
+    );
+
+    check('orosyの確認項目は13個', OROSY_CHECKLIST_KEYS.length === 13);
+
+    check('「可」は可として読む', normalizeAnswerInput('可') === 'YES');
+    check('「不可」は不可として読む', normalizeAnswerInput('不可') === 'NO');
+    check('「条件付き」は条件付きとして読む', normalizeAnswerInput('条件付き') === 'CONDITIONAL');
+    check('空欄は不明として読む', normalizeAnswerInput('') === 'UNKNOWN');
+    check('書いていない言葉を勝手に可にしない', normalizeAnswerInput('たぶん大丈夫') === 'UNKNOWN');
+
+    const venuesPage18 = readFile('app/venues/page.tsx');
+    check('管理画面が5つの状態で表示する', /GATE_DISPLAY_STATE_JA/.test(venuesPage18));
   }
 
   // ================================================================
