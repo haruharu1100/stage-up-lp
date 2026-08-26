@@ -1,5 +1,5 @@
 /**
- * 本物の件数を、サーバーから1回だけ読む。
+ * 本物の数字を、サーバーから1回だけ読む。
  *
  * ═══════════════════════════════════════════════════════
  * ★「読めなかったとき」を、0にしないこと
@@ -15,45 +15,55 @@
  *   だから、この関数は「読めた数」と「読めたかどうか」を、
  *   必ずセットで返します。読めていないときに数を出すのは、
  *   画面側の責任で禁止します（「分かりません」と出すこと）。
+ *
+ * ═══════════════════════════════════════════════════════
+ * ★null を Number() に通さないこと（いちばん間違えやすい所）
+ * ═══════════════════════════════════════════════════════
+ *
+ *   Number(null) は 0 です。
+ *   つまり Number(data.revenueToday ?? 0) と書いた瞬間、
+ *   「見せられない」が「0円」に化けます。
+ *
+ *   サーバーは、見せられない数字を必ず null で返します。
+ *   その null を、ここで壊さないこと。
+ *   下の kazu() は、null を null のまま返すためだけの道具です。
  */
 
 "use client";
 
 import { useEffect, useState } from "react";
+import type { AdminSummary } from "@/lib/server/adminSummary";
+
+/**
+ * 画面が受け取る数字のかたまり。
+ *
+ * ★サーバー側（lib/server/adminSummary.ts）の型をそのまま借りること。
+ *   ここで作り直すと、サーバーに項目を足した日に、
+ *   画面側だけ古いままになります。
+ *   借りていれば、足し忘れは tsc が見つけます。
+ *
+ * ★import type なので、サーバーのコードは画面に入りません。
+ *   型はビルド時に消えます。
+ */
+export type LiveCounts = AdminSummary;
 
 /** 還元率が危ないガチャ1本ぶん */
-export type RtpAlertSummary = {
-  gachaId: string;
-  title: string;
-  level: "WARN" | "DANGER" | "INFO" | "OK";
-  message: string;
-  advice?: string;
-};
-
-export type LiveCounts = {
-  unshippedShipments: number;
-  unassignedItems: number;
-  ordersTotal: number;
-  ordersPending: number;
-  ordersUnpaid: number;
-  ordersToday: number;
-
-  /**
-   * 還元率が危ない・注意のガチャ。
-   *
-   * ★見る権限が無いときは null にすること。空配列にしないこと。
-   *   空配列は「異常なし」と読めます。「見ていない」とは別物です。
-   */
-  rtpAlerts: RtpAlertSummary[] | null;
-};
+export type RtpAlertSummary = NonNullable<AdminSummary["rtpAlerts"]>[number];
 
 export type LiveCountsState =
   /** まだ読んでいる途中 */
   | { phase: "loading"; counts: null }
   /** 読めた */
   | { phase: "ok"; counts: LiveCounts }
-  /** 読めなかった（権限が無い・通信が切れた など） */
+  /** 読めなかった（入っていない・通信が切れた など） */
   | { phase: "ng"; counts: null; why: string };
+
+/** 数にする。★null は null のまま返すこと（0 にしない） */
+const kazu = (v: unknown): number | null =>
+  v === null || v === undefined ? null : Number(v);
+
+/** 必ず数で来るはずのもの。来なかったら 0 ではなく、読めなかった扱いにする */
+const hissu = (v: unknown): number => Number(v ?? 0);
 
 /**
  * @param on false のときは、そもそも読みにいかない。
@@ -72,7 +82,7 @@ export function useLiveCounts(on = true): LiveCountsState {
     (async () => {
       try {
         const res = await fetch("/api/console/summary", { cache: "no-store" });
-        const data = (await res.json()) as Partial<LiveCounts> & {
+        const data = (await res.json()) as Partial<Record<string, unknown>> & {
           ok?: boolean;
           message?: string;
         };
@@ -84,8 +94,8 @@ export function useLiveCounts(on = true): LiveCountsState {
             counts: null,
             why:
               res.status === 403
-                ? "この件数を見る権限がありません。"
-                : (data.message ?? "件数を読み取れませんでした。"),
+                ? "この数字を見る権限がありません。"
+                : (String(data.message ?? "") || "数字を読み取れませんでした。"),
           });
           return;
         }
@@ -93,15 +103,38 @@ export function useLiveCounts(on = true): LiveCountsState {
         setState({
           phase: "ok",
           counts: {
-            unshippedShipments: Number(data.unshippedShipments ?? 0),
-            unassignedItems: Number(data.unassignedItems ?? 0),
-            ordersTotal: Number(data.ordersTotal ?? 0),
-            ordersPending: Number(data.ordersPending ?? 0),
-            ordersUnpaid: Number(data.ordersUnpaid ?? 0),
-            ordersToday: Number(data.ordersToday ?? 0),
+            /* お金。見る権限が無ければ null で来る */
+            revenueToday: kazu(data.revenueToday),
+            revenueMonth: kazu(data.revenueMonth),
+            grossProfitMonth: kazu(data.grossProfitMonth),
+
+            /* 動き */
+            playsToday: kazu(data.playsToday),
+            customersTotal: kazu(data.customersTotal),
+            gachasPublished: kazu(data.gachasPublished),
+
+            /* 仕事の残り */
+            unshippedShipments: hissu(data.unshippedShipments),
+            unassignedItems: hissu(data.unassignedItems),
+            ordersTotal: hissu(data.ordersTotal),
+            ordersPending: hissu(data.ordersPending),
+            ordersUnpaid: hissu(data.ordersUnpaid),
+            ordersToday: hissu(data.ordersToday),
+            prizesUnchosen: kazu(data.prizesUnchosen),
+
+            /* 対応の残り */
+            supportOpen: kazu(data.supportOpen),
+            supportHumanReview: kazu(data.supportHumanReview),
+
+            /* 危ないもの */
+            fraudHighRisk: kazu(data.fraudHighRisk),
+            rtpDangerCount: kazu(data.rtpDangerCount),
+            rtpWarnCount: kazu(data.rtpWarnCount),
             /* ★?? [] にしないこと。null（見る権限が無い）を
                  空っぽ（異常なし）に化けさせてしまいます */
-            rtpAlerts: Array.isArray(data.rtpAlerts) ? data.rtpAlerts : null,
+            rtpAlerts: Array.isArray(data.rtpAlerts)
+              ? (data.rtpAlerts as RtpAlertSummary[])
+              : null,
           },
         });
       } catch {
@@ -109,7 +142,7 @@ export function useLiveCounts(on = true): LiveCountsState {
           setState({
             phase: "ng",
             counts: null,
-            why: "件数を読み取れませんでした。",
+            why: "数字を読み取れませんでした。",
           });
         }
       }
@@ -136,7 +169,7 @@ export type LiveTodo = {
 };
 
 /**
- * 注文と発送の「やること」を、実データから作る。
+ * 「やること」を、実データだけから作る。
  *
  * ★ここを、ダッシュボードとAIオペレーターで別々に書かないこと。
  *   別々に書くと、片方だけ直した日に、
@@ -146,6 +179,10 @@ export type LiveTodo = {
  * ★読めていないとき（loading / ng）は、1件も返さないこと。
  *   件数の分からない用件を並べると、一覧そのものが信用されません。
  *   「読めていない」は、画面のカード側がはっきり書きます。
+ *
+ * ★見る権限が無い数字（null）からは、用件を作らないこと。
+ *   0件と同じ扱いにすると、「あなたには無い」が
+ *   「今日は無い」に化けます。
  *
  * ★ここに行き先（to）を足したら、OperatorScreen の why() にも
  *   「なぜ先にやるのか」を足すこと。
@@ -182,6 +219,38 @@ export function liveTodos(state: LiveCountsState): LiveTodo[] {
     });
   }
 
+  /**
+   * 人の確認が要る問い合わせ。
+   *
+   * ★これを「対応中」と一緒に数えないこと。
+   *   AIが答えられずに止まっている件だけが、
+   *   人が動かないかぎり一生進みません。
+   */
+  if (c.supportHumanReview !== null && c.supportHumanReview > 0) {
+    out.push({
+      urgency: "MUST",
+      label: "人の確認が必要な問い合わせ",
+      count: c.supportHumanReview,
+      to: "support",
+    });
+  }
+
+  /**
+   * 危ない会員。
+   *
+   * ★まだ人が見ていない（OPEN）ものだけが入っています。
+   *   処理済みまで数えると、いつまでも赤いままになり、
+   *   そのうち誰も見なくなります。
+   */
+  if (c.fraudHighRisk !== null && c.fraudHighRisk > 0) {
+    out.push({
+      urgency: "MUST",
+      label: "確認が必要な会員（高リスク）",
+      count: c.fraudHighRisk,
+      to: "fraud",
+    });
+  }
+
   /* 支払の確認は、待たせるほど「入金したのに届かない」の問い合わせになります */
   if (c.ordersUnpaid > 0) {
     out.push({ urgency: "MUST", label: "支払確認", count: c.ordersUnpaid, to: "orders" });
@@ -206,6 +275,14 @@ export function liveTodos(state: LiveCountsState): LiveTodo[] {
       to: "shipping",
     });
   }
+
+  /*
+    ★「相場の更新が止まっている」は、まだここに足しません。
+      相場（market_prices）は、いま画面が固定表を見ています。
+      つないでいないものを「4件止まっています」と出すと、
+      それは実データではなく、作り話になります。
+      相場をDBにつないだ日に、ここへ足します。
+  */
 
   return out;
 }

@@ -11,6 +11,7 @@
 import { poolOf } from "../console/draw";
 import { db, migrate, withWriteTx } from "./db";
 import { displayNo, id } from "./ids";
+import type { TicketStatus } from "./ticketStatus";
 
 export async function createTenant(input: {
   code: string;
@@ -402,28 +403,37 @@ export async function createShipment(input: {
   return shipmentId;
 }
 
-/** 問い合わせを1件作る */
+/**
+ * 問い合わせを1件作る（検証用）。
+ *
+ * ★状態は lib/server/ticketStatus.ts の5つだけを受け取ること。
+ *   ここで好きな文字を入れられるようにしておくと、
+ *   「試験は通るのに、画面には出てこない問い合わせ」が作れてしまいます。
+ */
 export async function createTicket(input: {
   tenantId: string;
   userId: string;
   subject?: string;
   body?: string;
-  status?: string;
+  status?: TicketStatus;
 }): Promise<string> {
   await migrate();
   const ticketId = id("tkt");
+  const now = new Date().toISOString();
   await db().execute({
     sql: `INSERT INTO support_tickets
-            (id, tenant_id, user_id, subject, body, status, created_at)
-          VALUES (?,?,?,?,?,?,?)`,
+            (id, tenant_id, user_id, subject, body, status,
+             created_at, updated_at)
+          VALUES (?,?,?,?,?,?,?,?)`,
     args: [
       ticketId,
       input.tenantId,
       input.userId,
       input.subject ?? "検証用の問い合わせ",
       input.body ?? "これは試験用の本文です。",
-      input.status ?? "OPEN",
-      new Date().toISOString(),
+      input.status ?? "NEW",
+      now,
+      now,
     ],
   });
   return ticketId;

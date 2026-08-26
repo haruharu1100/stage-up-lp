@@ -49,7 +49,6 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 import type { ConsoleState } from "@/lib/console/state";
-import { summary, todayTodos } from "@/lib/console/state";
 import { liveTodos, useLiveCounts } from "@/lib/console/liveCounts";
 import type { MenuKey } from "../menu";
 import Icon from "../Icon";
@@ -61,32 +60,48 @@ export default function Dashboard({
   s: ConsoleState;
   onNav: (k: MenuKey) => void;
 }) {
-  const sum = summary(s);
-
   /**
-   * 発送と注文の件数だけは、サーバーの実データから取る（#27・#28）。
+   * ═══════════════════════════════════════════════
+   * ★この画面の数字は、全部サーバーから来ること
+   * ═══════════════════════════════════════════════
    *
-   * ★ここを見本の数に戻さないこと。
-   *   「未発送 6件」と出ているのに、発送画面を開くと0件、
-   *   という日が必ず来ます。そうなると、運営者はこの画面を
-   *   二度と信じません。数えるのは1か所（/api/console/summary）です。
+   *   2026-08-26 まで、この画面には
+   *   本物の数字と見本の数字が、並んで出ていました。
    *
-   * ★読めなかったときに0を出さないこと。
-   *   片づいたのだと思って、画面を閉じてしまいます。
-   *   読めていないなら、読めていないと書きます。
+   *       未発送・注文件数 …… 本物（DB）
+   *       売上・粗利・会員数・プレイ数 …… 見本
+   *
+   *   見た目がまったく同じなので、運営の方には見分けがつきません。
+   *   売上だけが動かない画面を、毎朝見ることになります。
+   *
+   *   いまは1か所（/api/console/summary →
+   *   lib/server/adminSummary.ts）だけから取ります。
+   *
+   *   ★ここで足し算・引き算を書かないこと。
+   *     書いた瞬間に、AIオペレーターや発送画面と数がずれます。
+   *     必要な数字が足りないなら、adminSummary.ts に足してください。
+   *
+   *   ★読めなかったときに0を出さないこと。
+   *     片づいたのだと思って、画面を閉じてしまいます。
+   *     読めていないなら、読めていないと書きます。
    */
   const live = useLiveCounts();
+  const c = live.phase === "ok" ? live.counts : null;
 
-  /* ★注文と発送の用件は、liveTodos が1か所で作る。
+  /* ★用件は liveTodos が1か所で作る。
        ここで組み立て直さないこと。AIオペレーターと数がずれます。 */
-  const todos = [...todayTodos(s), ...liveTodos(live)];
+  const todos = liveTodos(live);
 
   const must = todos.filter((t) => t.urgency === "MUST");
   const should = todos.filter((t) => t.urgency === "SHOULD");
 
-  const grossProfit = s.gachas
-    .filter((g) => g.status === "PUBLISHED")
-    .reduce((a, g) => a + g.profit, 0);
+  /** 数字が出せない理由。カードの下に、そのまま出す */
+  const wakaranai =
+    live.phase === "loading"
+      ? "数えています。"
+      : live.phase === "ng"
+        ? `${live.why} 数えられていないので、0とは書きません。`
+        : null;
 
   return (
     <div className="space-y-5">
@@ -104,15 +119,21 @@ export default function Dashboard({
       <section>
         <SectionHead
           title="今日の数字"
-          note="金額は税込です。今月は、公開中のガチャの合計です。"
+          note="金額は税込です。すべて、この会社のDBから数えた実データです。"
         />
         <div className="mt-3 grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-6">
-          <Kpi label="本日の売上" value={sum.revenueToday} unit="円" tone="ink" />
-          <Kpi label="今月の売上" value={sum.revenueMonth} unit="円" tone="ink" />
-          <Kpi label="今月の粗利益" value={grossProfit} unit="円" tone="ok" />
+          {/* ★null は「見せられない・数えられない」。0円ではありません */}
+          <Kpi label="本日の売上" value={c?.revenueToday ?? null} unit="円" tone="ink" />
+          <Kpi label="今月の売上" value={c?.revenueMonth ?? null} unit="円" tone="ink" />
+          <Kpi
+            label="今月の粗利益"
+            value={c?.grossProfitMonth ?? null}
+            unit="円"
+            tone="ok"
+          />
           <Kpi
             label="本日のプレイ"
-            value={sum.playsToday}
+            value={c?.playsToday ?? null}
             unit="回"
             tone="ink"
             to="analytics"
@@ -120,7 +141,7 @@ export default function Dashboard({
           />
           <Kpi
             label="公開中のガチャ"
-            value={sum.publishedCount}
+            value={c?.gachasPublished ?? null}
             unit="件"
             tone="ink"
             to="gacha"
@@ -128,7 +149,7 @@ export default function Dashboard({
           />
           <Kpi
             label="会員数"
-            value={sum.users}
+            value={c?.customersTotal ?? null}
             unit="人"
             tone="ink"
             to="customers"
@@ -140,13 +161,30 @@ export default function Dashboard({
               「0回」だけを見た人は、壊れているのか、
               まだ誰も引いていないのかを判断できません。
               判断できない表示は、無いのと同じです。 */}
-        {sum.playsToday === 0 && (
+        {c?.playsToday === 0 && (
           <p className="mt-3 rounded-xl border border-edge2 bg-paper2 px-4 py-3 text-note leading-[1.85] text-slate3">
             本日は、まだ1回も引かれていません。だから本日の売上は0円です。
             <span className="mx-1 font-bold text-slate2">
               上の「ユーザー側」から1回引くと、この数字がその場で動きます。
             </span>
             動かない見本の数字は、ここには置いていません。
+          </p>
+        )}
+
+        {/* ★「—」だけを並べて終わらせないこと。
+              なぜ出ないのかが分からないと、
+              壊れているのか、権限が無いのかを判断できません。 */}
+        {wakaranai && (
+          <p className="mt-3 rounded-xl border border-edge2 bg-mist px-4 py-3 text-note leading-[1.85] text-slate3">
+            {wakaranai}
+          </p>
+        )}
+
+        {/* 見えている中に、権限で伏せられた数字があるとき */}
+        {c && c.revenueToday === null && (
+          <p className="mt-3 rounded-xl border border-edge2 bg-mist px-4 py-3 text-note leading-[1.85] text-slate3">
+            売上・粗利益・プレイ数・公開中のガチャは、
+            あなたの権限では表示しません。0円という意味ではありません。
           </p>
         )}
       </section>
@@ -161,13 +199,23 @@ export default function Dashboard({
           <StatusCard
             icon="gauge"
             title="危険なガチャ"
-            value={sum.rtpAlerts}
+            value={c?.rtpDangerCount ?? null}
             unit="件"
-            tone={sum.rtpAlerts > 0 ? "danger" : "ok"}
+            tone={
+              c?.rtpDangerCount == null
+                ? "unknown"
+                : c.rtpDangerCount > 0
+                  ? "danger"
+                  : "ok"
+            }
             say={
-              sum.rtpAlerts > 0
-                ? "出しすぎています。相場が上がった分だけ、1回ごとに赤字が増えます。"
-                : "出しすぎているガチャはありません。"
+              wakaranai
+                ? wakaranai
+                : c?.rtpDangerCount == null
+                  ? "この数字は、あなたの権限では表示しません。"
+                  : c.rtpDangerCount > 0
+                    ? "出しすぎています。相場が上がった分だけ、1回ごとに赤字が増えます。"
+                    : "出しすぎているガチャはありません。"
             }
             to="rtp"
             cta="実績還元率を見る"
@@ -176,23 +224,17 @@ export default function Dashboard({
           <StatusCard
             icon="truck"
             title="発送待ち"
-            value={live.phase === "ok" ? live.counts.unshippedShipments : null}
+            value={c?.unshippedShipments ?? null}
             unit="件"
             tone={
-              live.phase !== "ok"
-                ? "unknown"
-                : live.counts.unshippedShipments > 0
-                  ? "warn"
-                  : "ok"
+              c === null ? "unknown" : c.unshippedShipments > 0 ? "warn" : "ok"
             }
             say={
-              live.phase === "loading"
-                ? "数えています。"
-                : live.phase === "ng"
-                  ? `${live.why} 数えられていないので、0件とは書きません。`
-                  : live.counts.unshippedShipments > 0
-                    ? "お客様が待っています。溜めるほど問い合わせが増えます。"
-                    : "出荷を待っている箱はありません。"
+              wakaranai
+                ? wakaranai
+                : c && c.unshippedShipments > 0
+                  ? "お客様が待っています。溜めるほど問い合わせが増えます。"
+                  : "出荷を待っている箱はありません。"
             }
             to="shipping"
             cta="発送管理へ"
@@ -201,13 +243,23 @@ export default function Dashboard({
           <StatusCard
             icon="chat"
             title="人へ回った問い合わせ"
-            value={sum.tickets}
+            value={c?.supportHumanReview ?? null}
             unit="件"
-            tone={sum.tickets > 0 ? "warn" : "ok"}
+            tone={
+              c?.supportHumanReview == null
+                ? "unknown"
+                : c.supportHumanReview > 0
+                  ? "warn"
+                  : "ok"
+            }
             say={
-              sum.tickets > 0
-                ? "AIが答えを出せなかったものです。人が返す必要があります。"
-                : "人が返すべき問い合わせはありません。"
+              wakaranai
+                ? wakaranai
+                : c?.supportHumanReview == null
+                  ? "この数字は、あなたの権限では表示しません。"
+                  : c.supportHumanReview > 0
+                    ? "AIが答えを出せなかったものです。人が返す必要があります。"
+                    : "人が返すべき問い合わせはありません。"
             }
             to="support"
             cta="問い合わせへ"
@@ -232,21 +284,25 @@ export default function Dashboard({
                 かっこよく見せるために緑にした瞬間に、
                 この画面は誰の判断にも使えなくなります。 */}
         <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+          {/* ★「安全のために止めた要求」の件数は、まだ数えていません。
+                数えていないものを「0件でした＝正常」と出さないこと。
+                実際に数えられる「今日引かれた回数」だけを書きます。 */}
           <Light
             label="抽選の処理"
-            state={sum.blockedRequests > 0 ? "warn" : "ok"}
+            state="unknown"
             say={
-              sum.blockedRequests > 0
-                ? `安全のために止めた要求が ${sum.blockedRequests} 件あります`
-                : `今日 ${sum.playsToday} 回、止まらずに通っています`}
+              c?.playsToday == null
+                ? "止めた要求の件数は、まだ数えていません"
+                : `今日 ${c.playsToday.toLocaleString()} 回引かれています。止めた要求の件数は、まだ数えていません`
+            }
           />
+          {/* ★相場（market_prices）は、まだ画面につないでいません。
+                つないでいないものを「すべて取れています」と出すと、
+                古い値で還元率を計算したまま、正常だと信じることになります。 */}
           <Light
             label="景品の相場データ"
-            state={sum.marketStale > 0 ? "warn" : "ok"}
-            say={
-              sum.marketStale > 0
-                ? `${sum.marketStale} 点が取れていません。古い値で計算しています`
-                : `見張っている ${sum.marketWatched} 点すべてが取れています`}
+            state="unknown"
+            say="相場の取り込みは、まだつないでいません"
           />
           {/* ★この2つは、この画面からは確かめられません。
                 確かめる仕組みができるまで、灰色のままにします。 */}
@@ -278,7 +334,9 @@ export default function Dashboard({
         <p className="mt-3 rounded-xl border border-edge2 bg-paper2 px-4 py-3 text-note leading-[1.85] text-slate3">
           お客様が受け取り方法を選ぶ待ちが
           <span className="num mx-1.5 font-bold text-slate2">
-            {sum.unchosenPrizes}件
+            {c?.prizesUnchosen == null
+              ? "—件"
+              : `${c.prizesUnchosen.toLocaleString()}件`}
           </span>
           あります（発送か、ポイント交換か）。 運営の作業はありません。
           だから「やること」には入れていません。
@@ -516,6 +574,13 @@ function TodoGroup({
  *   ラベルを大きくして数字を小さくすると、
  *   「何の数字か」は分かるのに「いくらか」が分かりません。
  *   人が知りたいのは、いつも後者です。
+ *
+ * ★null を 0 と書かないこと（いちばん大事な決まり）。
+ *   null は「見せられない・数えられない」です。
+ *   これを「0円」と書くと、売れていないのだと読まれます。
+ *   本当は、見ていないだけです。
+ *   だから「—」を出し、単位も付けません。
+ *   「— 円」と書くと、金額として読めてしまうからです。
  */
 function Kpi({
   label,
@@ -526,19 +591,25 @@ function Kpi({
   onNav,
 }: {
   label: string;
-  value: number;
+  /** ★null は「数えられていない・見せられない」。0 と同じ扱いにしないこと */
+  value: number | null;
   unit: string;
   tone: "ink" | "ok" | "warn" | "danger";
   /** 中身を見に行ける画面。無いものは押せなくてよい */
   to?: MenuKey;
   onNav?: (k: MenuKey) => void;
 }) {
-  const ink = {
-    ink: "text-slate",
-    ok: "text-ok-ink",
-    warn: "text-warn-ink",
-    danger: "text-danger-ink",
-  }[tone];
+  const wakaru = value !== null;
+
+  const ink = wakaru
+    ? {
+        ink: "text-slate",
+        ok: "text-ok-ink",
+        warn: "text-warn-ink",
+        danger: "text-danger-ink",
+      }[tone]
+    : /* 灰色＝分からない。ここを黒くすると、0円と見分けがつきません */
+      "text-slate3";
 
   const body = (
     <>
@@ -547,9 +618,9 @@ function Kpi({
       </span>
       <span className={`mt-1.5 flex items-baseline gap-1 ${ink}`}>
         <span className="num text-[1.9rem] font-bold leading-none tracking-tight tabular-nums xl:text-[2.05rem]">
-          {value.toLocaleString()}
+          {wakaru ? value.toLocaleString() : "—"}
         </span>
-        <span className="nb text-note font-bold">{unit}</span>
+        {wakaru && <span className="nb text-note font-bold">{unit}</span>}
       </span>
     </>
   );

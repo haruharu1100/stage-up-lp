@@ -16,6 +16,7 @@ import { appendAuditTx } from "./audit";
 import { withWriteTx, db } from "./db";
 import { id } from "./ids";
 import { addressLine, parseAddress, type Actor, type AddressSnapshot } from "./orders";
+import { isTicketStatus, TICKET_LABEL_CUSTOMER } from "./ticketStatus";
 
 type Row = Record<string, unknown>;
 const num = (v: unknown) => Number(v ?? 0);
@@ -309,13 +310,23 @@ export type TicketView = {
   createdAt: string;
 };
 
-const TICKET_LABEL: Record<string, string> = {
-  OPEN: "受付いたしました",
-  IN_PROGRESS: "運営スタッフが確認しています",
-  AI_ANSWERED: "回答いたしました",
-  HUMAN_REVIEW: "運営スタッフが確認しています",
-  DONE: "解決済み",
-};
+/**
+ * お客様に見せる状態の言葉。
+ *
+ * ★ここで独自の一覧を作らないこと。
+ *   以前ここには OPEN / AI_ANSWERED / DONE という、
+ *   DBにも管理画面にも無い名前が書かれていました。
+ *   そのため「解決済み」の問い合わせでも、
+ *   お客様の画面には「確認しています」と出ていました。
+ *   名前を決める場所は lib/server/ticketStatus.ts の1つだけです。
+ */
+function ticketLabel(status: string): string {
+  /* 決めた5つのどれでもない値が入っていたら、
+     分かったふりをしないこと。まだ途中である、とだけ伝えます */
+  return isTicketStatus(status)
+    ? TICKET_LABEL_CUSTOMER[status]
+    : "確認しています";
+}
 
 export async function listTickets(
   tenantId: string,
@@ -337,7 +348,7 @@ export async function listTickets(
       subject: str(t.subject),
       body: str(t.body),
       status: st,
-      statusLabel: TICKET_LABEL[st] ?? "確認しています",
+      statusLabel: ticketLabel(st),
       answer: nul(t.answer),
       answeredBy: nul(t.answered_by),
       answeredAt: nul(t.answered_at),
@@ -393,11 +404,13 @@ export async function createTicket(args: {
 
     const ticketId = id("tkt");
     await tx.execute({
+      /* ★status は 'NEW'。以前の 'OPEN' は、
+         管理画面の一覧にも、状態の絞り込みにも出てこない名前でした */
       sql: `INSERT INTO support_tickets
               (id, tenant_id, user_id, subject, body, status,
-               priority, needs_human, created_at)
-            VALUES (?,?,?,?,?, 'OPEN', 'NORMAL', 0, ?)`,
-      args: [ticketId, args.tenantId, args.userId, subject, body, at],
+               priority, needs_human, created_at, updated_at)
+            VALUES (?,?,?,?,?, 'NEW', 'NORMAL', 0, ?, ?)`,
+      args: [ticketId, args.tenantId, args.userId, subject, body, at, at],
     });
 
     const audit = await appendAuditTx(tx, {

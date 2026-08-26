@@ -27,7 +27,7 @@
 "use client";
 
 import type { ConsoleState } from "@/lib/console/state";
-import { NOW, summary, todayTodos } from "@/lib/console/state";
+import { NOW } from "@/lib/console/state";
 import { liveTodos, useLiveCounts } from "@/lib/console/liveCounts";
 import type { MenuKey } from "../menu";
 import { Badge, Btn, Card, DemoNote, WhatIsThis } from "../ui";
@@ -39,8 +39,6 @@ export default function OperatorScreen({
   s: ConsoleState;
   onNav: (k: MenuKey) => void;
 }) {
-  const sm = summary(s);
-
   /**
    * 「未発送は何件？」「今日の注文は？」に、実データで答える（#29）。
    *
@@ -48,11 +46,18 @@ export default function OperatorScreen({
    *   人は、AIが言った数を確かめずに使います。
    *   確かめられない数を自信たっぷりに言うのが、いちばん危険です。
    *
+   * ★ダッシュボードと同じ入口から取ること。
+   *   別々に数えると、ダッシュボードは「発送待ち14件」、
+   *   AIは「ありません」になります。
+   *   運営の方から見れば、どちらかが壊れている、としか分かりません。
+   *   数えるのは lib/server/adminSummary.ts の1か所だけです。
+   *
    * ★数えられなかったときは「分かりません」と言うこと。
    *   0件と答えてしまうと、放置が起きます。
    */
   const live = useLiveCounts();
-  const todos = [...todayTodos(s), ...liveTodos(live)];
+  const c = live.phase === "ok" ? live.counts : null;
+  const todos = liveTodos(live);
   const must = todos.filter((t) => t.urgency === "MUST");
   const should = todos.filter((t) => t.urgency === "SHOULD");
 
@@ -68,50 +73,54 @@ export default function OperatorScreen({
       <Card title="今日のご報告" note={`${s.me?.name ?? ""} さん向け。${NOW} 時点。`}>
         <div className="space-y-4">
           {/*
-            ★売上・回数・販売中の本数は、まだ見本の数字です。
-              集計につながっていません。
+            ★見本の数字は、もうここにありません。
+              以前は、売上・回数・販売中の本数だけが見本で、
+              点線の枠を付けて区別していました。
+              いまは全部 /api/console/summary（＝DB）から来ます。
 
-              ここを、下の「注文と発送」（本物）と同じ見た目で並べないこと。
-              同じ見た目で並べると、全部が本物に見えます。
-              いちばん困るのは、見本の売上を本物だと思って
-              仕入れや値付けを決めてしまうことです。
-
-              だから、見本のほうにだけ枠と札を付けて、
-              ★どこまでが本物か が一目で分かるようにします。
+              ★ここに、読み上げのための計算を書かないこと。
+                書いた瞬間、ダッシュボードと数がずれます。
           */}
-          <div className="rounded-xl border border-dashed border-edge2 bg-paper2 px-4 py-3">
-            <span className="mb-2 inline-block rounded-md border border-edge2 bg-paper px-2 py-0.5 text-[11px] font-bold text-slate3">
-              ここから3つは見本の数字（集計に未接続）
-            </span>
-            <p className="text-note leading-[2] text-slate2">
-              いま販売中のガチャは
-              <strong className="font-bold text-slate"> {sm.publishedCount}本 </strong>
-              です。本日の売上は
-              <span className="num font-bold text-slate"> {sm.revenueToday.toLocaleString()}円</span>
-              、引かれた回数は
-              <span className="num font-bold text-slate"> {sm.playsToday.toLocaleString()}回</span>
-              でした。
-            </p>
-          </div>
 
-          {/* ★注文と発送は、実データの数をそのまま読み上げる */}
-          {live.phase === "ok" ? (
-            <p className="text-note leading-[2] text-slate2">
-              本日の注文は
-              <span className="num font-bold text-slate"> {live.counts.ordersToday.toLocaleString()}件</span>
-              （これまでの合計
-              <span className="num font-bold text-slate"> {live.counts.ordersTotal.toLocaleString()}件</span>
-              ）です。出荷がまだの発送は
-              <span className="num font-bold text-slate"> {live.counts.unshippedShipments.toLocaleString()}件</span>
-              、まだ箱に入れていない商品は
-              <span className="num font-bold text-slate"> {live.counts.unassignedItems.toLocaleString()}点</span>
-              あります。
+          {/* 売上・回数・販売中の本数 */}
+          {live.phase === "loading" ? (
+            <p className="rounded-xl border border-edge2 bg-paper2 px-4 py-3 text-note leading-[1.9] text-slate3">
+              数字を数えています。
+            </p>
+          ) : live.phase === "ng" ? (
+            <p className="rounded-xl border border-edge2 bg-paper2 px-4 py-3 text-note leading-[1.9] text-slate3">
+              数字は分かりません（{live.why}）。
+              数えられていないので、0件とは申しません。
+            </p>
+          ) : c === null ? null : c.gachasPublished === null ? (
+            <p className="rounded-xl border border-edge2 bg-paper2 px-4 py-3 text-note leading-[1.9] text-slate3">
+              売上・引かれた回数・販売中の本数は、
+              あなたの権限では申し上げられません。0という意味ではありません。
             </p>
           ) : (
-            <p className="rounded-xl border border-edge2 bg-paper2 px-4 py-3 text-note leading-[1.9] text-slate3">
-              {live.phase === "loading"
-                ? "注文と発送の件数を数えています。"
-                : `注文と発送の件数は分かりません（${live.why}）。数えられていないので、0件とは申しません。`}
+            <p className="text-note leading-[2] text-slate2">
+              いま販売中のガチャは
+              <strong className="font-bold text-slate"> {c.gachasPublished.toLocaleString()}本 </strong>
+              です。本日の売上は
+              <span className="num font-bold text-slate"> {(c.revenueToday ?? 0).toLocaleString()}円</span>
+              、引かれた回数は
+              <span className="num font-bold text-slate"> {(c.playsToday ?? 0).toLocaleString()}回</span>
+              でした。
+            </p>
+          )}
+
+          {/* 注文と発送 */}
+          {c !== null && (
+            <p className="text-note leading-[2] text-slate2">
+              本日の注文は
+              <span className="num font-bold text-slate"> {c.ordersToday.toLocaleString()}件</span>
+              （これまでの合計
+              <span className="num font-bold text-slate"> {c.ordersTotal.toLocaleString()}件</span>
+              ）です。出荷がまだの発送は
+              <span className="num font-bold text-slate"> {c.unshippedShipments.toLocaleString()}件</span>
+              、まだ箱に入れていない商品は
+              <span className="num font-bold text-slate"> {c.unassignedItems.toLocaleString()}点</span>
+              あります。
             </p>
           )}
 
@@ -181,36 +190,58 @@ export default function OperatorScreen({
       */}
       <Card
         title="いま分かっていないこと"
-        note="推測で埋めず、そのまま出しています。（相場は見本のデータです）"
+        note="推測で埋めず、そのまま出しています。"
       >
-        {sm.marketStale === 0 ? (
-          <p className="text-note leading-[1.85] text-slate3">
-            いまは、取れていない項目はありません。
-            見張っている景品
-            <span className="num font-bold text-slate"> {sm.marketWatched}点 </span>
-            は、すべて相場が取れています。
-          </p>
-        ) : (
-          <ul className="space-y-3">
+        <ul className="space-y-3">
+          {/*
+            ★「すべて取れています」と言えるようになるまで、こう書くこと。
+              相場（market_prices）は、まだ画面につないでいません。
+              つないでいないのに「◯点すべて取れています」と言うと、
+              古い値で計算した還元率を、正しい数字だと信じてしまいます。
+          */}
+          <li className="rounded-xl border border-edge2 bg-paper2 px-4 py-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-note font-bold text-slate">景品の相場</span>
+              <Badge>分かりません</Badge>
+            </div>
+            <p className="mt-1 text-note leading-[1.85] text-slate3">
+              相場の取り込みは、まだつないでいません。
+              何点が取れていて、何点が古いのかを、いまは数えられません。
+              ★「問題なし」とは申しません。分からないものは分からないと出します。
+            </p>
+            <div className="mt-3">
+              <Btn onClick={() => onNav("market" as MenuKey)}>相場の画面へ</Btn>
+            </div>
+          </li>
+
+          {/*
+            ★不正・問い合わせの数字は、権限が無いときに 0 と言わないこと。
+              「危ない会員はいません」と聞けば、人は確認をやめます。
+          */}
+          {c !== null && c.fraudHighRisk === null && (
             <li className="rounded-xl border border-edge2 bg-paper2 px-4 py-3">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="text-note font-bold text-slate">
-                  一部の景品の相場（{sm.marketStale}点）
-                </span>
-                <Badge>分かりません</Badge>
+                <span className="text-note font-bold text-slate">危ない会員の数</span>
+                <Badge>権限がありません</Badge>
               </div>
               <p className="mt-1 text-note leading-[1.85] text-slate3">
-                見張っている{sm.marketWatched}点のうち
-                <span className="num font-bold text-slate"> {sm.marketStale}点 </span>
-                は、相場が取れていません。その分の還元率は、古い値のままです。
-                ★「問題なし」とは表示しません。分からないものは分からないと出します。
+                あなたの権限では申し上げられません。0人という意味ではありません。
               </p>
-              <div className="mt-3">
-                <Btn onClick={() => onNav("market" as MenuKey)}>相場の画面へ</Btn>
-              </div>
             </li>
-          </ul>
-        )}
+          )}
+
+          {c !== null && c.supportOpen === null && (
+            <li className="rounded-xl border border-edge2 bg-paper2 px-4 py-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-note font-bold text-slate">問い合わせの残り</span>
+                <Badge>権限がありません</Badge>
+              </div>
+              <p className="mt-1 text-note leading-[1.85] text-slate3">
+                あなたの権限では申し上げられません。0件という意味ではありません。
+              </p>
+            </li>
+          )}
+        </ul>
       </Card>
 
       <DemoNote>

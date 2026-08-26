@@ -992,6 +992,53 @@ const M009: string[] = [
      ON prizes (tenant_id, user_id, won_at)`,
 ];
 
+/* ── 010：問い合わせの状態を、運営が使える5つに正す ──
+ *
+ * ★これまで status には 'OPEN' しか入っていませんでした。
+ *   「まだ誰も見ていない」も「AIが答えた」も「人が見なければいけない」も、
+ *   全部おなじ 'OPEN' でした。これでは運営の方は、
+ *   一覧を上から全部開いて中身を読むまで、何をすべきか分かりません。
+ *
+ * ★これから使う5つ。
+ *     NEW          … 届いたばかり。まだ誰も触っていない
+ *     AI_REPLIED   … AIが一次回答した。人の確認は要らないと判断された
+ *     HUMAN_REVIEW … AIが「これは人が見るべき」と判断した
+ *     IN_PROGRESS  … 人が対応中
+ *     RESOLVED     … 終わった
+ *
+ * ★いま入っている 'OPEN' は、消さずに読み替えること。
+ *   needs_human が立っていたものは HUMAN_REVIEW、
+ *   それ以外は NEW にします。
+ *   「分からないから全部 NEW」にすると、
+ *   人が見るべきものが、その他大勢に紛れて消えます。
+ */
+const M010: string[] = [
+  `UPDATE support_tickets
+      SET status = 'HUMAN_REVIEW'
+    WHERE status = 'OPEN' AND needs_human = 1`,
+
+  `UPDATE support_tickets
+      SET status = 'NEW'
+    WHERE status = 'OPEN'`,
+
+  /* 誰が担当しているか。★空のままにできること。
+     「必ず誰かに割り当てる」形にすると、
+     割り当て先を決めるまで受け付けられなくなります */
+  `ALTER TABLE support_tickets ADD COLUMN assignee_id TEXT`,
+  `ALTER TABLE support_tickets ADD COLUMN assignee_name TEXT`,
+
+  /* 分類。AIが付けた見立ても、ここに入る */
+  `ALTER TABLE support_tickets ADD COLUMN category TEXT`,
+
+  /* 最後に動いた時刻。一覧の並び替えに使う */
+  `ALTER TABLE support_tickets ADD COLUMN updated_at TEXT`,
+
+  `UPDATE support_tickets SET updated_at = created_at WHERE updated_at IS NULL`,
+
+  `CREATE INDEX IF NOT EXISTS ix_support_tickets_status
+     ON support_tickets (tenant_id, status, updated_at)`,
+];
+
 const MIGRATIONS: Migration[] = [
   { name: "001_initial", sql: M001 },
   { name: "002_tenant_tables", sql: M002 },
@@ -1002,6 +1049,7 @@ const MIGRATIONS: Migration[] = [
   { name: "007_password_change", sql: M007 },
   { name: "008_order_shipment_split", sql: M008 },
   { name: "009_notifications_mypage", sql: M009 },
+  { name: "010_ticket_status", sql: M010 },
 ];
 
 /** どの段まで済んだかを覚えておく表 */
