@@ -114,7 +114,13 @@
 > 判定は `PASS` / `FAIL` / `UNKNOWN` の3つ。**原文・出典・確認日の3点が揃ったYESだけがPASSに数えられる**（`UNKNOWN` は PASS にしない）。
 > `ENTRY_GATE_BEFORE_LEGAL_GATE = true`。`/venues` では **入口の門の表を LEGAL GATE の表より上に**出す。
 > - **orosy = `FAIL`**（`ACCOUNT_ELIGIBLE` / `MALL_SELLER_ALLOWED` / `AMAZON_CENTRIC_ALLOWED` がNO）→ `FIRST_LIVE_SUPPLIER` 候補から除外
-> - **NETSEA = `UNKNOWN`**（5項目すべて未確認）→ まず `NETSEA_ENTRY_QUESTIONS_JA` の4問を聞く
+> - **NETSEA = `UNKNOWN`**（**2026-08-27 更新：①のみ YES。②〜⑤は未確認**）→ 残り4つは `NETSEA_ENTRY_QUESTIONS_JA` で聞く
+>   - **①`ACCOUNT_ELIGIBLE` = YES**（公開ページ・原文つき）。仕入れ会員登録ページに「**法人様、個人事業主の方、開業準備中の方（ビギナー会員のみ）**」と該当側が列挙され、断るのは「**ビジネス利用を目的としない一般消費者**」だけ。バイヤー会員規約 第1条6項も「**事業又は営業のために若しくは営業として締結するものに限り**」。**orosyのような「モールは不可」という除外リストは見当たらなかった。**
+>   - **②③（モール販売・Amazon中心）= UNKNOWN。禁止されていたのではなく、条文がそもそも無い。「書いていない＝可」と読まない（ルール58）。**
+>   - **④（古物商等の資格）= UNKNOWN**（記述に**到達できなかった**・ルール97）。**⑤（審査条件）= UNKNOWN**（審査の有無と断られる条件は確認済み。**必要書類と期間が未確認**）。
+>   - **1つ確認できても門は開かない。** `canStartLegalGateResearch('NETSEA')` は false のまま。
+>   - **構造上の発見**＝NETSEAには `取引申請` があり「**サプライヤーが承認したバイヤーだけが購入できる商品があり**」「**サプライヤーは自己紹介情報をもとに取引承認・否認の判断をする**」。→ **販路の可否はNETSEA本体が一括では答えられず、サプライヤーごとに決まる可能性が高い**（＝`product_marketplace_policy` を商品ごとに人が埋める既存設計と一致）。
+>   - **Legal Gate に効く条文**＝第7条2項3号「**利用者の権利の行使の範囲を超えて、本サービスの情報を利用すること**」に事前承諾が必要。**Q1〜Q4（保存・加工・価格比較・分析結果の保存）に直撃**。回答が「承諾が必要」なら **`CONDITIONAL`**（YESにしない）。
 
 > [!danger] `FIRST_LIVE_SUPPLIER` ＝ 入口の門を通り、さらに Legal Gate を完全通過した Supplier
 > **順位でも過去のスコアでも決めない。Gate通過が最優先条件。**

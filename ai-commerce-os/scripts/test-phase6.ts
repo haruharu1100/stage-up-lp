@@ -1275,9 +1275,35 @@ function main(): void {
     // NETSEA＝入口が未確認。まずここから。
     check('NETSEAの入口の門はまだ未確認', supplierEntryGateResult('NETSEA') === 'UNKNOWN');
     const netseaEntry = supplierEntryGateBoard().find((x) => x.gate.supplierCode === 'NETSEA');
-    check('NETSEAは5つとも未確認', netseaEntry?.unknownJa.length === 5);
+    // 2026-08-27：公開ページで①だけ確定した。残り4つは公開情報に無いので未確認のまま。
+    check('NETSEAに不可の項目は無い', netseaEntry?.failedJa.length === 0);
+    check('NETSEAは残り4つが未確認', netseaEntry?.unknownJa.length === 4);
     check(
-      '未確認のまま規約・API調査へ進ませない',
+      'NETSEAの①（事業形態での登録可否）は公開ページで可を確認済み',
+      netseaEntry?.gate.answers.ACCOUNT_ELIGIBLE?.value === 'YES',
+    );
+    check(
+      'NETSEAの①には原文・出典・確認日の3点が揃っている',
+      Boolean(
+        netseaEntry?.gate.answers.ACCOUNT_ELIGIBLE?.quoteJa &&
+          netseaEntry?.gate.answers.ACCOUNT_ELIGIBLE?.sourceJa &&
+          netseaEntry?.gate.answers.ACCOUNT_ELIGIBLE?.checkedAt,
+      ),
+    );
+    check(
+      'NETSEAの①の原文に「個人事業主」が入っている',
+      netseaEntry?.gate.answers.ACCOUNT_ELIGIBLE?.quoteJa?.includes('個人事業主') === true,
+    );
+    check(
+      '②モール販売可否は公開情報に無いので未確認のまま（書いていない＝可にしない）',
+      netseaEntry?.gate.answers.MALL_SELLER_ALLOWED === undefined,
+    );
+    check(
+      '③Amazon中心の可否も未確認のまま',
+      netseaEntry?.gate.answers.AMAZON_CENTRIC_ALLOWED === undefined,
+    );
+    check(
+      '1つ確認できても、残りが未確認なら規約・API調査へ進ませない',
       canStartLegalGateResearch('NETSEA') === false,
     );
     check('NETSEAで先に聞く項目は4つ', NETSEA_ENTRY_QUESTIONS_JA.length === 4);

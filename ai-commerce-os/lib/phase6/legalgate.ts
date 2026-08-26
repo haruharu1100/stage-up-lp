@@ -1371,8 +1371,35 @@ export const SUPPLIER_ENTRY_GATES: SupplierEntryGate[] = [
   {
     supplierCode: 'NETSEA',
     labelJa: 'NETSEA（SynaBiz）',
-    // ★ 2026-08-26 時点ですべて未確認。Legal Gate の8問より先に、この4点を確認する。
-    answers: {},
+    // ★ 2026-08-27：公開ページ（一次資料）だけで①のみ確定。②③④⑤は公開情報に無いため UNKNOWN のまま。
+    //   「書いていない＝可」とは読まない（ルール58）。残りは問い合わせの回答を待つ。
+    answers: {
+      ACCOUNT_ELIGIBLE: {
+        key: 'ACCOUNT_ELIGIBLE',
+        questionJa: SUPPLIER_ENTRY_GATE_STEP_JA.ACCOUNT_ELIGIBLE,
+        value: 'YES',
+        conditionJa: null,
+        quoteJa:
+          'ご登録は、日本国内に営業所または居所を有する法人、個人事業主、開業準備中の方に限らせていただいております／下記のいずれかに該当する方はお申込みいただけます。法人様、個人事業主の方、開業準備中の方（ビギナー会員のみ）／ビジネス利用を目的としない一般消費者の方のご入会をお断りしております',
+        sourceJa:
+          'NETSEA 仕入れ会員登録ページ https://www.netsea.jp/buyer/register ／ バイヤー会員規約 第1条6項「本サービスは、事業又は営業のために若しくは営業として締結するものに限りご利用いただけます。」 https://www.netsea.jp/agreement/statement',
+        checkedAt: '2026-08-27',
+      },
+      // MALL_SELLER_ALLOWED は UNKNOWN のまま。
+      //   規約・ヘルプ・ガイドを読んだが、モール（Amazon/楽天/Yahoo!）での販売可否を定めた条文は見つからなかった。
+      //   一方で「取引申請」に『参加マーケット選択』『販売サイトURL』の入力欄があり、
+      //   「サプライヤーが承認したバイヤーだけが購入ができる商品があり」「サプライヤーは自己紹介情報をもとに
+      //   取引承認・否認の判断をする」と明記されている（https://www.netsea.jp/help/manual/customer.html）。
+      //   ＝ 販売先の可否は NETSEA 全体では決まらず、サプライヤーごとに決まる可能性が高い。
+      //   「書いていないから可」とはしない（ルール58）。
+      // AMAZON_CENTRIC_ALLOWED も同じ理由で UNKNOWN。
+      // REQUIRED_LICENSES_MET は UNKNOWN（古物商許可等に関する記述に到達できなかった・ルール97）。
+      // SCREENING_CONDITIONS_KNOWN は UNKNOWN。
+      //   審査の「有無」と「断られる条件3つ」は確認できた（規約 第17条2項・3項）。
+      //   ガイドにも「入会審査から審査完了まで時間がかかる場合がございます。審査中もご利用いただけますが、
+      //   審査の結果により、機能制限もしくは入会を見送らせていただく場合」とある。
+      //   ただし **必要書類と審査期間の具体値** に到達できていないため、揃うまで YES にしない。
+    },
   },
 ];
 
