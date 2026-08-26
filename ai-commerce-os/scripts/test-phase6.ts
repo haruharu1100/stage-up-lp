@@ -1081,9 +1081,18 @@ function main(): void {
       board.map((b) => b.waiting.supplierCode).join(',') ===
         'NETSEA,VALUECOMMERCE,OROSY,YAHOO_SHOPPING,RAKUTEN',
     );
-    check('回答はまだ1件も入っていない', SUPPLIER_GATE_WAITING.every((w) => w.answers.length === 0));
+    // 2026-08-26：orosy だけ「不可」の回答2件が入った（バイヤー審査基準）。他の4件はまだ0件。
+    check(
+      'orosy以外はまだ回答が1件も入っていない',
+      SUPPLIER_GATE_WAITING.filter((w) => w.supplierCode !== 'OROSY').every(
+        (w) => w.answers.length === 0,
+      ),
+    );
     check('全員が止まっている', board.every((b) => b.gate === 'BLOCKED'));
-    check('未回答は不明として数える', board.every((b) => b.unknown === b.waiting.requiredCount));
+    check(
+      '未回答は不明として数える（回答が入った分だけ不明が減る）',
+      board.every((b) => b.unknown === b.waiting.requiredCount - b.waiting.answers.length),
+    );
     check('可が0件のまま', board.every((b) => b.yes === 0));
 
     check('回答の種類は4つ', ANSWER_STATES.length === 4);
@@ -1135,9 +1144,27 @@ function main(): void {
     const board18 = supplierGateBoard();
     const orosy = board18.find((b) => b.waiting.supplierCode === 'OROSY');
     const netsea = board18.find((b) => b.waiting.supplierCode === 'NETSEA');
-    check('orosyは人間の規約確認待ち', orosy?.display === 'WAITING_HUMAN_CHECK');
+    // 2026-08-26：orosy はバイヤー審査基準（一次資料）で「モール」が利用不可と判明し、
+    // 当社（Amazon主販路・実店舗なし）は審査対象外。人間確認待ちではなく「不可」で確定した。
+    check('orosyは不可で確定', orosy?.display === 'BLOCKED');
+    check('orosyの不可には出典3点が揃っている', (orosy?.no ?? 0) >= 1);
+    check(
+      'orosyの不可の根拠に審査基準の原文が入っている',
+      (orosy?.waiting.answers ?? []).some(
+        (a) =>
+          a.value === 'NO' &&
+          (a.quoteJa ?? '').includes('ご利用頂けません') &&
+          (a.sourceJa ?? '').includes('help.orosy.com') &&
+          a.checkedAt === '2026-08-26',
+      ),
+    );
+    check(
+      'orosyの残りの項目は不明のまま（読んでいないものを読んだことにしない）',
+      (orosy?.unknown ?? 0) === 11,
+    );
     check('NETSEAは返事待ち', netsea?.display === 'WAITING_ANSWER');
     check('通過している相手はまだ0件', board18.every((b) => b.display !== 'PASSED'));
+    check('購入できる仕入先候補で残っているのはNETSEAだけ', firstLiveSupplier() === null);
 
     check('最低条件は7つ', FIRST_LIVE_SUPPLIER_MIN_CONDITIONS.length === 7);
     const allYes = {

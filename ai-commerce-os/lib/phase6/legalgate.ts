@@ -981,11 +981,38 @@ export const SUPPLIER_GATE_WAITING: SupplierGateWaiting[] = [
     order: 3,
     supplierCode: 'OROSY',
     labelJa: 'orosy',
-    roleJa: '仕入先候補',
+    roleJa: '仕入先候補から除外（2026-08-26・バイヤー審査基準で当社は対象外）',
     way: 'HUMAN_READ_TERMS',
-    waitingForJa: '人が規約を読んで13項目に可／不可／不明を入れるのを待っている（所要20分・費用0円）',
+    waitingForJa:
+      '確認済み。規約13項目より手前の「バイヤー審査基準」で不可が確定したため、残りの項目は読まない',
     requiredCount: 13,
-    answers: [],
+    // ★ 2026-08-26：一次資料で「不可」が確定した2項目だけを記録する。
+    //   残り11項目は UNKNOWN のまま（読んでいないものを読んだことにしない・ルール58/97）。
+    //   1件でも NO があれば display は BLOCKED になるため、これで「不可」が確定する。
+    answers: [
+      {
+        key: 'OROSY_1_COMMERCIAL_USE',
+        questionJa: '#1 当社（法人・個人事業）がバイヤーとして利用してよいか',
+        value: 'NO',
+        conditionJa: null,
+        quoteJa:
+          '■ご利用可能／・実店舗での物販が可能な事業者／・実店舗の開店準備中の事業者／・ネットショップを運営している事業者（下記ご利用いただけない条件を除く）／上記に該当した場合であっても、事業実態や内容によりご利用をお断りする場合がございます。／■ご利用頂けません／・ネットショップのうち、オープン前、ドロップシッピング、フリマ、モール、オークション、アフィリエイト',
+        sourceJa:
+          'orosy ヘルプセンター「バイヤーの利用審査基準について」 https://help.orosy.com/hc/ja/articles/4403961908505 （記事の最終更新 2025-01-22）',
+        checkedAt: '2026-08-26',
+      },
+      {
+        key: 'OROSY_2_PURCHASABLE',
+        questionJa: '#2 実際に仕入れ（発注）ができるか',
+        value: 'NO',
+        conditionJa: null,
+        quoteJa:
+          'アカウント作成後、3営業日以内に審査結果を送信致します。審査結果の詳細については、開示しておりませんのでご了承ください。',
+        sourceJa:
+          'orosy ヘルプセンター「バイヤーの利用審査基準について」 https://help.orosy.com/hc/ja/articles/4403961908505 ／ バイヤーAPI紹介ページ https://wholesale-portal.orosy.com/ （初回発注の前に事業者確認が必要）',
+        checkedAt: '2026-08-26',
+      },
+    ],
     docJa: '事業Vault/AI Commerce OS/35_orosy規約チェックリスト_人間確認用.md',
   },
   {
