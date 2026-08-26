@@ -40,8 +40,8 @@
  */
 
 import { execFileSync } from "node:child_process";
-import { readFileSync, statSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { readFileSync, readdirSync, statSync } from "node:fs";
+import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -115,17 +115,80 @@ const MINAI =
 /* ══════════════════════════════════════════════
    git に入る予定のファイルを、集める
    ══════════════════════════════════════════════ */
-function tsuikaSareruFiles() {
+/*
+  ★git が使えない場所でも、必ず動くこと。（2026-08-26）
+
+    最初は git だけに頼って書きました。
+    そうしたら、公開環境（Vercel）には git が置かれておらず、
+    そこでこの検査が動かなくなりました。
+
+    このとき、いちばんやってはいけないのは
+    「git が無いから、素通りさせる」ことです。
+    素通りさせると、公開のときだけ見張りが居ない状態になります。
+    しかも画面には何も出ないので、誰も気づきません。
+
+    だから、git が使えないときは、自分でフォルダを歩いて全部読みます。
+    どちらのやり方で調べたかは、最後に必ず画面へ出します。
+*/
+
+/* 歩かないフォルダ（機械が作ったもの・鍵を置く場所そのもの） */
+const ARUKANAI_FOLDER = new Set([
+  "node_modules",
+  ".git",
+  ".next",
+  ".next-prod",
+  ".next-verify",
+  "_next-verify-local",
+  ".vercel",
+  "out",
+  "build",
+  "coverage",
+  ".data",
+  "logs",
+  "tmp",
+  ".tmp",
+  /* ★鍵の置き場そのもの。ここは「鍵があって正しい」場所なので、読まない */
+  ".secrets",
+]);
+
+/* 読まないファイル（鍵を入れてよい場所・機械が作った記録） */
+const YOMANAI_FILE = /^\.env|\.(pem|key|p12|pfx|log|db|tsbuildinfo)$/i;
+
+function gitDeAtsumeru() {
   const out = execFileSync(
     "git",
     ["ls-files", "-z", "--cached", "--others", "--exclude-standard", "."],
-    { cwd: ROOT, maxBuffer: 64 * 1024 * 1024 },
+    { cwd: ROOT, maxBuffer: 64 * 1024 * 1024, stdio: ["ignore", "pipe", "ignore"] },
   );
-  return out
-    .toString("utf8")
-    .split("\0")
-    .filter(Boolean)
-    .filter((p) => !MINAI.test(p));
+  return out.toString("utf8").split("\0").filter(Boolean);
+}
+
+function jibunDeAruku(dir = ROOT, atsumeta = []) {
+  for (const e of readdirSync(dir, { withFileTypes: true })) {
+    if (e.isDirectory()) {
+      if (ARUKANAI_FOLDER.has(e.name)) continue;
+      jibunDeAruku(join(dir, e.name), atsumeta);
+    } else if (e.isFile()) {
+      if (YOMANAI_FILE.test(e.name)) continue;
+      atsumeta.push(relative(ROOT, join(dir, e.name)));
+    }
+  }
+  return atsumeta;
+}
+
+/** どちらのやり方で集めたか（最後に画面へ出すため） */
+let YARIKATA = "git に入る予定のファイル";
+
+function tsuikaSareruFiles() {
+  let list;
+  try {
+    list = gitDeAtsumeru();
+  } catch {
+    /* ★ここで素通りさせないこと。自分で歩いて、必ず調べる */
+    YARIKATA = "フォルダを直接たどって全部（git が無い場所のため）";
+    list = jibunDeAruku();
+  }
+  return list.filter((p) => !MINAI.test(p));
 }
 
 /* ══════════════════════════════════════════════
@@ -172,14 +235,23 @@ for (const rel of tsuikaSareruFiles()) {
    結果
    ══════════════════════════════════════════════ */
 if (mitsuketa.length === 0) {
-  console.log(`  ✓ 鍵の書き残しはありません（${mita}ファイルを確認）`);
+  console.log(
+    `  ✓ 鍵の書き残しはありません（${mita}ファイルを確認／調べ方：${YARIKATA}）`,
+  );
   process.exit(0);
 }
 
+/*
+  ★止めたときこそ、「どうやって調べたか」を出すこと。
+    合格のときだけ出していると、止まった人が
+    「何が調べられていないのか」を確かめられません。
+*/
 console.error(`
 ═══════════════════════════════════════════════
-  ★止めました：git に入る場所に、鍵が書かれています
+  ★止めました：人に見られる場所に、鍵が書かれています
 ═══════════════════════════════════════════════
+
+  調べ方： ${YARIKATA}（${mita}ファイルを確認）
 `);
 for (const m of mitsuketa) {
   console.error(`  ${m.rel}:${m.gyou}`);

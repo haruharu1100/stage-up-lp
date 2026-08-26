@@ -61,13 +61,20 @@ const DOUGU = join(ROOT, "scripts", "check-secrets.mjs");
  */
 const NISE_NO_KAGI = "QF3XKZ7MTVBN4RDW" + "6YHJ2LPS5AECGUKT";
 
-/** 道具を走らせて、「止めたか」と「何と言ったか」を返す */
-function hashiraseru(): { tometaka: boolean; itta: string } {
+/**
+ * 道具を走らせて、「止めたか」と「何と言ったか」を返す。
+ *
+ * @param gitNashi true にすると、git が置かれていない場所のふりをします。
+ *   （公開環境の Vercel には git がありません）
+ */
+function hashiraseru(gitNashi = false): { tometaka: boolean; itta: string } {
   try {
-    const out = execFileSync("node", [DOUGU], {
+    const out = execFileSync(process.execPath, [DOUGU], {
       cwd: ROOT,
       encoding: "utf8",
       maxBuffer: 32 * 1024 * 1024,
+      /* PATH を消すと git が見つからなくなる。node は絶対パスで呼ぶので動く */
+      env: gitNashi ? { ...process.env, PATH: "/nonexistent" } : process.env,
     });
     return { tometaka: false, itta: out };
   } catch (e) {
@@ -112,6 +119,50 @@ test("★わざと鍵を置いたら、ちゃんと止まる（見張り役が�
         見つけた鍵を画面に出す道具は、
         それ自体が鍵を広める道具になります。
     */
+    assert.ok(
+      !r.itta.includes(NISE_NO_KAGI),
+      "見つけた鍵を、そのまま画面に出しています。出してはいけません。",
+    );
+  } finally {
+    if (existsSync(oku)) unlinkSync(oku);
+  }
+});
+
+/*
+  ═══════════════════════════════════════════════════════
+  ★git が無い場所でも、見張っていること
+  ═══════════════════════════════════════════════════════
+
+    2026-08-26、この道具を公開環境（Vercel）へ持っていったら、
+    そこには git が置かれておらず、ビルドが止まりました。
+
+    このとき、いちばん楽な直し方は
+    「git が無ければ、何もせず合格にする」ことでした。
+    しかしそれをすると、いちばん大事な公開のときだけ、
+    見張りが居ない状態になります。しかも画面には
+    「合格」としか出ないので、誰も気づきません。
+
+    だから、git が無いときは自分でフォルダを歩いて調べます。
+    そして「歩くほうも、ちゃんと捕まえる」ことを、ここで確かめます。
+*/
+test("★git が無い場所でも、わざと置いた鍵を捕まえる", () => {
+  const oku = join(ROOT, "__secret-canary3.ts");
+  writeFileSync(oku, `const k = "${NISE_NO_KAGI}";\n`, "utf8");
+  try {
+    const r = hashiraseru(true);
+
+    assert.ok(
+      r.itta.includes("フォルダを直接たどって"),
+      "git が無いのに、git のやり方で調べたことになっています。\n" + r.itta,
+    );
+
+    assert.equal(
+      r.tometaka,
+      true,
+      "git が無い場所で、わざと置いた鍵を素通りさせました。\n" +
+        "公開のときだけ見張りが居ない、といういちばん危ない状態です。",
+    );
+
     assert.ok(
       !r.itta.includes(NISE_NO_KAGI),
       "見つけた鍵を、そのまま画面に出しています。出してはいけません。",
