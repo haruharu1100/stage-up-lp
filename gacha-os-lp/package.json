@@ -4,10 +4,11 @@
   "private": true,
   "scripts": {
     "dev": "next dev -p 3210",
-    "build": "node scripts/check-draw-rng.mjs && node scripts/check-cache.mjs && node scripts/check-regression.mjs && node scripts/check-launch.mjs && next build",
+    "build": "node scripts/check-secrets.mjs && node scripts/check-draw-rng.mjs && node scripts/check-cache.mjs && node scripts/check-regression.mjs && node scripts/check-launch.mjs && next build",
     "start": "next start",
     "lint": "next lint",
     "test": "node scripts/run-tests.mjs",
+    "check:secrets": "node scripts/check-secrets.mjs",
     "check:launch": "node scripts/check-launch.mjs",
     "check:urls": "node scripts/check-urls.mjs",
     "check:design": "node scripts/check-design.mjs",
