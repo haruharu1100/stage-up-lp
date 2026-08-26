@@ -68,11 +68,41 @@ export type AuditAction =
   | "BACKTEST_RUN"
   | "GACHA_PUBLISH"
   | "GACHA_PAUSE"
+  /**
+   * 止めていた販売を、また始めた記録。
+   *
+   * ★GACHA_PUBLISH と分けて残すこと。
+   *   「はじめて世に出した」と「止めていたものを戻した」は、別の出来事です。
+   *   戻したということは、その前に止めた理由があったということです。
+   *   同じ名前で残すと、あとから読む人が、止めた事実を読み落とします。
+   */
+  | "GACHA_RESUME"
   | "POINT_ADJUST_REQUEST"
   | "POINT_ADJUST_APPROVE"
   | "POINT_ADJUST_REJECT"
   | "POINT_ADJUST_APPLY"
+  /** 担当者（管理画面に入る人）の利用停止・解除。target は admin:… */
   | "USER_SUSPEND"
+
+  /**
+   * お客様（会員）の利用停止・解除。target は customer:…
+   *
+   * ★USER_SUSPEND と分けて残すこと。
+   *   同じ名前にすると、「止められているお客様は何人か」を
+   *   数えるたびに target の頭文字を見分ける必要が出ます。
+   *   見分け方を知らない人が数えると、担当者まで会員として数えます。
+   *
+   *   止めることの意味も違います。
+   *   担当者を止めても、その人が管理画面に入れなくなるだけです。
+   *   お客様を止めると、その瞬間からガチャも発送依頼もできません。
+   *   重さの違うものを、同じ名前で残さないでください。
+   *
+   * ★停止と解除は、同じ種類で残します。
+   *   解除だけ別にすると、
+   *   「止めたが解除されていない人」を数えるのが難しくなります。
+   *   どちらなのかは before / after に残ります。
+   */
+  | "CUSTOMER_SUSPEND"
   | "FRAUD_REVIEW"
   | "FRAUD_BLOCK"
   | "SHIPPING_MARK"

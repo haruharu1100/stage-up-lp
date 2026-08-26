@@ -51,11 +51,15 @@ const ACTION_LABEL: Record<AuditAction, string> = {
   BACKTEST_RUN: "公開前バックテスト",
   GACHA_PUBLISH: "ガチャ公開",
   GACHA_PAUSE: "販売停止",
+  GACHA_RESUME: "販売再開",
   POINT_ADJUST_REQUEST: "ポイント変更の申請",
   POINT_ADJUST_APPROVE: "ポイント変更の承認",
   POINT_ADJUST_REJECT: "ポイント変更の却下",
   POINT_ADJUST_APPLY: "ポイント変更",
-  USER_SUSPEND: "会員の停止",
+  /* ★「会員」と「担当者」を、同じ言葉で書かないこと。
+        止まる範囲がまったく違います（管理画面に入れない／ガチャが引けない） */
+  USER_SUSPEND: "担当者の停止・解除",
+  CUSTOMER_SUSPEND: "お客様の利用停止・解除",
   FRAUD_REVIEW: "不正判定の処理",
   FRAUD_BLOCK: "登録の停止",
   SHIPPING_MARK: "発送処理",

@@ -622,7 +622,10 @@ function Screen({
       case "points":
         return <PointScreen s={s} dispatch={dispatch} />;
       case "customers":
-        return <CustomersScreen s={s} />;
+        /* ★見本データ（s）を渡さないこと。
+             この画面は、サーバーの会員そのものを見ています。
+             画面の中の控えを書き換えても、DBは変わりません。 */
+        return <CustomersScreen />;
       /* ★注文と発送を、同じ画面に戻さないこと。
            1つの注文を2回に分けて送った日に、書けなくなります。 */
       case "orders":
