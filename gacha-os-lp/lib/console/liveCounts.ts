@@ -125,6 +125,8 @@ export function useLiveCounts(on = true): LiveCountsState {
             /* 対応の残り */
             supportOpen: kazu(data.supportOpen),
             supportHumanReview: kazu(data.supportHumanReview),
+            supportNew: kazu(data.supportNew),
+            supportHigh: kazu(data.supportHigh),
 
             /* ポイントの見張り。★null（見せられない）を 0 に潰さないこと */
             pointMismatch: kazu(data.pointMismatch),
@@ -170,6 +172,14 @@ export type LiveTodo = {
   count: number;
   /** 押したときに飛ぶ画面 */
   to: string;
+  /**
+   * 飛んだ先での絞り込み。
+   *
+   * ★件数を押したのに、全件の一覧が出る、をやらないこと。
+   *   「人の確認が必要 3件」を押した人が見たいのは、その3件です。
+   *   200件の中から3件を探させると、その画面は使われなくなります。
+   */
+  query?: Record<string, string>;
 };
 
 /**
@@ -236,6 +246,26 @@ export function liveTodos(state: LiveCountsState): LiveTodo[] {
       label: "人の確認が必要な問い合わせ",
       count: c.supportHumanReview,
       to: "support",
+      /* 押したら、その件だけが出るようにする */
+      query: { status: "HUMAN_REVIEW" },
+    });
+  }
+
+  /**
+   * まだ誰も何もしていない問い合わせ。
+   *
+   * ★「人の確認が必要」と混ぜないこと。
+   *   やることが違います。
+   *     人の確認 … AIが答えられなかった。人が読んで書く
+   *     未対応  … まだ誰も開いていない。まず開く
+   */
+  if (c.supportNew !== null && c.supportNew > 0) {
+    out.push({
+      urgency: "SHOULD",
+      label: "まだ誰も見ていない問い合わせ",
+      count: c.supportNew,
+      to: "support",
+      query: { status: "NEW" },
     });
   }
 

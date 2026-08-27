@@ -64,7 +64,16 @@ export type NotifyKind =
   /** お届けが終わった */
   | "SHIPMENT_DELIVERED"
   /** 発送を取り消した */
-  | "SHIPMENT_CANCELLED";
+  | "SHIPMENT_CANCELLED"
+  /**
+   * 問い合わせに、担当者が返信した。
+   *
+   * ★AIが下書きを作っただけのときは、これを作らないこと。
+   *   下書きは、まだお客様の目に触れていません。
+   *   「返事が来ました」と知らせておいて、開いたら何も無い、
+   *   が起きます。人が送信を押したときだけです。
+   */
+  | "TICKET_REPLIED";
 
 export type NotifyChannel = "INAPP" | "EMAIL" | "SMS";
 export type NotifyStatus = "QUEUED" | "SENT" | "FAILED";

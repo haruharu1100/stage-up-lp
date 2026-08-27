@@ -638,7 +638,10 @@ function Screen({
           <ShipmentsScreen onNav={onNav} query={navQuery} />
         );
       case "support":
-        return <SupportScreen s={s} dispatch={dispatch} />;
+        /* ★見本の問い合わせ（s.tickets）を渡さないこと。
+             画面の中の控えに返信しても、お客様には何も届きません。
+             いまは、お客様が出した本物の問い合わせを直接読みます */
+        return <SupportScreen query={navQuery} />;
       case "security":
         return <SecurityCenter s={s} dispatch={dispatch} />;
       case "audit":

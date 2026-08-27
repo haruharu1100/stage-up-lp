@@ -58,7 +58,15 @@ export default function Dashboard({
   onNav,
 }: {
   s: ConsoleState;
-  onNav: (k: MenuKey) => void;
+  /**
+   * 画面を移る。
+   *
+   * ★2つめの引数（絞り込み）を落とさないこと。
+   *   「人の確認が必要 3件」を押した人が見たいのは、その3件です。
+   *   絞り込みを渡さずに飛ばすと、200件の一覧から
+   *   3件を目で探させることになり、その導線は使われなくなります。
+   */
+  onNav: (k: MenuKey, q?: Record<string, string>) => void;
 }) {
   /**
    * ═══════════════════════════════════════════════
@@ -369,7 +377,7 @@ function Hero({
   name: string;
   mustCount: number;
   shouldCount: number;
-  onNav: (k: MenuKey) => void;
+  onNav: (k: MenuKey, q?: Record<string, string>) => void;
 }) {
   const [hello, setHello] = useState("おはようございます");
 
@@ -447,7 +455,18 @@ function Hero({
    ① 今日やること
    ══════════════════════════════════════════════ */
 
-type Todo = { label: string; count: number; to: string };
+/**
+ * ★query（飛んだ先での絞り込み）を、ここで削らないこと。
+ *   liveTodos が付けた絞り込みを落とすと、
+ *   「人の確認が必要 3件」を押した人に、全件の一覧が出ます。
+ *   200件から3件を目で探させる導線は、じきに使われなくなります。
+ */
+type Todo = {
+  label: string;
+  count: number;
+  to: string;
+  query?: Record<string, string>;
+};
 
 function Today({
   must,
@@ -456,7 +475,7 @@ function Today({
 }: {
   must: Todo[];
   should: Todo[];
-  onNav: (k: MenuKey) => void;
+  onNav: (k: MenuKey, q?: Record<string, string>) => void;
 }) {
   const none = must.length === 0 && should.length === 0;
 
@@ -511,7 +530,7 @@ function TodoGroup({
   title: string;
   lead: string;
   items: Todo[];
-  onNav: (k: MenuKey) => void;
+  onNav: (k: MenuKey, q?: Record<string, string>) => void;
 }) {
   const conf =
     tone === "danger"
@@ -546,7 +565,7 @@ function TodoGroup({
                   1件ごとに手元を止めることになります */}
               <button
                 type="button"
-                onClick={() => onNav(t.to as MenuKey)}
+                onClick={() => onNav(t.to as MenuKey, t.query)}
                 className={`flex w-full flex-wrap items-center justify-between gap-x-4 gap-y-1.5 rounded-xl border px-4 py-3 text-left transition-colors hover:brightness-[0.98] ${conf.face}`}
               >
                 <span className="min-w-0 text-note font-medium text-slate2">
@@ -597,7 +616,7 @@ function Kpi({
   tone: "ink" | "ok" | "warn" | "danger";
   /** 中身を見に行ける画面。無いものは押せなくてよい */
   to?: MenuKey;
-  onNav?: (k: MenuKey) => void;
+  onNav?: (k: MenuKey, q?: Record<string, string>) => void;
 }) {
   const wakaru = value !== null;
 
@@ -673,7 +692,7 @@ function StatusCard({
   say: string;
   to: MenuKey;
   cta: string;
-  onNav: (k: MenuKey) => void;
+  onNav: (k: MenuKey, q?: Record<string, string>) => void;
 }) {
   const conf = {
     ok: { face: "border-edge bg-paper", ink: "text-ok-ink", dot: "bg-ok" },

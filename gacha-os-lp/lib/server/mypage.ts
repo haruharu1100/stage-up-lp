@@ -16,6 +16,7 @@ import { appendAuditTx } from "./audit";
 import { withWriteTx, db } from "./db";
 import { id } from "./ids";
 import { addressLine, parseAddress, type Actor, type AddressSnapshot } from "./orders";
+import { guessCategory } from "./ticketAdmin";
 import { isTicketStatus, TICKET_LABEL_CUSTOMER } from "./ticketStatus";
 
 type Row = Record<string, unknown>;
@@ -298,6 +299,23 @@ export async function setAddress(args: {
    お問い合わせ
    ══════════════════════════════════════════════ */
 
+/**
+ * お客様に見せる、1件のやり取り。
+ *
+ * ★お客様には「AI」と書かないこと。
+ *   下書きをAIが作っても、送るかどうかを決めたのは人です。
+ *   送り主は「サポート担当」です。
+ *   社内で誰が書いたかは、管理画面の側に残します。
+ */
+export type TicketMessageView = {
+  seq: number;
+  /** お客様 / サポート担当 の2つだけ */
+  from: "お客様" | "サポート担当";
+  mine: boolean;
+  body: string;
+  createdAt: string;
+};
+
 export type TicketView = {
   id: string;
   subject: string;
@@ -308,6 +326,14 @@ export type TicketView = {
   answeredBy: string | null;
   answeredAt: string | null;
   createdAt: string;
+  /**
+   * 時系列のやり取り（正本）。
+   *
+   * ★answer（1つ前のやり方）は、いちばん新しい返信の写しです。
+   *   2回以上返信すると、answer には最後の1件しか残りません。
+   *   読むときは、必ずこちらを使ってください。
+   */
+  messages: TicketMessageView[];
 };
 
 /**
@@ -341,6 +367,54 @@ export async function listTickets(
     args: [tenantId, userId],
   });
 
+  const ids = (r.rows as Row[]).map((t) => str(t.id));
+
+  /* やり取りを、まとめて1回で読む。
+     ★1件ずつ読みに行かないこと。問い合わせが20件あれば20往復になります */
+  const msgs = new Map<string, TicketMessageView[]>();
+  if (ids.length > 0) {
+    const m = await db().execute({
+      /*
+       * ★AIの下書き（author_kind = 'AI'）を、ここへ混ぜないこと。
+       *
+       *   AIが作るのは「下書き」です。まだ誰も送っていません。
+       *   人が読んで、直して、送信を押したときにだけ、
+       *   'STAFF' として別の1行が入ります。
+       *
+       *   2026-08-27、ここで author_kind を絞っていなかったため、
+       *   AIが下書きを作った瞬間に、その文がお客様の画面へ
+       *   「サポート担当」として出ていました。
+       *   担当者はまだ何も送っていないのに、です。
+       *   下書きの中身が違っていても、取り消せません。
+       *
+       *   「AIか人か」をお客様に見せない方針（下の from）と、
+       *   「下書きは出さない」は、別の話です。混ぜないでください。
+       */
+      sql: `SELECT ticket_id, seq, author_kind, body, created_at
+              FROM ticket_messages
+             WHERE tenant_id = ? AND ticket_id IN (${ids.map(() => "?").join(",")})
+               AND author_kind <> 'AI'
+             ORDER BY ticket_id, seq`,
+      args: [tenantId, ...ids],
+    });
+    for (const row of m.rows as Row[]) {
+      const tid = str(row.ticket_id);
+      const mine = str(row.author_kind) === "CUSTOMER";
+      const list = msgs.get(tid) ?? [];
+      list.push({
+        seq: Number(row.seq ?? 0),
+        /* ★AI と 担当者 を、お客様の画面で分けないこと。
+             分けると「これはAIだから読まなくていい」と思われます。
+             送ると決めたのは、どちらの場合も人です */
+        from: mine ? "お客様" : "サポート担当",
+        mine,
+        body: str(row.body),
+        createdAt: str(row.created_at),
+      });
+      msgs.set(tid, list);
+    }
+  }
+
   return (r.rows as Row[]).map((t) => {
     const st = str(t.status);
     return {
@@ -353,6 +427,7 @@ export async function listTickets(
       answeredBy: nul(t.answered_by),
       answeredAt: nul(t.answered_at),
       createdAt: str(t.created_at),
+      messages: msgs.get(str(t.id)) ?? [],
     };
   });
 }
@@ -403,14 +478,49 @@ export async function createTicket(args: {
     const c = cu.rows[0] as Row;
 
     const ticketId = id("tkt");
+
+    /* 分類は、分かるときだけ入れる。
+       ★分からないものを「その他」で埋めないこと。
+         埋めると「その他」が山になり、分類の意味が無くなります。
+         分からないときは null のままにして、人が決めます */
+    const category = guessCategory(subject, body);
+
     await tx.execute({
       /* ★status は 'NEW'。以前の 'OPEN' は、
          管理画面の一覧にも、状態の絞り込みにも出てこない名前でした */
       sql: `INSERT INTO support_tickets
               (id, tenant_id, user_id, subject, body, status,
-               priority, needs_human, created_at, updated_at)
-            VALUES (?,?,?,?,?, 'NEW', 'NORMAL', 0, ?, ?)`,
-      args: [ticketId, args.tenantId, args.userId, subject, body, at, at],
+               category, priority, needs_human, created_at, updated_at)
+            VALUES (?,?,?,?,?, 'NEW', ?, 'NORMAL', 0, ?, ?)`,
+      args: [
+        ticketId,
+        args.tenantId,
+        args.userId,
+        subject,
+        body,
+        category,
+        at,
+        at,
+      ],
+    });
+
+    /* ★やり取りの1件目として、必ず残すこと。
+         support_tickets.body にしか無いと、
+         2通目以降と並べて読めません（時系列にならない） */
+    await tx.execute({
+      sql: `INSERT INTO ticket_messages
+              (id, tenant_id, ticket_id, seq, author_kind,
+               author_id, author_name, body, sources, created_at)
+            VALUES (?,?,?, 1, 'CUSTOMER', ?, ?, ?, NULL, ?)`,
+      args: [
+        id("tmsg"),
+        args.tenantId,
+        ticketId,
+        args.userId,
+        str(c.name),
+        body,
+        at,
+      ],
     });
 
     const audit = await appendAuditTx(tx, {
@@ -420,7 +530,10 @@ export async function createTicket(args: {
       actorId: args.actor.id,
       actorName: args.actor.name,
       actorRole: args.actor.role,
-      action: "USER_ASK",
+      /* ★「問い合わせが来た」と「AIが下書きした」と「人が返信した」を、
+           1種類の記録にまとめないこと。
+           苦情になったとき、誰が書いた文なのかを必ず聞かれます */
+      action: "TICKET_CREATED",
       target: ticketId,
       summary: "お問い合わせを受け付けました。",
       after: subject,
@@ -429,6 +542,7 @@ export async function createTicket(args: {
         ticketId,
         userId: args.userId,
         userName: str(c.name),
+        category,
         length: body.length,
       },
     });

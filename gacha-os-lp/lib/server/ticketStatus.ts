@@ -61,7 +61,10 @@ export function isTicketStatus(v: unknown): v is TicketStatus {
  */
 export const TICKET_LABEL_ADMIN: Record<TicketStatus, string> = {
   NEW: "未対応",
-  AI_REPLIED: "AIが一次回答",
+  /* ★「AIが回答済み」と書かないこと。
+       AIが作るのは下書きだけで、まだ誰も送っていません。
+       済みと書くと、担当者が「もう返した件」だと思って飛ばします。 */
+  AI_REPLIED: "AIの下書きあり（未送信）",
   HUMAN_REVIEW: "人の確認が必要",
   IN_PROGRESS: "対応中",
   RESOLVED: "解決済み",
@@ -76,7 +79,20 @@ export const TICKET_LABEL_ADMIN: Record<TicketStatus, string> = {
  */
 export const TICKET_LABEL_CUSTOMER: Record<TicketStatus, string> = {
   NEW: "受け付けいたしました",
-  AI_REPLIED: "回答いたしました",
+  /*
+   * ★AI_REPLIED で「回答いたしました」と書かないこと。
+   *
+   *   AI_REPLIED は「AIが下書きを作った」という、社内だけの段階です。
+   *   お客様へは、まだ1文字も送っていません。
+   *   ここに「回答いたしました」と出すと、お客様は
+   *   回答を探しに来て、どこにも無いことに気づきます。
+   *   そのとき疑われるのは、文面ではなく、会社そのものです。
+   *
+   *   お客様から見た本当のことは「担当者が確認しています」です。
+   *   人が送信を押すと IN_PROGRESS か RESOLVED に変わり、
+   *   そのときはじめて、やり取りに返信が並びます。
+   */
+  AI_REPLIED: "担当者が確認しています",
   HUMAN_REVIEW: "担当者が確認しています",
   IN_PROGRESS: "担当者が確認しています",
   RESOLVED: "解決済み",

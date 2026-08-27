@@ -1159,6 +1159,121 @@ const M012: string[] = [
      ON point_adjustments (tenant_id, user_id, requested_at)`,
 ];
 
+/**
+ * ═══════════════════════════════════════════════════════
+ * 013 問い合わせを「1往復」から「やり取り」にする
+ * ═══════════════════════════════════════════════════════
+ *
+ *   これまで、問い合わせの返事は support_tickets の
+ *   answer という1つの欄に入っていました。
+ *   つまり、返事は**1回しか持てません**。
+ *
+ *   実際の問い合わせは、こう進みます。
+ *
+ *       お客様「届きません」
+ *         AI 「発送済みです。番号はこちらです」
+ *       お客様「その番号だと出てきません」
+ *         人 「確認します。少しお待ちください」
+ *         人 「再発送しました」
+ *
+ *   1つの欄では、この2件目以降が入りません。
+ *   入れようとすると、前の返事を上書きすることになります。
+ *   上書きすると、
+ *
+ *       「そんな案内はされていない」と言われたときに、
+ *        されていないことを示す記録も、
+ *        したことを示す記録も、どちらも残っていない
+ *
+ *   状態になります。これは、あとから絶対に取り返せません。
+ *
+ * ★誰が言ったのかを、必ず持たせること。
+ *   お客様・AI・担当者の3種類です。
+ *   ここを混ぜると「AIが勝手に答えた」のか
+ *   「人が読んで送った」のかが分からなくなります。
+ *   苦情が来たとき、いちばん先に問われるのがここです。
+ *
+ * ★消さずに、直した跡を残すこと（edited_*）。
+ *   送ったあとの文面を、黙って書き換えられる作りにしないこと。
+ *   書き換えられるなら、記録は証拠になりません。
+ *
+ * ★いまある本文と返事は、捨てずに1件目・2件目として移すこと。
+ *   「新しい仕組みにしたので、前のやり取りは見られません」は、
+ *   お客様には通じません。
+ */
+const M013: string[] = [
+  `CREATE TABLE IF NOT EXISTS ticket_messages (
+     id          TEXT PRIMARY KEY,
+     tenant_id   TEXT NOT NULL,
+     ticket_id   TEXT NOT NULL,
+     /* その問い合わせの中での並び。1から数える。
+        ★時刻で並べないこと。同じ秒に2件入ると順序が定まりません */
+     seq         INTEGER NOT NULL,
+     /* CUSTOMER / AI / STAFF。★この3つ以外を入れないこと */
+     author_kind TEXT NOT NULL,
+     author_id   TEXT,
+     author_name TEXT NOT NULL,
+     body        TEXT NOT NULL,
+     /* AIが何を見て書いたか（JSON）。
+        ★内部の番号はお客様には見せない。運営が確かめるためのもの */
+     sources     TEXT,
+     created_at  TEXT NOT NULL,
+     /* 送ったあとに直した跡。直していなければ空 */
+     edited_at   TEXT,
+     edited_by   TEXT,
+     original_body TEXT
+   )`,
+
+  /* ★同じ並び番号を2件入れられないようにすること。
+       2人が同時に返信しても、片方が必ず取り直しになります。
+       ここが無いと、同時返信で順序が入れ替わります */
+  `CREATE UNIQUE INDEX IF NOT EXISTS ux_ticket_messages_seq
+     ON ticket_messages (tenant_id, ticket_id, seq)`,
+
+  `CREATE INDEX IF NOT EXISTS ix_ticket_messages_ticket
+     ON ticket_messages (tenant_id, ticket_id, seq)`,
+
+  /* いまある問い合わせの本文を、1件目のお客様の発言として移す */
+  `INSERT INTO ticket_messages
+     (id, tenant_id, ticket_id, seq, author_kind, author_id, author_name,
+      body, created_at)
+   SELECT 'tmsg_mig1_' || t.id, t.tenant_id, t.id, 1, 'CUSTOMER',
+          t.user_id,
+          COALESCE((SELECT c.name FROM customers c
+                     WHERE c.tenant_id = t.tenant_id AND c.id = t.user_id),
+                   'お客様'),
+          t.body, t.created_at
+     FROM support_tickets t
+    WHERE NOT EXISTS (SELECT 1 FROM ticket_messages m
+                       WHERE m.tenant_id = t.tenant_id AND m.ticket_id = t.id
+                         AND m.seq = 1)`,
+
+  /* すでに返事があるものを、2件目として移す。
+     ★誰が書いたか分からないものを「AI」にしないこと。
+       answered_by が空なら、分からないまま「担当者」とだけ書きます */
+  `INSERT INTO ticket_messages
+     (id, tenant_id, ticket_id, seq, author_kind, author_id, author_name,
+      body, created_at)
+   SELECT 'tmsg_mig2_' || t.id, t.tenant_id, t.id, 2, 'STAFF',
+          t.answered_by,
+          COALESCE(t.answered_by, '担当者'),
+          t.answer, COALESCE(t.answered_at, t.updated_at, t.created_at)
+     FROM support_tickets t
+    WHERE t.answer IS NOT NULL AND TRIM(t.answer) <> ''
+      AND NOT EXISTS (SELECT 1 FROM ticket_messages m
+                       WHERE m.tenant_id = t.tenant_id AND m.ticket_id = t.id
+                         AND m.seq = 2)`,
+
+  /* AIが人へ回したときの理由。★理由なしで回させないための置き場 */
+  `ALTER TABLE support_tickets ADD COLUMN escalate_reason TEXT`,
+
+  /* いつAIが一次回答したか。★answered_at と分けること。
+     混ぜると「人が答えた時刻」が上書きされます */
+  `ALTER TABLE support_tickets ADD COLUMN ai_replied_at TEXT`,
+
+  /* 一覧の並び替え用。updated_at が空のものを埋める */
+  `UPDATE support_tickets SET updated_at = created_at WHERE updated_at IS NULL`,
+];
+
 const MIGRATIONS: Migration[] = [
   { name: "001_initial", sql: M001 },
   { name: "002_tenant_tables", sql: M002 },
@@ -1172,6 +1287,7 @@ const MIGRATIONS: Migration[] = [
   { name: "010_ticket_status", sql: M010 },
   { name: "011_gacha_publish_backtest", sql: M011 },
   { name: "012_point_adjust_balances", sql: M012 },
+  { name: "013_ticket_messages", sql: M013 },
 ];
 
 /** どの段まで済んだかを覚えておく表 */

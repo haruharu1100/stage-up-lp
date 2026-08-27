@@ -56,6 +56,7 @@ import {
   pointMismatchCount,
   pointPendingCount,
 } from "@/lib/server/pointAdmin";
+import { ticketCounts } from "@/lib/server/ticketAdmin";
 
 /* ══════════════════════════════════════════════
    返すもの
@@ -92,9 +93,20 @@ export type AdminSummary = {
    */
   prizesUnchosen: number | null;
 
-  /** 対応の残り */
+  /**
+   * 対応の残り。
+   *
+   * ★数え方を、ここに書き写さないこと。
+   *   lib/server/ticketAdmin.ts の ticketCounts() を必ず通します。
+   *   問い合わせ画面とダッシュボードで数がずれると、
+   *   どちらが本当なのかを調べる人はいません。両方が信じられなくなります。
+   */
   supportOpen: number | null;
   supportHumanReview: number | null;
+  /** まだ誰も何もしていないもの */
+  supportNew: number | null;
+  /** 高優先度のうち、まだ終わっていないもの */
+  supportHigh: number | null;
 
   /**
    * ポイントの残高と、ポイント台帳の合計が食い違っている会員の数。
@@ -295,17 +307,14 @@ export async function adminSummary(
 
       ★「終わっていないもの」を数えること。
         RESOLVED 以外は、まだ誰かが待っています。
+
+      ★ここに SQL を書かないこと。
+        以前ここには、この画面だけの COUNT が書いてありました。
+        問い合わせ画面は ticketAdmin で数えていたので、
+        知らない状態が1件でも混ざると、2つの画面で数が変わりました。
+        数える場所は ticketCounts() の1つだけにします。
     */
-    mieru.support
-      ? db().execute({
-          sql: `SELECT
-                  SUM(CASE WHEN status <> 'RESOLVED' THEN 1 ELSE 0 END) AS open_count,
-                  SUM(CASE WHEN status = 'HUMAN_REVIEW' THEN 1 ELSE 0 END) AS human_review
-                FROM support_tickets
-               WHERE tenant_id = ?`,
-          args: [tenantId],
-        })
-      : null,
+    mieru.support ? ticketCounts(tenantId) : null,
 
     /*
       危ない会員。
@@ -345,7 +354,6 @@ export async function adminSummary(
   const c = (customers.rows[0] ?? {}) as Record<string, unknown>;
   const u = (unchosen?.rows[0] ?? {}) as Record<string, unknown>;
   const g = (gachas?.rows[0] ?? {}) as Record<string, unknown>;
-  const s = (support?.rows[0] ?? {}) as Record<string, unknown>;
   const f = (fraud?.rows[0] ?? {}) as Record<string, unknown>;
 
   return {
@@ -371,8 +379,10 @@ export async function adminSummary(
     ordersToday: n(o.today),
     prizesUnchosen: unchosen ? n(u.unchosen) : null,
 
-    supportOpen: support ? n(s.open_count) : null,
-    supportHumanReview: support ? n(s.human_review) : null,
+    supportOpen: support ? support.open : null,
+    supportHumanReview: support ? support.humanReview : null,
+    supportNew: support ? support.new : null,
+    supportHigh: support ? support.high : null,
 
     /* ★null（見せられない）と 0（全員合っている）を、ここで潰さないこと */
     pointMismatch: pointMismatch,

@@ -68,6 +68,18 @@ const ACTION_LABEL: Record<AuditAction, string> = {
   USER_ASK: "お客様からの問い合わせ",
   SUPPORT_REPLY: "問い合わせ返信",
 
+  /* 問い合わせ。
+     ★「返信した」を1つの言葉にまとめないこと。
+       AIが書いた下書きなのか、人が書いて送ったのかは、
+       苦情になったとき必ず聞かれます。
+       まとめてしまうと、あとから分けることはできません */
+  TICKET_CREATED: "お客様が問い合わせを作成",
+  AI_REPLY_CREATED: "AIが下書きを作成",
+  TICKET_ASSIGNED: "問い合わせの担当者を変更",
+  HUMAN_REPLY_CREATED: "担当者が返信を送信",
+  TICKET_STATUS_CHANGED: "問い合わせの状態を変更",
+  TICKET_RESOLVED: "問い合わせを解決済みにした",
+
   /* 通知。
      ★「送信」ではなく「作成」と書くこと。
        いまの送り先は Mock（練習用の受け皿）で、
