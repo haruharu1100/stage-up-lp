@@ -33,6 +33,10 @@ const STATUS: Record<string, number> = {
   ALREADY_DECIDED: 409,
   SELF_APPROVAL: 403,
   WOULD_GO_NEGATIVE: 409,
+  /* ★却下にも理由が要ります。
+       「却下」とだけ残っていると、申請した人は何を直せばよいのか
+       分からないまま、同じ申請をもう一度出します */
+  REASON_REQUIRED: 400,
 };
 
 export async function POST(req: NextRequest) {

@@ -52,6 +52,10 @@
 import { can, type Role } from "@/lib/permissions";
 import { countUnassignedItems, countUnshipped } from "@/lib/server/shipments";
 import { rtpDangers } from "@/lib/server/rtpMonitor";
+import {
+  pointMismatchCount,
+  pointPendingCount,
+} from "@/lib/server/pointAdmin";
 
 /* ══════════════════════════════════════════════
    返すもの
@@ -91,6 +95,22 @@ export type AdminSummary = {
   /** 対応の残り */
   supportOpen: number | null;
   supportHumanReview: number | null;
+
+  /**
+   * ポイントの残高と、ポイント台帳の合計が食い違っている会員の数。
+   *
+   * ★これを「危険度」に混ぜないこと。
+   *   混ぜると、会員管理の「高Riskの会員」とダッシュボードの数がずれます。
+   *   食い違いは、危険な会員の話ではなく、
+   *   「記録に残っていないのにお金が動いた」という別の話です。
+   *
+   * ★0 と null を分けること。
+   *   0 は「全員ぶん合っている」。null は「見る権限が無くて確かめられなかった」。
+   *   確かめていないことを「合っている」と書かないでください。
+   */
+  pointMismatch: number | null;
+  /** 承認待ちのポイント調整の数 */
+  pointPending: number | null;
 
   /** 危ないもの */
   fraudHighRisk: number | null;
@@ -150,6 +170,10 @@ export async function adminSummary(
     revenue: role !== null && can(role, "revenue.view"),
     support: role !== null && can(role, "support.view"),
     fraud: role !== null && can(role, "fraud.view"),
+    /* ポイントの食い違いは point.view で守ります。
+       ★ここだけ別の権限にしないこと。ポイント管理の画面と、
+         同じ人に同じ数が見えている必要があります */
+    point: role !== null && can(role, "point.view"),
   };
 
   const [
@@ -163,6 +187,8 @@ export async function adminSummary(
     support,
     fraud,
     dangers,
+    pointMismatch,
+    pointPending,
   ] = await Promise.all([
     countUnshipped(tenantId),
     countUnassignedItems(tenantId),
@@ -301,6 +327,17 @@ export async function adminSummary(
       : null,
 
     mieru.gacha ? rtpDangers(tenantId) : null,
+
+    /*
+      ポイントの食い違い。
+
+      ★数え方を、ここに書き写さないこと。
+        lib/server/pointAdmin.ts の pointMismatchCount() を必ず通します。
+        ポイント管理の画面と、ダッシュボードで数がずれると、
+        どちらが本当なのかを調べる人はいません。両方が信じられなくなります。
+    */
+    mieru.point ? pointMismatchCount(tenantId) : null,
+    mieru.point ? pointPendingCount(tenantId) : null,
   ]);
 
   const o = (orders.rows[0] ?? {}) as Record<string, unknown>;
@@ -336,6 +373,10 @@ export async function adminSummary(
 
     supportOpen: support ? n(s.open_count) : null,
     supportHumanReview: support ? n(s.human_review) : null,
+
+    /* ★null（見せられない）と 0（全員合っている）を、ここで潰さないこと */
+    pointMismatch: pointMismatch,
+    pointPending: pointPending,
 
     fraudHighRisk: fraud ? n(f.high) : null,
     rtpDangerCount: dangers

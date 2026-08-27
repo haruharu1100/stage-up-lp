@@ -42,8 +42,26 @@
  *   5) 二度押されても、2行目を入れない。
  *      承認ボタンは、たいてい2回押されます。
  *      通信が遅いときは、押した人に悪気はありません。
+ *
+ * ═══════════════════════════════════════════════════════
+ * ★二人承認の境目（FOUR_EYES_THRESHOLD）を、ここに置く理由
+ * ═══════════════════════════════════════════════════════
+ *
+ *   これまで、この境目は画面の中（lib/console/state.ts）にしか
+ *   ありませんでした。画面の中にある決まりは、決まりではありません。
+ *   画面を通さずに入口を直接叩けば、素通りします。
+ *
+ *   だから、境目はここ（サーバー側）に1つだけ置きます。
+ *   画面はここから読むだけにします。
+ *
+ *   ★境目を大きくしないこと。
+ *     大きくするほど、1人で動かせる金額が増えます。
+ *     逆に 0 にすると「どんな金額でも二人承認」になります。
+ *     厳しくする向きは、いつでも安全です。
  */
 
+import { can, type Role } from "@/lib/permissions";
+import type { Transaction } from "@libsql/client";
 import { withWriteTx } from "./db";
 import { appendAuditTx } from "./audit";
 import { id } from "./ids";
@@ -66,10 +84,21 @@ export class PointError extends Error {
  *   桁を1つ多く打つのは、悪意ではなく、ただの打ち間違いです。
  *   打ち間違いを、そのまま通してしまう仕組みのほうが問題です。
  */
-const MAX_DELTA = 1_000_000;
+export const MAX_DELTA = 1_000_000;
+
+/**
+ * ここから上は、別の管理者の承認がないと1ptも動かない。
+ *
+ * ★この値は、この1か所だけに置くこと。
+ *   画面にも書き写さないでください。書き写した日から、
+ *   画面の説明とサーバーの判断がずれていきます。
+ */
+export const FOUR_EYES_THRESHOLD = 100_000;
 
 /** なぜ動かすのか。短すぎる理由を受け付けないこと */
-const MIN_REASON = 4;
+export const MIN_REASON = 4;
+
+export type AdjustmentStatus = "PENDING" | "APPLIED" | "APPROVED" | "REJECTED";
 
 export type AdjustmentRow = {
   id: string;
@@ -82,6 +111,7 @@ export type AdjustmentRow = {
   decided_by: string | null;
   decided_at: string | null;
   ledger_id: string | null;
+  balance_before: number | null;
 };
 
 type Actor = {
@@ -92,14 +122,26 @@ type Actor = {
   requestId: string;
 };
 
+export type RequestResult = {
+  adjustmentId: string;
+  /** PENDING＝承認待ち／APPLIED＝その場で反映した */
+  status: "PENDING" | "APPLIED";
+  needsApproval: boolean;
+  /** 申請したときの残高 */
+  balanceBefore: number;
+  /** 反映したあとの残高。承認待ちのあいだは null（まだ動いていないので） */
+  balanceAfter: number | null;
+  /** 同じ鍵で2回届いたので、前回の結果をそのまま返した */
+  reused: boolean;
+};
+
 /* ══════════════════════════════════════════════
-   申請する
+   道具
    ══════════════════════════════════════════════ */
 
-export async function requestAdjustment(
-  actor: Actor,
-  input: { userId: string; delta: number; reason: string },
-): Promise<{ adjustmentId: string }> {
+const num = (v: unknown) => Number(v ?? 0);
+
+function checkInput(input: { delta: number; reason: string }) {
   const delta = Math.trunc(Number(input.delta));
   const reason = String(input.reason ?? "").trim();
 
@@ -118,15 +160,99 @@ export async function requestAdjustment(
       "なぜ変更するのかを、あとから読んで分かる長さで書いてください。",
     );
   }
+  return { delta, reason };
+}
+
+/**
+ * この金額に、別の管理者の承認が要るか。
+ *
+ * ★「以上」で数えること。ちょうど 100,000pt を素通しにしないこと。
+ */
+export function needsFourEyes(delta: number): boolean {
+  return Math.abs(Math.trunc(Number(delta) || 0)) >= FOUR_EYES_THRESHOLD;
+}
+
+/**
+ * この会社に、この人以外で承認できる担当者がいるか。
+ *
+ * ★いないなら、申請を受け付けないこと。
+ *   受け付けてしまうと、永久に承認されない申請が溜まります。
+ *   溜まった申請は、いつか「面倒だから」という理由で
+ *   二人承認そのものを外す口実になります。
+ */
+async function otherApproverExists(
+  tx: Transaction,
+  tenantId: string,
+  meId: string,
+): Promise<boolean> {
+  const r = await tx.execute({
+    sql: `SELECT id, role FROM app_users
+           WHERE tenant_id = ? AND status = 'ACTIVE' AND id <> ?`,
+    args: [tenantId, meId],
+  });
+  return (r.rows as Record<string, unknown>[]).some((row) =>
+    can(String(row.role ?? "") as Role, "point.approve"),
+  );
+}
+
+/** 同じ鍵で来た申請を探す。★見つかったら、新しい行を作らないこと */
+async function findByKey(tx: Transaction, tenantId: string, key: string) {
+  const r = await tx.execute({
+    sql: `SELECT id, status, balance_before, balance_after, needs_approval
+            FROM point_adjustments
+           WHERE tenant_id = ? AND idempotency_key = ? LIMIT 1`,
+    args: [tenantId, key],
+  });
+  return r.rows[0] as Record<string, unknown> | undefined;
+}
+
+/* ══════════════════════════════════════════════
+   申請する（＝金額しだいでは、その場で反映する）
+   ══════════════════════════════════════════════ */
+
+export async function requestAdjustment(
+  actor: Actor,
+  input: {
+    userId: string;
+    delta: number;
+    reason: string;
+    /** 二度押し対策の鍵。同じ鍵なら、2件目を作らない */
+    idempotencyKey?: string;
+  },
+): Promise<RequestResult> {
+  const { delta, reason } = checkInput(input);
+  const key = String(input.idempotencyKey ?? "").trim() || null;
 
   const at = new Date().toISOString();
   const adjustmentId = id("adj");
+  const mustApprove = needsFourEyes(delta);
 
-  await withWriteTx(async (tx) => {
+  return withWriteTx(async (tx) => {
+    /* ── 二度押しの受け止め ────────────────────
+       ★「もう入っているから成功でいいや」で済ませないこと。
+         前回どうなったかを、そのまま返します。 */
+    if (key) {
+      const old = await findByKey(tx, actor.tenantId, key);
+      if (old) {
+        const st = String(old.status ?? "");
+        return {
+          adjustmentId: String(old.id ?? ""),
+          status: st === "PENDING" ? ("PENDING" as const) : ("APPLIED" as const),
+          needsApproval: num(old.needs_approval) === 1,
+          balanceBefore: num(old.balance_before),
+          balanceAfter:
+            old.balance_after === null || old.balance_after === undefined
+              ? null
+              : num(old.balance_after),
+          reused: true,
+        };
+      }
+    }
+
     /* ★対象のお客様が、自分の会社の人であることを必ず確かめる。
          確かめないと、他社のIDを送るだけで他社の残高が動きます。 */
     const cu = await tx.execute({
-      sql: `SELECT id, name FROM customers
+      sql: `SELECT id, name, points FROM customers
              WHERE id = ? AND tenant_id = ? LIMIT 1`,
       args: [input.userId, actor.tenantId],
     });
@@ -136,12 +262,90 @@ export async function requestAdjustment(
            返すと、そのIDが存在することを教えてしまいます。 */
       throw new PointError("NO_CUSTOMER", "対象の会員が見つかりません。");
     }
+    const customerName = String(customer.name ?? "");
+    const balanceBefore = num(customer.points);
+
+    /* ── 二人承認が要る金額 ────────────────── */
+    if (mustApprove) {
+      if (!(await otherApproverExists(tx, actor.tenantId, actor.adminId))) {
+        throw new PointError(
+          "NO_APPROVER",
+          `${FOUR_EYES_THRESHOLD.toLocaleString("ja-JP")}ポイント以上の変更は、別の管理者の承認が必要です。` +
+            "いまこの会社には、承認できる別の管理者がいないため、この申請はお預かりできません。",
+        );
+      }
+
+      await tx.execute({
+        sql: `INSERT INTO point_adjustments
+                (id, tenant_id, user_id, delta, reason, status,
+                 requested_by, requested_at, balance_before,
+                 needs_approval, idempotency_key)
+              VALUES (?,?,?,?,?, 'PENDING', ?,?,?, 1, ?)`,
+        args: [
+          adjustmentId,
+          actor.tenantId,
+          input.userId,
+          delta,
+          reason,
+          actor.adminId,
+          at,
+          balanceBefore,
+          key,
+        ],
+      });
+
+      await appendAuditTx(tx, {
+        tenantId: actor.tenantId,
+        at,
+        actorKind: "ADMIN",
+        actorId: actor.adminId,
+        actorName: actor.adminName,
+        actorRole: actor.role,
+        action: "POINT_ADJUST_REQUEST",
+        target: input.userId,
+        summary: `${customerName} さんのポイントを ${
+          delta > 0 ? "+" : ""
+        }${delta} する申請（別の管理者の承認が必要）`,
+        reason,
+        data: { adjustmentId, delta, balanceBefore, needsApproval: true },
+        requestId: actor.requestId,
+      });
+
+      return {
+        adjustmentId,
+        status: "PENDING" as const,
+        needsApproval: true,
+        balanceBefore,
+        /* ★ここで予定の残高を返さないこと。
+             まだ1ptも動いていません。数字を返すと、動いたように見えます */
+        balanceAfter: null,
+        reused: false,
+      };
+    }
+
+    /* ── その場で反映する金額 ──────────────────
+       ★「小さいから記録しなくてよい」ではありません。
+         金額に関係なく、理由・前後の残高・監査ログは必ず残します。
+         省くのは「別の人の承認」だけです。 */
+    const balanceAfter = balanceBefore + delta;
+    if (balanceAfter < 0) {
+      throw new PointError(
+        "WOULD_GO_NEGATIVE",
+        `いまの残高は ${balanceBefore} ポイントです。${Math.abs(
+          delta,
+        )} ポイントは引けません。`,
+      );
+    }
+
+    const ledgerId = id("pl");
 
     await tx.execute({
       sql: `INSERT INTO point_adjustments
               (id, tenant_id, user_id, delta, reason, status,
-               requested_by, requested_at)
-            VALUES (?,?,?,?,?, 'PENDING', ?,?)`,
+               requested_by, requested_at, decided_by, decided_at,
+               ledger_id, balance_before, balance_at_decision, balance_after,
+               applied_at, needs_approval, idempotency_key)
+            VALUES (?,?,?,?,?, 'APPLIED', ?,?,?,?,?,?,?,?,?, 0, ?)`,
       args: [
         adjustmentId,
         actor.tenantId,
@@ -150,7 +354,35 @@ export async function requestAdjustment(
         reason,
         actor.adminId,
         at,
+        actor.adminId,
+        at,
+        ledgerId,
+        balanceBefore,
+        balanceBefore,
+        balanceAfter,
+        at,
+        key,
       ],
+    });
+
+    await tx.execute({
+      sql: `INSERT INTO point_ledger
+              (id, tenant_id, user_id, kind, delta, memo, ref, created_at)
+            VALUES (?,?,?, 'ADMIN_ADJUST', ?,?,?,?)`,
+      args: [
+        ledgerId,
+        actor.tenantId,
+        input.userId,
+        delta,
+        `運営による調整：${reason}`,
+        adjustmentId,
+        at,
+      ],
+    });
+
+    await tx.execute({
+      sql: `UPDATE customers SET points = ? WHERE id = ? AND tenant_id = ?`,
+      args: [balanceAfter, input.userId, actor.tenantId],
     });
 
     await appendAuditTx(tx, {
@@ -160,34 +392,69 @@ export async function requestAdjustment(
       actorId: actor.adminId,
       actorName: actor.adminName,
       actorRole: actor.role,
-      action: "POINT_ADJUST_REQUEST",
+      action: "POINT_ADJUST_APPLY",
       target: input.userId,
-      summary: `${String(customer.name ?? "")} さんのポイントを ${
+      summary: `${customerName} さんのポイントを ${
         delta > 0 ? "+" : ""
-      }${delta} する申請`,
+      }${delta} 調整（${FOUR_EYES_THRESHOLD.toLocaleString("ja-JP")}pt 未満のため、その場で反映）`,
+      before: String(balanceBefore),
+      after: String(balanceAfter),
       reason,
-      data: { adjustmentId, delta },
+      data: { adjustmentId, ledgerId, delta, needsApproval: false },
       requestId: actor.requestId,
     });
-  });
 
-  return { adjustmentId };
+    return {
+      adjustmentId,
+      status: "APPLIED" as const,
+      needsApproval: false,
+      balanceBefore,
+      balanceAfter,
+      reused: false,
+    };
+  });
 }
 
 /* ══════════════════════════════════════════════
    承認する・断る
    ══════════════════════════════════════════════ */
 
+export type DecideResult = {
+  status: "APPROVED" | "REJECTED";
+  balance: number | null;
+  /** 申請したときの残高 */
+  balanceBefore: number | null;
+  /** 承認しようとした時点で読み直した残高 */
+  balanceAtDecision: number | null;
+  /**
+   * 承認を待っているあいだに、残高が動いていたか。
+   * ★動いていても止めません。最新の残高を基準に足し引きします。
+   *   ただし「動いていた」ことは、必ず記録にも返事にも残します。
+   */
+  balanceMoved: boolean;
+};
+
 export async function decideAdjustment(
   actor: Actor,
   input: { adjustmentId: string; approve: boolean; note?: string },
-): Promise<{ status: "APPROVED" | "REJECTED"; balance: number | null }> {
+): Promise<DecideResult> {
   const at = new Date().toISOString();
-  const note = String(input.note ?? "").trim() || null;
+  const note = String(input.note ?? "").trim();
+
+  /* ★却下にも理由を required にすること。
+       「却下」とだけ残っていると、申請した人は
+       何を直せばよいのか分かりません。
+       分からないまま、同じ申請がもう一度出てきます。 */
+  if (!input.approve && note.length < MIN_REASON) {
+    throw new PointError(
+      "REASON_REQUIRED",
+      "却下する理由を、あとから読んで分かる長さで書いてください。",
+    );
+  }
 
   return withWriteTx(async (tx) => {
     const got = await tx.execute({
-      sql: `SELECT id, user_id, delta, reason, status, requested_by
+      sql: `SELECT id, user_id, delta, reason, status, requested_by, balance_before
               FROM point_adjustments
              WHERE id = ? AND tenant_id = ? LIMIT 1`,
       args: [input.adjustmentId, actor.tenantId],
@@ -217,6 +484,11 @@ export async function decideAdjustment(
       );
     }
 
+    const balanceBefore =
+      row.balance_before === null || row.balance_before === undefined
+        ? null
+        : num(row.balance_before);
+
     if (!input.approve) {
       await tx.execute({
         sql: `UPDATE point_adjustments
@@ -235,16 +507,28 @@ export async function decideAdjustment(
         action: "POINT_ADJUST_REJECT",
         target: row.user_id,
         summary: `ポイント変更の申請を却下（${row.delta > 0 ? "+" : ""}${row.delta}）`,
-        reason: note ?? row.reason,
-        data: { adjustmentId: row.id, delta: row.delta },
+        reason: note,
+        data: { adjustmentId: row.id, delta: row.delta, requestReason: row.reason },
         requestId: actor.requestId,
       });
 
-      return { status: "REJECTED" as const, balance: null };
+      return {
+        status: "REJECTED" as const,
+        balance: null,
+        balanceBefore,
+        balanceAtDecision: null,
+        balanceMoved: false,
+      };
     }
 
-    /* ── 承認。ここからお金が動く ───────────────── */
+    /* ── 承認。ここからお金が動く ─────────────────
 
+       ★申請書に書き写した残高（balance_before）で計算しないこと。
+         申請から承認までの間に、その方はガチャを引いているかもしれません。
+         書き写した古い残高で上書きすると、
+         そのあいだに動いたポイントが、まるごと消えます。
+
+         必ず、いまの残高を読み直して、そこへ足し引きします。 */
     const before = await tx.execute({
       sql: `SELECT points FROM customers WHERE id = ? AND tenant_id = ? LIMIT 1`,
       args: [row.user_id, actor.tenantId],
@@ -253,18 +537,28 @@ export async function decideAdjustment(
     if (!beforeRow) {
       throw new PointError("NO_CUSTOMER", "対象の会員が見つかりません。");
     }
-    const beforePoints = Number(beforeRow.points ?? 0);
-    const afterPoints = beforePoints + row.delta;
+    const balanceAtDecision = num(beforeRow.points);
+    const afterPoints = balanceAtDecision + row.delta;
+    const balanceMoved =
+      balanceBefore !== null && balanceBefore !== balanceAtDecision;
 
     /* ★残高を負にしないこと。
          負を許すと、次に引いたときに「残高が足りている」判定が
-         おかしくなります。減らしすぎは、その場で断ります。 */
+         おかしくなります。減らしすぎは、その場で断ります。
+
+         ★ここが、申請中に残高が減っていた場合の受け止めでもあります。
+           120,000pt のつもりで −100,000pt を申請し、
+           承認までに 20,000pt へ減っていたら、ここで断ります。
+           古い残高で上書きして、勝手に負にはしません。 */
     if (afterPoints < 0) {
       throw new PointError(
         "WOULD_GO_NEGATIVE",
-        `いまの残高は ${beforePoints} ポイントです。${Math.abs(
+        `いまの残高は ${balanceAtDecision} ポイントです。${Math.abs(
           row.delta,
-        )} ポイントは引けません。`,
+        )} ポイントは引けません。` +
+          (balanceMoved
+            ? `（申請されたときは ${balanceBefore} ポイントでした。承認を待つあいだに残高が動いています）`
+            : ""),
       );
     }
 
@@ -277,9 +571,20 @@ export async function decideAdjustment(
     const marked = await tx.execute({
       sql: `UPDATE point_adjustments
                SET status = 'APPROVED', decided_by = ?, decided_at = ?,
-                   decided_note = ?, ledger_id = ?
+                   decided_note = ?, ledger_id = ?,
+                   balance_at_decision = ?, balance_after = ?, applied_at = ?
              WHERE id = ? AND tenant_id = ? AND status = 'PENDING'`,
-      args: [actor.adminId, at, note, ledgerId, row.id, actor.tenantId],
+      args: [
+        actor.adminId,
+        at,
+        note || null,
+        ledgerId,
+        balanceAtDecision,
+        afterPoints,
+        at,
+        row.id,
+        actor.tenantId,
+      ],
     });
     if (Number(marked.rowsAffected ?? 0) !== 1) {
       throw new PointError(
@@ -317,8 +622,10 @@ export async function decideAdjustment(
       actorRole: actor.role,
       action: "POINT_ADJUST_APPROVE",
       target: row.user_id,
-      summary: `ポイントを ${row.delta > 0 ? "+" : ""}${row.delta} 調整（申請者とは別の担当者が承認）`,
-      before: String(beforePoints),
+      summary:
+        `ポイントを ${row.delta > 0 ? "+" : ""}${row.delta} 調整（申請者とは別の担当者が承認）` +
+        (balanceMoved ? "／承認までのあいだに残高が動いていました" : ""),
+      before: String(balanceAtDecision),
       after: String(afterPoints),
       reason: row.reason,
       data: {
@@ -326,10 +633,22 @@ export async function decideAdjustment(
         ledgerId,
         requestedBy: row.requested_by,
         approvedBy: actor.adminId,
+        /* ★申請時と承認時の両方を残すこと。
+             片方だけだと、あとから「何を見て承認したのか」を示せません */
+        balanceAtRequest: balanceBefore,
+        balanceAtDecision,
+        balanceMoved,
+        decidedNote: note || null,
       },
       requestId: actor.requestId,
     });
 
-    return { status: "APPROVED" as const, balance: afterPoints };
+    return {
+      status: "APPROVED" as const,
+      balance: afterPoints,
+      balanceBefore,
+      balanceAtDecision,
+      balanceMoved,
+    };
   });
 }

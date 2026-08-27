@@ -1039,6 +1039,126 @@ const M010: string[] = [
      ON support_tickets (tenant_id, status, updated_at)`,
 ];
 
+/**
+ * ═══════════════════════════════════════════════════════
+ * 011 ガチャの「いつ公開したか」と「検証の結果」を、DBに残す
+ * ═══════════════════════════════════════════════════════
+ *
+ *   これまで、ガチャ管理の画面に出ていた
+ *   「公開日時」と「検証：SAFE」は、画面の中の見本でした。
+ *   ページを読み込み直すと消えました。
+ *
+ *   ★公開した時刻は、あとから絶対に必要になります。
+ *     「いつから売っていたのか」は、返金・問い合わせ・
+ *     税の計算で、必ず聞かれます。
+ *     そのとき「画面には出ていたが、どこにも残っていない」では、
+ *     答えようがありません。
+ *
+ *   ★検証の結果も同じです。
+ *     公開前の検証は「危ない構成を、公開の前で止める」ためのものです。
+ *     結果が残っていなければ、
+ *     「検証を通したから公開した」ことを、あとから示せません。
+ *     示せない検証は、やっていないのと同じ扱いになります。
+ *
+ * ★すでにあるガチャの公開日時を、created_at で埋めないこと。
+ *
+ *   作った日と公開した日は、違います。
+ *   埋めた瞬間に、それは「記録」ではなく「作り話」になります。
+ *   分からないものは空のままにして、
+ *   画面には「不明（この機能より前に公開されました）」と出します。
+ *   空欄は、間違った日付より、ずっと安全です。
+ */
+const M011: string[] = [
+  /* いつ公開したか。★分からないものは空のまま */
+  `ALTER TABLE gachas ADD COLUMN published_at TEXT`,
+
+  /* いつ止めたか・なぜ止めたか。
+     ★理由を必ず持てるようにすること。
+       「PAUSED」とだけ残っていても、
+       自分で止めたのか、危なくて止まったのかが分かりません */
+  `ALTER TABLE gachas ADD COLUMN paused_at TEXT`,
+  `ALTER TABLE gachas ADD COLUMN pause_reason TEXT`,
+
+  /* 公開前検証の結果。
+     verdict は SAFE / CAUTION / DANGER。空なら「まだ検証していない」 */
+  `ALTER TABLE gachas ADD COLUMN backtest_verdict TEXT`,
+  `ALTER TABLE gachas ADD COLUMN backtest_stress TEXT`,
+  `ALTER TABLE gachas ADD COLUMN backtest_at TEXT`,
+
+  /* あとから同じ結果を出し直すために要るもの。
+     ★これが無いと、検証結果はただの感想になります。
+       同じ道具・同じ種で回せば同じ答えが出る、が検証の前提です */
+  `ALTER TABLE gachas ADD COLUMN backtest_engine TEXT`,
+  `ALTER TABLE gachas ADD COLUMN backtest_seed INTEGER`,
+
+  /* 検証したときの構成そのもの（JSON）。
+     ★構成を変えたのに古い判定が残る、を見つけるために保存します */
+  `ALTER TABLE gachas ADD COLUMN backtest_spec TEXT`,
+
+  /* 一覧は「新しい順」に出すので、並べ替えを速くしておく */
+  `CREATE INDEX IF NOT EXISTS ix_gachas_tenant_status
+     ON gachas (tenant_id, status, created_at)`,
+];
+
+/* ── 012：ポイント調整に「そのときの残高」を持たせる ──
+
+   ★申請書に、そのときの残高を書き写しておく理由。
+
+     ポイントの申請は、出したその日に承認されるとは限りません。
+     出した人は「いま 120,000pt ある人から 100,000pt 引く」つもりでした。
+     ところが承認されるまでの間に、その方がガチャを引いて
+     残高が 20,000pt になっていることがあります。
+
+     このとき、申請時の残高を残していないと、
+     承認する人は「何を見て承認したのか」を説明できません。
+     残しておけば、承認画面で
+
+         申請したとき 120,000pt ／ いま 20,000pt
+
+     と並べて出せます。並べて出せば、人が気づけます。
+
+   ★balance_before を「正しい残高」として使い回さないこと。
+
+     反映するときの計算は、必ずそのときの残高を読み直して行います。
+     書き写した古い残高で上書きすると、
+     承認を待っている間に動いたポイントが、まるごと消えます。
+     balance_before は、あくまで「承認する人に見せるための記録」です。
+
+   ★idempotency_key を持つ理由。
+
+     承認ボタンと同じで、申請ボタンも二度押されます。
+     押した人に悪気はありません。通信が遅いだけです。
+     鍵が同じなら、2件目の申請は作らず、1件目をそのまま返します。
+
+   ★status に APPLIED を足す理由。
+
+     二人承認が要らない金額は、その場で反映されます。
+     これを APPROVED と書くと、
+     「誰かが承認した」ように読めてしまいます。
+     承認していないものを承認済みと書かないこと。 */
+const M012: string[] = [
+  /* 申請を出したときの残高。★あとで書き換えないこと */
+  `ALTER TABLE point_adjustments ADD COLUMN balance_before INTEGER`,
+  /* 反映を決めたときに読み直した残高。申請時とずれていたら、それが分かる */
+  `ALTER TABLE point_adjustments ADD COLUMN balance_at_decision INTEGER`,
+  /* 実際に反映したあとの残高 */
+  `ALTER TABLE point_adjustments ADD COLUMN balance_after INTEGER`,
+  /* いつ台帳へ足したか。PENDING のあいだは空 */
+  `ALTER TABLE point_adjustments ADD COLUMN applied_at TEXT`,
+  /* 二人承認が必要だったか。★あとから基準を変えても、当時の判断が残る */
+  `ALTER TABLE point_adjustments ADD COLUMN needs_approval INTEGER NOT NULL DEFAULT 1`,
+  /* 二度押し対策の鍵 */
+  `ALTER TABLE point_adjustments ADD COLUMN idempotency_key TEXT`,
+
+  `CREATE UNIQUE INDEX IF NOT EXISTS ux_point_adj_idem
+     ON point_adjustments (tenant_id, idempotency_key)
+     WHERE idempotency_key IS NOT NULL`,
+
+  /* 会員ごとの申請履歴を、詳細画面で新しい順に出すため */
+  `CREATE INDEX IF NOT EXISTS ix_point_adj_user
+     ON point_adjustments (tenant_id, user_id, requested_at)`,
+];
+
 const MIGRATIONS: Migration[] = [
   { name: "001_initial", sql: M001 },
   { name: "002_tenant_tables", sql: M002 },
@@ -1050,6 +1170,8 @@ const MIGRATIONS: Migration[] = [
   { name: "008_order_shipment_split", sql: M008 },
   { name: "009_notifications_mypage", sql: M009 },
   { name: "010_ticket_status", sql: M010 },
+  { name: "011_gacha_publish_backtest", sql: M011 },
+  { name: "012_point_adjust_balances", sql: M012 },
 ];
 
 /** どの段まで済んだかを覚えておく表 */

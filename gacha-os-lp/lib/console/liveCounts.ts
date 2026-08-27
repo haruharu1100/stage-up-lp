@@ -126,6 +126,10 @@ export function useLiveCounts(on = true): LiveCountsState {
             supportOpen: kazu(data.supportOpen),
             supportHumanReview: kazu(data.supportHumanReview),
 
+            /* ポイントの見張り。★null（見せられない）を 0 に潰さないこと */
+            pointMismatch: kazu(data.pointMismatch),
+            pointPending: kazu(data.pointPending),
+
             /* 危ないもの */
             fraudHighRisk: kazu(data.fraudHighRisk),
             rtpDangerCount: kazu(data.rtpDangerCount),
@@ -248,6 +252,47 @@ export function liveTodos(state: LiveCountsState): LiveTodo[] {
       label: "確認が必要な会員（高リスク）",
       count: c.fraudHighRisk,
       to: "fraud",
+    });
+  }
+
+  /**
+   * ポイント台帳と残高が合っていない会員。
+   *
+   * ★なぜ、発送より先なのか。
+   *   残高と台帳が食い違っている状態は、
+   *   「お客様の持っているポイントが、記録と違う」ということです。
+   *   放っておくと、その残高のままガチャが回り、景品が出て、
+   *   どこまでが正しかったのかを、あとから決められなくなります。
+   *
+   * ★0件のときは出さないこと。
+   *   0件は「全員合っている」という良い知らせです。
+   *   用件として並べると、毎日出て、読まれなくなります。
+   *
+   * ★null（見る権限が無い）からは作らないこと。
+   *   「あなたには見えない」が「今日は無い」に化けます。
+   */
+  if (c.pointMismatch !== null && c.pointMismatch > 0) {
+    out.push({
+      urgency: "MUST",
+      label: "ポイント確認が必要",
+      count: c.pointMismatch,
+      to: "points",
+    });
+  }
+
+  /**
+   * 承認を待っているポイント調整。
+   *
+   * ★これを「不整合」と同じ行にまとめないこと。
+   *   不整合は「壊れている」、承認待ちは「人の判断を待っている」で、
+   *   やることが違います。まとめると、どちらの対処もされません。
+   */
+  if (c.pointPending !== null && c.pointPending > 0) {
+    out.push({
+      urgency: "SHOULD",
+      label: "承認待ちのポイント調整",
+      count: c.pointPending,
+      to: "points",
     });
   }
 

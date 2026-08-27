@@ -169,7 +169,9 @@ export default function OperatorScreen({
                     {t.urgency === "MUST" ? "今日中" : "できれば今日"}
                   </Badge>
                 </div>
-                <p className="mt-2 text-note leading-[1.9] text-slate2">{why(t.to)}</p>
+                <p className="mt-2 text-note leading-[1.9] text-slate2">
+                  {why(t.to, t.label)}
+                </p>
                 <div className="mt-3">
                   <Btn onClick={() => onNav(t.to as MenuKey)}>この画面へ</Btn>
                 </div>
@@ -253,8 +255,19 @@ export default function OperatorScreen({
   );
 }
 
-/** なぜ、それを先にやるのか */
-function why(to: string): string {
+/**
+ * なぜ、それを先にやるのか。
+ *
+ * ★行き先（to）だけで決められない場合があります。
+ *   ポイント画面へ飛ぶ用件は2種類あり、やることがまったく違います。
+ *
+ *     ・ポイント確認が必要   ＝ 台帳と残高が食い違っている（壊れている）
+ *     ・承認待ちのポイント調整 ＝ 人の判断を待っている（止まっている）
+ *
+ *   同じ説明を出すと、片方の対処だけして、もう片方を見落とします。
+ *   だから label も受け取って、種類ごとに書き分けます。
+ */
+function why(to: string, label = ""): string {
   switch (to) {
     case "gacha":
       return "景品の相場が上がっているため、売れるほど赤字が増えます。止めるかどうかを先に決めてください。";
@@ -263,6 +276,16 @@ function why(to: string): string {
     case "support":
       return "AIが答えられなかった問い合わせです。返金や不正判定に関わるものなので、人が読む必要があります。";
     case "points":
+      /*
+       * ★不整合のほうを、承認待ちより強い言い方で書くこと。
+       *   承認待ちは「まだ動いていない」だけで、あとから片づきます。
+       *   不整合は「すでに食い違っている」ので、
+       *   そのままガチャが回るほど、どこまでが正しかったのかが
+       *   分からなくなっていきます。
+       */
+      if (label.includes("確認が必要")) {
+        return "ポイント台帳の合計と、いまの残高が合っていません。合わないまま使われ続けると、どこまでが正しい残高だったのかを、あとから決められなくなります。先に原因を確かめてください。";
+      }
       return "ポイントの変更が承認待ちです。承認されるまで1ptも動きません。止まったままになります。";
     case "shipping":
       return "箱はできていますが、まだ出ていません。お客様をお待たせしています。まとめて片づけるのが早いです。";

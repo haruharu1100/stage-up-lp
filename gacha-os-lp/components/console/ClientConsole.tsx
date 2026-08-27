@@ -620,7 +620,10 @@ function Screen({
       case "fraud":
         return <FraudCenter s={s} dispatch={dispatch} />;
       case "points":
-        return <PointScreen s={s} dispatch={dispatch} />;
+        /* ★見本データ（s）を渡さないこと。
+             ポイントの正本は台帳（point_ledger）です。
+             画面が自分でサーバーから読み、残高と台帳を毎回照合します。 */
+        return <PointScreen />;
       case "customers":
         /* ★見本データ（s）を渡さないこと。
              この画面は、サーバーの会員そのものを見ています。

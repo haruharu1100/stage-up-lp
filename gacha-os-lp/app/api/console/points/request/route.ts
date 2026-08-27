@@ -17,6 +17,29 @@
  * ★申請できるのは point.request を持つ人だけ。
  *   いまは 経理 と 全権管理者 です。
  *   サポートは「見る」ことはできても、申請はできません。
+ *
+ * ═══════════════════════════════════════════════════════
+ * ★この入口でも、追加の本人確認（6桁）を求める理由
+ * ═══════════════════════════════════════════════════════
+ *
+ *   10万pt 未満の変更は、別の管理者の承認を待たずに、
+ *   その場で反映されます（lib/server/points.ts）。
+ *   つまり、この入口を通った瞬間にお金が動きます。
+ *
+ *   お金が動く操作では、必ず stepUp を true にすること。
+ *   置き忘れた席のパソコンから、そのまま動かせてしまいます。
+ *
+ * ═══════════════════════════════════════════════════════
+ * ★Idempotency-Key を受け取る理由
+ * ═══════════════════════════════════════════════════════
+ *
+ *   申請ボタンは、たいてい2回押されます。
+ *   通信が遅いとき、押した人に悪気はありません。
+ *   鍵が同じなら、2件目は作らず、1件目の結果をそのまま返します。
+ *
+ *   ★鍵が無くても断らないこと。
+ *     断ると、古い画面からの申請が全部通らなくなります。
+ *     鍵が無いときは、二度押しを防げないだけです。
  */
 
 import { NextResponse, type NextRequest } from "next/server";
@@ -31,12 +54,16 @@ const STATUS: Record<string, number> = {
   DELTA_TOO_LARGE: 400,
   REASON_REQUIRED: 400,
   NO_CUSTOMER: 404,
+  NO_APPROVER: 409,
+  WOULD_GO_NEGATIVE: 409,
 };
 
 export async function POST(req: NextRequest) {
   const gate = await guard(req, {
     kind: "ADMIN",
     permission: "point.request",
+    /* ★お金が動きます。ここを false に戻さないこと */
+    stepUp: true,
   });
   if (!passed(gate)) return gate;
 
@@ -45,6 +72,7 @@ export async function POST(req: NextRequest) {
       userId?: unknown;
       delta?: unknown;
       reason?: unknown;
+      idempotencyKey?: unknown;
     };
 
     const { db } = await import("@/lib/server/db");
@@ -67,6 +95,11 @@ export async function POST(req: NextRequest) {
         userId: typeof body.userId === "string" ? body.userId : "",
         delta: Number(body.delta),
         reason: typeof body.reason === "string" ? body.reason : "",
+        idempotencyKey:
+          req.headers.get("Idempotency-Key")?.trim() ||
+          (typeof body.idempotencyKey === "string"
+            ? body.idempotencyKey
+            : undefined),
       },
     );
 
