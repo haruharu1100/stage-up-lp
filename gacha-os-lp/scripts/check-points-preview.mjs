@@ -827,10 +827,13 @@ await check("★承認を待つあいだに残高が動いたら、いまの残�
   const moushikomiJi = await zandaka(MATO);
   const adjId = await machiWoTsukuru(boss, MATO, "点検：待つあいだに残高が動く");
 
-  /* 待つあいだに、別の処理で減らす */
+  /* 待つあいだに、別の処理で減らす。
+     ★ここは chousei（動かしきる）を使うこと。
+       境目が 0pt の公開先では、ただ申請しただけでは承認待ちのまま止まり、
+       残高は1ptも動きません。それでは「あいだに動いた」状況が作れず、
+       この点検がいちばん見たいところを素通りしてしまいます。 */
   const genryou = 1_000;
-  const w = await moushikomi(boss, MATO, -genryou, "点検：あいだに入った別の処理");
-  must(w.status === 200, `あいだの処理が通りません（${w.status}：${short(w.json)}）`);
+  await chousei(boss, MATO, -genryou, "点検：あいだに入った別の処理");
   const shouninJi = await zandaka(MATO);
   eq(shouninJi, moushikomiJi - genryou, "あいだの処理が入っていません（前提が崩れています）");
 
@@ -1205,14 +1208,60 @@ await check("引いた記録が、その人のポイント履歴に出てくる"
 });
 
 await check("景品をポイントに換えると、管理側の残高もその分だけ増える", async () => {
-  const p = await db().execute({
-    sql: `SELECT id, exchange_pt FROM prizes
-           WHERE user_id = ? AND status = 'UNCHOSEN' ORDER BY won_at DESC LIMIT 1`,
-    args: [HIKU],
-  });
-  must(p.rows[0], "換えられる景品がありません（この点検の前提が崩れています）");
-  const pid = String(p.rows[0].id);
-  const pt = Number(p.rows[0].exchange_pt);
+  /*
+   * ★1回引けば景品が手に入る、と決めつけないこと。
+   *
+   *   ガチャは、当たった等級によっては「現物」ではなく
+   *   「ポイントの戻り」で終わります。そのときは景品の行が作られません。
+   *   直前の1回に頼ると、ポイントが当たった日にだけ
+   *   「前提が崩れています」と言って止まる点検になります。
+   *   それは製品の不具合ではなく、点検の運任せです。
+   *
+   *   ですので、現物が出るまで引きます。
+   *   引くためのポイントも、そのつど正しい道（管理者の付与）で用意します。
+   */
+  const MAX = 40;
+  let pid = null;
+  let pt = 0;
+
+  for (let i = 0; i < MAX; i++) {
+    const p = await db().execute({
+      sql: `SELECT id, exchange_pt FROM prizes
+             WHERE user_id = ? AND status = 'UNCHOSEN'
+               AND exchange_pt IS NOT NULL AND exchange_pt > 0
+             ORDER BY won_at DESC LIMIT 1`,
+      args: [HIKU],
+    });
+    if (p.rows[0]) {
+      pid = String(p.rows[0].id);
+      pt = Number(p.rows[0].exchange_pt);
+      break;
+    }
+
+    const g = await db().execute({
+      sql: `SELECT id, price FROM gachas
+             WHERE tenant_id = ? AND status = 'PUBLISHED' AND left_count > 0
+             ORDER BY price ASC LIMIT 1`,
+      args: [A_TID],
+    });
+    must(g.rows[0], "引けるガチャがありません（この点検の前提が崩れています）");
+    const nedan = Number(g.rows[0].price);
+
+    const ima = await zandaka(HIKU);
+    if (ima < nedan) {
+      await chousei(boss, HIKU, nedan - ima + KOGUCHI, "点検：景品を出すための用意");
+    }
+    const d = await kyaku.call("/api/console/draw", "POST", { gachaId: String(g.rows[0].id) }, {
+      "idempotency-key": newKey(),
+    });
+    must(d.status === 200 && d.json?.ok, `引けません（${d.status}：${short(d.json)}）`);
+  }
+
+  must(
+    pid,
+    `${MAX}回引いても、ポイントに換えられる景品が1つも出ませんでした。` +
+      "\n      景品が出ない設定になっているか、当たりが仕込まれていません",
+  );
 
   const mae = await zandaka(HIKU);
   const daiMae = await daichouGoukei(A_TID, HIKU);
