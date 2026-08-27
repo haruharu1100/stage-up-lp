@@ -324,15 +324,17 @@ await check("会員を1人ふやすと、会員数が1人ふえる", async () =>
        「DBに入れたら増えた」は、「画面から作れる」の証明ではありません。 */
   const t = await db().execute({ sql: "SELECT id FROM tenants WHERE code = ?", args: ["DEMO"] });
   const tid = String(t.rows[0].id);
-  const { id } = await import(`${ROOT}/lib/server/ids.ts`);
-  const uid = id("cus");
-  const at = new Date().toISOString();
-  await db().execute({
-    sql: `INSERT INTO customers
-            (id, tenant_id, display_id, name, email, points, status, created_at)
-          VALUES (?,?,?,?,?,?, 'ACTIVE', ?)`,
-    args: [uid, tid, `SUMCHK-${Date.now() % 1000000}`, "点検用の会員",
-      `sumcheck-${Date.now()}@demo.example`, 0, at],
+  /* ★会員の行を、自分で組み立てないこと。
+       残高を持たせて作ると、その残高が台帳のどこにも無い人ができます。
+       lib/server/seed.ts の createCustomer は、
+       開始時の残高も同時に台帳へ入れてくれます。 */
+  const { createCustomer } = await import(`${ROOT}/lib/server/seed.ts`);
+  await createCustomer({
+    tenantId: tid,
+    no: Date.now() % 1000000,
+    name: "点検用の会員",
+    points: 0,
+    email: `sumcheck-${Date.now()}@demo.example`,
   });
 
   const ato = await summaryOf(aBoss);

@@ -33,7 +33,7 @@ import {
 /* ★権限の判断を、この入口の中に書き写さないこと。
      表は lib/permissions.ts の1枚だけです */
 import { can } from "@/lib/permissions";
-import { FOUR_EYES_THRESHOLD } from "@/lib/server/points";
+import { fourEyesThreshold } from "@/lib/server/points";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -62,7 +62,7 @@ export async function GET(req: NextRequest) {
         requestId: gate.requestId,
         canRequest,
         canApprove,
-        fourEyesThreshold: FOUR_EYES_THRESHOLD,
+        fourEyesThreshold: fourEyesThreshold(),
         /* ★自分の番号を返すこと。
              画面が「これは自分が出した申請だ」を出せるようにするためです。
              守りはサーバー側（SELF_APPROVAL）にあります */
@@ -92,7 +92,7 @@ export async function GET(req: NextRequest) {
         requestId: gate.requestId,
         canRequest,
         canApprove,
-        fourEyesThreshold: FOUR_EYES_THRESHOLD,
+        fourEyesThreshold: fourEyesThreshold(),
         meId: gate.session.subjectId,
         customer: detail,
       });

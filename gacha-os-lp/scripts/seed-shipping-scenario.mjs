@@ -44,6 +44,7 @@ if (/prod|honban/i.test(url) && env !== "preview") {
 
 const { db, migrate } = await import(`${ROOT}/lib/server/db.ts`);
 const { createPrize } = await import(`${ROOT}/lib/server/seed.ts`);
+const { movePointsViaLedger } = await import(`${ROOT}/scripts/lib/ledger-write.mjs`);
 const { createShippingOrder } = await import(`${ROOT}/lib/server/orders.ts`);
 const {
   createShipment,
@@ -300,24 +301,17 @@ await db().execute({
          WHERE tenant_id = ? AND id = ?`,
   args: [TENANT, p5[2]],
 });
-await db().execute({
-  sql: `INSERT INTO point_ledger
-          (id, tenant_id, user_id, kind, delta, memo, ref, created_at)
-        VALUES (?,?,?, 'PRIZE_EXCHANGE', ?, ?, ?, ?)`,
-  args: [
-    `pl_${Math.random().toString(36).slice(2, 12)}`,
-    TENANT,
-    c1,
-    koukanPt,
-    "缶バッジセット（架空）をポイントに交換",
-    p5[2],
-    new Date().toISOString(),
-  ],
-});
-await db().execute({
-  sql: `UPDATE customers SET points = points + ?
-         WHERE tenant_id = ? AND id = ?`,
-  args: [koukanPt, TENANT, c1],
+/* ★台帳の行と残高は、1つの取引でまとめて入れること。
+     以前ここは、台帳へ入れる処理と残高を足す処理を別々に書いていました。
+     途中で止まると、片方だけ残ります。
+     どちらが残っても、その人の残高は説明できない数になります。 */
+await movePointsViaLedger(db, {
+  tenantId: TENANT,
+  userId: c1,
+  delta: koukanPt,
+  kind: "PRIZE_EXCHANGE",
+  memo: "缶バッジセット（架空）をポイントに交換",
+  ref: p5[2],
 });
 
 console.log("⑤ 未選択2点 ＋ ポイント交換済み1点 … 獲得商品の画面で操作を試せる");

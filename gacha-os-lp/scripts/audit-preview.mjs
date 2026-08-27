@@ -87,6 +87,50 @@ if (!(process.env.DATABASE_URL ?? "").trim()) {
 
 const { db } = await import(`${ROOT}/lib/server/db.ts`);
 const { poolOf } = await import(`${ROOT}/lib/console/draw.ts`);
+const { movePointsViaLedger, setPointsViaLedger } = await import(
+  `${ROOT}/scripts/lib/ledger-write.mjs`
+);
+
+/** その会員が、どの会社の人かを引く */
+async function kaishaOf(custId) {
+  const r = await db().execute({
+    sql: "SELECT tenant_id FROM customers WHERE id = ? LIMIT 1",
+    args: [custId],
+  });
+  if (!r.rows[0]) throw new Error(`会員が見つかりません（${custId}）`);
+  return String(r.rows[0].tenant_id);
+}
+
+/**
+ * 点検の下ごしらえで、ポイントを動かす。
+ *
+ * ★ここを通さずに「UPDATE customers SET points」と書かないこと。
+ *   以前この点検が、下ごしらえのつもりで残高を直接動かしていました。
+ *   その結果 Preview のお客様に
+ *   「残高はあるのに、台帳にその理由が無い」人が生まれました。
+ *   点検の道具が、帳簿を壊していたということです。
+ *   いまは scripts/check-no-direct-balance-write.mjs が機械で止めます。
+ */
+async function ugokasu(custId, delta, memo) {
+  return movePointsViaLedger(db, {
+    tenantId: await kaishaOf(custId),
+    userId: custId,
+    delta,
+    kind: "TEST_TOPUP",
+    memo,
+  });
+}
+
+/** 「この残高にしておきたい」を、台帳経由で叶える（差額を1行足すだけ） */
+async function sonoZandaka(custId, points, memo) {
+  return setPointsViaLedger(db, {
+    tenantId: await kaishaOf(custId),
+    userId: custId,
+    points,
+    kind: "TEST_TOPUP",
+    memo,
+  });
+}
 
 /**
  * ガチャの口数と、箱の中身（等級ごとの本数）を、合わせ直す。
@@ -602,22 +646,16 @@ await check("DBで残高を変えたら、次の読み取りで必ず新しい�
   const mae = await h.call("/api/customer/points");
   const maeBal = Number(mae.json.balance ?? mae.json.points ?? 0);
 
-  const atarashii = maeBal + 1234;
   const cust = FX.DEMO.customers.find((c) => c.email === "user5@demo.example");
-  await db().execute({
-    sql: "UPDATE customers SET points = ? WHERE id = ?",
-    args: [atarashii, cust.id],
-  });
+  const atarashii = await ugokasu(cust.id, 1234, "キャッシュの点検：足す");
 
   const ato = await h.call("/api/customer/points");
   const atoBal = Number(ato.json.balance ?? ato.json.points ?? 0);
   eq(atoBal, atarashii, "古い残高が返りました（キャッシュが効いています）");
 
-  /* 元に戻す */
-  await db().execute({
-    sql: "UPDATE customers SET points = ? WHERE id = ?",
-    args: [maeBal, cust.id],
-  });
+  /* 元に戻す。★消すのではなく、戻す1行を足します。
+     足した記録を消してしまうと、台帳が「無かったこと」を作る帳簿になります。 */
+  await ugokasu(cust.id, -1234, "キャッシュの点検：戻す");
   return `${maeBal} → ${atarashii} が、読み直しで一致`;
 });
 
@@ -627,12 +665,7 @@ await check("何台のサーバーに当たっても、同じ残高が返る", a
   await h.call("/api/customer/points");
 
   const cust = FX.DEMO.customers.find((c) => c.email === "user4@demo.example");
-  const mae = cust.points;
-  const atarashii = mae + 5555;
-  await db().execute({
-    sql: "UPDATE customers SET points = ? WHERE id = ?",
-    args: [atarashii, cust.id],
-  });
+  const atarashii = await ugokasu(cust.id, 5555, "台数の点検：足す");
 
   const many = await Promise.all(
     Array.from({ length: 10 }, () => h.call("/api/customer/points")),
@@ -642,10 +675,7 @@ await check("何台のサーバーに当たっても、同じ残高が返る", a
   );
   const insts = new Set(many.map((m) => m.vid.split("::").pop()?.split("-")[0]));
 
-  await db().execute({
-    sql: "UPDATE customers SET points = ? WHERE id = ?",
-    args: [mae, cust.id],
-  });
+  await ugokasu(cust.id, -5555, "台数の点検：戻す");
 
   eq(values.size, 1, `答えが割れました：${[...values].join(" / ")}`);
   eq([...values][0], atarashii, "古い値が返っています");
@@ -898,10 +928,7 @@ async function tameru(hito, custId, hitsuyou, gacha = null) {
 
   /** ポイントと在庫を、まとめて足しておく */
   const oginau = async (kaisuu) => {
-    await db().execute({
-      sql: "UPDATE customers SET points = points + ? WHERE id = ?",
-      args: [G.price * kaisuu, custId],
-    });
+    await ugokasu(custId, G.price * kaisuu, `点検の下ごしらえ：${kaisuu}回ぶんの補充`);
     await db().execute({
       sql: `UPDATE gachas SET left_count = left_count + ?, total = total + ?
              WHERE id = ? AND left_count < ?`,
@@ -1430,10 +1457,7 @@ await check("B社の管理者が、A社の発送を直接叩いても動かせ�
 
 await check("A社の会員が、B社の会員の景品を交換できない", async () => {
   const bCust = FX.KANSA.customers[0];
-  await db().execute({
-    sql: "UPDATE customers SET points = 3000 WHERE id = ?",
-    args: [bCust.id],
-  });
+  await sonoZandaka(bCust.id, 3000, "他社の景品を交換できないことの点検");
   await tameru(bKyaku, bCust.id, 1, FX.KANSA.gachas[0]);
   const p = await db().execute({
     sql: `SELECT id FROM prizes WHERE user_id = ? AND status = 'UNCHOSEN' LIMIT 1`,
@@ -1568,10 +1592,7 @@ await check("操作の前後で、ダッシュボードの数字が実際に動�
 
   const h = new Hito("動かす人");
   await h.login("CUSTOMER", "DEMO", OKURU_MAIL);
-  await db().execute({
-    sql: "UPDATE customers SET points = points + 1000 WHERE id = ?",
-    args: [okuruCust.id],
-  });
+  await ugokasu(okuruCust.id, 1000, "ダッシュボードが動くことの点検");
   const d = await h.call(
     "/api/console/draw",
     "POST",
@@ -1818,20 +1839,17 @@ await check("残高が足りなければ、引かせない", async () => {
   });
   const moto = Number(b.rows[0].points);
 
-  await db().execute({
-    sql: "UPDATE customers SET points = 0 WHERE id = ?",
-    args: [cust.id],
-  });
+  /* ★0にするのも、戻すのも、台帳を通します。
+     残高を直接0にすると、その人は「使った覚えの無い減り方」をした
+     ことになり、台帳と合わなくなります。 */
+  await sonoZandaka(cust.id, 0, "残高不足で引けないことの点検：一時的に0へ");
   const r = await h.call(
     "/api/console/draw",
     "POST",
     { gachaId: GACHA.id },
     { "Idempotency-Key": `audit-tarinai-${Date.now()}` },
   );
-  await db().execute({
-    sql: "UPDATE customers SET points = ? WHERE id = ?",
-    args: [moto, cust.id],
-  });
+  await sonoZandaka(cust.id, moto, "残高不足で引けないことの点検：元へ戻す");
 
   must(r.status >= 400, `残高ゼロなのに引けました ${r.status} ${short(r.json)}`);
   return `${r.status} ${r.json?.code ?? ""}`;

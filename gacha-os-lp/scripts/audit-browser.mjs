@@ -73,6 +73,7 @@ const pwMod = await import(
 const chromium = pwMod.chromium ?? pwMod.default?.chromium;
 
 const { db } = await import(`${ROOT}/lib/server/db.ts`);
+const { setPointsViaLedger } = await import(`${ROOT}/scripts/lib/ledger-write.mjs`);
 
 /* ═══════════════════════════════════════════════
    記録の付け方（audit-preview.mjs と同じ書き方）
@@ -102,11 +103,12 @@ function must(joken, why) {
    下ごしらえ
    ═══════════════════════════════════════════════ */
 const cust = await db().execute({
-  sql: "SELECT id, points FROM customers WHERE email = ?",
+  sql: "SELECT id, tenant_id, points FROM customers WHERE email = ?",
   args: [MAIL],
 });
 if (cust.rows.length === 0) throw new Error(`${MAIL} が見つかりません`);
 const CUST_ID = String(cust.rows[0].id);
+const TENANT_ID = String(cust.rows[0].tenant_id);
 const MOTO = Number(cust.rows[0].points);
 
 /**
@@ -118,10 +120,20 @@ const MAE = 771_001;
 const ATO = 992_002;
 const mieru = (n) => [String(n), n.toLocaleString("ja-JP"), n.toLocaleString("en-US")];
 
+/**
+ * 残高を、その数にしておく。
+ *
+ * ★台帳を通します。以前ここが残高を直接書き換えていたせいで、
+ *   Preview のお客様に「残高はあるのに、台帳にその理由が無い」人が
+ *   生まれました。走らせるたびに増える壊れ方です。
+ */
 async function nokosu(n) {
-  await db().execute({
-    sql: "UPDATE customers SET points = ? WHERE id = ?",
-    args: [n, CUST_ID],
+  await setPointsViaLedger(db, {
+    tenantId: TENANT_ID,
+    userId: CUST_ID,
+    points: n,
+    kind: "TEST_TOPUP",
+    memo: "ブラウザ点検：画面に出る数字を見分けるための調整",
   });
 }
 

@@ -56,6 +56,8 @@ import {
   maskEmail,
   setCustomerSuspended,
 } from "../lib/server/customerAdmin";
+/* ★台帳を通さずに残高を壊せる、ただ1つの出口。手元の使い捨てDBでしか動かない */
+import { breakBalanceForTest } from "../scripts/lib/fixtures-danger.mjs";
 
 after(async () => {
   await resetDbForTests();
@@ -278,10 +280,23 @@ test("★危険度で絞り込める", async () => {
 test("★ポイントの食い違いを、危険度に混ぜない", async () => {
   const t = await createTenant({ code: code(), name: "会員社I" });
   const c = await createCustomer({ tenantId: t, no: 1, name: "架空 不一致", points: 1000, email: "m@x.example" });
-  /* 台帳を触らずに残高だけ動かす＝記録に残っていないポイントが動いた状態 */
-  await db().execute({
-    sql: `UPDATE customers SET points = 9999 WHERE tenant_id = ? AND id = ?`,
-    args: [t, c],
+
+  /*
+   * 台帳を触らずに残高だけ動かす＝記録に残っていないポイントが動いた状態。
+   *
+   * ★ここだけは、わざと壊さないと確かめられません。
+   *   台帳経由でしか動かせないなら、食い違いは一生作れないので、
+   *   「食い違いを見つけて赤く出す」機能を試せなくなります。
+   *
+   *   ですので、壊す道具は scripts/lib/fixtures-danger.mjs に隔離し、
+   *   手元の使い捨てDBでしか動かないようにしてあります。
+   *   Preview や本番につながっていれば、呼んだ瞬間に止まります。
+   */
+  await breakBalanceForTest(db, {
+    tenantId: t,
+    userId: c,
+    delta: 9999 - 1000,
+    naze: "台帳と残高の食い違いを、画面が見つけられるか確かめる",
   });
 
   const l = await customerList(t, "SUPER_ADMIN");

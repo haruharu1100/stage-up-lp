@@ -53,7 +53,7 @@
 
 import { can, type Role } from "@/lib/permissions";
 import { db } from "./db";
-import { FOUR_EYES_THRESHOLD } from "./points";
+import { fourEyesThreshold } from "./points";
 import { maskEmail } from "./customerAdmin";
 
 type Row = Record<string, unknown>;
@@ -371,7 +371,7 @@ export async function pointList(
     canSeePoints,
     canRequest,
     canApprove,
-    fourEyesThreshold: FOUR_EYES_THRESHOLD,
+    fourEyesThreshold: fourEyesThreshold(),
     counts,
   };
 }

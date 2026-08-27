@@ -36,14 +36,20 @@
  * ★二人承認が要る額と、要らない額
  * ═══════════════════════════════════════════════════════
  *
- *   境目は lib/server/points.ts の FOUR_EYES_THRESHOLD です。
+ *   境目は lib/server/points.ts の fourEyesThreshold() です。
  *
  *     境目以上 … その場では1ptも動かない。別の担当者の承認を待つ
  *     境目未満 … その場で台帳へ入る（ただし理由と6桁は必ず要る）
  *
- *   ★この試験に、境目の数字（100000）を書き写さないこと。
+ *   ★標準は 0 です。何も設定しなければ、全件が二人承認になります。
+ *     この試験では「境目のある会社」を再現するために、
+ *     わざと境目を設定します。0 のままだと
+ *     「境目未満はその場で入る」道を1本も試せないからです。
+ *     標準が 0 であること自体は、いちばん下でまとめて試します。
+ *
+ *   ★判定側に、境目の数字を書き写さないこと。
  *     書き写すと、境目を変えた日に、試験だけが古い前提のまま
- *     通ってしまいます。必ず定数を読み込んで使います。
+ *     通ってしまいます。必ず正本から読み直して使います。
  */
 
 /* ★これを一番上に置くこと。接続先を使い捨てのファイルに固定する */
@@ -58,10 +64,20 @@ import { SESSION_COOKIE, CSRF_HEADER, markStepUp } from "../lib/server/session";
 import { createTenant, createCustomer, createAdmin } from "../lib/server/seed";
 import { POST as requestPost } from "../app/api/console/points/request/route";
 import { POST as approvePost } from "../app/api/console/points/approve/route";
-import { FOUR_EYES_THRESHOLD } from "../lib/server/points";
+import {
+  fourEyesThreshold,
+  DEFAULT_FOUR_EYES_THRESHOLD,
+} from "../lib/server/points";
 
-/** 二人承認が必要になる額。★数字を書き写さず、正本から読むこと */
-const OOGUCHI = FOUR_EYES_THRESHOLD;
+/*
+ * ★この試験のあいだだけ、「境目のある会社」を作ります。
+ *   標準は 0（全件二人承認）です。ここで上書きするのは、
+ *   境目未満の道も試すためであって、標準を変えたいからではありません。
+ */
+process.env.POINT_ADJUST_APPROVAL_THRESHOLD = "100000";
+
+/** 二人承認が必要になる額。★数字を書き写さず、正本から読み直すこと */
+const OOGUCHI = fourEyesThreshold();
 /** その場で反映される額 */
 const KOGUCHI = 300;
 
@@ -765,4 +781,78 @@ test("A：ログインしていなければ、どちらの入口も断る（401�
     post(APR_URL, null, { adjustmentId: "adj_dummy", approve: true }),
   );
   assert.equal(b.status, 401);
+});
+
+/* ══════════════════════════════════════════════
+   標準は「全件二人承認」
+   ══════════════════════════════════════════════
+
+   ★ここが、この試験でいちばん大事なところです。
+
+     1回あたりの金額で線を引く決まりは、回数で必ず抜けられます。
+     境目が 100,000pt なら、99,999pt を10回に分けるだけで
+     1人で 999,990pt を動かせます。
+     だから、何も設定しなかった会社は
+     「金額に関係なく、全件が二人承認」で始まります。
+
+   ★この試験のあいだだけ、設定を外して素の状態に戻します。
+     終わったら必ず戻します。戻さないと、
+     このあとの試験が別の前提で走ってしまいます。 */
+
+test("何も設定しなければ、境目は 0（＝全件が二人承認）", async () => {
+  const moto = process.env.POINT_ADJUST_APPROVAL_THRESHOLD;
+  try {
+    delete process.env.POINT_ADJUST_APPROVAL_THRESHOLD;
+    assert.equal(DEFAULT_FOUR_EYES_THRESHOLD, 0, "標準が 0 でなくなっています");
+    assert.equal(fourEyesThreshold(), 0, "何も設定していないのに、境目があります");
+
+    /* ★1pt でも承認待ちになること。ここが「全件」の意味です */
+    const before = await pointsOf(customerA);
+    const res = await requestPost(
+      post(REQ_URL, boss1, {
+        userId: customerA,
+        delta: 1,
+        reason: "たった1ptでも、ひとりでは動かせないこと",
+      }),
+    );
+    const body = (await res.json()) as { status?: string; needsApproval?: boolean };
+
+    assert.equal(res.status, 200);
+    assert.equal(body.status, "PENDING", "1pt の調整が、ひとりで通ってしまいました");
+    assert.equal(body.needsApproval, true);
+    assert.equal(
+      await pointsOf(customerA),
+      before,
+      "承認前なのに、残高が動いています",
+    );
+  } finally {
+    if (moto === undefined) delete process.env.POINT_ADJUST_APPROVAL_THRESHOLD;
+    else process.env.POINT_ADJUST_APPROVAL_THRESHOLD = moto;
+  }
+});
+
+test("設定が読めない値なら、いちばん厳しい側（全件二人承認）に倒す", () => {
+  const moto = process.env.POINT_ADJUST_APPROVAL_THRESHOLD;
+  try {
+    /*
+     * ★読めない値を「制限なし」と受け取らないこと。
+     *   設定を打ち間違えた日から、誰も気づかないまま
+     *   全部の調整がひとりで通るようになります。
+     */
+    for (const warui of ["", "   ", "abc", "-5", "1e999", "NaN"]) {
+      process.env.POINT_ADJUST_APPROVAL_THRESHOLD = warui;
+      assert.equal(
+        fourEyesThreshold(),
+        0,
+        `「${warui}」という設定が、素通りの側に倒れています`,
+      );
+    }
+
+    /* 正しく設定したときは、その値になること */
+    process.env.POINT_ADJUST_APPROVAL_THRESHOLD = "50000";
+    assert.equal(fourEyesThreshold(), 50_000);
+  } finally {
+    if (moto === undefined) delete process.env.POINT_ADJUST_APPROVAL_THRESHOLD;
+    else process.env.POINT_ADJUST_APPROVAL_THRESHOLD = moto;
+  }
 });

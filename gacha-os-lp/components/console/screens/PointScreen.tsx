@@ -468,9 +468,13 @@ function PointList() {
                 <KV
                   k="2人の承認が必要になる額"
                   v={
-                    <span className="num">
-                      {data.fourEyesThreshold.toLocaleString()}pt 以上
-                    </span>
+                    data.fourEyesThreshold <= 0 ? (
+                      "手動調整はすべて"
+                    ) : (
+                      <span className="num">
+                        {data.fourEyesThreshold.toLocaleString()}pt 以上
+                      </span>
+                    )
                   }
                 />
               </div>
@@ -923,6 +927,19 @@ function BeforeAfter({ a }: { a: PointAdjustment }) {
  *   サーバーから受け取った threshold をそのまま使います。
  *   書き写すと、境目を変えた日に画面だけ古いままになります。
  */
+
+/**
+ * 「何が二人承認の対象か」を、日本語の一言にする。
+ *
+ * ★境目が 0 のときに「0pt 以上」と書かないこと。
+ *   0pt 以上という日本語は、読んだ人に意味が通じません。
+ *   標準は「全件が二人承認」です。そう書きます。
+ */
+function shouninHani(threshold: number): string {
+  return threshold <= 0
+    ? "管理者による手動調整はすべて"
+    : `${threshold.toLocaleString()}pt 以上の手動調整は`;
+}
 function RequestForm({
   c,
   threshold,
@@ -984,8 +1001,10 @@ function RequestForm({
         </div>
 
         <p className="text-note leading-[1.85] text-slate3">
-          {threshold.toLocaleString()}pt 以上の変更は、別の担当者が承認するまで1ptも動きません。
-          それ未満は、その場で反映されます。どちらの場合も、追加の本人確認（6桁）と理由が必要です。
+          {shouninHani(threshold)}
+          、別の担当者が承認するまで1ptも動きません。
+          {threshold > 0 && "それ未満は、その場で反映されます。"}
+          追加の本人確認（6桁）と理由は、どの金額でも必要です。
         </p>
 
         {reason.trim().length > 0 && reason.trim().length < 4 && (
@@ -1096,7 +1115,9 @@ function ApprovalList() {
       {data && (
         <Card
           title="ポイント調整の申請"
-          note={`承認待ち ${data.pendingCount.toLocaleString()}件 ／ ${data.fourEyesThreshold.toLocaleString()}pt 以上は、2人目の承認が必要です。`}
+          note={`承認待ち ${data.pendingCount.toLocaleString()}件 ／ ${shouninHani(
+            data.fourEyesThreshold,
+          )}、2人目の承認が必要です。`}
         >
           {rows.length === 0 ? (
             <Empty
@@ -1107,12 +1128,21 @@ function ApprovalList() {
               }
               next={
                 status === "PENDING" ? (
-                  <>
-                    {data.fourEyesThreshold.toLocaleString()}
-                    pt 以上のポイント変更が申請されると、ここに入ります。
-                    それ未満の変更は承認を待たずにその場で反映されるので、ここには並びません
-                    （記録は会員ごとの台帳に残ります）。
-                  </>
+                  data.fourEyesThreshold <= 0 ? (
+                    <>
+                      担当者がポイントを手で増減する申請を出すと、ここに入ります。
+                      申請した本人は承認できないので、必ず別の担当者が確かめてから反映されます。
+                      ガチャで使った分・当たった分の戻り・景品のポイント交換は、
+                      お客様の操作の結果なので、ここには並びません。
+                    </>
+                  ) : (
+                    <>
+                      {data.fourEyesThreshold.toLocaleString()}
+                      pt 以上のポイント変更が申請されると、ここに入ります。
+                      それ未満の変更は承認を待たずにその場で反映されるので、ここには並びません
+                      （記録は会員ごとの台帳に残ります）。
+                    </>
+                  )
                 ) : (
                   <>上の「状態」を「すべて」にすると、過去の申請も出ます。</>
                 )

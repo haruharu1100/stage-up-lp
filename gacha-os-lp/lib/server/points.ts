@@ -44,7 +44,7 @@
  *      通信が遅いときは、押した人に悪気はありません。
  *
  * ═══════════════════════════════════════════════════════
- * ★二人承認の境目（FOUR_EYES_THRESHOLD）を、ここに置く理由
+ * ★二人承認の境目（fourEyesThreshold）を、ここに置く理由
  * ═══════════════════════════════════════════════════════
  *
  *   これまで、この境目は画面の中（lib/console/state.ts）にしか
@@ -54,10 +54,21 @@
  *   だから、境目はここ（サーバー側）に1つだけ置きます。
  *   画面はここから読むだけにします。
  *
- *   ★境目を大きくしないこと。
+ *   ★はじめの値は 0 です。つまり「金額に関係なく、全件が二人承認」。
+ *
+ *     「10万pt未満なら1人でよい」にしてはいけません。
+ *     9万9千ptを10回に分ければ、1人で99万ptを動かせるからです。
+ *     1回あたりの金額で引いた線は、回数で必ず抜けられます。
+ *
+ *   ★大きくしてよいのは、ご契約先が決めたときだけ。
  *     大きくするほど、1人で動かせる金額が増えます。
- *     逆に 0 にすると「どんな金額でも二人承認」になります。
- *     厳しくする向きは、いつでも安全です。
+ *     小さくする向き（厳しくする向き）は、いつでも安全です。
+ *
+ *   ★この境目は「管理者が手で動かす調整」だけの話です。
+ *     ガチャで使った分・当たった分の戻り・景品のポイント交換は、
+ *     お客様の操作の結果であって、誰かの裁量ではありません。
+ *     そこまで二人承認にすると、日常業務が止まります。
+ *     だから、この決まりは requestAdjustment にしか掛けません。
  */
 
 import { can, type Role } from "@/lib/permissions";
@@ -87,13 +98,35 @@ export class PointError extends Error {
 export const MAX_DELTA = 1_000_000;
 
 /**
- * ここから上は、別の管理者の承認がないと1ptも動かない。
+ * はじめの境目。0 ＝ 金額に関係なく、全件が二人承認。
  *
- * ★この値は、この1か所だけに置くこと。
+ * ★ここを 0 以外にしないこと。
+ *   ご契約先ごとに緩めたい場合は、下の環境変数で上書きします。
+ *   標準を緩めてしまうと、何も設定しなかった会社が
+ *   いちばん危ない状態で使い始めることになります。
+ */
+export const DEFAULT_FOUR_EYES_THRESHOLD = 0;
+
+/**
+ * ここから上（以上）は、別の管理者の承認がないと1ptも動かない。
+ *
+ * ★この値は、この関数の中だけで決めること。
  *   画面にも書き写さないでください。書き写した日から、
  *   画面の説明とサーバーの判断がずれていきます。
+ *
+ * ★読めない値が入っていたら、いちばん厳しい側（0）に倒すこと。
+ *   打ち間違いや空文字を「制限なし」と受け取ると、
+ *   設定を間違えた日から、誰も気づかないまま素通りになります。
  */
-export const FOUR_EYES_THRESHOLD = 100_000;
+export function fourEyesThreshold(): number {
+  const raw = process.env.POINT_ADJUST_APPROVAL_THRESHOLD;
+  if (raw === undefined || String(raw).trim() === "") {
+    return DEFAULT_FOUR_EYES_THRESHOLD;
+  }
+  const n = Math.trunc(Number(raw));
+  if (!Number.isFinite(n) || n < 0) return DEFAULT_FOUR_EYES_THRESHOLD;
+  return n;
+}
 
 /** なぜ動かすのか。短すぎる理由を受け付けないこと */
 export const MIN_REASON = 4;
@@ -166,10 +199,11 @@ function checkInput(input: { delta: number; reason: string }) {
 /**
  * この金額に、別の管理者の承認が要るか。
  *
- * ★「以上」で数えること。ちょうど 100,000pt を素通しにしないこと。
+ * ★「以上」で数えること。境目ちょうどの額を素通しにしないこと。
+ *   境目が 0 なら、1pt の調整にも承認が要ります（それが標準です）。
  */
 export function needsFourEyes(delta: number): boolean {
-  return Math.abs(Math.trunc(Number(delta) || 0)) >= FOUR_EYES_THRESHOLD;
+  return Math.abs(Math.trunc(Number(delta) || 0)) >= fourEyesThreshold();
 }
 
 /**
@@ -270,7 +304,9 @@ export async function requestAdjustment(
       if (!(await otherApproverExists(tx, actor.tenantId, actor.adminId))) {
         throw new PointError(
           "NO_APPROVER",
-          `${FOUR_EYES_THRESHOLD.toLocaleString("ja-JP")}ポイント以上の変更は、別の管理者の承認が必要です。` +
+          (fourEyesThreshold() === 0
+            ? "ポイントの変更は、別の管理者の承認が必要です。"
+            : `${fourEyesThreshold().toLocaleString("ja-JP")}ポイント以上の変更は、別の管理者の承認が必要です。`) +
             "いまこの会社には、承認できる別の管理者がいないため、この申請はお預かりできません。",
         );
       }
@@ -396,7 +432,7 @@ export async function requestAdjustment(
       target: input.userId,
       summary: `${customerName} さんのポイントを ${
         delta > 0 ? "+" : ""
-      }${delta} 調整（${FOUR_EYES_THRESHOLD.toLocaleString("ja-JP")}pt 未満のため、その場で反映）`,
+      }${delta} 調整（${fourEyesThreshold().toLocaleString("ja-JP")}pt 未満のため、その場で反映）`,
       before: String(balanceBefore),
       after: String(balanceAfter),
       reason,

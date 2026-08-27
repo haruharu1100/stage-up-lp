@@ -95,12 +95,31 @@ if (!(process.env.DATABASE_URL ?? "").trim()) {
 }
 
 const { db } = await import(`${ROOT}/lib/server/db.ts`);
-const { FOUR_EYES_THRESHOLD } = await import(`${ROOT}/lib/server/points.ts`);
 const Hito = makePreviewClient({ base: BASE, password: PW, db });
 
-/** 二人承認が必要になる額。★数字を書き写さず、正本から読むこと */
-const OOGUCHI = FOUR_EYES_THRESHOLD;
-/** その場で反映される額 */
+/**
+ * 二人承認になる境目。
+ *
+ * ★手元のコードから読まないこと。
+ *   境目は、動いているサーバーの設定で決まります。
+ *   手元の値を正しいことにすると、
+ *   「手元では0だから全件承認のはず」と思い込んだまま、
+ *   公開先だけ10万ptで動いている、という見落としが起きます。
+ *   ですので、公開先のAPIが言う数字を、そのまま正本にします。
+ *
+ *   ログインしてからでないと読めないので、最初は null です。
+ */
+let SHIKII = null;
+
+/** その額に、二人承認が要るか（正本＝公開先が言う境目で決める） */
+function futariGaIru(delta) {
+  if (SHIKII === null) throw new Error("境目を、まだ公開先から読んでいません");
+  return Math.abs(Math.trunc(delta)) >= SHIKII;
+}
+
+/** 大きめの額。境目が0でも、10万ptでも、必ず二人承認になる側 */
+const OOGUCHI = 100_000;
+/** 小さめの額。境目が0なら二人承認、境目が大きければその場で反映 */
 const KOGUCHI = 500;
 
 /* ══════════════════════════════════════════════
@@ -251,8 +270,40 @@ async function machiWoTsukuru(h, userId, reason) {
   return String(r.json.adjustmentId);
 }
 
+/**
+ * ポイントを、実際に動かしきる。
+ *
+ * ★境目の設定によって、道が2つに分かれます。
+ *     ・二人承認が要らない額 … 申請した時点で反映される
+ *     ・二人承認が要る額     … 申請 → 別の管理者が承認 で反映される
+ *
+ *   標準の設定（境目0＝全件二人承認）では、必ず後者です。
+ *   この点検のあちこちで「ポイントを動かした状態」が必要になるので、
+ *   どちらの道でも同じように動かしきる入口を、1つだけ作ります。
+ *
+ * ★ここで「承認を飛ばす近道」を作らないこと。
+ *   飛ばしてしまうと、二人承認そのものが点検されなくなります。
+ *   必ず、承認する人（fuku）に本当に承認させます。
+ */
+async function chousei(h, userId, delta, reason, key = newKey()) {
+  const r = await moushikomi(h, userId, delta, reason, key);
+  must(r.status === 200 && r.json?.ok, `申請できません（${r.status}：${short(r.json)}）`);
+
+  if (r.json.status === "APPLIED") {
+    eq(r.json.needsApproval, false, "その場で入ったのに、承認が要ると言っています");
+    must(!futariGaIru(delta), `二人承認が要る額なのに、その場で反映されました（${delta}pt）`);
+    return { ...r.json, futari: false };
+  }
+
+  eq(r.json.status, "PENDING", `知らない状態が返りました：${short(r.json)}`);
+  must(futariGaIru(delta), `二人承認が要らない額なのに、止められました（${delta}pt）`);
+
+  const a = await handan(fuku, String(r.json.adjustmentId), true, "点検のため承認します");
+  must(a.status === 200 && a.json?.ok, `承認できません（${a.status}：${short(a.json)}）`);
+  return { ...a.json, adjustmentId: r.json.adjustmentId, futari: true };
+}
+
 console.log(`\n公開先：${BASE}`);
-console.log(`二人承認になる額：${OOGUCHI.toLocaleString()}pt（正本 lib/server/points.ts から読み込み）\n`);
 
 const A_TID = await tenantIdOf("DEMO");
 const B_TID = await tenantIdOf("KANSA");
@@ -261,8 +312,6 @@ const MATO = await customerIdOf(A_TID, "user3@demo.example");
 const HIKU = await customerIdOf(A_TID, "user1@demo.example");
 /* ★残高の少ないお客様。「その場で入る道」の引きすぎを試すのに使います */
 const KOGAKU = await customerIdOf(A_TID, "user5@demo.example");
-/* 後片づけで戻すもの */
-let zurashita = null; /* わざとずらしたお客様 */
 
 /** いま、台帳と残高が合っていない人の数（A社） */
 async function zurehito() {
@@ -373,6 +422,30 @@ await check("役割の違う担当者が、それぞれ入れる", async () => {
   const b = await bBoss.login("ADMIN", "KANSA", "b-boss@kansa.example");
   must(b.status === 200 && b.json?.ok, `B社の統括が入れません（${b.status}）`);
   return "7人";
+});
+
+await check("★二人承認になる境目を、公開先から読む（手元の値を信じない）", async () => {
+  /*
+   * ★ここを飛ばさないこと。
+   *   境目は、動いているサーバーの設定です。
+   *   手元のコードの数字を正しいことにすると、
+   *   公開先だけ違う設定で動いていても気づけません。
+   *
+   *   標準は 0、つまり「管理者による手動調整は、金額に関係なく全件が二人承認」。
+   *   1回あたりの金額で線を引くと、回数で必ず抜けられるからです。
+   *   （9万9千ptを10回に分ければ、ひとりで99万pt動かせます）
+   */
+  const r = await listOf(boss);
+  must(
+    typeof r.fourEyesThreshold === "number",
+    "公開先が、二人承認の境目を教えてくれません",
+  );
+  must(r.fourEyesThreshold >= 0, `境目が負の数です（${r.fourEyesThreshold}）`);
+  SHIKII = r.fourEyesThreshold;
+
+  return SHIKII === 0
+    ? "0pt ＝ 管理者による手動調整は、全件が二人承認"
+    : `${SHIKII.toLocaleString()}pt 以上が二人承認`;
 });
 
 /* ══════════════════════════════════════════════
@@ -515,7 +588,15 @@ await check("「台帳と合っていない」の人数が、DBの数と一致�
    ③ E2E A・B・C：その場で反映される額
    ══════════════════════════════════════════════ */
 
-group("③ A・B・C：境目より少ない額は、その場で台帳へ入る");
+/* ★この組の題は「その場で入る」ではありません。
+
+     標準の設定（境目0）では、その場で入る道はもうありません。
+     管理者が手で動かすものは、金額に関係なく全件が二人承認だからです。
+
+     ですので、ここで確かめるのは
+         「申請から反映までを通しきったとき、残高と台帳が同じだけ動くか」
+     です。途中に承認が挟まるかどうかは、設定の違いにすぎません。 */
+group("③ A・B・C：手動調整が、残高と台帳を同じだけ動かす");
 
 await check("承認の直前に、6桁を入れ直せる", async () => {
   /* ★二人とも先に通しておくこと。
@@ -527,28 +608,24 @@ await check("承認の直前に、6桁を入れ直せる", async () => {
   return "統括ふたりとも入れ直し済み";
 });
 
-await check("A：通常の付与で、残高と台帳が同じだけ増える", async () => {
+await check("A：付与すると、残高と台帳が同じだけ増える", async () => {
   const zanMae = await zandaka(MATO);
   const daiMae = await daichouGoukei(A_TID, MATO);
 
-  const r = await moushikomi(boss, MATO, KOGUCHI, "点検：通常の付与");
-  must(r.status === 200 && r.json?.ok, `付与できません（${r.status}：${short(r.json)}）`);
-  eq(r.json.status, "APPLIED", "少額なのに、承認待ちで止まっています");
-  eq(r.json.needsApproval, false, "少額なのに、承認が要ると言っています");
+  const r = await chousei(boss, MATO, KOGUCHI, "点検：通常の付与");
 
   eq(await zandaka(MATO), zanMae + KOGUCHI, "残高が動いていません");
   eq(await daichouGoukei(A_TID, MATO), daiMae + KOGUCHI, "台帳が動いていません");
-  eq(r.json.balanceBefore, zanMae, "変更前の残高が違います");
-  eq(r.json.balanceAfter, zanMae + KOGUCHI, "変更後の残高が違います");
-  return `+${KOGUCHI}pt（${zanMae} → ${zanMae + KOGUCHI}）`;
+  return `+${KOGUCHI}pt（${zanMae} → ${zanMae + KOGUCHI}）${
+    r.futari ? "／二人承認を経て" : "／その場で反映"
+  }`;
 });
 
-await check("B：通常の減算で、残高と台帳が同じだけ減る", async () => {
+await check("B：減らすと、残高と台帳が同じだけ減る", async () => {
   const zanMae = await zandaka(MATO);
   const daiMae = await daichouGoukei(A_TID, MATO);
 
-  const r = await moushikomi(boss, MATO, -KOGUCHI, "点検：通常の減算");
-  must(r.status === 200 && r.json?.ok, `引けません（${r.status}：${short(r.json)}）`);
+  await chousei(boss, MATO, -KOGUCHI, "点検：通常の減算");
 
   eq(await zandaka(MATO), zanMae - KOGUCHI, "残高が減っていません");
   eq(await daichouGoukei(A_TID, MATO), daiMae - KOGUCHI, "台帳が減っていません");
@@ -569,26 +646,42 @@ await check("C：0ptの申請は、断る", async () => {
   return "400 のまま";
 });
 
-await check("C：その場で反映される額なら、残高より多く引こうとした時点で断る", async () => {
+await check("C：残高より多く引こうとしても、1ptも動かない", async () => {
   /*
-   * ★残高の少ないお客様で試すこと。
-   *   残高の多い人で「残高＋1」を引こうとすると、
-   *   その額はもう二人承認の側へ行きます。
-   *   そちらは、その場では止まりません（止めるのは承認のときです）。
-   *   確かめたいのは「その場で入る道」の入口なので、
-   *   境目より少ない額で試します。
+   * ★「どこで断られるか」は、設定によって変わります。
+   *
+   *     境目が0（標準）… その場で入る道が無いので、申請は受け付けられ、
+   *                      承認のときに断られます。
+   *     境目が大きい   … その場で入る道があるので、申請の時点で断られます。
+   *
+   *   断られる場所が違っても、確かめたいことは1つです。
+   *
+   *       残高が負にならないこと。
+   *
+   *   負の残高は、あとから誰にも直せません。
    */
   const ima = await zandaka(KOGAKU);
-  must(
-    ima + 1 < OOGUCHI,
-    `点検用のお客様の残高（${ima}pt）が大きすぎて、その場で入る道を試せません`,
-  );
+  const hikisugi = -(ima + 1);
 
-  const r = await moushikomi(boss, KOGAKU, -(ima + 1), "点検：引きすぎ");
-  must(r.status >= 400, "残高より多く引けてしまいます");
-  eq(r.json?.code, "WOULD_GO_NEGATIVE", `断りの理由が違います：${short(r.json)}`);
-  eq(await zandaka(KOGAKU), ima, "断ったのに、残高が動いています");
-  return `${r.status}（残高 ${ima}pt は変わらず）`;
+  const r = await moushikomi(boss, KOGAKU, hikisugi, "点検：引きすぎ");
+
+  if (!futariGaIru(hikisugi)) {
+    /* その場で入る道 ＝ 申請の時点で断る */
+    must(r.status >= 400, "残高より多く引けてしまいます");
+    eq(r.json?.code, "WOULD_GO_NEGATIVE", `断りの理由が違います：${short(r.json)}`);
+    eq(await zandaka(KOGAKU), ima, "断ったのに、残高が動いています");
+    return `申請の時点で ${r.status}（残高 ${ima}pt は変わらず）`;
+  }
+
+  /* 二人承認の道 ＝ 申請は通るが、1ptも動かない */
+  must(r.status === 200 && r.json?.ok, `申請できません（${r.status}：${short(r.json)}）`);
+  eq(r.json.status, "PENDING", "承認待ちになっていません");
+  eq(r.json.balanceAfter, null, "まだ動いていないのに、変更後の残高が返っています");
+  eq(await zandaka(KOGAKU), ima, "承認前なのに、残高が動いています");
+
+  /* 出しっぱなしにしない */
+  await handan(fuku, String(r.json.adjustmentId), false, "点検の後片づけのため却下");
+  return `承認待ちのまま（残高 ${ima}pt は変わらず／却下済み）`;
 });
 
 await check("★大きな引きすぎは、申請は通るが、承認のときに断られる", async () => {
@@ -629,6 +722,20 @@ await check("同じ操作が二重に届いても、1回しか動かない", asy
 
   eq(b.json.adjustmentId, a.json.adjustmentId, "同じ操作なのに、2件目が作られました");
   eq(b.json.reused, true, "2回目が、使い回しとして扱われていません");
+
+  if (a.json.status === "PENDING") {
+    /* 二人承認の道。ここで動いていたら、承認の意味がありません */
+    eq(await zandaka(MATO), zanMae, "承認前なのに、残高が動いています");
+    const machi = await db().execute({
+      sql: `SELECT COUNT(*) AS n FROM point_adjustments
+             WHERE tenant_id = ? AND idempotency_key = ?`,
+      args: [A_TID, key],
+    });
+    eq(Number(machi.rows[0].n), 1, "2回押しただけで、申請が2件になっています");
+    await handan(fuku, String(a.json.adjustmentId), false, "点検の後片づけのため却下");
+    return "同じ申請が1件だけ（承認待ちのまま／却下済み）";
+  }
+
   eq(await zandaka(MATO), zanMae + KOGUCHI, "2回押しただけで、ポイントが2倍動いています");
   return `+${KOGUCHI}pt が1回だけ`;
 });
@@ -878,37 +985,95 @@ await check("B社の承認待ち一覧に、A社の申請が出てこない", as
 
 /* ══════════════════════════════════════════════
    ⑦ E2E J：合っていないとき、合っていないと言えるか
-   ══════════════════════════════════════════════ */
+   ══════════════════════════════════════════════
 
-group("⑦ J：台帳と残高がずれたら、赤く言う（黙らない）");
+   ★ここで、わざと残高をずらさないこと。
 
-await check("★わざとずらすと、その人が「合っていない」に変わる", async () => {
-  /*
-   * ★残高だけを直接いじって、台帳を動かしません。
-   *   これは、本番で起きたら事故です。
-   *   起きたときに、画面が黙るのか、赤く言うのかを見ます。
-   */
-  const zurashi = 777;
-  const mae = await zandaka(HIKU);
-  await db().execute({
-    sql: "UPDATE customers SET points = points + ? WHERE id = ?",
-    args: [zurashi, HIKU],
+     以前この場所は、点検のために
+         UPDATE customers SET points = points + 777
+     と書いて、台帳を動かさずに残高だけ動かしていました。
+     そして最後に戻していました。
+
+     ところが、途中で失敗すると戻らないので、
+     Preview のお客様に「残高はあるのに、台帳にその理由が無い」人が
+     残りました。実際に3名残っています。
+     つまり、点検の道具が帳簿を壊していたということです。
+
+     いまは scripts/check-no-direct-balance-write.mjs が機械で止めます。
+
+     では、赤く出せることをどこで確かめるのか。
+     手元の使い捨てDBで確かめます（tests/pointIntegrity.test.ts）。
+     あちらなら、壊しても誰の帳簿も汚れません。
+
+     ここ（Preview）で確かめるのは、次の2つだけにします。
+
+         ① 画面が言う「合っていない人数」が、DBを自分で数えた人数と同じか
+         ② ダッシュボードの数と、ポイント画面の数が同じか
+
+     この2つは、不一致が0人でも2人でも、正しく成り立ちます。
+     ★「0件だから通った」ではありません。
+       DBを数えた結果と突き合わせているので、
+       0件のときは「本当に0件であること」を確かめています。 */
+
+group("⑦ J：台帳と残高のずれを、画面が正しい人数で言う");
+
+/** DBを自分で数えて、台帳と残高が合っていない人を出す */
+async function fuitchiWoKazoeru(tenantId) {
+  const r = await db().execute({
+    sql: `SELECT c.id AS id, c.points AS points,
+                 COALESCE((SELECT SUM(l.delta) FROM point_ledger l
+                            WHERE l.tenant_id = c.tenant_id AND l.user_id = c.id), 0) AS goukei
+            FROM customers c
+           WHERE c.tenant_id = ?`,
+    args: [tenantId],
   });
-  zurashita = { id: HIKU, haba: zurashi };
+  return r.rows
+    .map((x) => ({
+      id: String(x.id),
+      diff: Number(x.points ?? 0) - Number(x.goukei ?? 0),
+    }))
+    .filter((x) => x.diff !== 0);
+}
 
+await check("画面が言う「合っていない人数」が、DBで数えた人数と同じ", async () => {
+  const jissai = await fuitchiWoKazoeru(A_TID);
   const r = await listOf(boss, "?mismatch=1");
-  const me = r.customers.find((c) => c.userId === HIKU);
-  must(me, "残高と台帳がずれているのに、「合っていない」の絞り込みに出てきません");
-  eq(me.integrity, "MISMATCH", "ずれているのに、赤くなっていません");
-  eq(me.diff, zurashi, `差の大きさが違います（${zurashi}pt ずらしました）`);
-  return `${mae} → ${mae + zurashi}（台帳は据え置き）で赤く出た`;
+
+  eq(
+    r.total,
+    jissai.length,
+    "画面の「合っていない人数」と、DBで数えた人数が違います",
+  );
+
+  /* 一人ずつ、差の大きさまで合っているか */
+  for (const x of jissai) {
+    const gamen = r.customers.find((c) => c.userId === x.id);
+    must(gamen, `合っていないはずの人が、絞り込みに出てきません（${x.id}）`);
+    eq(gamen.integrity, "MISMATCH", `${x.id} が赤くなっていません`);
+    eq(gamen.diff, x.diff, `${x.id} の差の大きさが違います`);
+  }
+
+  return jissai.length === 0
+    ? "0人。DBを数えても0人なので、本当に0人です"
+    : `${jissai.length}人（差 ${jissai.map((x) => `${x.diff}pt`).join(" / ")}）`;
 });
 
-await check("その人の詳細でも、「合っていない」と分かる", async () => {
-  const r = await detailOf(boss, HIKU);
+await check("合っていない人は、詳細でも「合っていない」と分かる", async () => {
+  const jissai = await fuitchiWoKazoeru(A_TID);
+  if (jissai.length === 0) {
+    /* ★居ないものを「居たことにして通す」ことはしません。
+         そのかわり、合っている人が緑であることを確かめます。 */
+    const r = await detailOf(boss, HIKU);
+    must(r.status === 200 && r.json?.ok, `詳細が読めません（${r.status}）`);
+    eq(r.json.customer.integrity, "OK", "合っているのに、赤くなっています");
+    eq(r.json.customer.diff, 0, "合っているのに、差が出ています");
+    return "合っていない人は0人。合っている人は緑と出た";
+  }
+
+  const r = await detailOf(boss, jissai[0].id);
   must(r.status === 200 && r.json?.ok, `詳細が読めません（${r.status}）`);
   eq(r.json.customer.integrity, "MISMATCH", "詳細では、ずれが消えています");
-  must(r.json.customer.diff !== 0, "詳細で、差が0になっています");
+  eq(r.json.customer.diff, jissai[0].diff, "一覧と詳細で、差の大きさが違います");
   return `差 ${r.json.customer.diff}pt`;
 });
 
@@ -922,26 +1087,19 @@ await check("ダッシュボードの「今日やること」にも、同じ数�
   must(s.status === 200 && s.json?.ok, `ダッシュボードが読めません（${s.status}）`);
 
   const p = await listOf(boss, "?mismatch=1");
+  const jissai = await fuitchiWoKazoeru(A_TID);
+
   eq(
     Number(s.json.pointMismatch),
     p.total,
     "ダッシュボードの「ポイント確認が必要」の数が、ポイント画面と違います",
   );
-  must(Number(s.json.pointMismatch) > 0, "ずらしたのに、ダッシュボードは0件と言っています");
-  return `どちらも ${p.total}件`;
-});
-
-await check("戻すと、「合っている」に戻る（言いっぱなしにしない）", async () => {
-  await db().execute({
-    sql: "UPDATE customers SET points = points - ? WHERE id = ?",
-    args: [zurashita.haba, zurashita.id],
-  });
-  zurashita = null;
-
-  const r = await detailOf(boss, HIKU);
-  eq(r.json.customer.integrity, "OK", "戻したのに、赤いままです");
-  eq(r.json.customer.diff, 0, "戻したのに、差が残っています");
-  return "緑に戻った";
+  eq(
+    Number(s.json.pointMismatch),
+    jissai.length,
+    "ダッシュボードの数が、DBで数えた人数と違います",
+  );
+  return `ダッシュボード・ポイント画面・DB のどれも ${jissai.length}件`;
 });
 
 /* ══════════════════════════════════════════════
@@ -981,8 +1139,7 @@ await check("お客様がガチャを引くと、管理側の残高もその分�
   /* 引けるだけのポイントを、正しい道（管理者の付与）で用意する */
   const ima = await zandaka(HIKU);
   if (ima < nedan) {
-    const r = await moushikomi(boss, HIKU, nedan - ima + KOGUCHI, "点検：引くための用意");
-    must(r.status === 200, `用意できません（${r.status}：${short(r.json)}）`);
+    await chousei(boss, HIKU, nedan - ima + KOGUCHI, "点検：引くための用意");
   }
 
   const mae = await zandaka(HIKU);
@@ -1074,8 +1231,7 @@ await check("景品をポイントに換えると、管理側の残高もその�
 
 await check("管理者が付けたポイントが、お客様側の画面にもすぐ出る", async () => {
   const mae = await zandaka(HIKU);
-  const r = await moushikomi(boss, HIKU, KOGUCHI, "点検：お客様側へ届くか");
-  must(r.status === 200, `付与できません（${r.status}：${short(r.json)}）`);
+  await chousei(boss, HIKU, KOGUCHI, "点検：お客様側へ届くか");
 
   const p = await kyaku.call("/api/customer/points");
   const kyakuGawa = Number(p.json.balance ?? p.json.points ?? 0);
@@ -1150,10 +1306,9 @@ await check("ポイントの画面が、古い答えを配らない設定にな�
 
 group("⑩ 誰が・いつ・何を動かしたかが、記録に残っている");
 
-await check("その場で反映した分にも、記録が1行残る", async () => {
-  const r = await moushikomi(boss, MATO, KOGUCHI, "点検：記録が残ること");
-  must(r.status === 200, `付与できません（${r.status}：${short(r.json)}）`);
-  const adjId = String(r.json.adjustmentId);
+await check("手動で動かした分は、必ず記録に残る", async () => {
+  const r = await chousei(boss, MATO, KOGUCHI, "点検：記録が残ること");
+  const adjId = String(r.adjustmentId);
 
   const rows = await db().execute({
     sql: `SELECT action FROM audit_events
@@ -1161,7 +1316,23 @@ await check("その場で反映した分にも、記録が1行残る", async () 
     args: [A_TID, `%${adjId}%`],
   });
   const actions = rows.rows.map((x) => String(x.action));
-  must(actions.includes("POINT_ADJUST_APPLY"), `記録が残っていません：${JSON.stringify(actions)}`);
+
+  /*
+   * ★どちらの道でも、最後に「反映した」が残っていること。
+   *     その場で入る道 … POINT_ADJUST_APPLY だけ
+   *     二人承認の道   … POINT_ADJUST_REQUEST → POINT_ADJUST_APPROVE
+   *   反映の記録が無いのに残高が動いていたら、
+   *   それは「誰が動かしたか分からないポイント」です。
+   */
+  const nokotta =
+    actions.includes("POINT_ADJUST_APPLY") || actions.includes("POINT_ADJUST_APPROVE");
+  must(nokotta, `記録が残っていません：${JSON.stringify(actions)}`);
+  if (r.futari) {
+    must(
+      actions.includes("POINT_ADJUST_REQUEST"),
+      `二人承認なのに、申請の記録がありません：${JSON.stringify(actions)}`,
+    );
+  }
   return actions.join(" → ");
 });
 
@@ -1206,14 +1377,24 @@ await check("却下も、記録に残る", async () => {
 
 group("⑪ 後片づけ");
 
-await check("わざとずらした残高が、戻っている", async () => {
-  if (!zurashita) return "ずらしたままのものは無し";
-  await db().execute({
-    sql: "UPDATE customers SET points = points - ? WHERE id = ?",
-    args: [zurashita.haba, zurashita.id],
-  });
-  zurashita = null;
-  return "戻した";
+await check("この点検が、新しい不一致を作っていない", async () => {
+  /*
+   * ★以前ここは「わざとずらした残高を戻す」場所でした。
+   *   戻す処理が要るということは、壊す処理があるということです。
+   *   そして、途中で失敗すれば戻りません。実際に戻りませんでした。
+   *
+   *   いまは、この点検はもう残高を直接いじりません。
+   *   ですので、確かめるのは「増えていないこと」だけです。
+   */
+  const ima = await zurehito();
+  eq(
+    ima,
+    MAE_NO_ZURE,
+    "この点検を走らせたせいで、台帳と合わない人が増えました",
+  );
+  return ima === 0
+    ? "合っていない人は0人のまま"
+    : `合っていない人は ${ima}人のまま（点検の前と同じ）`;
 });
 
 await check("承認待ちのまま残した申請が、無い", async () => {
