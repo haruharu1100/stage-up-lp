@@ -28,6 +28,7 @@ const GROUPS: { group: string; items: { href: string; label: string }[] }[] = [
     group: '案件受注',
     items: [
       { href: '/jobs', label: '案件検索' },
+      { href: '/jobs/sites', label: '規約台帳' },
       { href: '/jobs/candidates', label: '応募候補' },
       { href: '/jobs/applied', label: '応募済み' },
       { href: '/replies', label: '返信' },

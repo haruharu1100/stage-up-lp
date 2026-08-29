@@ -1,6 +1,7 @@
 import { all, one, parseJson } from '../../../lib/db/client';
 import { sitePolicy } from '../../../lib/jobs/sites';
 import { EXCLUSION_RULES } from '../../../lib/jobs/exclude';
+import { READINESS_LABEL, type Readiness } from '../../../lib/catalog/definitions';
 import { Money, Page, Panel, Tag, verdictTag } from '../../ui';
 
 export const dynamic = 'force-dynamic';
@@ -23,7 +24,9 @@ export default async function JobDetail({ params }: { params: Promise<{ id: stri
   const policy = await sitePolicy(String(j.site_code));
 
   const tasks = a ? parseJson<string[]>(a.tasks, []) : [];
-  const matched = a ? parseJson<string[]>(a.matched_caps, []) : [];
+  // 当たった道具は「名前だけ」ではなく「仕上がり具合」も一緒に出す。
+  // 試作の仕組みを実績のように見せないため。
+  const matched = a ? parseJson<{ name: string; readiness: Readiness; readinessReason: string }[]>(a.matched_caps, []) : [];
   const missing = a ? parseJson<string[]>(a.missing_caps, []) : [];
   const verdict = s ? verdictTag(String(s.verdict)) : null;
 
@@ -80,7 +83,24 @@ export default async function JobDetail({ params }: { params: Promise<{ id: stri
               </tr>
               <tr>
                 <th>使える自社の道具</th>
-                <td>{matched.length ? matched.join(' / ') : '—（当てはまるものが無い）'}</td>
+                <td>
+                  {matched.length === 0 ? (
+                    '—（当てはまるものが無い）'
+                  ) : (
+                    <ul style={{ margin: 0, paddingLeft: 18 }}>
+                      {matched.map((m) => (
+                        <li key={m.name}>
+                          {m.name}
+                          <span className="small">
+                            {' '}
+                            ／ {READINESS_LABEL[m.readiness] ?? String(m.readiness)}
+                            {m.readinessReason ? `（${m.readinessReason}）` : ''}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </td>
               </tr>
               <tr>
                 <th>足りない道具</th>
@@ -163,8 +183,31 @@ export default async function JobDetail({ params }: { params: Promise<{ id: stri
                     )}
                   </td>
                 </tr>
+                <tr>
+                  <th>取れる見込み</th>
+                  <td>{s.win_probability === null ? '—' : `${Math.round(Number(s.win_probability) * 100)}%`}</td>
+                </tr>
+                <tr>
+                  <th>手直しの起きやすさ</th>
+                  <td>
+                    {s.revision_risk === null ? '—' : `${Number(s.revision_risk)} / 100`}
+                    <div className="small">{String(s.revision_risk_reason ?? '')}</div>
+                  </td>
+                </tr>
+                <tr>
+                  <th>取りに行く順番の点数</th>
+                  <td>
+                    {s.opportunity_score === null ? '—' : Number(s.opportunity_score).toFixed(1)}
+                    <div className="small">{String(s.opportunity_reason ?? '')}</div>
+                  </td>
+                </tr>
               </tbody>
             </table>
+            {String(s.estimate_confidence ?? 'NORMAL') === 'LOW' ? (
+              <p className="small">
+                ※ 時間あたりの利益が目標の5倍を超えています。作業時間を短く読み違えている可能性があるので、応募前に見積りを確かめてください。
+              </p>
+            ) : null}
           </>
         )}
       </Panel>

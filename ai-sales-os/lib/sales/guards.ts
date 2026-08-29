@@ -1,4 +1,4 @@
-import { all, one, nowIso, insert, type Row } from '../db/client';
+import { all, one, nowIso, insert, run, type Row } from '../db/client';
 import { checkExternalAction } from '../gate';
 import { emailDomain, hostOf } from '../text';
 import type { Channel } from './channel';
@@ -65,6 +65,34 @@ async function ngHit(company: Row): Promise<Row | null> {
 }
 
 /**
+ * 「その会社に実際に接触した」と言える記録だけを見るための条件。
+ *
+ * ★予定（PLANNED）や見送り（SKIPPED）の記録は接触ではない。
+ *   ここを分けないと、処理をやり直すたびに全社が「今日営業した相手」になり、
+ *   90日ルールに引っかかって営業候補が全部消える。
+ *   実際には1件も送っていないのに「重複営業になるから止めた」と表示され、
+ *   人は何も判断できなくなる。
+ * ★数えるのは2つだけ:
+ *     ① outreach_logs で executed = 1（＝本当に送った記録。今は必ず0件）
+ *     ② 承認キューで人が「承認」を押したもの（＝人が自分の手で送った可能性がある）
+ */
+const CONTACTED_SQL = `(
+     EXISTS (SELECT 1 FROM outreach_logs l WHERE l.company_id = c.id AND l.executed = 1)
+  OR EXISTS (SELECT 1 FROM approval_queue q WHERE q.ref_table = 'companies' AND q.ref_id = c.id AND q.status = 'APPROVED')
+)`;
+
+/** その会社に最後に接触した日時。まだ一度も接触していなければ null。 */
+async function lastContactAt(companyId: number): Promise<string | null> {
+  const a = await one('SELECT created_at FROM outreach_logs WHERE company_id = ? AND executed = 1 ORDER BY id DESC LIMIT 1', [companyId]);
+  const b = await one(
+    "SELECT decided_at FROM approval_queue WHERE ref_table = 'companies' AND ref_id = ? AND status = 'APPROVED' AND decided_at IS NOT NULL ORDER BY id DESC LIMIT 1",
+    [companyId],
+  );
+  const times = [a?.created_at, b?.decided_at].filter(Boolean).map(String).sort();
+  return times.length === 0 ? null : times[times.length - 1];
+}
+
+/**
  * 同じ運営者を二重に触っていないか。
  * 会社名が違っても、同じドメイン・同じ電話番号なら中身は同じ相手。
  */
@@ -75,9 +103,7 @@ async function sameOperatorAlreadyTouched(company: Row): Promise<Row | null> {
   if (!domain && !phone) return null;
 
   const rows = await all(
-    `SELECT c.id, c.name, c.website, c.phone, l.created_at
-       FROM outreach_logs l JOIN companies c ON c.id = l.company_id
-      WHERE c.id <> ? ORDER BY l.id DESC LIMIT 500`,
+    `SELECT c.id, c.name, c.website, c.phone FROM companies c WHERE c.id <> ? AND ${CONTACTED_SQL} LIMIT 500`,
     [companyId],
   );
   for (const r of rows) {
@@ -88,13 +114,15 @@ async function sameOperatorAlreadyTouched(company: Row): Promise<Row | null> {
   return null;
 }
 
-async function touchedToday(): Promise<number> {
+async function touchedToday(exceptCompanyId: number): Promise<number> {
   // 1日の上限は「今日その会社に営業したか」の数。
   // ★見送った（SKIPPED）記録は数えない。数えてしまうと、営業しないと決めた会社を見ただけで
   //   上限を使い切り、本当に営業したい会社が上限に引っかかって消える。
+  // ★今見ている会社自身は数えない。数えると、処理をやり直したときに
+  //   「前回の自分」が上限を埋めてしまい、同じ入力なのに全部が上限で止まる。
   const r = await one(
-    "SELECT COUNT(DISTINCT company_id) AS n FROM outreach_logs WHERE action IN ('PLANNED','QUEUED_FOR_APPROVAL') AND substr(created_at, 1, 10) = substr(?, 1, 10)",
-    [nowIso()],
+    "SELECT COUNT(DISTINCT company_id) AS n FROM outreach_logs WHERE action IN ('PLANNED','QUEUED_FOR_APPROVAL') AND company_id <> ? AND substr(created_at, 1, 10) = substr(?, 1, 10)",
+    [exceptCompanyId, nowIso()],
   );
   return Number(r?.n ?? 0);
 }
@@ -137,9 +165,8 @@ export async function canOutreach(companyId: number, channel: Channel): Promise<
   const draft = await one('SELECT id, status, blocked_reason FROM outreach_drafts WHERE company_id = ? AND channel = ?', [companyId, channel]);
   push('DRAFT_READY', String(draft?.status ?? '') === 'READY', draft ? (String(draft.status) === 'READY' ? '下書きは作成済み' : `下書きが使えない状態（${draft.blocked_reason ?? draft.status}）`) : 'この手段の下書きがまだ無い');
 
-  // 6. 同じ会社への重複営業
-  const last = await one('SELECT created_at FROM outreach_logs WHERE company_id = ? ORDER BY id DESC LIMIT 1', [companyId]);
-  const sinceLast = daysSince(last?.created_at as string | undefined);
+  // 6. 同じ会社への重複営業（数えるのは実際の接触だけ。予定・見送りは数えない）
+  const sinceLast = daysSince(await lastContactAt(companyId));
   const dupOk = sinceLast === null || sinceLast >= REAPPROACH_DAYS;
   push('DUPLICATE', dupOk, sinceLast === null ? 'この会社にはまだ一度も営業していない' : `前回の営業から${Math.floor(sinceLast)}日（${REAPPROACH_DAYS}日空けるまで再度は営業しない）`);
 
@@ -168,7 +195,7 @@ export async function canOutreach(companyId: number, channel: Channel): Promise<
   push('CONTACT', contactOk, contactDetail);
 
   // 10. 1日の上限
-  const today = await touchedToday();
+  const today = await touchedToday(companyId);
   push('DAILY_CAP', today < DAILY_CAP_HARD_MAX, `今日はすでに${today}件（上限${DAILY_CAP_HARD_MAX}件）`);
 
   // 11. 最後の鍵。外部操作は実装そのものが無いので、必ずここで止まる。
@@ -192,6 +219,12 @@ export async function canOutreach(companyId: number, channel: Channel): Promise<
  * executed は必ず0。このシステムには実際に送る処理が存在しない。
  */
 export async function logOutreachPlan(args: { companyId: number; channel: Channel; draftId: number | null; action: 'PLANNED' | 'QUEUED_FOR_APPROVAL' | 'SKIPPED'; gateReason: string }): Promise<void> {
+  // ★まだ実行していない「予定」は、その会社について常に最新の1件だけを持つ。
+  //   処理をやり直すたびに予定を積み増すと、同じ会社の予定が何行も並び、
+  //   人が見たときに「2回営業する気なのか」と読めてしまう。
+  //   手段（電話→フォーム等）が変わった場合も古い予定は残さない。
+  //   実際に送った記録（executed = 1）は履歴なので、ここでは絶対に消さない。
+  await run('DELETE FROM outreach_logs WHERE company_id = ? AND executed = 0', [args.companyId]);
   await insert('outreach_logs', {
     company_id: args.companyId,
     channel: args.channel,

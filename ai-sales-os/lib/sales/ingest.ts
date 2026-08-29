@@ -13,6 +13,7 @@ import {
 } from '../text';
 import { guessIndustry } from '../industry';
 import { detectNoSales } from './nosales';
+import { trustedByRegistry } from './identity';
 
 export type CompanySource =
   | 'HOUJIN_BANGOU'
@@ -28,7 +29,13 @@ export type CompanyInput = {
   name: string;
   corporateNumber?: string | null;
   address?: string | null;
+  /** その会社のHPだと確認できているURL。確認できていないものはここに入れない。 */
   website?: string | null;
+  /**
+   * HPかもしれないURL。まだ確認していないもの（Google Places が返したURLなど）。
+   * 照合に通るまでHP欄には入れない。別会社のHPを掴む事故を止めるため。
+   */
+  websiteCandidate?: string | null;
   phone?: string | null;
   email?: string | null;
   contactFormUrl?: string | null;
@@ -121,6 +128,24 @@ export async function ingestCompany(input: CompanyInput): Promise<IngestResult> 
     }
   }
 
+  // ★HPを「確認済み」と言ってよいのは、国が法人番号にひも付けて公開しているときだけ。
+  //   それ以外は候補のまま置き、公式HPを読んで照合してから採用する（enrich.ts）。
+  let websiteCandidate = input.websiteCandidate?.trim() || null;
+  let verified = 0;
+  let verifyReason: string | null = null;
+  if (website) {
+    if (trustedByRegistry(input.source, corporateNumber)) {
+      verified = 1;
+      verifyReason = 'gBizINFO が法人番号にひも付けて公開しているHP';
+    } else {
+      verifyReason = 'まだ照合していない（公式HPを読んで確かめる前）';
+    }
+  }
+  if (websiteCandidate && !isOwnSiteUrl(websiteCandidate)) {
+    warnings.push(`会社のHPではないサイトなので候補から外した（${hostOf(websiteCandidate)}）`);
+    websiteCandidate = null;
+  }
+
   const noSales = detectNoSales([input.pageText, input.description, input.businessDetail].filter(Boolean).join('\n'));
 
   const industry = guessIndustry(name, input.description, input.businessDetail, input.pageText);
@@ -140,6 +165,10 @@ export async function ingestCompany(input: CompanyInput): Promise<IngestResult> 
     email: emailValue,
     email_valid: emailValue ? 1 : 0,
     contact_form_url: contactFormUrl,
+    website_verified: verified,
+    website_verify_reason: verifyReason,
+    website_checked_at: verified ? at : null,
+    website_candidate: websiteCandidate,
     representative: input.representative ?? null,
     established_on: input.establishedOn ?? null,
     employees_estimate: input.employeesEstimate ?? null,

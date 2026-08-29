@@ -1,5 +1,7 @@
 import Link from 'next/link';
 import { all, scalar } from '../../lib/db/client';
+import { websiteVerificationSummary } from '../../lib/sales/enrich';
+import { sourceStatuses } from '../../lib/sales/sources';
 import { CHANNEL_JA, Kpi, Kpis, Page, Panel, Tag } from '../ui';
 
 export const dynamic = 'force-dynamic';
@@ -22,6 +24,12 @@ export default async function Companies() {
   );
 
   const bySource = await all('SELECT source, COUNT(*) AS n FROM companies GROUP BY source ORDER BY n DESC');
+  const site = await websiteVerificationSummary();
+  const sources = [...sourceStatuses()].sort((a, b) => a.order - b.order);
+  const rejected = await all(
+    `SELECT id, name, website_candidate AS url, website_reject_reason AS reason
+       FROM companies WHERE website_reject_reason IS NOT NULL ORDER BY updated_at DESC LIMIT 20`,
+  );
 
   return (
     <Page title="会社一覧" lead="いろいろな取得元から集めた会社を、重複をまとめた状態で並べています。">
@@ -33,21 +41,69 @@ export default async function Companies() {
         <Kpi label="営業しない会社" value={noSales} unit="社" hint="HPに営業お断りと書いてある" />
       </Kpis>
 
-      <Panel title="どこから集めたか" note="1つのサービスだけに頼らないようにしています。">
+      <Panel
+        title="ホームページが「本当にその会社のもの」か"
+        note="別の会社のホームページを読んだまま営業文を書くのが、このシステムで一番大きい事故です。確かめられないものは、埋めずに空欄のまま残します。"
+      >
+        <Kpis>
+          <Kpi label="本人のHPと確認できた" value={site.verified} unit="社" hint="法人番号が一致した、または社名・電話・住所などが2種類以上一致した" />
+          <Kpi label="HPはあるが未確認" value={site.unverified} unit="社" hint="この会社の文面には「公式サイトを拝見しました」と書きません" />
+          <Kpi label="別会社だったので外した" value={site.rejected} unit="社" hint="事故を止めた件数。0を目指す数字ではありません" />
+          <Kpi label="HPが分かっていない" value={site.noWebsite} unit="社" />
+        </Kpis>
+        {rejected.length > 0 ? (
+          <table>
+            <thead>
+              <tr>
+                <th>会社</th>
+                <th>使わなかったURL</th>
+                <th>理由</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rejected.map((r) => (
+                <tr key={String(r.id)}>
+                  <td>
+                    <Link href={`/companies/${r.id}`}>{String(r.name)}</Link>
+                  </td>
+                  <td className="small">{r.url ? String(r.url) : '—'}</td>
+                  <td className="small">{String(r.reason)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        ) : (
+          <p className="empty">別会社のHPを掴んでいたものは、今のところありません。</p>
+        )}
+      </Panel>
+
+      <Panel title="どこから集めるか（使う順番）" note="登記に近いものから順に使います。鍵が無いものは推測で埋めず、そこで止めます。">
         <table>
           <thead>
             <tr>
+              <th>順</th>
               <th>取得元</th>
-              <th className="num">会社数</th>
+              <th>状態</th>
+              <th className="num">この取得元の会社数</th>
+              <th>あと何をすれば使えるか</th>
             </tr>
           </thead>
           <tbody>
-            {bySource.map((s) => (
-              <tr key={String(s.source)}>
-                <td>{String(s.source)}</td>
-                <td className="num">{Number(s.n).toLocaleString()}</td>
-              </tr>
-            ))}
+            {sources.map((s) => {
+              const n = bySource.find((b) => String(b.source) === s.code);
+              return (
+                <tr key={s.code}>
+                  <td className="small">{s.order}</td>
+                  <td>
+                    {s.label}
+                    <div className="small">{s.note}</div>
+                  </td>
+                  <td>{s.configured ? <Tag kind="ok">使える</Tag> : <Tag kind="warn">キー待ち</Tag>}</td>
+                  <td className="num">{n ? Number(n.n).toLocaleString() : '—'}</td>
+                  <td className="small">{s.needs ?? '—（設定は済んでいます）'}</td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </Panel>

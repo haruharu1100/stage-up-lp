@@ -1,11 +1,13 @@
 import { all, nowIso, upsert, type Row } from '../db/client';
-import { checkExpression, pickVariant as variant, similarity } from '../text';
+import { checkExpression, checkUnfoundedClaim, pickVariant as variant, similarity } from '../text';
 import { NEED_LABEL, type NeedFlags, type NeedKey } from '../needs';
 import { INDUSTRY_LABEL, type IndustryKey } from '../industry';
 import { num } from '../settings';
 import type { OfferRow } from '../catalog/sync';
 import type { Channel } from './channel';
 import { legalFooter, senderIdentity } from './sender-identity';
+import { chooseFacts, ownWords, primeFactRarity, rarityReady, type ChosenFacts } from './facts';
+import { qualityBlockReason, scoreDraft, type QualityScores } from './quality';
 
 /**
  * 営業の文面を作る。
@@ -14,7 +16,13 @@ import { legalFooter, senderIdentity } from './sender-identity';
  *   その会社を実際に読んで書いた要素（個別化）が1つ以上入っていなければ止める。
  *   他社宛ての文面と似すぎていても止める。
  * ★景表法・薬機法で使えない表現が入っていたら止める。
+ * ★相手が言っていない困りごとを言い切っていたら止める（優良誤認・失礼の両方を避ける）。
  * ★メールは、法律で必要な4項目が揃っていなければ、そもそも下書きを作らない。
+ *
+ * ★「使い回し」を測るのは、その会社について書いた部分だけ。
+ *   会社名・その会社が公式サイトに書いている一文・その会社の仕事の内容だけを比べる。
+ *   あいさつ・商品説明・料金・法定の署名は、どの会社宛てでも同じで当たり前なので比べない。
+ *   ここを混ぜると「法律を守っているせいで似ている」を理由に全部止まる。
  */
 
 export type DraftInput = {
@@ -38,16 +46,33 @@ export type Draft = {
   personalization: string[];
   similarityMax: number;
   expressionNg: { code: string; why: string; matched: string }[];
+  /** 相手の困りごとを勝手に決めつけている箇所。 */
+  unfounded: { code: string; why: string; matched: string }[];
+  /** 5つの見方での採点。作らなかったときは null。 */
+  quality: QualityScores | null;
   status: 'READY' | 'BLOCKED';
   blockedReason: string | null;
 };
+
+/**
+ * 「公式サイトを拝見しました」と書いてよい会社か。
+ *
+ * ★HPが本当にその会社のものだと確かめられているときだけ true。
+ *   確かめていないHPを根拠に「御社の公式サイトを拝見し」と書くと、
+ *   最悪の場合、別会社のページの話を本人に送ることになる。
+ *   確かめていないときは「公開されている情報を拝見し」と書く。こちらは事実。
+ */
+function siteVerified(c: Row): boolean {
+  return Boolean(c.website) && Number(c.website_verified ?? 0) === 1;
+}
 
 /** その会社を実際に読んだ痕跡。ここが空なら、それは一斉送信の文面。 */
 function personalizationPoints(input: DraftInput): string[] {
   const p: string[] = [];
   const c = input.company;
   if (c.business_detail) p.push(`事業内容の記載（${String(c.business_detail).slice(0, 30)}…）`);
-  if (c.website) p.push(`公式サイト（${c.website}）を見た`);
+  if (siteVerified(c)) p.push(`公式サイト（${c.website}）を読んだ（本人のサイトと確認済み）`);
+  else if (c.website) p.push(`公開されている会社情報を読んだ（HPは本人のものと未確認）`);
   if (c.prefecture) p.push(`所在地が${c.prefecture}`);
   if (input.industry !== 'UNKNOWN') p.push(`業種が${INDUSTRY_LABEL[input.industry]}`);
   for (const e of input.evidence.slice(0, 3)) p.push(e);
@@ -64,66 +89,86 @@ function topNeedLabels(flags: NeedFlags, offer: OfferRow, n = 2): string[] {
 }
 
 /**
- * その会社について、文面に書ける事実。無いものは書かない。
- * 事業内容は文ごとにばらす。先頭だけ使うと、同じ業種の会社に同じ書き出しを送ることになる。
+ * 「なぜ今回この会社にこの商品なのか」を1文で書く。
+ *
+ * ★必ず「可能性がある」「かもしれない」の言い方にする。
+ *   「御社は電話対応に困っています」のような言い切りは、相手が言っていないことを
+ *   事実として書くことになるので作らない。作れないときは null を返し、書かない。
+ *
+ * ★ここで会社の事実をもう一度引用しない。
+ *   直前の文で既にサイトの記載を引いているので、また同じ一文を書くと
+ *   「東京都で建設」を3回言うような文面になる。この一文は理由だけを書く。
  */
-function sentencesOf(v: unknown): string[] {
-  return String(v ?? '')
-    .replace(/\s+/g, '')
-    .split(/[。\n]/)
-    .map((s) => s.trim())
-    .filter((s) => s.length >= 6)
-    .map((s) => s.slice(0, 60));
+function whyThisOffer(input: DraftInput, facts: ChosenFacts, needs: string[]): string | null {
+  const need0 = needs[0] ?? null;
+  if (facts.fallback || !need0) return null;
+  const seed = Number(input.company.id) || 1;
+  return variant(
+    [
+      `そのうえで、${need0}のところで「${input.offer.name}」が活用できる可能性があるためご連絡しました。`,
+      `拝見した内容から、${need0}まわりで「${input.offer.name}」がお役に立てる余地があるかもしれないと考えました。`,
+      `そうした内容を踏まえ、${need0}に「${input.offer.name}」が向いているのではないかと思いご連絡しています。`,
+      `読ませていただいた範囲では、${need0}に「${input.offer.name}」を使える場面がありそうだと感じました。`,
+    ],
+    seed,
+    7,
+  );
 }
 
-/** その会社自身が書いた言葉（事業内容・紹介文）。所在地や人数と違い、他社と被りにくい。 */
-function ownWords(c: Row): string[] {
-  return [...sentencesOf(c.business_detail), ...sentencesOf(c.description)];
+/**
+ * 使い回しを測る対象。ここに入れてよいのは「その会社にしか当てはまらない文字列」だけ。
+ * 商品名・料金・あいさつは、どの会社宛てでも同じなので絶対に入れない。
+ */
+function personalTextOf(c: Row, f: ChosenFacts): string {
+  const parts = [String(c.name ?? ''), f.fallback ? '' : f.f0, f.f1 ?? '', f.work ?? ''];
+  const seen = new Set<string>();
+  const uniq: string[] = [];
+  for (const p of parts) {
+    const t = p.trim();
+    if (t.length === 0 || seen.has(t)) continue;
+    seen.add(t);
+    uniq.push(t);
+  }
+  return uniq.join('\n');
 }
 
-function companyFacts(c: Row): string[] {
-  const f: string[] = [...ownWords(c)];
-  if (c.established_on) f.push(`${String(c.established_on).slice(0, 4)}年から事業を続けておられる`);
-  if (c.employees_estimate) f.push(`${c.employees_estimate}名ほどの体制でいらっしゃる`);
-  if (c.prefecture) f.push(`${c.prefecture}で事業をされている`);
-  return f;
+/** 文面に実際に書き込んだ「会社の事実」。採点の裏取りに使う。 */
+function usedFactsOf(f: ChosenFacts): string[] {
+  return [f.fallback ? null : f.f0, f.f1, f.work].filter((x): x is string => x !== null && x !== undefined && x.length > 0).filter((x, i, a) => a.indexOf(x) === i);
 }
 
-/** 会社ごとに、書き出しに使う事実を1つ・補足に使う事実を1つ選ぶ。work は「その会社の仕事」を指す言葉。 */
-function chooseFacts(c: Row, seed: number): { f0: string; f1: string | null; work: string | null } {
-  const all = companyFacts(c);
-  // 事業内容に書いてあることを優先する。所在地や人数はどの会社にも言えるので、他に無いときだけ使う。
-  const own = ownWords(c);
-  const facts = own.length >= 2 ? own : all;
-  const work =
-    String(c.business_detail ?? '')
-      .replace(/\s+/g, '')
-      .split(/[。\n]/)
-      .map((s) => s.trim())
-      .filter((s) => s.length >= 4)[0] ?? null;
-  if (facts.length === 0) return { f0: '公式サイトに書かれている内容', f1: null, work };
-  const f0 = variant(facts, seed, 7);
-  const rest = facts.filter((x) => x !== f0);
-  return { f0, f1: rest.length > 0 ? variant(rest, seed, 4) : null, work };
-}
+type Built = { subject: string | null; body: string; personal: string; facts: ChosenFacts; usedFacts: string[]; needs: string[]; whyOffer: string | null };
 
-function buildEmailBody(input: DraftInput, footer: string): { subject: string; body: string; personal: string } {
+function buildEmailBody(input: DraftInput, footer: string): Built {
   const c = input.company;
   const seed = Number(c.id) || 1;
   const needs = topNeedLabels(input.needFlags, input.offer);
-  const { f0, f1 } = chooseFacts(c, seed);
+  const facts = chooseFacts(c, seed);
+  const { f0, f1, work } = facts;
+  const whyOffer = whyThisOffer(input, facts, needs);
   const industry = INDUSTRY_LABEL[input.industry];
   const need0 = needs[0] ?? '日々の業務';
 
+  // ★「公式サイトを拝見し」と書けるのは、そのHPが本人のものだと確かめられているときだけ。
+  //   確かめていないときは「公開されている情報を拝見し」と書く。読んでいないものを読んだと書かない。
   const opening = variant(
-    [
-      `${c.name}様の公式サイトを拝見し、${f0}というところに目が留まりご連絡しました。`,
-      `突然のご連絡失礼いたします。${c.name}様のサイトで${f0}と拝見しました。`,
-      `${c.name}様のホームページを読み、${f0}という点が印象に残っています。`,
-      `はじめてご連絡いたします。${c.name}様の${f0}という記載を拝見しました。`,
-      `${c.name}様のサイトにある${f0}という説明を読んで、お手紙のつもりで書いています。`,
-      `${c.name}様のことをサイトで知りました。${f0}とのこと、興味深く読みました。`,
-    ],
+    siteVerified(c)
+      ? [
+          `${c.name}様の公式サイトを拝見し、「${f0}」というところに目が留まりご連絡しました。`,
+          `突然のご連絡失礼いたします。${c.name}様のサイトで「${f0}」と拝見しました。`,
+          `${c.name}様のホームページを読み、「${f0}」という点が印象に残っています。`,
+          `はじめてご連絡いたします。${c.name}様の「${f0}」という記載を拝見しました。`,
+          `${c.name}様のサイトにある「${f0}」という説明を読んで、お手紙のつもりで書いています。`,
+          `${c.name}様のことをサイトで知りました。「${f0}」とのこと、興味深く読みました。`,
+        ]
+      : [
+          `${c.name}様について公開されている情報を拝見し、「${f0}」というところに目が留まりご連絡しました。`,
+          `突然のご連絡失礼いたします。公開されている情報で、${c.name}様の「${f0}」を拝見しました。`,
+          `${c.name}様の会社情報を読み、「${f0}」という点が印象に残っています。`,
+          `はじめてご連絡いたします。${c.name}様の「${f0}」という記載を拝見しました。`,
+          `${c.name}様の「${f0}」という説明を読んで、お手紙のつもりで書いています。`,
+          `${c.name}様のことを公開されている情報で知りました。「${f0}」とのこと、興味深く読みました。`,
+        ],
     seed,
     0,
   );
@@ -131,18 +176,21 @@ function buildEmailBody(input: DraftInput, footer: string): { subject: string; b
   const second = f1
     ? variant(
         [
-          `${f1}も併せて拝見しています。`,
-          `${f1}についても書かれていましたね。`,
-          `${f1}という点も踏まえてご連絡しています。`,
-          `${f1}も知ったうえでお送りしています。`,
+          `「${f1}」も併せて拝見しています。`,
+          `「${f1}」についても書かれていましたね。`,
+          `「${f1}」という点も踏まえてご連絡しています。`,
+          `「${f1}」も知ったうえでお送りしています。`,
         ],
         seed,
         1,
       )
     : null;
 
+  // 「なぜこの商品か」が書けたときは、そちらを使う。
+  // 業種の一般論より、その会社のサイトに書いてあることを根拠にしたほうが誠実で、内容も重ならない。
   const hypothesis =
-    needs.length > 0
+    whyOffer ??
+    (needs.length > 0
       ? variant(
           [
             `${industry}の会社様とお話ししていると、${needs.join('と')}のあたりで手が回らなくなる、という話をよく伺います。${c.name}様はいかがでしょうか。`,
@@ -154,7 +202,7 @@ function buildEmailBody(input: DraftInput, footer: string): { subject: string; b
           seed,
           2,
         )
-      : `${industry}の会社様のお困りごとを伺いながら、お役に立てそうなところを探しています。`;
+      : `${industry}の会社様のお困りごとを伺いながら、お役に立てそうなところを探しています。`);
 
   const offerLine = variant(
     [
@@ -204,7 +252,7 @@ function buildEmailBody(input: DraftInput, footer: string): { subject: string; b
   const subjectPool = [
     `${c.name}様｜${need0}のご相談（${input.offer.name}）`,
     `${need0}について｜${input.offer.name}のご案内（${c.name}様）`,
-    `${c.name}様のサイトを拝見してのご連絡｜${input.offer.name}`,
+    siteVerified(c) ? `${c.name}様のサイトを拝見してのご連絡｜${input.offer.name}` : `${c.name}様へのご連絡｜${input.offer.name}`,
     `【ご相談】${need0}を軽くする方法について（${c.name}様）`,
   ];
   const subject = variant(subjectPool, seed, 6);
@@ -212,34 +260,44 @@ function buildEmailBody(input: DraftInput, footer: string): { subject: string; b
   const body = [`${c.name} ご担当者様`, '', opening, second, '', hypothesis, '', offerLine, '', priceLine, '', cta, '', footer]
     .filter((l) => l !== null)
     .join('\n');
-  return { subject, body, personal: [subject, opening, second].filter((l) => l !== null).join('\n') };
+  return { subject, body, personal: personalTextOf(c, facts), facts, usedFacts: usedFactsOf(facts), needs, whyOffer };
 }
 
-function buildFormBody(input: DraftInput): { body: string; personal: string } {
+function buildFormBody(input: DraftInput): Built {
   const c = input.company;
   const seed = Number(c.id) || 1;
   const needs = topNeedLabels(input.needFlags, input.offer);
-  const { f0, f1 } = chooseFacts(c, seed);
+  const facts = chooseFacts(c, seed);
+  const { f0, f1, work } = facts;
+  const whyOffer = whyThisOffer(input, facts, needs);
 
   const opening = variant(
-    [
-      `サイトを拝見し、${f0}というところを知ってご連絡しました。`,
-      `${f0}という記載を読み、フォームからご連絡しています。`,
-      `ホームページの${f0}という部分が印象に残り、ご連絡しました。`,
-      `${f0}とのこと、拝見しました。突然の連絡で失礼いたします。`,
-    ],
+    siteVerified(c)
+      ? [
+          `サイトを拝見し、「${f0}」というところを知ってご連絡しました。`,
+          `「${f0}」という記載を読み、フォームからご連絡しています。`,
+          `ホームページの「${f0}」という部分が印象に残り、ご連絡しました。`,
+          `「${f0}」とのこと、拝見しました。突然の連絡で失礼いたします。`,
+        ]
+      : [
+          `公開されている情報で「${f0}」というところを知り、ご連絡しました。`,
+          `「${f0}」という記載を読み、フォームからご連絡しています。`,
+          `「${f0}」という部分が印象に残り、ご連絡しました。`,
+          `「${f0}」とのこと、拝見しました。突然の連絡で失礼いたします。`,
+        ],
     seed,
     0,
   );
   const context = f1
     ? variant(
-        [`${f1}という点も拝見しました。`, `あわせて${f1}とも書かれていましたね。`, `${f1}という記載も読んでいます。`, `${f1}ということも踏まえてお送りしています。`],
+        [`「${f1}」という点も拝見しました。`, `あわせて「${f1}」とも書かれていましたね。`, `「${f1}」という記載も読んでいます。`, `「${f1}」ということも踏まえてお送りしています。`],
         seed,
         3,
       )
     : null;
   const needLine =
-    needs.length > 0
+    whyOffer ??
+    (needs.length > 0
       ? variant(
           [
             `${needs.join('と')}のあたりでお手伝いできることがあるかもしれません。`,
@@ -249,7 +307,7 @@ function buildFormBody(input: DraftInput): { body: string; personal: string } {
           seed,
           1,
         )
-      : null;
+      : null);
   const offerLine = variant(
     [
       `お伝えしたいのは「${input.offer.name}」という仕組みです。${input.offer.summary}`,
@@ -262,7 +320,7 @@ function buildFormBody(input: DraftInput): { body: string; personal: string } {
   const body = [`${c.name} ご担当者様`, '', opening, context, needLine, '', offerLine, '', '営業のご連絡が不要でしたら、その旨だけご返信いただければ以後お送りしません。']
     .filter((l) => l !== null)
     .join('\n');
-  return { body, personal: [c.name, opening, context].filter((l) => l !== null).join('\n') };
+  return { subject: null, body, personal: personalTextOf(c, facts), facts, usedFacts: usedFactsOf(facts), needs, whyOffer };
 }
 
 export function buildCallScript(input: DraftInput): {
@@ -272,11 +330,17 @@ export function buildCallScript(input: DraftInput): {
   objections: { say: string; reply: string }[];
   closing: string;
   personal: string;
+  facts: ChosenFacts;
+  usedFacts: string[];
+  needs: string[];
+  whyOffer: string | null;
 } {
   const c = input.company;
   const seed = Number(c.id) || 1;
   const needs = topNeedLabels(input.needFlags, input.offer);
-  const { f0, f1, work } = chooseFacts(c, seed);
+  const facts = chooseFacts(c, seed);
+  const { f0, f1, work } = facts;
+  const whyOffer = whyThisOffer(input, facts, needs);
 
   const hearing0 = variant(
     [
@@ -288,14 +352,14 @@ export function buildCallScript(input: DraftInput): {
     seed,
     5,
   );
-  const hearing1 = work ? `${work}のほうは、今はどんなやり方で回しておられますか。` : '今はどんなやり方で対応されていますか。';
+  const hearing1 = work ? `「${work}」とのことですが、今はどんなやり方で回しておられますか。` : '今はどんなやり方で対応されていますか。';
   const context = f1
     ? variant(
         [
-          `サイトには${f1}とも書かれていましたね。`,
-          `${f1}という点も拝見しています。`,
-          `あわせて${f1}とのことも読みました。`,
-          `${f1}ということも踏まえてお電話しました。`,
+          siteVerified(c) ? `サイトには「${f1}」とも書かれていましたね。` : `「${f1}」とも書かれていましたね。`,
+          `「${f1}」という点も拝見しています。`,
+          `あわせて「${f1}」とのことも読みました。`,
+          `「${f1}」ということも踏まえてお電話しました。`,
         ],
         seed,
         3,
@@ -303,28 +367,41 @@ export function buildCallScript(input: DraftInput): {
     : null;
 
   const opening = variant(
-    [
-      `お忙しいところ失礼いたします。${c.name}様でいらっしゃいますか。サイトで${f0}と拝見してお電話しました。ご担当の方はいらっしゃいますでしょうか。`,
-      `突然のお電話失礼いたします。${c.name}様のホームページで${f0}と拝見し、ご連絡しました。ご担当の方をお願いできますでしょうか。`,
-      `恐れ入ります。${c.name}様のサイトを読み、${f0}という点でご連絡しました。少しだけお時間よろしいでしょうか。`,
-      `お世話になります。${c.name}様の${f0}という記載を拝見してお電話しています。ご担当の方はご在席でしょうか。`,
-      `${c.name}様のお電話でよろしいでしょうか。サイトに${f0}とありましたので、ご連絡しました。ご担当の方はおられますか。`,
-      `失礼いたします。${f0}と書かれているのを読み、${c.name}様へお電話しました。今よろしいでしょうか。`,
-    ],
+    siteVerified(c)
+      ? [
+          `お忙しいところ失礼いたします。${c.name}様でいらっしゃいますか。サイトで「${f0}」と拝見してお電話しました。ご担当の方はいらっしゃいますでしょうか。`,
+          `突然のお電話失礼いたします。${c.name}様のホームページで「${f0}」と拝見し、ご連絡しました。ご担当の方をお願いできますでしょうか。`,
+          `恐れ入ります。${c.name}様のサイトを読み、「${f0}」という点でご連絡しました。少しだけお時間よろしいでしょうか。`,
+          `お世話になります。${c.name}様の「${f0}」という記載を拝見してお電話しています。ご担当の方はご在席でしょうか。`,
+          `${c.name}様のお電話でよろしいでしょうか。サイトに「${f0}」とありましたので、ご連絡しました。ご担当の方はおられますか。`,
+          `失礼いたします。「${f0}」と書かれているのを読み、${c.name}様へお電話しました。今よろしいでしょうか。`,
+        ]
+      : [
+          `お忙しいところ失礼いたします。${c.name}様でいらっしゃいますか。公開されている情報で「${f0}」と拝見してお電話しました。ご担当の方はいらっしゃいますでしょうか。`,
+          `突然のお電話失礼いたします。${c.name}様の会社情報で「${f0}」と拝見し、ご連絡しました。ご担当の方をお願いできますでしょうか。`,
+          `恐れ入ります。${c.name}様の「${f0}」という点を読み、ご連絡しました。少しだけお時間よろしいでしょうか。`,
+          `お世話になります。${c.name}様の「${f0}」という記載を拝見してお電話しています。ご担当の方はご在席でしょうか。`,
+          `${c.name}様のお電話でよろしいでしょうか。「${f0}」とありましたので、ご連絡しました。ご担当の方はおられますか。`,
+          `失礼いたします。「${f0}」と書かれているのを読み、${c.name}様へお電話しました。今よろしいでしょうか。`,
+        ],
     seed,
     0,
   );
-  const purpose = variant(
-    [
-      `${INDUSTRY_LABEL[input.industry]}の会社様に、${needs.join('と') || '業務の負担'}を減らす仕組みをご案内しています。${input.offer.summary}`,
-      `${needs.join('・') || '日々の業務'}のところを軽くする「${input.offer.name}」という仕組みのご案内です。${input.offer.summary}`,
-      `お伝えしたいのは「${input.offer.name}」ひとつです。${needs[0] ?? '業務の負担'}に効くもので、${input.offer.summary}`,
-      `ご用件は「${input.offer.name}」の紹介です。${needs[0] ?? '業務'}にかかる手間を減らすものです。${input.offer.summary}`,
-      `${needs.join('と') || '業務'}を人の手でやらずに済ませる道具を作っていまして、それが「${input.offer.name}」です。${input.offer.summary}`,
-    ],
-    seed,
-    1,
-  );
+  // 用件は「なぜこの会社に電話したのか」から入る。書けないときだけ一般的な言い方に戻す。
+  const purpose =
+    whyOffer !== null
+      ? `${whyOffer}${input.offer.summary}`
+      : variant(
+          [
+            `${INDUSTRY_LABEL[input.industry]}の会社様に、${needs.join('と') || '業務の負担'}を減らす仕組みをご案内しています。${input.offer.summary}`,
+            `${needs.join('・') || '日々の業務'}のところを軽くする「${input.offer.name}」という仕組みのご案内です。${input.offer.summary}`,
+            `お伝えしたいのは「${input.offer.name}」ひとつです。${needs[0] ?? '業務の負担'}に効くもので、${input.offer.summary}`,
+            `ご用件は「${input.offer.name}」の紹介です。${needs[0] ?? '業務'}にかかる手間を減らすものです。${input.offer.summary}`,
+            `${needs.join('と') || '業務'}を人の手でやらずに済ませる道具を作っていまして、それが「${input.offer.name}」です。${input.offer.summary}`,
+          ],
+          seed,
+          1,
+        );
   return {
     opening: context ? `${opening}\n${context}` : opening,
     purpose,
@@ -358,7 +435,11 @@ export function buildCallScript(input: DraftInput): {
       seed,
       6,
     ),
-    personal: [opening, context, hearing0].filter((l) => l !== null).join('\n'),
+    personal: personalTextOf(c, facts),
+    facts,
+    usedFacts: usedFactsOf(facts),
+    needs,
+    whyOffer,
   };
 }
 
@@ -384,68 +465,95 @@ async function maxSimilarityAgainstExisting(companyId: number, channel: Channel,
 
 export async function buildDraft(input: DraftInput): Promise<Draft> {
   const companyId = Number(input.company.id);
-  const base: Omit<Draft, 'status' | 'blockedReason' | 'body' | 'subject' | 'similarityMax' | 'expressionNg' | 'personalText'> = {
+  // 「その会社にしか書いていない一文」を選べるように、先に全社の紹介文を数えておく。
+  // 1回数えたら覚えておくので、会社ごとに走るのは初回だけ。
+  if (!rarityReady()) await primeFactRarity();
+
+  const base = {
     companyId,
     channel: input.channel,
     offerCode: input.offer.code,
     personalization: personalizationPoints(input),
   };
+  const empty: Pick<Draft, 'subject' | 'body' | 'personalText' | 'similarityMax' | 'expressionNg' | 'unfounded' | 'quality'> = {
+    subject: null,
+    body: '',
+    personalText: '',
+    similarityMax: 0,
+    expressionNg: [],
+    unfounded: [],
+    quality: null,
+  };
 
   if (input.channel === 'SKIP' || input.channel === 'MANUAL') {
     return {
       ...base,
-      subject: null,
-      body: '',
-      personalText: '',
-      similarityMax: 0,
-      expressionNg: [],
+      ...empty,
       status: 'BLOCKED',
       blockedReason: input.channel === 'SKIP' ? '営業しない相手' : '人が判断する相手なので、自動では文面を作らない',
     };
   }
 
-  let subject: string | null = null;
-  let body: string;
-  let personalText: string;
+  let built: Built;
 
   if (input.channel === 'EMAIL') {
     const id = senderIdentity();
     if (!id.ok) {
-      return { ...base, subject: null, body: '', personalText: '', similarityMax: 0, expressionNg: [], status: 'BLOCKED', blockedReason: id.reasonJa };
+      return { ...base, ...empty, status: 'BLOCKED', blockedReason: id.reasonJa };
     }
-    const built = buildEmailBody(input, legalFooter(id.identity));
-    subject = built.subject;
-    body = built.body;
-    personalText = built.personal;
+    built = buildEmailBody(input, legalFooter(id.identity));
   } else if (input.channel === 'FORM') {
-    const built = buildFormBody(input);
-    body = built.body;
-    personalText = built.personal;
+    built = buildFormBody(input);
   } else {
     const s = buildCallScript(input);
-    body = [s.opening, '', s.purpose, '', '【聞くこと】', ...s.hearing.map((h) => `・${h}`), '', '【切り返し】', ...s.objections.map((o) => `・「${o.say}」→ ${o.reply}`), '', s.closing].join('\n');
-    personalText = s.personal;
+    const body = [s.opening, '', s.purpose, '', '【聞くこと】', ...s.hearing.map((h) => `・${h}`), '', '【切り返し】', ...s.objections.map((o) => `・「${o.say}」→ ${o.reply}`), '', s.closing].join('\n');
+    built = { subject: null, body, personal: s.personal, facts: s.facts, usedFacts: s.usedFacts, needs: s.needs, whyOffer: s.whyOffer };
   }
 
+  const { subject, body, personal: personalText } = built;
+
   const expressionNg = checkExpression(body);
+  // 電話の切り返し集は「相手がそう言ったとき」の想定台詞なので、決めつけの判定からは外す。
+  const claimTarget = input.channel === 'PHONE' ? body.split('【切り返し】')[0] : body;
+  const unfounded = checkUnfoundedClaim(claimTarget);
   const similarityMax = await maxSimilarityAgainstExisting(companyId, input.channel, personalText);
   const maxSim = await num('draft.max_similarity');
   const minPers = await num('draft.min_personalization');
+
+  const quality = scoreDraft({
+    company: input.company,
+    body,
+    proseText: claimTarget,
+    personalText,
+    usedFacts: built.usedFacts,
+    needs: built.needs,
+    whyOffer: built.whyOffer,
+    similarityMax,
+  });
 
   let status: 'READY' | 'BLOCKED' = 'READY';
   let blockedReason: string | null = null;
   if (expressionNg.length > 0) {
     status = 'BLOCKED';
     blockedReason = `使えない表現が入っている: ${expressionNg.map((e) => `「${e.matched}」(${e.why})`).join('、')}`;
+  } else if (unfounded.length > 0) {
+    status = 'BLOCKED';
+    blockedReason = `相手が言っていない困りごとを言い切っている: ${unfounded.map((e) => `「${e.matched}」`).join('、')}`;
   } else if (base.personalization.length < minPers) {
     status = 'BLOCKED';
     blockedReason = 'その会社を読んで書いた要素が1つも無い。これは一斉送信の文面なので送らない。';
   } else if (similarityMax > maxSim) {
     status = 'BLOCKED';
     blockedReason = `他社宛ての文面と似すぎている（類似度${similarityMax}／上限${maxSim}）`;
+  } else {
+    const q = qualityBlockReason(quality);
+    if (q) {
+      status = 'BLOCKED';
+      blockedReason = q;
+    }
   }
 
-  return { ...base, subject, body, personalText, similarityMax, expressionNg, status, blockedReason };
+  return { ...base, subject, body, personalText, similarityMax, expressionNg, unfounded, quality, status, blockedReason };
 }
 
 export async function saveDraft(d: Draft): Promise<void> {
@@ -460,7 +568,8 @@ export async function saveDraft(d: Draft): Promise<void> {
       personal_text: d.personalText,
       personalization: JSON.stringify(d.personalization),
       similarity_max: d.similarityMax,
-      expression_ng: JSON.stringify(d.expressionNg),
+      expression_ng: JSON.stringify([...d.expressionNg, ...d.unfounded]),
+      quality_scores: d.quality ? JSON.stringify(d.quality) : null,
       status: d.status,
       blocked_reason: d.blockedReason,
       created_at: nowIso(),

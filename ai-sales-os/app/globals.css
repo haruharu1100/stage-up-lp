@@ -263,6 +263,82 @@ button.act:hover {
   display: flex;
   gap: 6px;
 }
+
+/* 1クリック承認カード。1件の判断に必要なものを、この枠の中だけで完結させる。 */
+.appr {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin-bottom: 14px;
+  background: #fff;
+}
+.appr + .appr {
+  margin-top: 0;
+}
+.appr-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.appr-head h3 {
+  font-size: 15px;
+  margin: 0;
+}
+.appr-sec {
+  margin-top: 12px;
+}
+.appr-sec > .lbl {
+  font-size: 11px;
+  color: var(--muted);
+  letter-spacing: 0.04em;
+  margin-bottom: 4px;
+}
+.appr-sec ul {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 13px;
+}
+.appr-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 8px;
+}
+.appr-cell {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 6px 10px;
+}
+.appr-cell .k {
+  font-size: 11px;
+  color: var(--muted);
+}
+.appr-cell .v {
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+.appr textarea {
+  width: 100%;
+  min-height: 150px;
+  font: inherit;
+  font-size: 13px;
+  line-height: 1.7;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fbfcfd;
+  white-space: pre-wrap;
+  resize: vertical;
+}
+.appr-foot {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  align-items: center;
+}
 .small {
   font-size: 12px;
   color: var(--muted);

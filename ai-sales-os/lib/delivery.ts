@@ -1,7 +1,7 @@
 import { all, insert, nowIso, one, parseJson, run, type Row } from './db/client';
 import { checkExpression } from './text';
 import { checkExternalAction } from './gate';
-import { enqueueApproval } from './approval';
+import { enqueueApproval, EMPTY_DETAIL, type ApprovalDetail } from './approval';
 
 /**
  * 受注してから納品までの流れ。
@@ -93,6 +93,49 @@ export async function deliveryReadiness(orderId: number): Promise<DeliveryCheck>
   return { orderId, ready: false, reasonJa: `全て確認済み。ただし${gate.reasonJa}`, total, confirmed };
 }
 
+/**
+ * 承認画面に出す中身（納品）。
+ * 何を作ったのか・自分と別の目で見て何が引っかかったのかを、その画面だけで読めるようにする。
+ */
+async function buildDeliverDetail(order: Row, check: DeliveryCheck): Promise<ApprovalDetail> {
+  const rows = await all('SELECT * FROM deliverables WHERE order_id = ? ORDER BY id', [Number(order.id)]);
+  const risks: string[] = [];
+  const bodies: string[] = [];
+  for (const d of rows) {
+    const self = parseJson<Review>(d.self_review, { passed: false, findings: [], checkedAt: '' });
+    const peer = parseJson<Review>(d.peer_review, { passed: false, findings: [], checkedAt: '' });
+    for (const f of [...self.findings, ...peer.findings]) {
+      risks.push(`${String(d.task_name)}：${f.detailJa}（${f.severity === 'BLOCK' ? '直すべき' : '気になる程度'}）`);
+    }
+    bodies.push(`── ${String(d.task_name)} ──\n${String(d.content)}`);
+  }
+  risks.push('承認を押しても納品は起きない。納品を送る処理コードがこのシステムに無いため。');
+
+  const amount = order.amount === null ? null : Number(order.amount);
+  const cost = Number(order.cost ?? 0);
+  const hours = order.actual_hours !== null && order.actual_hours !== undefined ? Number(order.actual_hours) : order.planned_hours !== null && order.planned_hours !== undefined ? Number(order.planned_hours) : null;
+  const profit = amount === null ? null : amount - cost;
+
+  return {
+    ...EMPTY_DETAIL,
+    subtitle: `${order.site_code ? String(order.site_code) : '取得元不明'} ／ 成果物${check.total}件（人間確認済み${check.confirmed}件）`,
+    offer: `受注金額 ${amount === null ? '—' : `${amount.toLocaleString()}円`} の納品物`,
+    whyChosen: ['成果物がすべて人間の確認を通っているので、納品候補として並べている。'],
+    scores: rows.map((d) => ({ label: `品質点：${String(d.task_name)}`, value: d.quality_score === null ? '—' : String(Number(d.quality_score)) })),
+    expectedProfit: profit,
+    expectedProfitNote: amount === null ? '受注金額が入っていないので利益を出せない' : null,
+    expectedHours: hours,
+    expectedHourlyProfit: profit !== null && hours !== null && hours > 0 ? Math.round(profit / hours) : null,
+    capabilities: [],
+    policy: { label: '納品は自動で送らない', kind: 'warn', reason: '納品の送信処理はこのシステムに存在しない。実際の受け渡しは人が行う。', checkedAt: null },
+    body: bodies.join('\n\n'),
+    risks,
+    sources: [],
+    excludeKind: null,
+    textRef: null,
+  };
+}
+
 /** 納品候補として、人の最終確認キューに載せる。ここでも送信はしない。 */
 export async function queueDelivery(order: Row): Promise<DeliveryCheck> {
   const orderId = Number(order.id);
@@ -105,6 +148,7 @@ export async function queueDelivery(order: Row): Promise<DeliveryCheck> {
       title: String(order.title),
       summary: `成果物${check.total}件（すべて人間確認済み）`,
       riskNote: '納品の送信処理はこのシステムに存在しない。実際の受け渡しは人が行う。',
+      detail: await buildDeliverDetail(order, check),
     });
   }
   return check;

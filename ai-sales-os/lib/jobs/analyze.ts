@@ -1,5 +1,6 @@
 import { nowIso, upsert, type Row } from '../db/client';
 import { loadCapabilities, type CapabilityRow } from '../catalog/sync';
+import type { Readiness } from '../catalog/definitions';
 
 /**
  * 案件の中身を読んで、自社（＝すでに作ってあるAI・システム）で作れるかを見る。
@@ -8,12 +9,19 @@ import { loadCapabilities, type CapabilityRow } from '../catalog/sync';
  *   「たぶん作れる」は数えない。道具が当たらなければ missing に入れて、受注可能性を下げる。
  */
 
+export type MatchedCap = { code: string; name: string; hits: string[]; readiness: Readiness; readinessReason: string };
+
 export type JobAnalysis = {
   jobId: number;
   engine: 'rule' | 'openai';
   tasks: string[];
-  matchedCaps: { code: string; name: string; hits: string[] }[];
+  matchedCaps: MatchedCap[];
   missingCaps: string[];
+  /**
+   * 当たったが「請けない」と決めてある道具。
+   * 規約や法令で外に出せないもの。ここが当たった案件は、応募せずに理由を出す。
+   */
+  blockedCaps: { code: string; name: string; reason: string }[];
   estHours: number;
   automationRate: number;
   notes: string;
@@ -37,15 +45,26 @@ export function decomposeTasks(text: string): string[] {
   return out.length > 0 ? out : ['内容の確認（作業の種類が読み取れない）'];
 }
 
-/** 案件文と自社の道具を、キーワードで突き合わせる。 */
-export function matchCapabilities(text: string, caps: CapabilityRow[]): { code: string; name: string; hits: string[] }[] {
+/**
+ * 案件文と自社の道具を、キーワードで突き合わせる。
+ * 並び順は「仕上がっているもの優先 → 当たった言葉が多い順」。
+ * 実績として書ける道具を先に持ってこないと、応募文の先頭が試作の説明になってしまう。
+ */
+const READINESS_RANK: Record<Readiness, number> = {
+  PRODUCTION_READY: 0,
+  USABLE_WITH_REVIEW: 1,
+  PROTOTYPE: 2,
+  NOT_SELLABLE: 3,
+};
+
+export function matchCapabilities(text: string, caps: CapabilityRow[]): MatchedCap[] {
   const lower = text.toLowerCase();
-  const out: { code: string; name: string; hits: string[] }[] = [];
+  const out: MatchedCap[] = [];
   for (const c of caps) {
     const hits = c.keywords.filter((k) => lower.includes(k.toLowerCase()));
-    if (hits.length > 0) out.push({ code: c.code, name: c.name, hits });
+    if (hits.length > 0) out.push({ code: c.code, name: c.name, hits, readiness: c.readiness, readinessReason: c.readiness_reason });
   }
-  return out.sort((a, b) => b.hits.length - a.hits.length);
+  return out.sort((a, b) => READINESS_RANK[a.readiness] - READINESS_RANK[b.readiness] || b.hits.length - a.hits.length);
 }
 
 /**
@@ -96,9 +115,14 @@ function estimateHours(matched: { code: string }[], caps: CapabilityRow[], text:
 export async function analyzeJob(job: Row): Promise<JobAnalysis> {
   const jobId = Number(job.id);
   const text = [job.title, job.description, job.category, job.work_style].filter(Boolean).map(String).join('\n');
-  // 使えるのは「今すぐ動く道具」だけ。開発中のものを当てにしない。
-  const caps = await loadCapabilities(true);
-  const matched = matchCapabilities(text, caps);
+  // 全部の道具と突き合わせたうえで、「売り物にしない」ものだけを抜き出して分ける。
+  // 抜き出さずに混ぜると、規約で請けないと決めた作業まで応募候補に上がってしまう。
+  const caps = await loadCapabilities(false);
+  const hit = matchCapabilities(text, caps);
+  const matched = hit.filter((m) => m.readiness !== 'NOT_SELLABLE');
+  const blocked = hit
+    .filter((m) => m.readiness === 'NOT_SELLABLE')
+    .map((m) => ({ code: m.code, name: m.name, reason: m.readinessReason }));
   const tasks = decomposeTasks(text);
   const est = estimateHours(matched, caps, text);
 
@@ -110,6 +134,7 @@ export async function analyzeJob(job: Row): Promise<JobAnalysis> {
     tasks,
     matchedCaps: matched,
     missingCaps: missing,
+    blockedCaps: blocked,
     estHours: est.hours,
     automationRate: est.automation,
     notes: est.note,
@@ -124,7 +149,7 @@ export async function saveJobAnalysis(a: JobAnalysis): Promise<void> {
       engine: a.engine,
       tasks: JSON.stringify(a.tasks),
       matched_caps: JSON.stringify(a.matchedCaps),
-      missing_caps: JSON.stringify(a.missingCaps),
+      missing_caps: JSON.stringify([...a.missingCaps, ...a.blockedCaps.map((b) => `${b.name}：${b.reason}`)]),
       est_hours: a.estHours,
       automation_rate: a.automationRate,
       notes: a.notes,

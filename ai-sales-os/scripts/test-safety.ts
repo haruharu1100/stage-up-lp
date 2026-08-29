@@ -4,8 +4,20 @@ import { scalar } from '../lib/db/client';
 import { initSettings } from '../lib/settings';
 import { EXTERNAL_ACTIONS_IMPLEMENTED, config } from '../lib/env';
 import { checkExternalAction, externalActionStatus } from '../lib/gate';
+import { readinessSummary } from '../lib/readiness';
 import { addDeliverable, confirmDeliverable, deliveryReadiness } from '../lib/delivery';
-import { insert, nowIso } from '../lib/db/client';
+import { insert, nowIso, one, run } from '../lib/db/client';
+import {
+  decideApproval,
+  enqueueApproval,
+  excludeKind,
+  isKindExcluded,
+  listApprovals,
+  listPendingApprovals,
+  reviseText,
+  EMPTY_DETAIL,
+  type ApprovalDetail,
+} from '../lib/approval';
 import { Suite, finish } from './_harness';
 
 /**
@@ -77,6 +89,34 @@ async function main() {
   // 8. 段階解放が Phase 1 から始まること
   s.check('リリース段階が1（一番慎重な段階）', config.releasePhase === 1, `RELEASE_PHASE=${config.releasePhase}`);
 
+  // 9. 「あと何が要るか」の表が、嘘をつかないこと
+  //    ★ここが「もうできている」と言い切ってしまうと、人は用意が済んだと思って先へ進む。
+  //      実際には送る処理が無いので何も起きず、原因を探す時間だけが失われる。
+  const ready = await readinessSummary();
+  s.eq('外部操作のうち「あと何が要るか」を出している数', ready.actions.length, 5, '種類');
+  s.check(
+    'どの外部操作にも「実行する処理そのものが無い」が必ず載っている',
+    ready.actions.every((a) => a.items.some((i) => i.label === '実行する処理そのもの' && i.state === 'BLOCKED')),
+    ready.actions
+      .filter((a) => !a.items.some((i) => i.label === '実行する処理そのもの' && i.state === 'BLOCKED'))
+      .map((a) => a.label)
+      .join('・') || '全部載っている',
+  );
+  s.check(
+    '足りない項目には必ず「何をすればよいか」が書いてある',
+    ready.actions.every((a) => a.items.filter((i) => i.state !== 'DONE').every((i) => Boolean(i.how))),
+    '',
+  );
+  s.check(
+    '「そろっている」と言い切っている外部操作が1つも無い',
+    ready.actions.every((a) => a.summary !== 'そろっている'),
+    ready.actions
+      .filter((a) => a.summary === 'そろっている')
+      .map((a) => a.label)
+      .join('・') || '無い',
+  );
+  s.check('次にやることが1つに絞って書かれている', ready.nextStep.length > 10, ready.nextStep.slice(0, 40));
+
   s.print();
 
   // ---- 納品の関門
@@ -119,7 +159,90 @@ async function main() {
   d.check('問題が残ったものは人間確認済みにできない', cannot.ok === false, cannot.reasonJa);
 
   d.print();
-  finish([s, d]);
+
+  // ------------------------------------------------------------------ 1クリック承認
+  const a = new Suite('1クリック承認（人の判断）');
+
+  // 本物のデータを汚さないよう、上で作ったテスト用の受注を対象にする。
+  const testRef = { kind: 'DELIVER' as const, refTable: 'orders', refId: orderId };
+  const detail: ApprovalDetail = {
+    ...EMPTY_DETAIL,
+    subtitle: 'テスト用',
+    offer: 'テスト用の提案内容',
+    whyChosen: ['テストのため'],
+    scores: [{ label: '点数', value: '50' }],
+    body: 'これはテスト用の文章です。\n人が読んで判断できる長さにしています。',
+    risks: ['テスト用のリスク'],
+    sources: [{ label: 'テスト', url: 'https://example.com/' }],
+    excludeKind: { scope: 'JOB', dimension: '__test__', key: '__test_key__', label: 'テスト用の除外' },
+    textRef: { table: 'proposals', id: -1 },
+  };
+  await enqueueApproval({ ...testRef, title: 'テスト用の承認', summary: 'テスト', riskNote: 'テスト', detail });
+
+  const find = async () => (await listApprovals()).find((x) => x.kind === 'DELIVER' && x.refTable === 'orders' && x.refId === orderId) ?? null;
+  const item1 = await find();
+  a.check('承認待ちに判断材料が保存される', item1?.detail.offer === 'テスト用の提案内容', item1 ? `offer=${item1.detail.offer}` : '見つからない');
+  a.check('根拠URLも一緒に保存される', (item1?.detail.sources.length ?? 0) === 1, `${item1?.detail.sources.length ?? 0}件`);
+
+  // 却下 → やり直しても人の判断は消えない
+  await decideApproval(item1!.id, 'REJECTED');
+  await enqueueApproval({ ...testRef, title: 'テスト用の承認', summary: 'テスト', riskNote: 'テスト', detail });
+  a.check('却下した判断は、処理をやり直しても消えない', (await find())?.status === 'REJECTED', `status=${(await find())?.status}`);
+
+  // 保留 → あとから承認できる
+  await run('UPDATE approval_queue SET status = ?, decided_at = NULL WHERE id = ?', ['PENDING', item1!.id]);
+  const held = await decideApproval(item1!.id, 'HELD');
+  a.check('保留にできる', held.ok === true, held.reasonJa);
+  a.check('保留は「判断した日時」を空のままにする', (await find())?.decidedAt === null, `decidedAt=${(await find())?.decidedAt}`);
+  const afterHold = await decideApproval(item1!.id, 'APPROVED');
+  a.check('保留にしたあとでも承認に進める', afterHold.ok === true, afterHold.reasonJa);
+  a.check('承認の結果に「送信は起きない」と書かれている', afterHold.reasonJa.includes('実際の送信は起きない'), afterHold.reasonJa);
+
+  // 文章の直し
+  const tooShort = await reviseText({ table: 'proposals', id: -1, body: '短い' });
+  a.check('短すぎる修正文は保存しない', tooShort.ok === false, tooShort.reasonJa);
+  const ng = await reviseText({ table: 'proposals', id: -1, body: 'このサービスを使えば必ず儲かります。絶対に損はしません。' });
+  a.check('使えない表現を含む修正文は保存しない', ng.ok === false, ng.reasonJa);
+  const okRev = await reviseText({ table: 'proposals', id: -1, body: '人が直した文章です。これを送る文章として扱います。' });
+  a.check('直した文章は保存できる', okRev.ok === true, okRev.reasonJa);
+  a.check('直した文章が承認画面に出る', (await find())?.revisedBody === '人が直した文章です。これを送る文章として扱います。', String((await find())?.revisedBody));
+  await enqueueApproval({ ...testRef, title: 'テスト用の承認', summary: 'テスト', riskNote: 'テスト', detail });
+  a.check('直した文章は、処理をやり直しても消えない', (await find())?.revisedBody?.startsWith('人が直した文章') === true, String((await find())?.revisedBody));
+  const original = await one('SELECT body FROM proposals WHERE id = -1');
+  a.check('AIが作った元の文は書き換えられていない', original === null, original ? '元の行が書き換わっている' : '別の場所に保存されている');
+
+  // 「今後この種類は出さない」
+  await excludeKind({ scope: 'JOB', dimension: '__test__', key: '__test_key__', reason: 'テスト' });
+  a.check('「今後この種類は出さない」を登録できる', (await isKindExcluded('JOB', '__test__', '__test_key__')) === true, '');
+  await run('UPDATE approval_queue SET status = ?, decided_at = NULL WHERE id = ?', ['PENDING', item1!.id]);
+  const listed = await listPendingApprovals();
+  a.check('出さないと決めた種類は判断待ちに並ばない', listed.items.every((x) => x.id !== item1!.id), `hidden=${listed.hidden}件`);
+  a.check('隠した件数と理由が分かる', listed.hidden >= 1 && listed.hiddenLabels.length >= 1, listed.hiddenLabels.join('／'));
+  await excludeKind({ scope: 'JOB', dimension: '__test__', key: '__test_key__', reason: 'テスト' });
+  a.check('出さないと決めた判断は、やり直しても消えない', (await isKindExcluded('JOB', '__test__', '__test_key__')) === true, '');
+
+  // 承認しても外部へは何も起きない
+  await decideApproval(item1!.id, 'APPROVED');
+  a.eq('承認したあとに実際に送信した件数', await scalar('SELECT COUNT(*) FROM outreach_logs WHERE executed = 1'), 0, '件');
+  a.eq('承認したあとに実際に応募した件数', await scalar('SELECT COUNT(*) FROM applications WHERE executed = 1'), 0, '件');
+
+  // テスト用に作ったものを片付ける（本番の判断を残さない）
+  await run('DELETE FROM approval_queue WHERE kind = ? AND ref_table = ? AND ref_id = ?', [testRef.kind, testRef.refTable, orderId]);
+  await run("DELETE FROM excluded_kinds WHERE dimension = '__test__'");
+  await run("DELETE FROM text_revisions WHERE ref_table = 'proposals' AND ref_id = -1");
+
+  // 本物の承認待ちに、判断に必要なものがそろっているか
+  const real = (await listPendingApprovals()).items;
+  const missing = real.filter((x) => !x.detail.subtitle || x.detail.whyChosen.length === 0 || x.detail.risks.length === 0 || !x.detail.body);
+  a.eq('判断材料が足りない承認待ちの件数', missing.length, 0, '件');
+  a.check(
+    '承認待ちの各件に根拠URLが付いている',
+    real.length === 0 || real.every((x) => x.detail.sources.length > 0),
+    real.length === 0 ? '承認待ちが0件' : `${real.filter((x) => x.detail.sources.length === 0).length}件にURLが無い`,
+  );
+
+  a.print();
+  finish([s, d, a]);
 }
 
 main().catch((e) => {

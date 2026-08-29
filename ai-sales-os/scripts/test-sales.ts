@@ -7,6 +7,9 @@ import { detectNoSales } from '../lib/sales/nosales';
 import { guessIndustry } from '../lib/industry';
 import { senderIdentity } from '../lib/sales/sender-identity';
 import { canOutreach } from '../lib/sales/guards';
+import { trustedByRegistry, verifyWebsiteIdentity } from '../lib/sales/identity';
+import { htmlToText, parseRobots, pickSubPagesFromUrls, robotsAllowsPath } from '../lib/sales/website';
+import { sourceStatuses } from '../lib/sales/sources';
 import { Suite, finish } from './_harness';
 
 /**
@@ -168,7 +171,129 @@ async function main() {
   );
   g.print();
 
-  finish([p, i, j, d, g]);
+  // ---------------------------------------------------------------- ホームページの照合
+  // ★別会社のHPを掴んだまま営業文を書くのが、このシステムで一番大きい事故。
+  //   ここは通信をしないで判定の正しさだけを確かめる（テストが外へ出て行かないようにするため）。
+  const w = new Suite('ホームページが本当にその会社のものか');
+
+  const HIMAWARI = { name: '株式会社ひまわり住宅', corporateNumber: '1234567890123', address: '東京都新宿区西新宿1-1-1', phone: '03-1234-5678', representative: '山田太郎' };
+
+  // ① 法人番号が載っていれば一発で確定する
+  const byNumber = verifyWebsiteIdentity(HIMAWARI, {
+    url: 'https://himawari-jutaku.co.jp/',
+    title: 'ひまわり住宅',
+    text: '会社概要 商号 株式会社ひまわり住宅 法人番号 1234567890123 所在地 東京都新宿区西新宿1-1-1 新築戸建ての販売と賃貸仲介を行っています。',
+  });
+  w.check('法人番号が一致すれば本人のHPと確認できる', byNumber.verdict === 'MATCH', byNumber.reason);
+
+  // ② 別の法人番号が載っていたら、他がどれだけ合っていても採用しない
+  const wrongNumber = verifyWebsiteIdentity(HIMAWARI, {
+    url: 'https://example-corp.co.jp/',
+    title: '株式会社ひまわり住宅',
+    text: '株式会社ひまわり住宅 東京都新宿区西新宿1-1-1 TEL 03-1234-5678 法人番号 9999999999999 代表 山田太郎',
+  });
+  w.check('ページの法人番号が違えば採用しない', wrongNumber.verdict === 'MISMATCH', wrongNumber.reason);
+
+  // ③ 会社名だけ一致しても足りない（同名の別会社があるため）
+  const nameOnly = verifyWebsiteIdentity(
+    { name: '株式会社ひまわり住宅' },
+    { url: 'https://himawari.example.jp/', title: 'ひまわり住宅', text: 'ひまわり住宅のページです。わたしたちは地域に根ざした住まいづくりをしています。お気軽にご相談ください。' },
+  );
+  w.check('会社名が合っただけでは採用しない', nameOnly.verdict === 'UNKNOWN', `${nameOnly.verdict} / ${nameOnly.reason}`);
+
+  // ④ 会社名＋電話番号のように2種類そろえば採用する
+  const twoKinds = verifyWebsiteIdentity(
+    { name: '株式会社ひまわり住宅', phone: '03-1234-5678' },
+    { url: 'https://himawari-jutaku.co.jp/', title: 'ひまわり住宅', text: '株式会社ひまわり住宅 お問い合わせ TEL 03-1234-5678 新築戸建ての販売と賃貸仲介を行っています。' },
+  );
+  w.check('会社名と電話番号がそろえば採用する', twoKinds.verdict === 'MATCH', twoKinds.reason);
+
+  // ⑤ まったく別の会社のページは弾く
+  const other = verifyWebsiteIdentity(HIMAWARI, {
+    url: 'https://sakura-kensetsu.co.jp/',
+    title: '株式会社さくら建設',
+    text: '株式会社さくら建設は大阪府大阪市で土木工事を行っています。創業50年の実績があります。お問い合わせはこちら。',
+  });
+  w.check('まったく別の会社のページは弾く', other.verdict === 'MISMATCH', other.reason);
+
+  // ⑥ 求人サイト・プレスリリースはそもそもHPとして見ない
+  const jobSite = verifyWebsiteIdentity(HIMAWARI, {
+    url: 'https://www.wantedly.com/companies/himawari',
+    title: '株式会社ひまわり住宅の採用',
+    text: '株式会社ひまわり住宅 東京都新宿区西新宿1-1-1 法人番号 1234567890123 求人情報',
+  });
+  w.check('求人サイトはHPとして扱わない', jobSite.verdict === 'MISMATCH', jobSite.reason);
+
+  // ⑦ 中身が読めなかったページは「分からない」にする（0や「合っている」で埋めない）
+  const empty = verifyWebsiteIdentity(HIMAWARI, { url: 'https://himawari-jutaku.co.jp/', title: null, text: '準備中' });
+  w.check('中身が読めないときは「分からない」にする', empty.verdict === 'UNKNOWN', empty.reason);
+
+  // ⑧ 国が法人番号にひも付けて公開しているHPだけは、読まずに本人のものとして扱える
+  w.check('gBizINFOのHPは確認済みとして扱える', trustedByRegistry('GBIZINFO', '1234567890123') === true, '');
+  w.check('Google PlacesのHPは確認済みにしない', trustedByRegistry('GOOGLE_PLACES', '1234567890123') === false, '');
+  w.check('法人番号が無ければgBizINFOでも確認済みにしない', trustedByRegistry('GBIZINFO', null) === false, '');
+
+  // ⑨ robots.txt で断られている場所は読まない。読めなかったときも読まない。
+  const robots = parseRobots('User-agent: *\nDisallow: /private/\nAllow: /private/public/\nCrawl-delay: 3');
+  const rules = { usable: true, reason: '', ...robots };
+  w.check('robots.txt で禁止された場所は読まない', robotsAllowsPath(rules, '/private/secret.html') === false, '');
+  w.check('robots.txt で許可し直された場所は読む', robotsAllowsPath(rules, '/private/public/a.html') === true, '');
+  w.check('robots.txt に書かれていない場所は読む', robotsAllowsPath(rules, '/company/about.html') === true, '');
+  w.check('Crawl-delay を守る（3秒）', rules.crawlDelayMs >= 3000, `${rules.crawlDelayMs}ミリ秒`);
+  w.check(
+    'robots.txt が読めなかったときは読まない',
+    robotsAllowsPath({ usable: false, reason: '', allow: [], disallow: [], crawlDelayMs: 1500, sitemaps: [] }, '/') === false,
+    '',
+  );
+
+  // ⑩ HTMLから文章を取り出せる（台本や見た目の指定は落とす）
+  const text = htmlToText('<html><head><style>.a{color:red}</style><script>var x=1;</script></head><body><h1>株式会社ひまわり住宅</h1><p>新築戸建ての販売</p></body></html>');
+  w.check('HTMLから文章だけを取り出せる', text.includes('株式会社ひまわり住宅') && text.includes('新築戸建ての販売'), text.slice(0, 60));
+  w.check('画面の指定やプログラムは文章に混ぜない', !text.includes('color:red') && !text.includes('var x'), text.slice(0, 60));
+
+  // ⑩-2 メニューが読めないHPでも、サイトマップから会社概要へたどり着ける
+  const smRobots = parseRobots('User-agent: *\nDisallow:\nSitemap: https://example.co.jp/sitemap.xml');
+  w.check('robots.txt に書かれたサイトマップの場所を拾える', smRobots.sitemaps.includes('https://example.co.jp/sitemap.xml'), smRobots.sitemaps.join(','));
+  const picked = pickSubPagesFromUrls(
+    ['https://example.co.jp/', 'https://example.co.jp/news/2026', 'https://example.co.jp/company/about', 'https://example.co.jp/contact/'],
+    'https://example.co.jp/',
+  );
+  w.check('サイトマップから会社概要のページを選べる', picked.about === 'https://example.co.jp/company/about', String(picked.about));
+  w.check('サイトマップからお問い合わせのページを選べる', picked.contact === 'https://example.co.jp/contact/', String(picked.contact));
+
+  // ⑪ 取得元の「あと何をすれば使えるか」が、鍵の無いものには必ず書いてある
+  const missing = sourceStatuses().filter((s) => !s.configured);
+  w.check('鍵が無い取得元には、次にやることが必ず書いてある', missing.every((s) => (s.needs ?? '').length > 10), missing.map((s) => s.code).join(',') || 'すべて設定済み');
+  w.check('取得元はすべて読み取り専用', sourceStatuses().every((s) => s.readOnly === true), '');
+
+  // ⑫ 実際のデータで、確認していないHPを「確認済み」と言っていないこと
+  w.eq(
+    '照合していないのに「確認済み」になっている会社はいない',
+    await scalar("SELECT COUNT(*) FROM companies WHERE website_verified = 1 AND website_checked_at IS NULL"),
+    0,
+    '社',
+  );
+  w.eq(
+    '照合に落ちたのにHPが残っている会社はいない',
+    await scalar('SELECT COUNT(*) FROM companies WHERE website_reject_reason IS NOT NULL AND website IS NOT NULL'),
+    0,
+    '社',
+  );
+
+  // ⑬ 未確認のHPしか無い会社の文面に「公式サイトを拝見しました」と書いていないこと
+  const unverifiedDrafts = await all(
+    `SELECT d.body FROM outreach_drafts d JOIN companies c ON c.id = d.company_id
+      WHERE COALESCE(c.website_verified, 0) = 0`,
+  );
+  w.eq(
+    '確かめていないHPを「公式サイトを拝見しました」と書いていない',
+    unverifiedDrafts.filter((r) => /公式サイトを拝見|ホームページを読み|サイトを読み|サイトで「|サイトにある|サイトには「/.test(String(r.body ?? ''))).length,
+    0,
+    '通',
+  );
+  w.print();
+
+  finish([p, i, j, d, g, w]);
 }
 
 main().catch((e) => {

@@ -1,6 +1,7 @@
 import { all } from '../../lib/db/client';
 import { config, hasSecret } from '../../lib/env';
 import { externalActionStatus } from '../../lib/gate';
+import { readinessSummary } from '../../lib/readiness';
 import { loadSettings, DEFAULT_SETTINGS } from '../../lib/settings';
 import { Page, Panel, Tag } from '../ui';
 
@@ -25,6 +26,7 @@ export default async function System() {
   const settings = await loadSettings();
   const phase = config.releasePhase;
   const logs = await all('SELECT step, status, detail, created_at FROM run_logs ORDER BY id DESC LIMIT 40');
+  const ready = await readinessSummary();
 
   const secrets: { label: string; present: boolean; why: string }[] = [
     { label: 'OpenAI のキー', present: hasSecret('OPENAI_API_KEY'), why: '無い場合はルールだけで判断します（AIによる読み取りは行いません）' },
@@ -40,6 +42,72 @@ export default async function System() {
         <b>秘密の情報（APIキーなど）の中身は、この画面には出しません。</b>
         「設定されているか、いないか」だけを出しています。
       </div>
+
+      <Panel
+        title="1件目を実行するために、あと何が要るか"
+        note="ここが全部そろっても、送信は起きません（実行する処理コードが無いため）。これは「やることの一覧」であって「実行の許可」ではありません。"
+      >
+        <div className="banner">
+          <b>次にやること：</b>
+          {ready.nextStep}
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>会社データの取得元</th>
+              <th>鍵</th>
+              <th>入れ方</th>
+            </tr>
+          </thead>
+          <tbody>
+            {ready.dataKeys.map((k) => (
+              <tr key={k.label}>
+                <td>{k.label}</td>
+                <td>{k.ok ? <Tag kind="ok">あり</Tag> : <Tag kind="warn">なし</Tag>}</td>
+                <td className="small">{k.ok ? '—（設定済み）' : k.how}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {ready.actions.map((a) => (
+          <div key={a.action} style={{ marginTop: 18 }}>
+            <h3 style={{ margin: '0 0 6px' }}>
+              {a.label}
+              <span className="small" style={{ fontWeight: 'normal', marginLeft: 10 }}>
+                {a.candidateLabel}
+              </span>
+            </h3>
+            <table>
+              <thead>
+                <tr>
+                  <th>要るもの</th>
+                  <th>状態</th>
+                  <th>今どうなっているか</th>
+                  <th>何をすればよいか</th>
+                </tr>
+              </thead>
+              <tbody>
+                {a.items.map((it) => (
+                  <tr key={it.label}>
+                    <td>{it.label}</td>
+                    <td>
+                      {it.state === 'DONE' ? (
+                        <Tag kind="ok">できている</Tag>
+                      ) : it.state === 'MISSING' ? (
+                        <Tag kind="warn">用意すれば済む</Tag>
+                      ) : (
+                        <Tag kind="stop">先に決めることがある</Tag>
+                      )}
+                    </td>
+                    <td className="small">{it.detail}</td>
+                    <td className="small">{it.how ?? '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ))}
+      </Panel>
 
       <Panel title="外部への操作" note="「実行する処理コード」が「なし」である限り、スイッチをONにしても送信・応募・納品は起きません。">
         <table>

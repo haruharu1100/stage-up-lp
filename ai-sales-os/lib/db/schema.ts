@@ -66,11 +66,35 @@ export const SCHEMA_CORE: string[] = [
     title       TEXT NOT NULL,
     summary     TEXT NOT NULL,
     risk_note   TEXT NOT NULL,
-    status      TEXT NOT NULL DEFAULT 'PENDING',  -- PENDING / APPROVED / REJECTED
+    status      TEXT NOT NULL DEFAULT 'PENDING',  -- PENDING / APPROVED / REJECTED / HELD
     decided_at  TEXT,
     decided_by  TEXT,
     created_at  TEXT NOT NULL,
     UNIQUE(kind, ref_table, ref_id)
+  )`,
+
+  // 「今後この種類は出さないでほしい」という人の指示。
+  // ★AIが勝手に作らない。人が承認画面で押したときだけ増える。
+  //   一度押したものは、処理をやり直しても消えない（人の判断を上書きしない）。
+  `CREATE TABLE IF NOT EXISTS excluded_kinds (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    scope       TEXT NOT NULL,                    -- SALES / JOB
+    dimension   TEXT NOT NULL,                    -- industry / offer / site / job_kind
+    key         TEXT NOT NULL,
+    reason      TEXT,
+    created_at  TEXT NOT NULL,
+    UNIQUE(scope, dimension, key)
+  )`,
+
+  // 人が承認画面で直した文面。元の生成物は残し、直した内容を別に持つ。
+  `CREATE TABLE IF NOT EXISTS text_revisions (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    ref_table   TEXT NOT NULL,                    -- outreach_drafts / proposals
+    ref_id      INTEGER NOT NULL,
+    body        TEXT NOT NULL,
+    revised_by  TEXT NOT NULL,
+    created_at  TEXT NOT NULL,
+    UNIQUE(ref_table, ref_id)
   )`,
 
   // 学習結果。実績が足りないうちは verdict='INSUFFICIENT' のまま動かさない。
@@ -432,4 +456,62 @@ export const COLUMN_ADDITIONS: string[] = [
   `ALTER TABLE company_offers ADD COLUMN sellable INTEGER NOT NULL DEFAULT 0`,
   `ALTER TABLE company_offers ADD COLUMN blocked_reason TEXT`,
   `ALTER TABLE proposals ADD COLUMN personal_text TEXT NOT NULL DEFAULT ''`,
+
+  // 規約台帳を本番仕様にする。
+  // ★application_mode が実際の分岐に使う値。auto_apply_policy は元の列で、意味は同じ。
+  //   「AIを使ってよい」と「外部のプログラムが自動で応募してよい」は別物なので、
+  //   根拠（原文引用・URL・確認日）が揃わない限り APPROVAL_REQUIRED から動かさない。
+  `ALTER TABLE job_sites ADD COLUMN policy_url TEXT`,
+  `ALTER TABLE job_sites ADD COLUMN policy_checked_at TEXT`,
+  `ALTER TABLE job_sites ADD COLUMN policy_quote_or_summary TEXT`,
+  `ALTER TABLE job_sites ADD COLUMN automation_status TEXT NOT NULL DEFAULT 'UNKNOWN'`,
+  `ALTER TABLE job_sites ADD COLUMN application_mode TEXT NOT NULL DEFAULT 'APPROVAL_REQUIRED'`,
+  `ALTER TABLE job_sites ADD COLUMN api_available TEXT NOT NULL DEFAULT 'UNKNOWN'`,
+  `ALTER TABLE job_sites ADD COLUMN official_automation_available TEXT NOT NULL DEFAULT 'UNKNOWN'`,
+  `ALTER TABLE job_sites ADD COLUMN reason TEXT`,
+  `ALTER TABLE job_sites ADD COLUMN next_review_at TEXT`,
+  `ALTER TABLE job_sites ADD COLUMN guideline_url TEXT`,
+  `ALTER TABLE job_sites ADD COLUMN robots_summary TEXT`,
+
+  // 文面・応募文の採点を保存する（弱めずに質を上げたことを数字で示すため）
+  `ALTER TABLE outreach_drafts ADD COLUMN quality_scores TEXT`,
+  `ALTER TABLE proposals ADD COLUMN quality_scores TEXT`,
+  `ALTER TABLE proposals ADD COLUMN opportunity_score REAL`,
+
+  // 能力の成熟度。未完成のものを「完成実績」として案件に当てないため。
+  `ALTER TABLE capabilities ADD COLUMN readiness TEXT NOT NULL DEFAULT 'PROTOTYPE'`,
+  `ALTER TABLE capabilities ADD COLUMN readiness_reason TEXT`,
+
+  // 承認キューの「保留」と、種類ごとの除外
+  `ALTER TABLE approval_queue ADD COLUMN detail TEXT`,
+
+  // ★同じ依頼が複数サイトに出る／同じ依頼が何度も出し直される、を見分けるための列。
+  //   dedupe_key は「サイト＋そのサイトでのID」なので、同じ依頼でもサイトが違えば別物として入ってしまう。
+  //   content_key は本文そのものから作るので、サイトをまたいでも同じ依頼だと分かる。
+  //   duplicate_of には「先に取り込んだ同じ依頼」のIDを入れ、応募を1件に絞るのに使う。
+  `ALTER TABLE jobs ADD COLUMN content_key TEXT`,
+  `ALTER TABLE jobs ADD COLUMN duplicate_of INTEGER`,
+
+  // ★どの案件から先に取りに行くかを決めるための列。
+  //   金額の大きさだけで並べると、時間ばかりかかる案件が上に来てしまう。
+  //   取れる見込み・AIの肩代わり率・手直しの起きやすさまで入れて並べ替える。
+  `ALTER TABLE job_scores ADD COLUMN win_probability REAL`,
+  `ALTER TABLE job_scores ADD COLUMN revision_risk INTEGER`,
+  `ALTER TABLE job_scores ADD COLUMN revision_risk_reason TEXT`,
+  `ALTER TABLE job_scores ADD COLUMN opportunity_score REAL`,
+  `ALTER TABLE job_scores ADD COLUMN opportunity_reason TEXT`,
+  `ALTER TABLE job_scores ADD COLUMN estimate_confidence TEXT`,
+
+  // ★「そのHPは本当にその会社のものか」を記録する列。
+  //   別会社のHPを掴んだまま営業文を書くのは、このシステムで一番大きい事故。
+  //   確かめた／確かめていない／別会社だった、を必ず残す。空欄と「確認済み」を混ぜない。
+  `ALTER TABLE companies ADD COLUMN website_verified INTEGER NOT NULL DEFAULT 0`,
+  `ALTER TABLE companies ADD COLUMN website_verify_reason TEXT`,
+  `ALTER TABLE companies ADD COLUMN website_checked_at TEXT`,
+  // 照合に通らなかったURL。捨てずに残して、人が見て判断できるようにする。
+  `ALTER TABLE companies ADD COLUMN website_candidate TEXT`,
+  `ALTER TABLE companies ADD COLUMN website_reject_reason TEXT`,
+  // 公式HPを最後に読んだ日時。読めなかったときは理由。
+  `ALTER TABLE companies ADD COLUMN site_read_at TEXT`,
+  `ALTER TABLE companies ADD COLUMN site_read_note TEXT`,
 ];

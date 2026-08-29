@@ -52,7 +52,7 @@ export default async function Jobs() {
 
       <Panel
         title="サイトごとの規約の確認結果"
-        note="確認の記録が無い、または確認から180日を超えたサイトは「不明」に戻します。不明は安全側に倒して自動応募しません。"
+        note="確認の記録が無い、または確認から180日を超えたサイトは「不明」に戻します。不明は安全側に倒して自動応募しません。規約の原文やrobots.txtまで見るときは、左メニューの「規約台帳」を開いてください。"
       >
         <table>
           <thead>
@@ -78,7 +78,7 @@ export default async function Jobs() {
                     <Tag kind={p.kind}>{p.label}</Tag>
                   </td>
                   <td className="small">{s.checkedAt ? String(s.checkedAt).slice(0, 10) : '—（未確認）'}</td>
-                  <td className="small">{s.reasonJa}</td>
+                  <td className="small">{s.recordedReason ?? s.reasonJa}</td>
                 </tr>
               );
             })}

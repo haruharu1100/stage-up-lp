@@ -3,8 +3,9 @@ import { num } from '../settings';
 import { getLearnedRate } from '../learning';
 import type { JobAnalysis } from './analyze';
 import { EXCLUSION_RULES, type ExclusionHit } from './exclude';
+import { computeOpportunity, revisionRisk } from './opportunity';
 
-export const JOB_FORMULA_VERSION = 'job-v1';
+export const JOB_FORMULA_VERSION = 'job-v2';
 
 /**
  * 案件の点数。
@@ -29,6 +30,16 @@ export type JobScore = {
   expectedValue: number | null;
   evUnavailableReason: string | null;
   priorityScore: number;
+  /** 取れる見込み（0〜1）。実績が溜まればサイト別の実測に差し替わる。 */
+  winProbability: number;
+  /** 手直しの起きやすさ（0〜100。高いほど直しが増える）。 */
+  revisionRisk: number;
+  revisionRiskReason: string;
+  /** どの案件から先に取りに行くか（0〜100）。 */
+  opportunityScore: number;
+  opportunityReason: string;
+  /** 見積りの確からしさ。時給が現実離れしているときは LOW。 */
+  estimateConfidence: 'NORMAL' | 'LOW';
   verdict: 'APPLY' | 'HOLD' | 'EXCLUDE';
   verdictReason: string;
 };
@@ -115,13 +126,35 @@ export async function computeJobScore(args: { job: Row; analysis: JobAnalysis; e
   // 金額が出せない案件も並べ替えられるようにする点数
   const priorityScore = Math.round(matchScore * 0.3 + profitScore * 0.3 + automationScore * 0.15 + effortScore * 0.15 + winScore * 0.1);
 
+  // --- 利益で並べ替えるための点数 -----------------------------------
+  // 手直しは見積りに入っていない時間として必ず効くので、先に見積もっておく。
+  const risk = revisionRisk(job, analysis);
+  const opp = computeOpportunity({
+    expectedProfit,
+    expectedHours: hours > 0 ? hours : null,
+    expectedHourlyProfit: expectedHourly,
+    winProbability: winRate,
+    automationRate: analysis.automationRate,
+    revisionRisk: risk.score,
+    targetHourly,
+  });
+
   // --- 結論 -------------------------------------------------------
   let verdict: JobScore['verdict'];
   let verdictReason: string;
 
+  // ★実績として書ける道具が1つでもあるか。
+  //   試作しか当たっていない案件に自動で応募すると、
+  //   「実際に運用しています」と書けないまま応募することになる。人が決める。
+  const proven = analysis.matchedCaps.filter((m) => m.readiness === 'PRODUCTION_READY' || m.readiness === 'USABLE_WITH_REVIEW');
+  const prototypeOnly = analysis.matchedCaps.length > 0 && proven.length === 0;
+
   if (exclusions.length > 0) {
     verdict = 'EXCLUDE';
     verdictReason = `受けない案件：${exclusions.map((e) => `${e.label}（「${e.matched}」）`).join('、')}`;
+  } else if (analysis.blockedCaps.length > 0 && analysis.matchedCaps.length === 0) {
+    verdict = 'EXCLUDE';
+    verdictReason = `売り物にしないと決めてある作業：${analysis.blockedCaps.map((b) => `${b.name}（${b.reason}）`).join('、')}`;
   } else if (analysis.matchedCaps.length === 0) {
     verdict = 'EXCLUDE';
     verdictReason = '自社のAI・システムで作れる部分が無い。手作業になるので受けない。';
@@ -137,9 +170,13 @@ export async function computeJobScore(args: { job: Row; analysis: JobAnalysis; e
   } else if (isHourlyPay) {
     verdict = 'HOLD';
     verdictReason = '時給での支払い。時間を売る形になるので人が判断する。';
+  } else if (prototypeOnly) {
+    verdict = 'HOLD';
+    verdictReason = `当たったのが試作段階の仕組みだけ（${analysis.matchedCaps.map((m) => m.name).join('・')}）。実績として書けないので、応募するかは人が決める。`;
   } else {
     verdict = 'APPLY';
-    verdictReason = `自社の道具（${analysis.matchedCaps.map((m) => m.name).join('・')}）で作れて、時間あたり約${expectedHourly?.toLocaleString()}円の見込み`;
+    // 実績として書ける道具の名前だけを理由に出す（試作を成果のように見せない）
+    verdictReason = `自社の道具（${proven.map((m) => m.name).join('・')}）で作れて、時間あたり約${expectedHourly?.toLocaleString()}円の見込み`;
   }
 
   return {
@@ -156,6 +193,12 @@ export async function computeJobScore(args: { job: Row; analysis: JobAnalysis; e
     expectedValue,
     evUnavailableReason,
     priorityScore,
+    winProbability: Number(winRate.toFixed(3)),
+    revisionRisk: risk.score,
+    revisionRiskReason: risk.reasons.join('／'),
+    opportunityScore: opp.score,
+    opportunityReason: opp.reason,
+    estimateConfidence: opp.estimateConfidence,
     verdict,
     verdictReason,
   };
@@ -178,6 +221,12 @@ export async function saveJobScore(s: JobScore): Promise<void> {
       expected_value: s.expectedValue,
       ev_unavailable_reason: s.evUnavailableReason,
       priority_score: s.priorityScore,
+      win_probability: s.winProbability,
+      revision_risk: s.revisionRisk,
+      revision_risk_reason: s.revisionRiskReason,
+      opportunity_score: s.opportunityScore,
+      opportunity_reason: s.opportunityReason,
+      estimate_confidence: s.estimateConfidence,
       verdict: s.verdict,
       verdict_reason: s.verdictReason,
       formula_version: JOB_FORMULA_VERSION,
@@ -185,6 +234,34 @@ export async function saveJobScore(s: JobScore): Promise<void> {
     },
     ['job_id'],
   );
+}
+
+/** 保存済みの点数を読み戻す。列が増えたときに読み側を直し忘れないよう、1か所にまとめる。 */
+export function rowToJobScore(s: Row): JobScore {
+  return {
+    jobId: Number(s.job_id),
+    matchScore: Number(s.match_score),
+    profitScore: Number(s.profit_score),
+    winScore: Number(s.win_score),
+    automationScore: Number(s.automation_score),
+    effortScore: Number(s.effort_score),
+    riskScore: Number(s.risk_score),
+    expectedProfit: s.expected_profit === null || s.expected_profit === undefined ? null : Number(s.expected_profit),
+    expectedHours: s.expected_hours === null || s.expected_hours === undefined ? null : Number(s.expected_hours),
+    expectedHourlyProfit:
+      s.expected_hourly_profit === null || s.expected_hourly_profit === undefined ? null : Number(s.expected_hourly_profit),
+    expectedValue: s.expected_value === null || s.expected_value === undefined ? null : Number(s.expected_value),
+    evUnavailableReason: s.ev_unavailable_reason ? String(s.ev_unavailable_reason) : null,
+    priorityScore: Number(s.priority_score),
+    winProbability: Number(s.win_probability ?? 0),
+    revisionRisk: Number(s.revision_risk ?? 0),
+    revisionRiskReason: String(s.revision_risk_reason ?? ''),
+    opportunityScore: Number(s.opportunity_score ?? 0),
+    opportunityReason: String(s.opportunity_reason ?? ''),
+    estimateConfidence: (String(s.estimate_confidence ?? 'NORMAL') as JobScore['estimateConfidence']),
+    verdict: String(s.verdict) as JobScore['verdict'],
+    verdictReason: String(s.verdict_reason ?? ''),
+  };
 }
 
 export async function loadExclusionHits(jobId: number): Promise<ExclusionHit[]> {

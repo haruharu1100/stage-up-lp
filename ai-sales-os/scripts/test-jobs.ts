@@ -1,9 +1,12 @@
 import { all, one, scalar } from '../lib/db/client';
 import { initSettings, num } from '../lib/settings';
 import { findExclusions } from '../lib/jobs/exclude';
-import { listSitePolicies, sitePolicy } from '../lib/jobs/sites';
+import { listSitePolicies, sitePolicy, recordTosCheck, canCollect } from '../lib/jobs/sites';
+import { TOS_RECORDS } from '../lib/jobs/tos-records';
 import { similarity } from '../lib/text';
 import { TESTDATA_EXPECT } from '../lib/testdata';
+import { loadCapabilities } from '../lib/catalog/sync';
+import { READINESS_CLAIM, type Readiness } from '../lib/catalog/definitions';
 import { Suite, finish } from './_harness';
 
 /**
@@ -33,10 +36,26 @@ const RULE_CASES: { text: string; expect: string | null; note: string }[] = [
   { text: '当社商品の高評価レビューを投稿していただける方。', expect: 'FAKE_REVIEW', note: 'サクラ' },
   { text: '生成AIの使用は禁止です。手作業で執筆してください。', expect: 'NO_AI', note: 'AI禁止' },
   { text: 'アダルトジャンルのサイトです。R-18表現を含みます。', expect: 'ADULT', note: 'アダルト' },
+  // ここから、時間を拘束される働き方の追加ルール
+  { text: '週30時間ほど稼働いただける方を探しています。', expect: 'WEEKLY_HOURS', note: '週30時間' },
+  { text: '月160時間の稼働を想定しています。', expect: 'WEEKLY_HOURS', note: '月160時間（週あたりに換算）' },
+  { text: '毎日の朝会に参加が必須です。', expect: 'DAILY_MEETING', note: '毎日の朝会' },
+  { text: 'デイリーMTGを毎日実施しますので必ずご出席ください。', expect: 'DAILY_MEETING', note: 'デイリーMTG' },
+  { text: '平日の日中は常時連絡が取れる状態にしてください。', expect: 'DAYTIME_CONTACT', note: '日中の常時連絡' },
+  { text: 'リアルタイムでの連絡が必須となります。', expect: 'DAYTIME_CONTACT', note: 'リアルタイム連絡必須' },
+  { text: '作業時間の記録が必須です。毎日ご報告ください。', expect: 'TIME_TRACKING', note: '作業時間の記録' },
+  { text: '勤怠管理ツールの導入が必須です。', expect: 'TIME_TRACKING', note: '勤怠管理ツール' },
+  { text: 'Hubstaffの導入をお願いしています。', expect: 'TIME_TRACKING', note: '時間計測ソフト名' },
+  { text: '作業中はスクリーンショットを定期的に取得します。', expect: 'PC_MONITORING', note: 'スクショ監視' },
+  { text: '監視ツールのインストールが必須です。', expect: 'PC_MONITORING', note: 'PC監視' },
   // 誤爆よけ。ここが落ちると、受けてよい案件まで捨ててしまう。
   { text: 'Amazonの商品説明文を20件作成してください。固定報酬でお支払いします。', expect: null, note: '普通の良い案件' },
   { text: '固定報酬でお支払いします。時給換算で3000円ほどを想定しています。', expect: null, note: '固定報酬なら時給の記載があっても除外しない' },
   { text: 'GASでスプレッドシートの集計を自動化してください。固定報酬。', expect: null, note: '自動化してほしい依頼を「自動収集」と混同しない' },
+  { text: '勤怠管理システムの開発をお願いします。固定報酬でお支払いします。', expect: null, note: '勤怠管理システムを「作る」依頼は受けてよい' },
+  { text: 'サーバー監視ツールの機能を実装してください。固定報酬。', expect: null, note: '監視ツールを「作る」依頼は受けてよい' },
+  { text: '固定報酬でお願いします。週5時間ほどの想定です。', expect: null, note: '週5時間なら拘束とみなさない' },
+  { text: '全体で30時間ほどかかる想定の制作物です。固定報酬。', expect: null, note: '総作業時間の目安を週の拘束と取り違えない' },
 ];
 
 /** テストデータに仕込んだ案件のタイトルと、期待する結果。 */
@@ -164,6 +183,74 @@ async function main() {
   v.atLeast('応募候補として残った案件', applyCount, 1, '件');
   v.print();
 
+  // ---------------------------------------------------------------- 3b. 取りに行く順番
+  const o = new Suite('取りに行く順番（利益で並べる）');
+  const target = await num('job.target_hourly');
+
+  const noOpp = await scalar("SELECT COUNT(*) FROM job_scores WHERE verdict = 'APPLY' AND opportunity_score IS NULL");
+  o.eq('応募候補なのに順番の点数が付いていない件数', noOpp, 0, '件');
+  const noOppWhy = await scalar(
+    "SELECT COUNT(*) FROM job_scores WHERE verdict = 'APPLY' AND (opportunity_reason IS NULL OR opportunity_reason = '')",
+  );
+  o.eq('順番の点数に理由が書かれていない件数', noOppWhy, 0, '件');
+  const noRiskWhy = await scalar(
+    "SELECT COUNT(*) FROM job_scores WHERE verdict = 'APPLY' AND (revision_risk_reason IS NULL OR revision_risk_reason = '')",
+  );
+  o.eq('手直しの起きやすさに理由が書かれていない件数', noRiskWhy, 0, '件');
+
+  const outOfRange = await scalar(
+    'SELECT COUNT(*) FROM job_scores WHERE opportunity_score < 0 OR opportunity_score > 100 OR revision_risk < 0 OR revision_risk > 100',
+  );
+  o.eq('点数が0〜100の外に出た件数', outOfRange, 0, '件');
+
+  // ★金額が読み取れない案件を、順番の点数で上に持ってきていないこと（想像で埋めない）。
+  const noMoneyRanked = await scalar(
+    'SELECT COUNT(*) FROM job_scores WHERE expected_hourly_profit IS NULL AND opportunity_score > 0',
+  );
+  o.eq('金額が読み取れないのに順番が付いた件数', noMoneyRanked, 0, '件');
+
+  // ★時給の高さだけで順番が決まっていないこと。
+  //   目標の2倍を超えた時給は順位に効かせない決まりなので、
+  //   「時給は一番高いのに1位ではない」案件が実際に出ているかを確かめる。
+  const ranked = await all(
+    `SELECT j.title, s.opportunity_score AS o, s.expected_hourly_profit AS h
+       FROM job_scores s JOIN jobs j ON j.id = s.job_id
+      WHERE s.verdict = 'APPLY' AND j.duplicate_of IS NULL AND s.expected_hourly_profit IS NOT NULL
+      ORDER BY s.opportunity_score DESC`,
+  );
+  const topByHourly = [...ranked].sort((a, b) => Number(b.h) - Number(a.h))[0];
+  o.check(
+    '時給がいちばん高い案件を、そのまま1位にしていない（見積り違いに引きずられない）',
+    ranked.length > 1 ? String(ranked[0].title) !== String(topByHourly.title) : true,
+    ranked.length > 1
+      ? `1位: ${String(ranked[0].title)}（時給${Number(ranked[0].h).toLocaleString()}円） / 時給1位: ${String(topByHourly.title)}（${Number(topByHourly.h).toLocaleString()}円）`
+      : '比べられる件数がない',
+  );
+
+  // ★上位に置いた案件が、下位より割が良いこと（順番が意味を持っていること）。
+  const half = Math.floor(ranked.length / 2);
+  if (half >= 2) {
+    const avg = (rows: typeof ranked) => rows.reduce((s, r) => s + Number(r.h), 0) / rows.length;
+    const upper = avg(ranked.slice(0, half));
+    const lower = avg(ranked.slice(-half));
+    o.check(
+      '上位半分の平均時給が、下位半分より高い',
+      upper > lower,
+      `上位 ${Math.round(upper).toLocaleString()}円 / 下位 ${Math.round(lower).toLocaleString()}円`,
+    );
+  }
+
+  // ★見積りが短すぎる疑いのある案件に、必ず印が付いていること。
+  const suspect = await all(
+    `SELECT expected_hourly_profit AS h, estimate_confidence AS c FROM job_scores
+      WHERE verdict = 'APPLY' AND expected_hourly_profit IS NOT NULL`,
+  );
+  const missedFlag = suspect.filter((r) => Number(r.h) > target * 5 && String(r.c) !== 'LOW').length;
+  o.eq(`時給が目標の5倍（${(target * 5).toLocaleString()}円）を超えたのに印が付いていない件数`, missedFlag, 0, '件');
+  const wrongFlag = suspect.filter((r) => Number(r.h) <= target * 5 && String(r.c) === 'LOW').length;
+  o.eq('印を付けなくてよい案件に印が付いた件数', wrongFlag, 0, '件');
+  o.print();
+
   // ---------------------------------------------------------------- 4. 応募文
   const p = new Suite('応募文の品質');
   const proposals = await all("SELECT p.*, j.title FROM proposals p JOIN jobs j ON j.id = p.job_id WHERE p.status = 'READY'");
@@ -208,14 +295,151 @@ async function main() {
 
   const priced = proposals.filter((x) => x.price !== null);
   p.check('見積り金額が入っている', priced.length === proposals.length || proposals.length === 0, `${priced.length}本／${proposals.length}本`);
+
+  // ★同じ依頼への重複応募が作られていないこと。
+  //   同じ依頼主が同じ募集を複数サイトへ出す／毎月出し直すのは普通にあるので、
+  //   サイト内IDだけで見分けていると、同じ相手に同じ文面を何通も出すことになる。
+  const dupReady = await scalar('SELECT COUNT(*) FROM proposals p JOIN jobs j ON j.id = p.job_id WHERE j.duplicate_of IS NOT NULL AND p.status = ?', ['READY']);
+  p.eq('同じ依頼への重複応募を作ってしまった件数', dupReady, 0, '件');
+
+  const sameContentReady = await all(
+    `SELECT j.content_key, COUNT(*) c FROM proposals p JOIN jobs j ON j.id = p.job_id
+     WHERE p.status = 'READY' GROUP BY j.content_key HAVING c > 1`,
+  );
+  p.eq('中身が同じ依頼に応募文が2本以上ある組', sameContentReady.length, 0, '組');
+
+  const noContentKey = await scalar('SELECT COUNT(*) FROM jobs WHERE content_key IS NULL OR content_key = ?', ['']);
+  p.eq('中身の鍵が入っていない案件', noContentKey, 0, '件');
+
+  // ★同じ中身の依頼のかたまりごとに、本家が必ず1件残っていること。
+  //   取り込みを2回流すと「全部が重複扱い」になって応募先が消える不具合があったので、固定で見張る。
+  const orphanGroups = await all(
+    `SELECT content_key FROM jobs GROUP BY content_key HAVING SUM(CASE WHEN duplicate_of IS NULL THEN 1 ELSE 0 END) = 0`,
+  );
+  p.eq('本家が1件も残っていない依頼のかたまり', orphanGroups.length, 0, '組');
   p.print();
+
+  // ---------------------------------------------------------------- 4b. 仕上がり具合（実績を盛らない）
+  const q = new Suite('自社の道具の仕上がり具合');
+  const capsAll = await loadCapabilities(false);
+  const knownNames = new Set(capsAll.map((c) => c.name));
+  const unsellableNames = capsAll.filter((c) => c.readiness === 'NOT_SELLABLE').map((c) => c.name);
+  const bodies = await all(
+    `SELECT p.job_id, p.body, a.matched_caps FROM proposals p JOIN job_analyses a ON a.job_id = p.job_id WHERE p.status = 'READY'`,
+  );
+  let overclaim = 0;
+  let unsellableInBody = 0;
+  let unknownName = 0;
+  for (const b of bodies) {
+    const body = String(b.body ?? '');
+    const ms = JSON.parse(String(b.matched_caps ?? '[]')) as { name: string; readiness: Readiness }[];
+    for (const m of ms.slice(0, 3)) {
+      // 応募文に書いてよい一言は、カタログで仕上がり具合ごとに決めてある文言だけ。
+      if (!body.includes(`・${m.name}（${READINESS_CLAIM[m.readiness]}）`)) overclaim++;
+      if (!knownNames.has(m.name)) unknownName++;
+    }
+    for (const n of unsellableNames) if (body.includes(n)) unsellableInBody++;
+  }
+  q.eq('仕上がり具合と違う言い方をしている応募文', overclaim, 0, '件');
+  q.eq('売り物にしない道具を応募文に書いた件数', unsellableInBody, 0, '件');
+  q.eq('カタログに無い道具名が入った応募文', unknownName, 0, '件');
+
+  // ★試作しか当たっていない案件が、そのまま応募候補（APPLY）になっていないこと。
+  //   「実際に運用しています」と書けないまま応募することになるので、人が決める（HOLD）。
+  const analyses = await all('SELECT job_id, matched_caps FROM job_analyses');
+  const verdicts = new Map((await all('SELECT job_id, verdict FROM job_scores')).map((r) => [Number(r.job_id), String(r.verdict)]));
+  let protoApply = 0;
+  for (const a of analyses) {
+    const ms = JSON.parse(String(a.matched_caps ?? '[]')) as { readiness: Readiness }[];
+    if (ms.length === 0) continue;
+    const proven = ms.some((m) => m.readiness === 'PRODUCTION_READY' || m.readiness === 'USABLE_WITH_REVIEW');
+    if (!proven && verdicts.get(Number(a.job_id)) === 'APPLY') protoApply++;
+  }
+  q.eq('試作だけで応募候補になった案件', protoApply, 0, '件');
+
+  // ★売り物にしないと決めた道具が、案件の照合結果に混ざっていないこと。
+  let notSellableMatched = 0;
+  for (const a of analyses) {
+    const ms = JSON.parse(String(a.matched_caps ?? '[]')) as { readiness: Readiness }[];
+    if (ms.some((m) => m.readiness === 'NOT_SELLABLE')) notSellableMatched++;
+  }
+  q.eq('売り物にしない道具が当たった扱いになった案件', notSellableMatched, 0, '件');
+
+  // カタログ側：仕上がり具合が4種類のどれかで埋まっていること。
+  const badReadiness = capsAll.filter((c) => !(c.readiness in READINESS_CLAIM)).length;
+  q.eq('仕上がり具合が決まっていない道具', badReadiness, 0, '件');
+  const noReason = capsAll.filter((c) => !c.readiness_reason || c.readiness_reason.length < 5).length;
+  q.eq('仕上がり具合の理由が書かれていない道具', noReason, 0, '件');
+  q.atLeast('実績として書ける道具の数', capsAll.filter((c) => c.readiness === 'PRODUCTION_READY').length, 1, '件');
+  q.print();
 
   // ---------------------------------------------------------------- 5. 応募の関門
   const g = new Suite('応募の関門（規約と外部操作）');
   const policies = await listSitePolicies();
   for (const pol of policies) {
-    g.check(`規約を確認していないので自動応募しない: ${pol.name}`, pol.effectivePolicy !== 'AUTO_ALLOWED', `${pol.effectivePolicy}／${pol.reasonJa}`);
+    g.check(`外部プログラムの自動応募を許可していない: ${pol.name}`, pol.effectivePolicy !== 'AUTO_ALLOWED', `${pol.effectivePolicy}／${pol.reasonJa}`);
   }
+
+  // 台帳に「根拠」が全部そろっているか。1つでも欠けたら、その判定は信用できない。
+  for (const pol of policies) {
+    const missing: string[] = [];
+    if (!pol.policyUrl) missing.push('規約URL');
+    if (!pol.checkedAt) missing.push('確認日');
+    if (!pol.policyQuote) missing.push('規約の原文');
+    if (!pol.nextReviewAt) missing.push('次に確認する日');
+    if (!pol.recordedReason) missing.push('そう判断した理由');
+    g.check(`規約の根拠がそろっている: ${pol.name}`, missing.length === 0, missing.length === 0 ? `確認日 ${pol.checkedAt}／次回 ${pol.nextReviewAt}` : `足りない: ${missing.join('・')}`);
+  }
+
+  // ★根拠が無いのに AUTO_ALLOWED を入れようとしたら、必ず APPROVAL_REQUIRED へ落ちること。
+  //   ここが効かなくなると「たぶん大丈夫」で自動応募が始まり、アカウントごと失う。
+  const downgrade = await recordTosCheck({
+    code: 'LANCERS',
+    hasOfficialApi: 'NO',
+    readPolicy: 'MANUAL_ONLY',
+    applicationMode: 'AUTO_ALLOWED', // わざと自動応募を入れてみる
+    permissionEvidence: 'NONE', // ただし許可の根拠は無い
+    officialAutomationAvailable: 'YES',
+    automationStatus: 'テスト',
+    evidenceQuote: 'テスト用の引用（このあと本物の記録で上書きする）',
+    evidenceUrl: 'https://www.lancers.jp/help/terms',
+    checkedAt: '2026-08-29',
+    reason: 'テスト',
+  });
+  g.check(
+    '許可の根拠が無いまま自動応募を入れようとすると1クリック承認へ落ちる',
+    downgrade.appliedMode === 'APPROVAL_REQUIRED',
+    `入れようとした値: AUTO_ALLOWED → 実際に入った値: ${downgrade.appliedMode}`,
+  );
+  // 台帳を本物の記録に戻す
+  for (const rec of TOS_RECORDS) {
+    if (rec.code !== 'LANCERS') continue;
+    await recordTosCheck({
+      code: rec.code,
+      hasOfficialApi: rec.hasOfficialApi,
+      readPolicy: rec.readPolicy,
+      applicationMode: rec.applicationMode,
+      permissionEvidence: rec.permissionEvidence,
+      officialAutomationAvailable: rec.officialAutomationAvailable,
+      automationStatus: rec.automationStatus,
+      evidenceQuote: rec.evidenceQuote,
+      evidenceUrl: rec.evidenceUrl,
+      policyUrl: rec.policyUrl,
+      guidelineUrl: rec.guidelineUrl ?? null,
+      robotsSummary: rec.robotsSummary,
+      checkedAt: '2026-08-29',
+      reason: rec.reason,
+      note: rec.note,
+    });
+  }
+
+  // ★応募の手前の関門。機械が勝手に案件を集めることを、どのサイトでも許していないこと。
+  for (const pol of policies) {
+    const auto = await canCollect(pol.code, 'API');
+    g.check(`機械が勝手に案件を集めない: ${pol.name}`, auto.allowed === false, auto.reasonJa);
+  }
+  const byHand = await canCollect('LANCERS', 'CSV');
+  g.check('人が手で入れた案件は取り込める', byHand.allowed === true, byHand.reasonJa);
 
   const planned = await scalar("SELECT COUNT(*) FROM applications WHERE action = 'PLANNED'");
   g.eq('自動応募すると判定された件数', planned, 0, '件');
@@ -236,7 +460,7 @@ async function main() {
   g.eq('止めた理由が書かれていない件数', anyReason, 0, '件');
   g.print();
 
-  finish([r, i, v, p, g]);
+  finish([r, i, v, o, p, q, g]);
 }
 
 main().catch((e) => {

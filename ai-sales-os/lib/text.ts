@@ -186,3 +186,33 @@ export function checkExpression(text: string): { code: string; why: string; matc
   }
   return hits;
 }
+
+/**
+ * 相手の「困りごと」を、こちらが勝手に決めつけていないか。
+ *
+ * ★悪い例：「御社は電話対応に困っています」
+ *   相手はそんなことを一言も言っていない。事実でないことを事実として書くのは失礼であり、
+ *   優良誤認（相手の状況を偽って商品をよく見せる）にもつながる。
+ * ★良い例：「公式サイトで○○事業を展開されていることを拝見し、
+ *   問い合わせ対応で活用できる可能性があるためご連絡しました」
+ *
+ * 疑問文（「〜でしょうか」「〜ありますか」）は決めつけではないので通す。
+ * 「〜ではないかと思っています」のような推量も通す。止めるのは言い切りだけ。
+ */
+const ASSERTION_RE =
+  /(困って(い|お)|お困りで|課題を抱え|手が回っていま|手が足りていま|できていま|遅れていま|不足していま|苦労されて|悩まされて)/;
+const HEDGE_RE = /(でしょうか|ありますか|ますか|ですか|かもしれ|のではない|ではないか|と思(い|っ)|推測|想像|可能性)/;
+
+export function checkUnfoundedClaim(text: string): { code: string; why: string; matched: string }[] {
+  const hits: { code: string; why: string; matched: string }[] = [];
+  for (const raw of String(text).split(/[\n。]/)) {
+    const s = raw.trim();
+    if (s.length === 0) continue;
+    if (!ASSERTION_RE.test(s)) continue;
+    if (HEDGE_RE.test(s)) continue;
+    // 自社（私ども・弊社）について書いている文は相手の決めつけではない
+    if (/(私ども|弊社|当社)/.test(s)) continue;
+    hits.push({ code: 'ASSERT_ISSUE', why: '相手が言っていない困りごとを言い切っている', matched: s.slice(0, 40) });
+  }
+  return hits;
+}

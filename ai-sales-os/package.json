@@ -13,6 +13,8 @@
     "seed": "tsx scripts/seed.ts",
     "companies:import": "tsx scripts/companies-import.ts",
     "companies:fetch": "tsx scripts/companies-fetch.ts",
+    "companies:verify": "tsx scripts/companies-verify.ts",
+    "ready": "tsx scripts/ready.ts",
     "analyze": "tsx scripts/analyze.ts",
     "score": "tsx scripts/score.ts",
     "draft": "tsx scripts/draft.ts",
@@ -26,7 +28,8 @@
     "test": "tsx scripts/test-all.ts",
     "test:safety": "tsx scripts/test-safety.ts",
     "test:sales": "tsx scripts/test-sales.ts",
-    "test:jobs": "tsx scripts/test-jobs.ts"
+    "test:jobs": "tsx scripts/test-jobs.ts",
+    "sites:record": "tsx scripts/sites-record.ts"
   },
   "dependencies": {
     "@libsql/client": "^0.14.0",

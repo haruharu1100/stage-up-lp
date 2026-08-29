@@ -24,14 +24,19 @@ export default async function Candidates() {
   const min = await num('job.min_hourly');
   const avg = await one("SELECT AVG(expected_hourly_profit) AS v FROM job_scores WHERE verdict = 'APPLY' AND expected_hourly_profit IS NOT NULL");
 
+  // ★並び順は「取りに行く順番の点数」。時給の高い順ではない。
+  //   時給だけで並べると、作業時間を短く読み違えた案件がいつも一番上に来てしまう。
+  //   同じ中身の依頼（重複）は本家1件だけを出す。
   const rows = await all(
     `SELECT j.id, j.title, j.site_code, s.verdict, s.expected_profit AS p, s.expected_hours AS hrs,
-            s.expected_hourly_profit AS h, s.automation_score AS auto, s.priority_score AS prio, s.verdict_reason AS why,
+            s.expected_hourly_profit AS h, s.automation_score AS auto, s.verdict_reason AS why,
+            s.opportunity_score AS opp, s.win_probability AS win, s.revision_risk AS risk,
+            s.revision_risk_reason AS riskwhy, s.estimate_confidence AS conf,
             pr.status AS pstatus
        FROM job_scores s JOIN jobs j ON j.id = s.job_id
        LEFT JOIN proposals pr ON pr.job_id = j.id
-      WHERE s.verdict IN ('APPLY','HOLD')
-      ORDER BY CASE s.verdict WHEN 'APPLY' THEN 0 ELSE 1 END, s.expected_hourly_profit DESC LIMIT 120`,
+      WHERE s.verdict IN ('APPLY','HOLD') AND j.duplicate_of IS NULL
+      ORDER BY CASE s.verdict WHEN 'APPLY' THEN 0 ELSE 1 END, s.opportunity_score DESC LIMIT 120`,
   );
 
   const excluded = await all(
@@ -76,20 +81,26 @@ export default async function Candidates() {
         )}
       </Panel>
 
-      <Panel title="候補の一覧（時間あたりの利益が高い順）">
+      <Panel
+        title="候補の一覧（取りに行く順）"
+        note={`並び順は「取りに行く順番の点数」です。時間あたりの利益（40%）・取れる見込み（20%）・AIの肩代わり率（15%）・手直しの少なさ（15%）・1件で残る金額（10%）で決めています。金額の大きい順ではありません。時間あたりの利益は目標の${(target * 2).toLocaleString()}円で頭打ちにして、時給の高さだけで順番が決まらないようにしています。同じ内容の依頼は先に見つけた1件だけを出しています。`}
+      >
         {rows.length === 0 ? (
           <p className="empty">候補がまだありません。</p>
         ) : (
           <table>
             <thead>
               <tr>
+                <th className="num">取りに行く順</th>
                 <th>案件</th>
                 <th>サイト</th>
                 <th>判定</th>
                 <th className="num">想定利益</th>
                 <th className="num">想定時間</th>
                 <th className="num">時間あたり</th>
+                <th className="num">取れる見込み</th>
                 <th className="num">自動化</th>
+                <th className="num">手直し</th>
                 <th>応募文</th>
               </tr>
             </thead>
@@ -97,11 +108,18 @@ export default async function Candidates() {
               {rows.map((r) => {
                 const t = verdictTag(String(r.verdict));
                 const pt = r.pstatus ? verdictTag(String(r.pstatus)) : null;
+                const low = String(r.conf ?? 'NORMAL') === 'LOW';
                 return (
                   <tr key={String(r.id)}>
+                    <td className="num">{r.opp === null ? '—' : Number(r.opp).toFixed(1)}</td>
                     <td>
                       <Link href={`/jobs/${r.id}`}>{String(r.title)}</Link>
                       <div className="small">{String(r.why)}</div>
+                      {low ? (
+                        <div className="small">
+                          ※ 時間あたりの利益が目標の5倍を超えています。作業時間を短く読み違えている可能性があるので、応募前に見積りを確かめてください。
+                        </div>
+                      ) : null}
                     </td>
                     <td className="small">{String(r.site_code)}</td>
                     <td>
@@ -114,7 +132,11 @@ export default async function Candidates() {
                     <td className="num">
                       <Money v={r.h === null ? null : Number(r.h)} />
                     </td>
+                    <td className="num">{r.win === null ? '—' : `${Math.round(Number(r.win) * 100)}%`}</td>
                     <td className="num">{Number(r.auto)}</td>
+                    <td className="num" title={String(r.riskwhy ?? '')}>
+                      {r.risk === null ? '—' : Number(r.risk)}
+                    </td>
                     <td>{pt ? <Tag kind={pt.kind}>{pt.label}</Tag> : <span className="small">—</span>}</td>
                   </tr>
                 );

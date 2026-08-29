@@ -1,6 +1,7 @@
-import { all, nowIso, upsert, type Row } from '../db/client';
+import { all, nowIso, one, upsert, type Row } from '../db/client';
 import { checkExpression, pickVariant as variant, similarity } from '../text';
 import { num } from '../settings';
+import { READINESS_CLAIM } from '../catalog/definitions';
 import type { JobAnalysis } from './analyze';
 import type { JobScore } from './score';
 
@@ -60,13 +61,50 @@ export function proposeDeliveryDays(analysis: JobAnalysis): number {
   return Math.max(2, raw);
 }
 
-/** 案件本文から、そのまま引ける一文。読んだ証拠として応募文に入れる。 */
-function quoteFromDescription(job: Row): string | null {
+/**
+ * 案件本文から、そのまま引ける一文。読んだ証拠として応募文に入れる。
+ *
+ * ★「本文の2文目」のような固定の位置から取ってはいけない。
+ *   募集文の出だしは「〇〇をお願いします」「固定報酬でお支払いします」のように
+ *   どの案件でも同じになりやすく、そこを引用しても読んだ証拠にならないうえ、
+ *   別の案件への応募文と同じ一文になってしまう。
+ *
+ * ★もう一つ、件名で既に分かることを引用してもいけない。
+ *   件名が「サムネイル画像の作成」で、引用が「サムネイルのデザインをお願いします」では、
+ *   件名を読み直しただけで、本文を読んだことにはならない。
+ *   だから「定型句」と「件名で既に言っている言葉」の両方を外し、残りが一番多い一文を選ぶ。
+ */
+const BOILERPLATE_RE = /固定報酬|お支払い|ご相談ください|よろしくお願い|募集(します|しています)|(して|し)ください|お願いします|報酬は|納期は|分量は|[のでにをはがともや、]/g;
+
+export function quoteFromDescription(job: Row): string | null {
   const desc = String(job.description ?? '').replace(/\s+/g, '');
   if (desc.length < 20) return null;
   const parts = desc.split(/[。、]/).filter((s) => s.length >= 12);
   if (parts.length === 0) return null;
-  return parts[Math.min(parts.length - 1, 1)].slice(0, 50);
+
+  // 件名に出てくる2文字のかたまりを「既に分かっていること」として持っておく。
+  const title = String(job.title ?? '').replace(/\s+/g, '');
+  const known = new Set<string>();
+  for (let i = 0; i + 2 <= title.length; i++) known.add(title.slice(i, i + 2));
+
+  const newness = (s: string): number => {
+    const t = s.replace(BOILERPLATE_RE, '');
+    let n = 0;
+    for (let i = 0; i + 2 <= t.length; i++) if (!known.has(t.slice(i, i + 2))) n++;
+    return n;
+  };
+
+  // 残りが一番多い一文を選ぶ。同点なら先に出てくるほうを使う。
+  let best = parts[0];
+  let bestScore = -1;
+  for (const s of parts) {
+    const score = newness(s);
+    if (score > bestScore) {
+      best = s;
+      bestScore = score;
+    }
+  }
+  return best.slice(0, 50);
 }
 
 /**
@@ -81,7 +119,6 @@ function quoteFromDescription(job: Row): string | null {
  */
 function buildBody(job: Row, analysis: JobAnalysis, price: number | null, days: number): { body: string; personal: string } {
   const seed = Number(job.id) || 1;
-  const caps = analysis.matchedCaps.map((m) => m.name);
   const title = String(job.title ?? '').slice(0, 40);
   const quote = quoteFromDescription(job);
   const qty = String(job.description ?? '').match(/([0-9０-９]{1,3})\s*(本|記事|件|ページ|枚)/);
@@ -132,10 +169,12 @@ function buildBody(job: Row, analysis: JobAnalysis, price: number | null, days: 
     personal.push(qtyLine);
   }
   lines.push('【できること】');
-  for (const c of caps.slice(0, 3)) {
-    lines.push(`・${c}（自分で作って実際に運用している仕組みを使います）`);
+  // ★書き添える一言は、その道具の仕上がり具合で決まっているものだけを使う。
+  //   全部に「実際に運用しています」と書くと、試作しかない道具まで実績になってしまう（優良誤認）。
+  for (const m of analysis.matchedCaps.slice(0, 3)) {
+    lines.push(`・${m.name}（${READINESS_CLAIM[m.readiness]}）`);
     // どの道具を当てたかは案件ごとに変わるので、個別に書いた部分として数える。
-    personal.push(c);
+    personal.push(m.name);
   }
   lines.push('');
   if (price !== null) lines.push(`【お見積り】${price.toLocaleString()}円`);
@@ -186,8 +225,21 @@ async function maxSimilarityAgainstExisting(jobId: number, personal: string): Pr
 export async function buildProposal(job: Row, analysis: JobAnalysis, score: JobScore): Promise<Proposal> {
   const jobId = Number(job.id);
 
+  const empty = { jobId, body: '', personalText: '', price: null, deliveryDays: null, evidenceUsed: [], similarityMax: 0, expressionNg: [] };
+
   if (score.verdict === 'EXCLUDE') {
-    return { jobId, body: '', personalText: '', price: null, deliveryDays: null, evidenceUsed: [], similarityMax: 0, expressionNg: [], status: 'BLOCKED', blockedReason: `応募しない案件なので文面を作らない（${score.verdictReason}）` };
+    return { ...empty, status: 'BLOCKED', blockedReason: `応募しない案件なので文面を作らない（${score.verdictReason}）` };
+  }
+
+  // ★同じ中身の依頼が既に入っているときは、文面を作らずここで止める。
+  //   同じ依頼主に同じ応募文を何通も出すのは、こちらの落ち度になる。
+  //   これまでは「他の応募文と似すぎている」として止まっていたが、
+  //   それだと『文章の書き方が悪い』と読めてしまい、直しようのない指摘になっていた。
+  //   本当の理由は『同じ依頼が2回入っている』なので、そう出す。
+  if (job.duplicate_of !== null && job.duplicate_of !== undefined) {
+    const orig = await one('SELECT id, site_code, url FROM jobs WHERE id = ?', [Number(job.duplicate_of)]);
+    const where = orig ? `案件ID ${orig.id}／${orig.site_code}` : `案件ID ${job.duplicate_of}`;
+    return { ...empty, status: 'BLOCKED', blockedReason: `同じ内容の依頼が既にある（${where}）。重複応募になるので、応募はそちら1件に絞る。` };
   }
 
   const evidence = evidenceFromJob(job, analysis);

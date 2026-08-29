@@ -4,7 +4,7 @@ import { analyzeJob } from '../lib/jobs/analyze';
 import { buildProposal, saveProposal } from '../lib/jobs/proposal';
 import { decideApply, saveApplication } from '../lib/jobs/apply';
 import { listSitePolicies } from '../lib/jobs/sites';
-import type { JobScore } from '../lib/jobs/score';
+import { rowToJobScore } from '../lib/jobs/score';
 
 /**
  * 応募文を作り、応募してよいかを規約台帳で判定する。応募そのものは行わない。
@@ -44,23 +44,7 @@ async function main() {
       noScore++;
       continue;
     }
-    const score: JobScore = {
-      jobId: Number(j.id),
-      matchScore: Number(s.match_score),
-      profitScore: Number(s.profit_score),
-      winScore: Number(s.win_score),
-      automationScore: Number(s.automation_score),
-      effortScore: Number(s.effort_score),
-      riskScore: Number(s.risk_score),
-      expectedProfit: s.expected_profit === null ? null : Number(s.expected_profit),
-      expectedHours: s.expected_hours === null ? null : Number(s.expected_hours),
-      expectedHourlyProfit: s.expected_hourly_profit === null ? null : Number(s.expected_hourly_profit),
-      expectedValue: s.expected_value === null ? null : Number(s.expected_value),
-      evUnavailableReason: s.ev_unavailable_reason ? String(s.ev_unavailable_reason) : null,
-      priorityScore: Number(s.priority_score),
-      verdict: String(s.verdict) as JobScore['verdict'],
-      verdictReason: String(s.verdict_reason ?? ''),
-    };
+    const score = rowToJobScore({ ...s, job_id: Number(j.id) });
 
     const analysis = await analyzeJob(j);
     const p = await buildProposal(j, analysis, score);
