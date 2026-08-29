@@ -4,6 +4,23 @@
 
 1. `../事業Vault/AI Commerce OS/00_設計書v1_最上位.md`
 2. 同フォルダ内の全ファイル
+   - **38_Phase7設計_MULTI_MARKET_COMMERCE_ENGINE / 37_Phase6.6_仕入ルート3本確保_入口調査**
+     （**★ここが最新の最上位方針。2026-08-29 にユーザー指示で「NETSEA → Amazon の1本」を廃止し、
+     多仕入先 × 多販売先を総当たり比較して最適Routeを出す `MULTI_MARKET_COMMERCE_ENGINE` へ変更した。
+     さらに「人が仕入れた後、正式APIのある販売先へは自動出品する」が最終形に加わった。
+     38 は 00_設計書v1_最上位 の §0.5 を上書きする（§0.4 として追記済み）。
+     仕入先・販売先・自動出品・在庫・Routeスコアの話をする前に、必ず 38 → 37 の順で読む。
+     ★核心3点：①SP-APIデータのAI学習は Solution Provider Portal Agreement §6 で明文禁止
+     → `KEEPA_ANALYSIS_PIPELINE` と `AMAZON_LISTING_PIPELINE` をDB・プロセスごと分離する（ASINでのJOIN禁止）
+     ②AUP 4.3 の "Do not use external data services" によりSP-API開発者がKeepaを併用してよいか不明
+     → **Amazonへ書面照会するまでSP-API開発者登録をしない**
+     ③Yahoo!ショッピング出店API約款 第10条で取得情報を「一切保持しない」→ 蓄積・学習型パイプラインは組めない
+     ★到達点：自動探索に使える仕入先は **NETSEA 1社だけ**。国分ネット卸はNETSEA上に出展（supplier_id 903497）。
+     グッズステーションは**買えるが自動探索には使えない**（価格が登録前に見えずJANの一括取得手段が無い）。
+     販売先の第一候補は Amazon ではなく **Yahoo!ショッピング**。ヤフオク!は出品API廃止済みで `LISTING_MANUAL_REQUIRED`。
+     ★`OWNED_CONFIRMED` になるまで自動出品しない。`GLOBAL_INVENTORY_LEDGER` で二重販売を防ぐ。
+     `AUTO_REPRICE = false`。出品内容を捏造しない。画像は仕入先側と販売先側の両方がYESのときだけ使う。
+     ★Connectorは仕入側0件・販売側0件。**自動出品は開始していない。設計と調査だけが終わっている**）
    - 01_DB設計案 / 02_Phase0_外部連携調査 / 03_安全設計と事故防止 / 04_ロードマップ / 05_Obsidianナレッジ構造
    - 06_商品大量生成とパイプライン / 07_価格戦略設計 / 08_仕入先ネットワークと勝ち筋拡張
    - 09_Phase1実装記録 / 10_Phase2実装記録 / 11_Phase3実装記録 / 12_Phase3.5実装記録
