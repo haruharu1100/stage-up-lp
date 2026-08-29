@@ -1,0 +1,44 @@
+{
+  "name": "ai-sales-os",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AI営業・案件自動受注OS — 法人を見つけて売る(SYSTEM A)と、案件を見つけて受注する(SYSTEM B)を1つの利益最大化OSにする。外部送信は既定OFF。",
+  "scripts": {
+    "dev": "next dev -p 3960",
+    "build": "next build",
+    "start": "next start -p 3960",
+    "typecheck": "tsc --noEmit",
+    "init": "tsx scripts/init-db.ts",
+    "catalog:sync": "tsx scripts/catalog-sync.ts",
+    "seed": "tsx scripts/seed.ts",
+    "companies:import": "tsx scripts/companies-import.ts",
+    "companies:fetch": "tsx scripts/companies-fetch.ts",
+    "analyze": "tsx scripts/analyze.ts",
+    "score": "tsx scripts/score.ts",
+    "draft": "tsx scripts/draft.ts",
+    "jobs:import": "tsx scripts/jobs-import.ts",
+    "jobs:evaluate": "tsx scripts/jobs-evaluate.ts",
+    "jobs:propose": "tsx scripts/jobs-propose.ts",
+    "pipeline": "tsx scripts/pipeline.ts",
+    "learn": "tsx scripts/learn.ts",
+    "backtest": "tsx scripts/backtest.ts",
+    "obsidian:sync": "tsx scripts/obsidian-sync.ts",
+    "test": "tsx scripts/test-all.ts",
+    "test:safety": "tsx scripts/test-safety.ts",
+    "test:sales": "tsx scripts/test-sales.ts",
+    "test:jobs": "tsx scripts/test-jobs.ts"
+  },
+  "dependencies": {
+    "@libsql/client": "^0.14.0",
+    "next": "^15.5.23",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.4",
+    "tsx": "^4.19.2",
+    "typescript": "^5.5.4"
+  }
+}

@@ -1,0 +1,132 @@
+import { insert, nowIso, run, type Row } from '../db/client';
+
+/**
+ * 案件の足切り。
+ *
+ * ★固定ルール。ここはAIの判断で緩めない。
+ *   時間を拘束される仕事は、いくら単価が良くても取らない。
+ *   （AIで自動化できず、他の全ての仕事が止まるため）
+ *   違法・規約違反・なりすましは、金額に関係なく即除外。
+ */
+
+export type ExclusionRule = {
+  code: string;
+  label: string;
+  why: string;
+  patterns: RegExp[];
+  /** この語があれば、そのルールは当てはまらない（誤爆よけ） */
+  unless?: RegExp[];
+};
+
+export const EXCLUSION_RULES: ExclusionRule[] = [
+  {
+    code: 'FULLTIME_HOURS',
+    label: '1日8時間などの長時間拘束',
+    why: '時間を売る仕事はAIで置き換えられず、他の案件が全部止まる',
+    patterns: [/1日\s*[89１２]\s*時間/, /[89]\s*時間\s*(勤務|稼働|拘束|以上)/, /実働\s*[89]/, /フルタイム/, /8h\s*\/\s*日/i],
+  },
+  {
+    code: 'WEEKLY_FIXED',
+    label: '週5日などの固定シフト',
+    why: '曜日が固定されると他の仕事を入れられない',
+    patterns: [/週\s*[45５４]\s*日\s*(以上|固定|勤務)/, /シフト\s*制/, /月〜金/, /月曜.{0,3}金曜/],
+  },
+  {
+    code: 'EMPLOYMENT',
+    label: '正社員・アルバイト等の雇用',
+    why: '業務委託ではないので受けられない',
+    patterns: [/正社員/, /契約社員/, /アルバイト/, /パート募集/, /雇用契約/, /社会保険/, /試用期間/],
+  },
+  {
+    code: 'ONSITE',
+    label: '常駐・出社が必要',
+    why: '場所を拘束されるとAIで自動化できない',
+    patterns: [/常駐/, /出社/, /来社/, /対面(必須|での)/, /現地(作業|対応|訪問)/, /オフィス勤務/, /通勤/],
+  },
+  {
+    code: 'HOURLY_LABOR',
+    label: '時給での労働が中心',
+    why: '成果ではなく時間で払われる仕事は、AIを使うほど自分の取り分が減る',
+    patterns: [/時給\s*[0-9０-９]/, /時間単価/, /稼働時間\s*に応じて/],
+    unless: [/成果報酬/, /固定報酬/],
+  },
+  {
+    code: 'ALWAYS_ON',
+    label: '常時対応・即レス要求',
+    why: '待機そのものが拘束になる',
+    patterns: [/即レス/, /常時対応/, /24時間対応/, /チャットに\s*すぐ/, /連絡が取れる方/],
+  },
+  {
+    code: 'ILLEGAL',
+    label: '違法・犯罪に関わる',
+    why: '受けてはいけない',
+    patterns: [/名義貸し/, /口座(の)?(貸|譲渡|売買)/, /受け子/, /出し子/, /裏バイト/, /闇バイト/, /高額報酬.{0,10}即日現金/, /無在庫転売の代行/, /著作権(を)?無視/],
+  },
+  {
+    code: 'IMPERSONATION',
+    label: '本人確認の偽装・なりすまし',
+    why: 'アカウント停止と法的責任に直結する',
+    patterns: [/本人確認.{0,8}(代行|なりすまし|偽装|回避)/, /他人名義/, /身分証.{0,6}(貸|借|用意)/, /複数アカウント/, /サブ垢/],
+  },
+  {
+    code: 'THIRD_PARTY_ACCOUNT',
+    label: '第三者アカウントの操作',
+    why: '各サービスの規約違反になる',
+    patterns: [/(アカウント|ID).{0,6}(お貸し|貸与|共有|預か)/, /ログイン情報.{0,6}(共有|お渡し)/, /代理ログイン/],
+  },
+  {
+    code: 'TOS_VIOLATION',
+    label: '規約違反を求めている',
+    why: '依頼どおりに作ると規約違反になる',
+    patterns: [/スクレイピング/, /クロール(して|で).{0,10}(収集|取得)/, /自動収集/, /bot(で|を使って)/i, /CAPTCHA.{0,6}(突破|回避)/i, /規約.{0,4}(グレー|ギリギリ)/],
+  },
+  {
+    code: 'FAKE_REVIEW',
+    label: 'サクラ・やらせ',
+    why: '景表法（ステマ規制）違反になる',
+    patterns: [/サクラ/, /やらせ/, /(高評価|口コミ|レビュー).{0,8}(投稿|書いて|依頼)/, /自演/],
+  },
+  {
+    code: 'NO_AI',
+    label: 'AI利用が禁止されている',
+    why: 'AIを使えない仕事は、自分がやる意味がない（時間だけ消える）',
+    patterns: [/AI.{0,6}(禁止|不可|使用しないで|使わないで)/, /ChatGPT.{0,6}(禁止|不可)/i, /生成AI.{0,6}(禁止|不可)/, /手作業(のみ|で)/],
+  },
+  {
+    code: 'ADULT',
+    label: 'アダルト・出会い系',
+    why: '入金手段と法令の面で扱えない',
+    patterns: [/アダルト/, /出会い系/, /R-?18/i, /風俗/],
+  },
+];
+
+export type ExclusionHit = { code: string; label: string; why: string; matched: string };
+
+/** 案件の文面から、受けてはいけない理由を全部拾う。 */
+export function findExclusions(text: string): ExclusionHit[] {
+  const hits: ExclusionHit[] = [];
+  for (const rule of EXCLUSION_RULES) {
+    if (rule.unless?.some((u) => u.test(text))) continue;
+    for (const p of rule.patterns) {
+      const m = text.match(p);
+      if (m) {
+        hits.push({ code: rule.code, label: rule.label, why: rule.why, matched: m[0] });
+        break;
+      }
+    }
+  }
+  return hits;
+}
+
+/** 案件1件を判定して、除外理由をDBに残す。 */
+export async function evaluateExclusions(job: Row): Promise<ExclusionHit[]> {
+  const jobId = Number(job.id);
+  const text = [job.title, job.description, job.work_style, job.category].filter(Boolean).map(String).join('\n');
+  const hits = findExclusions(text);
+
+  await run('DELETE FROM job_exclusions WHERE job_id = ?', [jobId]);
+  for (const h of hits) {
+    await insert('job_exclusions', { job_id: jobId, rule_code: h.code, matched_text: h.matched, created_at: nowIso() });
+  }
+  return hits;
+}

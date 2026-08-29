@@ -1,0 +1,236 @@
+import { all, nowIso, upsert, type Row } from '../db/client';
+import { checkExpression, pickVariant as variant, similarity } from '../text';
+import { num } from '../settings';
+import type { JobAnalysis } from './analyze';
+import type { JobScore } from './score';
+
+/**
+ * 応募文。
+ *
+ * ★テンプレの使い回しは禁止。
+ *   その案件の本文から拾った言葉が入っていなければ作らない。
+ *   他の応募文と似すぎていたら止める。
+ * ★誇大な表現（必ず・絶対・No.1 など）が入ったら止める。
+ * ★出せる金額・納期は、見積もった時間から計算した数字だけを書く。
+ */
+
+export type Proposal = {
+  jobId: number;
+  body: string;
+  /** その案件について書いた部分だけ。使い回しの判定はここだけで行う。 */
+  personalText: string;
+  price: number | null;
+  deliveryDays: number | null;
+  evidenceUsed: string[];
+  similarityMax: number;
+  expressionNg: { code: string; why: string; matched: string }[];
+  status: 'READY' | 'BLOCKED';
+  blockedReason: string | null;
+};
+
+/** 案件本文から、実際に読んだ証拠になる言葉を拾う。 */
+export function evidenceFromJob(job: Row, analysis: JobAnalysis): string[] {
+  const out: string[] = [];
+  const title = String(job.title ?? '');
+  const desc = String(job.description ?? '');
+  if (title) out.push(`件名「${title.slice(0, 40)}」`);
+  for (const t of analysis.tasks.slice(0, 3)) out.push(`作業内容：${t}`);
+  const qty = desc.match(/([0-9０-９]{1,3})\s*(本|記事|件|ページ|枚)/);
+  if (qty) out.push(`分量：${qty[0]}`);
+  const deadline = job.deadline ? `納期：${job.deadline}` : desc.match(/(納期|締切|希望日).{0,12}/)?.[0];
+  if (deadline) out.push(String(deadline));
+  return out;
+}
+
+/** 見積もり時間と時給目標から、出す金額を決める。予算が書いてあればその範囲に収める。 */
+export async function proposePrice(job: Row, analysis: JobAnalysis): Promise<number | null> {
+  const target = await num('job.target_hourly');
+  const wanted = Math.round(analysis.estHours * target);
+  const lo = job.budget_min === null || job.budget_min === undefined ? null : Number(job.budget_min);
+  const hi = job.budget_max === null || job.budget_max === undefined ? null : Number(job.budget_max);
+  if (lo === null && hi === null) return wanted > 0 ? wanted : null;
+  const max = hi ?? lo!;
+  const min = lo ?? hi!;
+  return Math.max(min, Math.min(max, wanted));
+}
+
+export function proposeDeliveryDays(analysis: JobAnalysis): number {
+  // AIが肩代わりする割合が高いほど早い。ただし最低2日は見る（人間の確認が必ず入るため）。
+  const raw = Math.ceil(analysis.estHours / 4) + (analysis.automationRate >= 0.7 ? 1 : 3);
+  return Math.max(2, raw);
+}
+
+/** 案件本文から、そのまま引ける一文。読んだ証拠として応募文に入れる。 */
+function quoteFromDescription(job: Row): string | null {
+  const desc = String(job.description ?? '').replace(/\s+/g, '');
+  if (desc.length < 20) return null;
+  const parts = desc.split(/[。、]/).filter((s) => s.length >= 12);
+  if (parts.length === 0) return null;
+  return parts[Math.min(parts.length - 1, 1)].slice(0, 50);
+}
+
+/**
+ * 応募文を組み立てる。
+ *
+ * body     … 実際に送る全文
+ * personal … そのうち「この案件について書いた部分」だけ
+ *
+ * 使い回しの判定に全文を使うと、見積り・納期・締めの挨拶といった
+ * どの応募文でも同じになる部分だけで似た判定になり、
+ * ちゃんと個別に書けている文まで止まってしまう。だから比べるのは personal だけにする。
+ */
+function buildBody(job: Row, analysis: JobAnalysis, price: number | null, days: number): { body: string; personal: string } {
+  const seed = Number(job.id) || 1;
+  const caps = analysis.matchedCaps.map((m) => m.name);
+  const title = String(job.title ?? '').slice(0, 40);
+  const quote = quoteFromDescription(job);
+  const qty = String(job.description ?? '').match(/([0-9０-９]{1,3})\s*(本|記事|件|ページ|枚)/);
+  const lines: string[] = [];
+  const personal: string[] = [];
+
+  lines.push(
+    variant(
+      [
+        'はじめまして。ご依頼を拝見しました。',
+        'はじめてご連絡します。募集内容を読ませていただきました。',
+        'ご依頼の内容を拝見し、応募いたします。',
+        '募集を拝見しました。お力になれそうでしたのでご連絡します。',
+      ],
+      seed,
+      0,
+    ),
+  );
+  lines.push('');
+  const taskLine = variant(
+    [
+      `「${title}」について、${analysis.tasks.join('・')}の部分を担当できます。`,
+      `「${title}」のうち、${analysis.tasks.join('と')}をお引き受けできます。`,
+      `${analysis.tasks.join('・')}が中心と読みました。「${title}」であればお手伝いできます。`,
+      `ご依頼「${title}」は、${analysis.tasks.join('・')}が要になると理解しています。そこを担当できます。`,
+    ],
+    seed,
+    1,
+  );
+  lines.push(taskLine);
+  personal.push(taskLine);
+  if (quote) {
+    const quoteLine = variant(
+      [
+        `本文にある「${quote}」という点は、特に注意して進めます。`,
+        `「${quote}」と書かれていた部分を、いちばん外せない条件として扱います。`,
+        `「${quote}」というご要望に沿う形でお出しします。`,
+      ],
+      seed,
+      2,
+    );
+    lines.push(quoteLine);
+    personal.push(quoteLine);
+  }
+  if (qty) {
+    const qtyLine = `${qty[0]}という分量で承知しています。`;
+    lines.push(qtyLine);
+    personal.push(qtyLine);
+  }
+  lines.push('【できること】');
+  for (const c of caps.slice(0, 3)) {
+    lines.push(`・${c}（自分で作って実際に運用している仕組みを使います）`);
+    // どの道具を当てたかは案件ごとに変わるので、個別に書いた部分として数える。
+    personal.push(c);
+  }
+  lines.push('');
+  if (price !== null) lines.push(`【お見積り】${price.toLocaleString()}円`);
+  lines.push(`【納期】ご依頼確定から${days}日`);
+  lines.push('');
+  lines.push(
+    variant(
+      [
+        '作ったものは、そのまま出さずに一度こちらで内容を確認してからお渡しします。',
+        '納品前に必ず自分で見直し、確認してからお渡しします。',
+        'お渡しする前に、事実関係と表現を一度点検します。',
+      ],
+      seed,
+      3,
+    ),
+  );
+  lines.push(
+    variant(
+      [
+        'ご希望と違う部分があれば、着手前に擦り合わせさせてください。',
+        '認識がずれていそうな点があれば、先に確認させてください。',
+        '進め方のご希望があれば、着手前に合わせます。',
+      ],
+      seed,
+      4,
+    ),
+  );
+  lines.push('');
+  lines.push('よろしくお願いいたします。');
+  return { body: lines.join('\n'), personal: personal.join('\n') };
+}
+
+/**
+ * 他の応募文とどれだけ似ているか。
+ * 比べるのは「その案件について書いた部分」だけ。見積り・納期・挨拶は比べない。
+ * 比較相手は READY のものだけにする（止めた文まで相手にすると、1本の似た文で連鎖的に全部止まる）。
+ */
+async function maxSimilarityAgainstExisting(jobId: number, personal: string): Promise<number> {
+  const rows = await all("SELECT personal_text FROM proposals WHERE job_id <> ? AND status = 'READY' ORDER BY id DESC LIMIT 200", [jobId]);
+  let max = 0;
+  for (const r of rows) {
+    const s = similarity(personal, String(r.personal_text ?? ''));
+    if (s > max) max = s;
+  }
+  return Number(max.toFixed(3));
+}
+
+export async function buildProposal(job: Row, analysis: JobAnalysis, score: JobScore): Promise<Proposal> {
+  const jobId = Number(job.id);
+
+  if (score.verdict === 'EXCLUDE') {
+    return { jobId, body: '', personalText: '', price: null, deliveryDays: null, evidenceUsed: [], similarityMax: 0, expressionNg: [], status: 'BLOCKED', blockedReason: `応募しない案件なので文面を作らない（${score.verdictReason}）` };
+  }
+
+  const evidence = evidenceFromJob(job, analysis);
+  const price = await proposePrice(job, analysis);
+  const days = proposeDeliveryDays(analysis);
+  const { body, personal } = buildBody(job, analysis, price, days);
+
+  const expressionNg = checkExpression(body);
+  const similarityMax = await maxSimilarityAgainstExisting(jobId, personal);
+  const maxSim = await num('draft.max_similarity');
+
+  let status: Proposal['status'] = 'READY';
+  let blockedReason: string | null = null;
+  if (expressionNg.length > 0) {
+    status = 'BLOCKED';
+    blockedReason = `使えない表現が入っている: ${expressionNg.map((e) => `「${e.matched}」`).join('、')}`;
+  } else if (evidence.length < 2) {
+    status = 'BLOCKED';
+    blockedReason = '案件本文から読み取れた内容が少なすぎる。テンプレ文になるので応募しない。';
+  } else if (similarityMax > maxSim) {
+    status = 'BLOCKED';
+    blockedReason = `他の応募文と似すぎている（類似度${similarityMax}／上限${maxSim}）`;
+  }
+
+  return { jobId, body, personalText: personal, price, deliveryDays: days, evidenceUsed: evidence, similarityMax, expressionNg, status, blockedReason };
+}
+
+export async function saveProposal(p: Proposal): Promise<void> {
+  await upsert(
+    'proposals',
+    {
+      job_id: p.jobId,
+      body: p.body,
+      personal_text: p.personalText,
+      price: p.price,
+      delivery_days: p.deliveryDays,
+      evidence_used: JSON.stringify(p.evidenceUsed),
+      similarity_max: p.similarityMax,
+      expression_ng: JSON.stringify(p.expressionNg),
+      status: p.status,
+      blocked_reason: p.blockedReason,
+      created_at: nowIso(),
+    },
+    ['job_id'],
+  );
+}
