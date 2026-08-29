@@ -28,8 +28,16 @@
      LINEヤフー回答前は **Yahoo! APIのLive接続を禁止**／NETSEA回答前は **Live接続を禁止**。
      ★Amazon問い合わせ文（6問）とLINEヤフー問い合わせ文（5問）は 39番に完成形で入っている。
      **AIは送らない。人が送る**（`CONTACT_VENUE_BY_AI_ALLOWED = false`）。
-     ★最初の出品テストは 1商品 →【停止】→ 人が13項目確認 → 5商品 →【停止】。
-     `OWNED_CONFIRMED = true` でなければ出品しない）
+     ★**「本命」＝「着工可能」ではない（2026-08-29 ユーザー確定・39番 §7.7）。**
+     Route C は `PRIMARY_CANDIDATE` であって `READY_TO_BUILD` ではない。
+     **仕入側Gate（NETSEA回答→原文貼付→E1〜E4判定→受入テスト4本PASS）と
+     販売側Gate（Shopifyの P1 Partner契約要否／P2 オーナー本人のAI利用同意の残し方／
+     P3 価格自動更新を正式APIで行えるか の3点が全部確定）の両方がPASSして初めて、
+     1商品 READ ONLY テストへ進む。** P1〜P3のどれか1つでもUNKNOWNのうちはShopify実装を開始しない。
+     ★最初の出品テストは READ ONLY → 1商品 →【停止】→ 人が13項目確認 → 5商品 →【停止】。
+     `OWNED_CONFIRMED = true` でなければ出品しない。
+     ★NETSEAの催促日は **2026-09-07（月）**（8/27から7営業日後。旧記載の9/5は土曜で誤り）。
+     2回目の別窓口は 2026-09-16（水））
    - **38_Phase7設計_MULTI_MARKET_COMMERCE_ENGINE / 37_Phase6.6_仕入ルート3本確保_入口調査**
      （**★ここが最新の最上位方針。2026-08-29 にユーザー指示で「NETSEA → Amazon の1本」を廃止し、
      多仕入先 × 多販売先を総当たり比較して最適Routeを出す `MULTI_MARKET_COMMERCE_ENGINE` へ変更した。
