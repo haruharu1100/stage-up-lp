@@ -11,6 +11,18 @@ updated: 2026-08-25
 
 # Phase 5 — AUTO RESEARCH ORCHESTRATOR
 
+> [!warning] **部分SUPERSEDED（2026-08-29）**
+> **探索の出口を Amazon 1本にする前提は無効。**
+> 販売先は複数市場へ拡張した（38番 第4部 BUY×SELL ROUTE MATRIX）。
+> 順位は **1位 Shopify ／ 2位 Yahoo!ショッピング ／ 3位 Amazon**。
+>
+> - **無効になった部分**：Keepa → 需要の強いASIN → Amazonで売る、という単一の出口。
+> - **今も有効な部分**：Connector Interface（正式取得7段階）、Candidate Queue（8状態）、
+>   Research Score、Cheap Filter First、`EXPECTED_PROFIT_PER_30D`、Scheduler の安全停止。
+>
+> 最新は **`39_Phase7_根幹規約確認と最初の実運用Route確定.md`** と `00_設計書v1_最上位.md` §0.4。
+> 古い記述は削除しない（ルール76）。
+
 > [!danger] この文書の位置づけ
 > **主経路が変わった。** [[00_設計書v1_最上位]] §0.5 と一体で読む。
 > **`PRIMARY WORKFLOW = AUTO RESEARCH` ／ `MANUAL INPUT = FALLBACK`。**

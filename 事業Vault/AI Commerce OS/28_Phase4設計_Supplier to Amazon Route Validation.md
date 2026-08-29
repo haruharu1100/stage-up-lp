@@ -8,6 +8,20 @@ updated: 2026-08-25
 
 # 28_Phase4設計_Supplier to Amazon Route Validation
 
+> [!warning] **部分SUPERSEDED（2026-08-29）**
+> **「販売先＝Amazon固定」という前提はもう使わない。**
+> Amazon SP-API 側に AI/機械学習の学習禁止条項と、Keepa 併用の疑義があり、
+> 販売先の順位は **1位 Shopify ／ 2位 Yahoo!ショッピング ／ 3位 Amazon** に変わった。
+> Amazon へ問い合わせて回答が来るまで、**SP-API の新規Live実装と開発者登録を禁止。**
+>
+> - **無効になった部分**：販売先をAmazonに固定する前提。「Amazon想定販売価格」を唯一の出口とする設計。
+> - **今も有効な部分**：Route検証の考え方（仕入値 → 販売値 → 手数料 → 保守純利益 → ROI）、
+>   Match Gate（HIGH/REVIEW/REJECTED）、Amazon費用と自社費用の分離、MAX_BUY_PRICE、脱落理由の分類。
+>   これらは販売先を差し替えても、そのまま使える。
+>
+> 最新は **`39_Phase7_根幹規約確認と最初の実運用Route確定.md`** と `00_設計書v1_最上位.md` §0.4。
+> 古い記述は削除しない（ルール76）。
+
 作成日：2026-08-25
 対象：`ai-commerce-os/`（AI Commerce OS・ポート3910）
 前記録：`27_Phase3.15実測記録_Keepa100件テスト.md`

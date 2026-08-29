@@ -4,6 +4,32 @@
 
 1. `../事業Vault/AI Commerce OS/00_設計書v1_最上位.md`
 2. 同フォルダ内の全ファイル
+   - **39_Phase7_根幹規約確認と最初の実運用Route確定**
+     （**★ここが最新。2026-08-29。38番の直後の実務ノート。販売先の順位をここで確定した。
+     ★「販売先は Amazon を最優先」という過去方針は SUPERSEDED（廃止）。28番・29番の
+     「販売先＝Amazon固定」も部分SUPERSEDED（古い記述は削除せず残す＝ルール76）。
+     ★確定した順位：1位 NETSEA→**Shopify**（`FIRST_SELF_OWNED_SELLING_CHANNEL`）／
+     2位 NETSEA→Yahoo!ショッピング／3位 NETSEA→Amazon。
+     選定理由は「一番売れる」ではなく **「一番安全に自動化できる」**。
+     ★Routeの判断は必ず3階層に分けて混ぜない：`LEGAL_ELIGIBLE`（規約上使ってよいか）／
+     `TECHNICALLY_AVAILABLE`（自動化できるか）／`ECONOMICALLY_ATTRACTIVE`（儲かるか）。
+     LEGAL_ELIGIBLE が UNKNOWN の Route は技術・利益がどれだけ良くても進めない。
+     ECONOMICALLY_ATTRACTIVE は**全Route UNKNOWN**（実測0件。0%とは書かない＝ルール116）。
+     ★Shopifyの重要事実：API規約 2.3.24 に Amazon と同型の **AI/機械学習 学習禁止条項がある**が、
+     「当該マーチャント本人の同意」で解除できる例外があり自分が店主なので使える見込み
+     → ただし同意の形式が未定義のため `ML_TRAINING_ALLOWED(shopify) = UNKNOWN`。
+     管理画面からのカスタムアプリ新規作成は2026年に停止（Dev Dashboard 経由）
+     → **Partner Program Agreement への同意が必要かが最大の未確認事項**。
+     Yahoo!のような全面データ保持禁止は**無い**（目的限定＋用済み30日削除の弱い制限のみ）。
+     契約主体 Shopify Commerce Singapore Pte. Ltd.／管轄シンガポール／準拠法カナダ・オンタリオ州／英語版優先。
+     **管理画面のUI自動操作は明文で禁止（2.3.9）→ Playwright等で管理画面を叩かない。必ずAPI経由。**
+     Basic 年払い 月3,650円／国内カード 3.55%／Shopify Payments 非使用で +2%。
+     ★禁止事項（3つとも回答が来るまで）：Amazon回答前は **SP-APIの新規Live実装と開発者登録を禁止**／
+     LINEヤフー回答前は **Yahoo! APIのLive接続を禁止**／NETSEA回答前は **Live接続を禁止**。
+     ★Amazon問い合わせ文（6問）とLINEヤフー問い合わせ文（5問）は 39番に完成形で入っている。
+     **AIは送らない。人が送る**（`CONTACT_VENUE_BY_AI_ALLOWED = false`）。
+     ★最初の出品テストは 1商品 →【停止】→ 人が13項目確認 → 5商品 →【停止】。
+     `OWNED_CONFIRMED = true` でなければ出品しない）
    - **38_Phase7設計_MULTI_MARKET_COMMERCE_ENGINE / 37_Phase6.6_仕入ルート3本確保_入口調査**
      （**★ここが最新の最上位方針。2026-08-29 にユーザー指示で「NETSEA → Amazon の1本」を廃止し、
      多仕入先 × 多販売先を総当たり比較して最適Routeを出す `MULTI_MARKET_COMMERCE_ENGINE` へ変更した。
