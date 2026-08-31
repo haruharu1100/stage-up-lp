@@ -38,6 +38,55 @@ const BUTTONS: { href: string; label: string; note: string }[] = [
 
 const pctOf = (v: unknown) => `${Math.round(Number(v ?? 0) * 100)}%`;
 
+/**
+ * 「今日見る10件」の1件ぶん。
+ *
+ * ★スマホで横に指を滑らせないと読めない表は、毎日は見られない。
+ *   毎日見るものは、縦に並んだ10枚のカードにする。
+ *   細かい数字（点数・依頼主の危なさ・道具の仕上がり）は、開いたときだけ出す。
+ */
+function Row({
+  rank,
+  href,
+  name,
+  sub,
+  amount,
+  amountNote,
+  audit,
+}: {
+  rank: number;
+  href: string;
+  name: string;
+  sub: string;
+  amount: string;
+  amountNote?: string;
+  audit: string | null;
+}) {
+  return (
+    <li className="day10-item">
+      <span className="day10-rank">{rank}</span>
+      <span className="day10-main">
+        <Link href={href} className="day10-name">
+          {name}
+        </Link>
+        <span className="day10-sub">{sub}</span>
+      </span>
+      <span className="day10-right">
+        <span className="day10-amount" title={amountNote ?? ''}>
+          {amount}
+        </span>
+        {audit === null ? (
+          <Tag kind="mute">未監査</Tag>
+        ) : audit === 'PASS' ? (
+          <Tag kind="ok">監査通過</Tag>
+        ) : (
+          <Tag kind="warn">{audit}</Tag>
+        )}
+      </span>
+    </li>
+  );
+}
+
 export default async function Dashboard() {
   // ---------------------------------------------------------------- 数え上げ（REALのみ）
   const realCompanies = Number(await scalar(`SELECT COUNT(*) FROM companies WHERE ${REAL_SQL}`));
@@ -128,6 +177,32 @@ export default async function Dashboard() {
         </div>
       ) : null}
 
+      {/* ★毎日の運用は「この10件だけ見る」に固定する。
+          会社250社・案件を全部読む運用は続かない。続かない運用は、必ずどこかで見落としになる。
+          10件そろっていないときは、そろっていないと正面から書く。数を埋めるために基準は下げない。 */}
+      <div className="banner">
+        <b>
+          今日見るのは {top5Companies.length + top5Jobs.length}件です（営業 {top5Companies.length}社 ／ 案件 {top5Jobs.length}件）。
+        </b>
+        {top5Companies.length + top5Jobs.length < 10 ? (
+          <>
+            10件そろっていないのは、
+            {top5Companies.length < 5 ? `監査を通った会社が${top5Companies.length}社しかない` : ''}
+            {top5Companies.length < 5 && top5Jobs.length < 5 ? '／' : ''}
+            {top5Jobs.length < 5 ? `本物の案件が${realJobs}件しか入っていない` : ''}
+            ためです。数をそろえるために基準は下げていません。
+            {realJobs === 0 ? (
+              <>
+                {' '}
+                <Link href="/jobs/inbox">案件を貼る →</Link>
+              </>
+            ) : null}
+          </>
+        ) : (
+          'この10件以外は、今日は見なくて構いません。'
+        )}
+      </div>
+
       {/* ============================================ ① 最初に営業する5社 */}
       <Panel
         title="最初に営業する5社"
@@ -137,9 +212,33 @@ export default async function Dashboard() {
           <p className="empty">
             まだ決まっていません（本物の会社 {realCompanies}社）。
             <br />
-            ターミナルで <code>npm run rank</code> → <code>npm run audit:top20</code> の順に実行すると、ここに5社並びます。
+            会社に点を付ける処理と、文面を別のAIが監査する処理が、まだ一度も走っていません。
+            会社データを入れ直したあとは、この2つを流し直す必要があります（パソコンでの作業です）。
           </p>
         ) : (
+          <>
+            {/* ★ふだん見るのはこの5行だけ。横スクロールなしで、指1本で読み切れる形にする。 */}
+            <ul className="day10">
+              {top5Companies.map((c) => (
+                <Row
+                  key={String(c.id)}
+                  rank={Number(c.rank)}
+                  href={`/companies/${c.id}`}
+                  name={String(c.name)}
+                  sub={`${INDUSTRY_LABEL[String(c.industry) as IndustryKey] ?? '業種不明'}／${CHANNEL_JA[String(c.channel)] ?? '手段未定'}／${c.offer ? String(c.offer) : '売るもの未定'}`}
+                  amount={c.profit === null ? '利益は未算出' : `利益 ${Number(c.profit).toLocaleString()}円`}
+                  amountNote={c.profit === null ? String(c.noAmount ?? '') : undefined}
+                  audit={c.audit === null || c.audit === undefined ? null : String(c.audit)}
+                />
+              ))}
+            </ul>
+            <p className="note">
+              5社ぶんの18項目を1枚ずつ確かめるときは <Link href="/leads/top5">営業する5社の資料</Link> を開いてください。
+            </p>
+
+            <details className="more">
+              <summary>細かい数字も見る（業種・金額・成約見込み）</summary>
+              <div className="body">
           <div className="tablewrap">
           <table>
             <thead>
@@ -185,6 +284,9 @@ export default async function Dashboard() {
             </tbody>
           </table>
           </div>
+              </div>
+            </details>
+          </>
         )}
         {/* ★金額が1件も出せていないときは、その理由を表の外にも出す。
             表の中の「—」だけだと、値段を決め忘れているのか計算が壊れているのか分からない。 */}
@@ -231,6 +333,26 @@ export default async function Dashboard() {
                 : '20件を超えているので、順位は安定して見てよい段階です。'}{' '}
               <Link href="/jobs/top5">1件ずつ19項目で確かめる →</Link>
             </div>
+
+            {/* ★こちらも、ふだん見るのは5行だけ。 */}
+            <ul className="day10">
+              {top5Jobs.map((j, i) => (
+                <Row
+                  key={String(j.id)}
+                  rank={j.rank === null || j.rank === undefined ? i + 1 : Number(j.rank)}
+                  href={`/jobs/${j.id}`}
+                  name={String(j.title)}
+                  sub={`${String(j.site_code)}／${j.hours === null ? '時間は未算出' : `約${Number(j.hours).toFixed(1)}時間`}／${READINESS_LABEL[String(j.readiness) as Readiness] ?? '道具の仕上がり不明'}`}
+                  amount={j.hourly === null ? '時給は未算出' : `時給 ${Number(j.hourly).toLocaleString()}円`}
+                  amountNote={String(j.conf) === 'LOW' ? '見積りの確からしさが低いので、応募前に人が読んでください。' : undefined}
+                  audit={j.audit === null || j.audit === undefined ? null : String(j.audit)}
+                />
+              ))}
+            </ul>
+
+            <details className="more">
+              <summary>細かい数字も見る（点数・利益・依頼主の危なさ）</summary>
+              <div className="body">
             <div className="tablewrap">
               <table>
                 <thead>
@@ -280,6 +402,8 @@ export default async function Dashboard() {
                 </tbody>
               </table>
             </div>
+              </div>
+            </details>
           </>
         )}
       </Panel>

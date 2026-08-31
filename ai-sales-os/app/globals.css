@@ -556,6 +556,88 @@ details.more > .body {
   padding: 0 16px 16px;
 }
 
+/* 「今日見る10件」の並び。
+   毎日見るものなので、横スクロールを一切起こさない形にしてある。
+   1行が指1本ぶんの高さ（44px以上）を持ち、名前のどこを押しても資料へ飛ぶ。 */
+.day10 {
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow: hidden;
+  background: #fff;
+}
+.day10-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--line);
+}
+.day10-item:last-child {
+  border-bottom: none;
+}
+.day10-rank {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  background: var(--line);
+  color: var(--fg);
+  font-size: 13px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.day10-main {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.day10-name {
+  display: block;
+  font-weight: 700;
+  font-size: 15px;
+  line-height: 1.4;
+  word-break: break-word;
+}
+.day10-sub {
+  display: block;
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.6;
+  margin-top: 2px;
+  word-break: break-word;
+}
+.day10-right {
+  flex: none;
+  text-align: right;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+.day10-amount {
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+@media (max-width: 820px) {
+  /* 幅の狭い画面では、金額と監査の札を名前の下へ回して折り返しを防ぐ。 */
+  .day10-item {
+    flex-wrap: wrap;
+  }
+  .day10-right {
+    width: 100%;
+    flex-direction: row;
+    justify-content: flex-start;
+    align-items: center;
+    padding-left: 34px;
+  }
+}
+
 @media (max-width: 820px) {
   .shell {
     display: block;
