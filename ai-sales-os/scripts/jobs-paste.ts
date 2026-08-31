@@ -3,8 +3,8 @@ import path from 'node:path';
 import { migrate, nowIso, scalar } from '../lib/db/client';
 import { initSettings } from '../lib/settings';
 import { seedJobSites } from '../lib/jobs/sites';
-import { CollectionBlocked, ingestJob, type JobInput } from '../lib/jobs/ingest';
 import { parsePastedJob } from '../lib/jobs/paste';
+import { intakeJob, pastedToIntake } from '../lib/jobs/intake';
 import { REAL_SQL } from '../lib/origin';
 
 /**
@@ -85,45 +85,32 @@ async function main() {
   let rejected = 0;
   const notes: string[] = [];
 
+  // ★取り込みの道は1本だけにする（intakeJob）。
+  //   以前ここだけ別の関数を直接呼んでいたため、画面から入れた案件には効く検査が、
+  //   このコマンドから入れた案件には効いていなかった。効かない側でしか事故は起きない。
   for (const f of files) {
     const text = fs.readFileSync(path.join(INBOX_DIR, f), 'utf8');
     const p = parsePastedJob(text);
-    if (p.problems.length > 0) {
+    const { input } = pastedToIntake(text, nowIso());
+
+    const res = await intakeJob(input);
+    if (!res.ok) {
       rejected++;
-      for (const q of p.problems) notes.push(`${f}: ${q}`);
+      for (const q of res.problems) notes.push(`${f}: ${q}`);
       continue;
     }
+    if (res.isNew) added++;
+    else known++;
 
-    const input: JobInput = {
-      siteCode: p.siteCode,
-      title: p.title,
-      description: p.body,
-      budgetMin: p.budgetMin,
-      budgetMax: p.budgetMax,
-      deadline: p.deadline,
-      url: p.url,
-      source: 'MANUAL',
-      // ★URLが分かっているものと、本文だけのものは、信じてよい範囲が違う。入口を分けて記録する。
-      inboxSource: p.url ? 'MANUAL_URL' : 'MANUAL_TEXT',
-      inboxReceivedAt: nowIso(),
-    };
-
-    try {
-      const res = await ingestJob(input);
-      if (res.isNew) added++;
-      else known++;
-      console.log(`  ${res.isNew ? '新規' : '既出'} … ${p.title.slice(0, 46)}`);
-      console.log(`         サイト＝${p.siteCode} / 入口＝${input.inboxSource}`);
-      console.log(
-        `         予算＝${p.budgetMin === null ? '書かれていない（空のまま）' : `${p.budgetMin.toLocaleString()}〜${(p.budgetMax ?? p.budgetMin).toLocaleString()}円`}`
-        + ` / 締切＝${p.deadline ?? '書かれていない（空のまま）'}`,
-      );
-      for (const e of p.evidence) console.log(`         根拠（${e.field}）＝「${e.matched.slice(0, 60)}」`);
-      if (res.excluded.length > 0) console.log(`         ★受けない判定: ${res.excluded.join('、')}`);
-    } catch (err) {
-      rejected++;
-      notes.push(`${f}: ${err instanceof CollectionBlocked ? err.message : String(err)}`);
-    }
+    console.log(`  ${res.isNew ? '新規' : '既出'} … ${p.title.slice(0, 46)}`);
+    console.log(`         サイト＝${p.siteCode ?? 'URLのドメインから台帳へ自動で追加'} / 入口＝${input.inboxSource}`);
+    console.log(
+      `         予算＝${p.budgetMin === null ? '書かれていない（空のまま）' : `${p.budgetMin.toLocaleString()}〜${(p.budgetMax ?? p.budgetMin).toLocaleString()}円`}`
+      + ` / 締切＝${p.deadline ?? '書かれていない（空のまま）'}`,
+    );
+    for (const e of p.evidence) console.log(`         根拠（${e.field}）＝「${e.matched.slice(0, 60)}」`);
+    if (res.duplicateOf !== null) console.log(`         同じ依頼として案件#${res.duplicateOf}に束ねた（${res.duplicateReason ?? '根拠なし'}）`);
+    if (res.excluded.length > 0) console.log(`         ★受けない判定: ${res.excluded.join('、')}`);
   }
 
   console.log('');

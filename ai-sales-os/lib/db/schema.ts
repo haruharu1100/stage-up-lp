@@ -671,6 +671,13 @@ export const COLUMN_ADDITIONS: string[] = [
   `ALTER TABLE job_sites ADD COLUMN guideline_url TEXT`,
   `ALTER TABLE job_sites ADD COLUMN robots_summary TEXT`,
 
+  // ★人が貼ったURLのドメインが台帳に無いとき、その1件を捨てずに済むようにする列。
+  //   これまでは「台帳に無いサイト」というだけで取り込みを断っていた。
+  //   だが本当に困るのは、外で見つけた本物の案件が、貼った瞬間に消えることのほうだった。
+  //   代わりに台帳へ行だけ作り、規約の判定は全部 UNKNOWN のままにする。
+  //   UNKNOWN は「安全」という意味ではない。UNKNOWN のサイトの案件は自動では応募へ進まない。
+  `ALTER TABLE job_sites ADD COLUMN auto_registered INTEGER NOT NULL DEFAULT 0`,
+
   // 文面・応募文の採点を保存する（弱めずに質を上げたことを数字で示すため）
   `ALTER TABLE outreach_drafts ADD COLUMN quality_scores TEXT`,
   `ALTER TABLE proposals ADD COLUMN quality_scores TEXT`,

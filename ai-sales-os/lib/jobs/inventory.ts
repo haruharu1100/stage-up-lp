@@ -1,5 +1,5 @@
 import { all, scalar } from '../db/client';
-import { ORIGIN_JA, type DataOrigin } from '../origin';
+import { JOB_DATA_ORIGINS, ORIGIN_JA, type DataOrigin } from '../origin';
 import { INBOX_SOURCE_JA, type InboxSource } from './inbox';
 
 /**
@@ -27,6 +27,15 @@ export type JobInventory = {
   hardBlocked: number;
   byInbox: InventoryLine[];
   byOrigin: InventoryLine[];
+  /**
+   * 本物（REAL）の案件だけを、5つの入力元ごとに数えたもの。
+   *
+   * ★0件の入力元も必ず1行出す。
+   *   「本物20件」とだけ言われても、それが全部手入力なのか、
+   *   サイトから届いた通知メールなのかで、信じてよい範囲がまるで違う。
+   *   使っていない入力元の行を消すと、「使っていない」のか「そもそも無い」のか分からなくなる。
+   */
+  realByOrigin: InventoryLine[];
 };
 
 export async function jobInventory(): Promise<JobInventory> {
@@ -44,6 +53,15 @@ export async function jobInventory(): Promise<JobInventory> {
     `SELECT COALESCE(data_origin, '') AS k, COUNT(*) AS n FROM jobs GROUP BY k ORDER BY n DESC`,
   );
 
+  // ★5つの入力元は、件数が0でも必ず並べる（存在しないのではなく、まだ使っていないだけ）。
+  const realCounts = new Map<string, number>();
+  for (const r of originRows) realCounts.set(String(r.k ?? ''), Number(r.n));
+  const realByOrigin: InventoryLine[] = JOB_DATA_ORIGINS.map((k) => ({
+    key: k,
+    labelJa: ORIGIN_JA[k],
+    count: realCounts.get(k) ?? 0,
+  }));
+
   return {
     total,
     real,
@@ -51,6 +69,7 @@ export async function jobInventory(): Promise<JobInventory> {
     originals: total - duplicates,
     duplicates,
     hardBlocked,
+    realByOrigin,
     byInbox: inboxRows.map((r) => {
       const k = String(r.k ?? '');
       return {

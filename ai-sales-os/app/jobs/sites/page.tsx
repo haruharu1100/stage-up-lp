@@ -18,6 +18,7 @@ export default async function Sites() {
   const autoOk = sites.filter((s) => s.effectivePolicy === 'AUTO_ALLOWED').length;
   const needApproval = sites.filter((s) => s.effectivePolicy === 'APPROVAL_REQUIRED').length;
   const unknown = sites.filter((s) => s.effectivePolicy === 'UNKNOWN' || s.effectivePolicy === 'PROHIBITED').length;
+  const autoAdded = sites.filter((s) => s.autoRegistered).length;
 
   return (
     <Page
@@ -29,7 +30,23 @@ export default async function Sites() {
         <Kpi label="自動応募OK" value={autoOk} unit="件" hint="明確な許可の記述があるサイトだけ" />
         <Kpi label="人が1クリックで承認" value={needApproval} unit="件" />
         <Kpi label="応募しない・不明" value={unknown} unit="件" />
+        <Kpi
+          label="自動で足りた行（未読）"
+          value={autoAdded}
+          unit="件"
+          hint={autoAdded === 0 ? undefined : '貼られた案件のURLから足した行。規約をまだ誰も読んでいない'}
+        />
       </Kpis>
+
+      {/* ★自動で足りた行は放置すると溜まる。溜まるほど「人が読む」に回る案件が増え、
+          応募する5件が空のままになる。だから件数と読む順番をここで先に出す。 */}
+      {autoAdded > 0 ? (
+        <div className="banner">
+          <b>規約をまだ読んでいないサイトが {autoAdded}件あります。</b>
+          貼られた案件のURLから自動で足した行です。読むまで、このサイトの案件は点数が高くても「人が読む」に回り、
+          応募する5件には入りません。案件が多く入っているサイトから順に読むのがいちばん早く効きます。
+        </div>
+      ) : null}
 
       <Panel
         title="この台帳の決まりごと"
@@ -59,7 +76,10 @@ export default async function Sites() {
         const m = MODE_JA[s.effectivePolicy] ?? MODE_JA.UNKNOWN;
         const c = collect.get(s.code);
         return (
-          <Panel key={s.code} title={`${s.name}（${s.code}）`}>
+          <Panel
+            key={s.code}
+            title={`${s.name}（${s.code}）${s.autoRegistered ? '　※自動で足した行・規約は未読' : ''}`}
+          >
             <table>
               <tbody>
                 <tr>

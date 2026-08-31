@@ -1,7 +1,18 @@
 import { all, one, scalar } from '../lib/db/client';
 import { initSettings, num } from '../lib/settings';
 import { findExclusions } from '../lib/jobs/exclude';
-import { listSitePolicies, sitePolicy, recordTosCheck, canCollect, PUBLIC_JOB_API_SURVEY, SITE_SEEDS } from '../lib/jobs/sites';
+import {
+  listSitePolicies,
+  sitePolicy,
+  recordTosCheck,
+  canCollect,
+  autoSiteCodeForHost,
+  autoSiteCodeForUrl,
+  registerUnknownSite,
+  PUBLIC_JOB_API_SURVEY,
+  SITE_SEEDS,
+} from '../lib/jobs/sites';
+import { REQUIRED_MIN_REAL, top5StageOf } from '../lib/jobs/stage';
 import { decideApply } from '../lib/jobs/apply';
 import {
   GMAIL_ADAPTER_CONNECTED,
@@ -640,12 +651,15 @@ async function main() {
   );
   m.eq('予算と書かれていない数字を金額にしない', decoy.budgetMin, null);
 
-  // ★台帳に無いサイトのURLは取り込まない。
+  // ★台帳に無いサイトのURLでも、案件そのものは捨てない。
+  //   以前はここで断っていたが、断ると外で見つけた本物の案件が貼った瞬間に消えていた。
+  //   捨てない代わりに、どのサイトか決められないことを null で残す（勝手に既知のサイト扱いにしない）。
   const pastedUnknown = parsePastedJob(
     'テスト案件\nhttps://example.com/jobs/1\n'
     + '本文をある程度の長さで書いておかないと、短すぎるという別の理由で断られてしまいます。',
   );
-  m.check('規約台帳に無いサイトのURLは取り込まない', pastedUnknown.problems.some((p) => p.includes('規約台帳')), pastedUnknown.problems.join(' / '));
+  m.check('規約台帳に無いサイトのURLでも案件を捨てない', pastedUnknown.problems.length === 0, pastedUnknown.problems.join(' / ') || '断らなかった');
+  m.eq('どのサイトか決められないときは、既知のサイト扱いにしない', pastedUnknown.siteCode, null);
 
   // ★URLだけ貼られても受け取らない（中身が無ければ判断できない）。
   m.check('URLだけの貼り付けは受け取らない', parsePastedJob('https://www.lancers.jp/work/detail/1').problems.length > 0, '断った');
@@ -985,7 +999,136 @@ async function main() {
     `SELECT COUNT(*) FROM jobs WHERE inbox_source = 'REFERRAL' AND (referral_from IS NULL OR referral_from = '')`,
   );
   iv.eq('紹介案件なのに紹介者が残っていない案件', referralNoFrom, 0, '件');
+
+  // ★5つの入力元は、0件でも必ず1行出す。
+  //   行を消すと「使っていない」のか「そもそもその道が無い」のかが分からなくなる。
+  iv.eq('本物の案件の入力元が5つとも並んでいる', inv.realByOrigin.length, JOB_DATA_ORIGINS.length, '行');
+  iv.check(
+    '入力元ごとの合計が、本物の案件数と一致する',
+    inv.realByOrigin.reduce((n, l) => n + l.count, 0) === inv.real,
+    `入力元の合計: ${inv.realByOrigin.reduce((n, l) => n + l.count, 0)}件 / 本物: ${inv.real}件`,
+  );
+  iv.check(
+    '入力元の行に、練習用（TEST）が混ざっていない',
+    inv.realByOrigin.every((l) => l.key !== 'TEST'),
+    inv.realByOrigin.map((l) => `${l.key}=${l.count}`).join('／'),
+  );
   iv.print();
+
+  // ================================================================
+  // 暫定TOP5と正式TOP5の言い分け
+  // ================================================================
+  // ★同じ5件がトップ画面・案件TOP5の資料・取り込み後のメッセージの3か所に出る。
+  //   3か所で別々に「20件以上か」を書くと、必ずどこかが古いまま残り、
+  //   暫定の順位を正式だと思った人が1件目を出してしまう。だから言い方を1か所に固定する。
+  const st = new Suite('暫定TOP5と正式TOP5の言い分け（1か所で決める）');
+  st.eq('正式に切り替わる件数は20件', REQUIRED_MIN_REAL, 20, '件');
+
+  const s0 = top5StageOf(0);
+  st.eq('0件のときは暫定', s0.headingJa, '暫定TOP5');
+  st.eq('0件のときも件数を隠さない', s0.badgeJa, '暫定：REAL案件0件中');
+  st.check('0件のときは正式ではない', s0.official === false, `official=${s0.official}`);
+
+  const s1 = top5StageOf(1);
+  st.eq('1件のときは暫定', s1.headingJa, '暫定TOP5');
+  st.check('1件のときは残り19件と書く', s1.noteJa.includes('19件足りません'), s1.noteJa);
+
+  const s19 = top5StageOf(19);
+  st.eq('19件のときは暫定のまま', s19.headingJa, '暫定TOP5');
+  st.eq('19件のときの言い方', s19.badgeJa, '暫定：REAL案件19件中');
+  st.check('19件のときは残り1件と書く', s19.noteJa.includes('1件足りません'), s19.noteJa);
+
+  const s20 = top5StageOf(20);
+  st.eq('20件ちょうどで正式に変わる', s20.headingJa, '正式TOP5');
+  st.eq('20件のときの言い方', s20.badgeJa, '正式：REAL案件20件中');
+  st.check('20件のときは正式', s20.official === true, `official=${s20.official}`);
+
+  const s21 = top5StageOf(21);
+  st.eq('21件でも正式のまま', s21.headingJa, '正式TOP5');
+
+  // ★件数をそろえるために基準を下げない。下げたら「正式」の意味が消える。
+  st.check(
+    '暫定のときは「基準を下げていない」と必ず書く',
+    [s0, s1, s19].every((s) => s.noteJa.includes('基準は下げていません')),
+    s19.noteJa,
+  );
+  st.check(
+    'マイナスの件数を渡しても0件として扱う（負の件数を表示しない）',
+    top5StageOf(-5).realTotal === 0,
+    `realTotal=${top5StageOf(-5).realTotal}`,
+  );
+  st.print();
+
+  // ================================================================
+  // 知らないサイトの案件を捨てない（ただし規約は未確認のまま）
+  // ================================================================
+  // ★以前は、貼られたURLのドメインが規約台帳に無いというだけで、その案件を丸ごと捨てていた。
+  //   外で見つけた本物の案件が、貼った瞬間に消えるほうが実際には困る。
+  //   いまは台帳に行だけ作って案件を残す。ただし規約は全部「分からない」のままにする。
+  //   ★「分からない」は「安全」ではない。分からないサイトの案件は自動で応募へ進めない。
+  const us = new Suite('知らないサイトの案件を捨てない（規約は未確認のまま）');
+  us.eq('ドメインからサイトコードを作れる', autoSiteCodeForHost('example-jobboard.jp'), 'EXAMPLE_JOBBOARD_JP');
+  us.eq('www と大文字小文字の違いで別のサイト扱いにしない', autoSiteCodeForHost('WWW.Example.CO.JP'), 'EXAMPLE_CO_JP');
+  us.eq('ドメインに見えない文字列は受け付けない', autoSiteCodeForHost('localhost'), null);
+  us.eq('空文字は受け付けない', autoSiteCodeForHost(''), null);
+  us.eq('IPアドレスは受け付けない', autoSiteCodeForHost('192.168.0.1'), null);
+  us.eq('URLからドメインだけ取り出す', autoSiteCodeForUrl('https://example-jobboard.jp/jobs/12345?a=1'), 'EXAMPLE_JOBBOARD_JP');
+  us.eq('URLでない文字列からは作らない', autoSiteCodeForUrl('ふつうの文章です'), null);
+  us.eq('URLでない文字列では台帳に行を作らない', await registerUnknownSite('ふつうの文章です'), null);
+
+  // ★人が規約を読んで記録した行を、機械が上書きしない。
+  //   上書きすると「なぜ応募してよいと判断したか」の根拠が消える。
+  const humanSites = (await listSitePolicies()).filter((s) => !s.autoRegistered);
+  us.atLeast('人が規約を読んで記録した行がある', humanSites.length, 1, '件');
+  us.check(
+    '人が読んだ行には、規約の引用と確認日が必ずある',
+    humanSites.every((s) => s.policyQuote !== null && s.checkedAt !== null),
+    humanSites.map((s) => `${s.code}=${s.policyQuote ? '引用あり' : '引用なし'}`).join('／'),
+  );
+
+  const autoSites = (await listSitePolicies()).filter((s) => s.autoRegistered);
+  us.check(
+    '自動で足した行は、必ず全部「分からない」のまま',
+    autoSites.every((s) => s.effectivePolicy === 'UNKNOWN'),
+    autoSites.map((s) => `${s.code}=${s.effectivePolicy}`).join('／') || '（0件）',
+  );
+  us.check(
+    '自動で足した行に、規約の引用や確認日を勝手に書いていない',
+    autoSites.every((s) => s.policyQuote === null && s.checkedAt === null),
+    autoSites.map((s) => `${s.code}=${s.policyQuote ?? '引用なし'}`).join('／') || '（0件）',
+  );
+  us.check(
+    '自動で足した行は「自動で足した」と分かるようになっている',
+    autoSites.every((s) => s.autoRegistered === true),
+    `${autoSites.length}件`,
+  );
+
+  // ★規約を誰も読んでいないサイトの案件が、応募する5件へ入っていないこと。
+  const autoRanked = await scalar(
+    `SELECT COUNT(*) FROM jobs j
+       JOIN job_sites s ON s.code = j.site_code
+       JOIN job_scores sc ON sc.job_id = j.id
+      WHERE s.auto_registered = 1 AND sc.final_rank IS NOT NULL`,
+  );
+  us.eq('規約が未確認のサイトの案件が、応募する5件に入っている件数', autoRanked, 0, '件');
+
+  const autoApplied = await scalar(
+    `SELECT COUNT(*) FROM applications a
+       JOIN jobs j ON j.id = a.job_id
+       JOIN job_sites s ON s.code = j.site_code
+      WHERE s.auto_registered = 1 AND a.action = 'PLANNED'`,
+  );
+  us.eq('規約が未確認のサイトの案件が、自動応募の予定に入っている件数', autoApplied, 0, '件');
+
+  // ★架空のドメイン（.test / .example / .invalid / .localhost）を本物として数えていないこと。
+  //   動作確認のために貼ったURLが残ると、本物の案件数がその分だけ多く見える。
+  const fakeDomainJobs = await scalar(
+    `SELECT COUNT(*) FROM jobs
+      WHERE data_origin <> 'TEST'
+        AND (url LIKE '%.test/%' OR url LIKE '%.example/%' OR url LIKE '%.invalid/%' OR url LIKE '%.localhost/%')`,
+  );
+  us.eq('架空のドメインの案件が本物として数えられている件数', fakeDomainJobs, 0, '件');
+  us.print();
 
   // ================================================================
   // 別の目（監査）が、本当に落とせるか
@@ -1235,7 +1378,7 @@ async function main() {
   );
   ds.print();
 
-  finish([r, i, v, o, p, q, g, b, m, cr, dd, ib, iv, au, ds]);
+  finish([r, i, v, o, p, q, g, b, m, cr, dd, ib, iv, st, us, au, ds]);
 }
 
 main().catch((e) => {

@@ -7,6 +7,7 @@ import { EXTERNAL_ACTIONS_IMPLEMENTED } from '../lib/env';
 import { DEFAULT_SETTINGS, loadSettings } from '../lib/settings';
 import { EXCLUSION_RULES } from '../lib/jobs/exclude';
 import { listSitePolicies, TOS_RECHECK_DAYS } from '../lib/jobs/sites';
+import { REQUIRED_MIN_REAL, top5StageOf } from '../lib/jobs/stage';
 import { listLearnings } from '../lib/learning';
 import { ACTUAL_RESULT_JA, PREDICTED_BASIS_JA, calibration, learningReadiness, listOutcomes } from '../lib/outcome';
 import { METRIC_DEFS } from '../lib/metrics';
@@ -124,6 +125,8 @@ ${table(
 - 本物として外へ出す前に通す条件は14個。1つでも欠けたら実行しない（→ 24_LIVE実行の設計.md）
 - パスワード・鍵は**コード・Git・Obsidian・ログ・画面・報告本文のどこにも置かない**（→ 25_クラウド運用と認証情報.md）
 - **練習用（TEST）の案件を本物として数えない**（→ 26_REAL案件の入口とランキング.md）
+- 本物の案件が${REQUIRED_MIN_REAL}件そろうまでは **「暫定TOP5」**。件数を揃えるために基準は下げない（→ 26_REAL案件の入口とランキング.md）
+- **規約を誰も読んでいないサイトの案件は捨てないが、応募する5件にも入れない**（→ 26_REAL案件の入口とランキング.md）
 
 ## 毎日の使い方（この形を崩さない）
 
@@ -1110,6 +1113,7 @@ ${
   // ---------------------------------------------------------------- 26
   const realJobCount = Number(await scalar(`SELECT COUNT(*) FROM jobs WHERE data_origin <> 'TEST'`));
   const testJobCount = Number(await scalar(`SELECT COUNT(*) FROM jobs WHERE data_origin = 'TEST'`));
+  const realStage = top5StageOf(realJobCount);
   write(
     '26_REAL案件の入口とランキング.md',
     head(
@@ -1122,7 +1126,20 @@ ${
 | --- | --- |
 | 本物（REAL）の案件 | **${realJobCount}件** |
 | 練習用（TEST）の案件 | ${testJobCount}件 |
-| 自動ランキングを始める件数 | 20件 |
+| 正式TOP5に切り替わる件数 | ${REQUIRED_MIN_REAL}件 |
+| いまの表示 | **${realStage.headingJa}（${realStage.badgeJa}）** |
+
+## ★暫定TOP5と正式TOP5（言い方を1か所に固定する）
+
+本物の案件が${REQUIRED_MIN_REAL}件そろうまでは、いくら点数が高くても **「暫定TOP5」** と書きます。
+見出しの横には必ず **「暫定：REAL案件◯件中」** を添えます。${REQUIRED_MIN_REAL}件以上そろったら **「正式TOP5」** に変わります。
+
+- **20件未満でも止めません。**入っているぶんだけで並べて、暫定として出します。
+- **件数を揃えるために基準は下げません。**足りないときは「あと何件足りないか」をそのまま画面に書きます。
+- この言い回しは \`lib/jobs/stage.ts\` の1か所だけで作ります。
+  トップ画面・案件TOP5の資料・取り込み後のメッセージの3か所に同じ5件が出るので、
+  3か所で別々に「20件以上か」を書くと必ずどこかが古いまま残り、
+  **暫定の順位を正式だと思った人が1件目を出してしまいます。**
 
 ## 入れ方（スマホから貼るだけ）
 
@@ -1155,6 +1172,26 @@ ${
 | REAL_OFFICIAL_API | 公式APIから取った案件 |
 
 規約に反するサイトの機械収集は行いません。求人以外のメールは案件にしません。
+
+## ★知らないサイトの案件を捨てない（ただし規約は未確認のまま）
+
+以前は、貼られたURLのドメインが規約台帳に無いというだけで、その案件を丸ごと捨てていました。
+外で見つけた本物の案件が、貼った瞬間に消えるほうが実際には困るので、いまはこうします。
+
+1. 台帳にドメインの行だけを作る（\`auto_registered = 1\`）
+2. **規約の判定は全部「分からない（UNKNOWN）」のまま**にする。引用も確認日も勝手に書かない
+3. 案件そのものは残る
+
+**「分からない」は「安全」という意味ではありません。**
+分からないサイトの案件は、点数がいくら高くても「人が読む」に回り、**応募する5件には入りません**。
+規約台帳の画面には「自動で足りた行（未読）」として件数を出し、放置して溜まらないようにします。
+
+人が規約を読んで記録した行を、機械が上書きすることはありません。
+上書きすると「なぜ応募してよいと判断したか」の根拠が消えるためです。
+
+動作確認のために架空のURLを貼ってしまったときは、\`npx tsx scripts/jobs-delete.ts <案件番号>\` で案件を消し、
+\`npx tsx scripts/sites-forget.ts <サイトコード>\` で自動で足した行を消します。
+**動作確認用の案件を本物として数えたままにしません。**
 
 ## 順位の付け方（10個の指標）
 

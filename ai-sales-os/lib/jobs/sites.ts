@@ -145,6 +145,98 @@ export async function seedJobSites(): Promise<number> {
   return n;
 }
 
+/**
+ * 台帳に無いドメインのために、サイトコードを作る。
+ *
+ * ★推測ではない。見たままのドメインを大文字にして記号を _ に置き換えるだけ。
+ *   「wantedly.com のことだから WANTEDLY だろう」とは考えない。
+ *   同じサイトが2つの名前で台帳に入るより、見たままの1つで入るほうが後から直せる。
+ */
+export function autoSiteCodeForHost(host: string): string | null {
+  const h = String(host ?? '').trim().toLowerCase().replace(/^www\./, '');
+  if (h === '' || !/^[a-z0-9.-]+\.[a-z]{2,}$/.test(h)) return null;
+  return h.replace(/[^a-z0-9]+/g, '_').toUpperCase();
+}
+
+/** URLからサイトコードを作る。URLとして読めなければ null。 */
+export function autoSiteCodeForUrl(url: string): string | null {
+  try {
+    return autoSiteCodeForHost(new URL(url).hostname);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * 台帳に無いドメインの案件を、捨てずに受け取るための行を作る。
+ *
+ * ★なぜ必要か。
+ *   これまでは「URLのサイトが台帳に無い」というだけで、その1件を丸ごと断っていた。
+ *   だが実際に困るのは、外で見つけた本物の案件が、貼った瞬間に消えることのほうだった。
+ *   案件が消えれば、そもそも規約を読む理由も生まれない。
+ *
+ * ★ここで規約の判定は一切しない。
+ *   read_policy も application_mode も UNKNOWN のまま入れる。
+ *   UNKNOWN は「安全」ではない。UNKNOWN のサイトの案件は、
+ *   点数が高くても監査で「人が読む」に回り、応募の候補には上がらない。
+ *
+ * ★既にある行は絶対に書き換えない。
+ *   人が規約を読んで入れた判定を、自動登録が上書きしてはいけない。
+ */
+export async function registerUnknownSite(url: string): Promise<{ code: string; created: boolean } | null> {
+  const code = autoSiteCodeForUrl(url);
+  if (code === null) return null;
+
+  const exists = await one('SELECT id FROM job_sites WHERE code = ?', [code]);
+  if (exists) return { code, created: false };
+
+  let host = '';
+  let origin = '';
+  try {
+    const u = new URL(url);
+    host = u.hostname.toLowerCase().replace(/^www\./, '');
+    origin = u.origin;
+  } catch {
+    return null;
+  }
+
+  await upsert(
+    'job_sites',
+    {
+      code,
+      // ★サイトの正式名称は分からない。分からないので、見たままのドメインを名前にする。
+      name: host,
+      url: origin,
+      tos_url: null,
+      robots_url: `${origin}/robots.txt`,
+      has_official_api: 'UNKNOWN',
+      api_available: 'UNKNOWN',
+      official_automation_available: 'UNKNOWN',
+      read_policy: 'UNKNOWN',
+      auto_apply_policy: 'UNKNOWN',
+      application_mode: 'UNKNOWN',
+      automation_status: 'UNKNOWN',
+      evidence_quote: null,
+      policy_quote_or_summary: null,
+      evidence_url: null,
+      policy_url: null,
+      guideline_url: null,
+      robots_summary: null,
+      checked_at: null,
+      policy_checked_at: null,
+      next_review_at: null,
+      reason:
+        '人が貼った案件のURLから、ドメインだけを台帳に足した。規約はまだ誰も読んでいない。'
+        + '読むまでは、このサイトの案件を自動で応募へ進めない。',
+      note: '自動で足した行（未確認のサイト）。規約を読んだら「規約台帳」から確認結果を入れること。',
+      auto_registered: 1,
+      updated_at: nowIso(),
+    },
+    ['code'],
+  );
+  return { code, created: true };
+}
+
 /** 確認日から次の再確認日を出す（180日）。 */
 export function nextReviewAt(checkedAt: string): string {
   const t = new Date(checkedAt).getTime();
@@ -240,6 +332,8 @@ export type SitePolicy = {
   robotsSummary: string | null;
   recordedReason: string | null;
   nextReviewAt: string | null;
+  /** 人が貼ったURLから自動で足した行か。人が規約を読むまで true のまま。 */
+  autoRegistered: boolean;
 };
 
 function staleness(checkedAt: string | null): number | null {
@@ -259,6 +353,7 @@ const EMPTY_DETAIL = {
   robotsSummary: null,
   recordedReason: null,
   nextReviewAt: null,
+  autoRegistered: false,
 } as const;
 
 /** そのサイトで自動応募してよいか。証拠が無い・古い場合は UNKNOWN に落とす。 */
@@ -312,6 +407,7 @@ export async function sitePolicy(code: string): Promise<SitePolicy> {
     robotsSummary: s(r.robots_summary),
     recordedReason: s(r.reason),
     nextReviewAt: s(r.next_review_at),
+    autoRegistered: Number(r.auto_registered ?? 0) === 1,
   };
 }
 

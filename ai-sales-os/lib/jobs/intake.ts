@@ -24,7 +24,7 @@ import { ORIGIN_JA, originForJobSource, type DataOrigin } from '../origin';
 import { CollectionBlocked, ingestJob, guessBudgetType, type JobInput } from './ingest';
 import { INBOX_SOURCE_JA, isJobAlertSender, jobAlertSiteFor, toInboxSource, type InboxSource } from './inbox';
 import { parsePastedJob, siteCodeForUrl } from './paste';
-import { sitePolicy } from './sites';
+import { registerUnknownSite, sitePolicy } from './sites';
 
 /** 6つの入口すべてで共通の受け取り形。入口によって「必須」が変わるだけ。 */
 export type IntakeInput = {
@@ -187,18 +187,27 @@ export async function intakeJob(input: Partial<IntakeInput>): Promise<IntakeResu
 
   // ── どのサイトの規約でこの案件を判断するかを決める。
   //    ①メール通知なら差出人から ②URLがあればURLのドメインから ③どちらも無ければ MANUAL。
+  //
+  // ★台帳に無いドメインでも、この1件を捨てない。
+  //   以前はここで断っていたが、外で見つけた本物の案件が、貼った瞬間に消えていた。
+  //   案件が消えると、そのサイトの規約を読む理由すら生まれない。
+  //   代わりに、そのドメインの行を台帳へ作る。判定は全部 UNKNOWN のまま入る。
+  //   UNKNOWN は「安全」という意味ではない。UNKNOWN のサイトの案件は、
+  //   点数が高くても監査で「人が読む」に回り、応募の候補には上がらない。
   let siteCode: string;
   if (source === 'EMAIL_ALERT') {
     siteCode = String(jobAlertSiteFor(String(input.sender ?? '')));
   } else if (url !== null) {
     const fromUrl = siteCodeForUrl(url);
-    if (fromUrl === null) {
-      return {
-        ...none,
-        problems: [`URL「${url}」のサイトが規約台帳にありません。台帳に足すまで取り込みません（どのサイトの規約で判断すればよいか言えないため）。`],
-      };
+    if (fromUrl !== null) {
+      siteCode = fromUrl;
+    } else {
+      const registered = await registerUnknownSite(url);
+      if (registered === null) {
+        return { ...none, problems: [`案件ページのURL「${url}」からサイトのドメインを読み取れませんでした。`] };
+      }
+      siteCode = registered.code;
     }
-    siteCode = fromUrl;
   } else {
     siteCode = (s(input.source_site) ?? 'MANUAL').toUpperCase();
   }

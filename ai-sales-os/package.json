@@ -30,6 +30,7 @@
     "jobs:import": "tsx scripts/jobs-import.ts",
     "jobs:inbox": "tsx scripts/job-inbox.ts",
     "jobs:paste": "tsx scripts/jobs-paste.ts",
+    "jobs:delete": "tsx scripts/jobs-delete.ts",
     "jobs:evaluate": "tsx scripts/jobs-evaluate.ts",
     "jobs:propose": "tsx scripts/jobs-propose.ts",
     "jobs:audit": "tsx scripts/jobs-audit.ts",
@@ -42,7 +43,8 @@
     "test:safety": "tsx scripts/test-safety.ts",
     "test:sales": "tsx scripts/test-sales.ts",
     "test:jobs": "tsx scripts/test-jobs.ts",
-    "sites:record": "tsx scripts/sites-record.ts"
+    "sites:record": "tsx scripts/sites-record.ts",
+    "sites:forget": "tsx scripts/sites-forget.ts"
   },
   "dependencies": {
     "@libsql/client": "^0.14.0",

@@ -6,6 +6,7 @@ import { REAL_SQL, TEST_SQL } from '../lib/origin';
 import { learningReadiness } from '../lib/outcome';
 import { READINESS_LABEL, type Readiness } from '../lib/catalog/definitions';
 import { INDUSTRY_LABEL, type IndustryKey } from '../lib/industry';
+import { top5StageOf } from '../lib/jobs/stage';
 import { CHANNEL_JA, Kpi, Kpis, Page, Panel, Tag } from './ui';
 
 export const dynamic = 'force-dynamic';
@@ -93,6 +94,10 @@ export default async function Dashboard() {
   const realJobs = Number(await scalar(`SELECT COUNT(*) FROM jobs WHERE ${REAL_SQL}`));
   const testCompanies = Number(await scalar(`SELECT COUNT(*) FROM companies WHERE ${TEST_SQL}`));
   const testJobs = Number(await scalar(`SELECT COUNT(*) FROM jobs WHERE ${TEST_SQL}`));
+
+  // ★案件TOP5が「暫定」か「正式」かは lib/jobs/stage.ts の1か所だけで決める。
+  //   画面ごとに20件かどうかを書き分けると、必ずどこかが古いままになる。
+  const jobStage = top5StageOf(realJobs);
 
   const sentActual = Number(await scalar('SELECT COUNT(*) FROM outreach_logs WHERE executed = 1'));
   const appliedActual = Number(await scalar('SELECT COUNT(*) FROM applications WHERE executed = 1'));
@@ -301,12 +306,12 @@ export default async function Dashboard() {
 
       {/* ============================================ ② 最初に応募する5案件 */}
       <Panel
-        title="最初に応募する5案件"
+        title={`最初に応募する5案件（${jobStage.headingJa}）`}
         note="時間あたりに残る利益を中心に並べ、手直しの起きやすさと依頼主の危なさを引いた順番です。応募は行いません。"
       >
         {top5Jobs.length === 0 ? (
           <p className="empty">
-            まだ決まっていません（本物の案件 {realJobs}件）。
+            まだ決まっていません（{jobStage.badgeJa}）。
             <br />
             <Link href="/jobs/inbox">案件を貼る</Link> から案件ページやメールの本文を貼ってください。
             貼ると、重複の確認・仕事内容の読み取り・足切り・利益の計算・応募文の下書き・規約の確認まで自動で走り、ここに並びます。
@@ -318,20 +323,11 @@ export default async function Dashboard() {
             {/* ★いま出している順位が「監査を通ったもの」か「点数だけの暫定」かを必ず言う。
                 同じ見た目の表で意味が違うと、人は暫定を確定と思って1件目を出してしまう。 */}
             <div className="banner">
-              {jobsAudited ? (
-                <>
-                  <b>別のAIの監査を通った順位です。</b>
-                </>
-              ) : (
-                <>
-                  <b>点数だけの暫定順位です（監査がまだ走っていません）。</b>
-                </>
-              )}
-              本物の案件は {realJobs}件。
-              {realJobs < 20
-                ? `目安の20件に${20 - realJobs}件足りないので、この順位はまだ入れ替わります。件数を揃えるために基準は下げていません。`
-                : '20件を超えているので、順位は安定して見てよい段階です。'}{' '}
-              <Link href="/jobs/top5">1件ずつ19項目で確かめる →</Link>
+              <b>
+                {jobStage.headingJa}（{jobStage.badgeJa}）
+              </b>
+              {jobsAudited ? '別のAIの監査を通った順位です。' : '監査がまだ走っていないので、点数だけで並べています。'}
+              {jobStage.noteJa} <Link href="/jobs/top5">1件ずつ19項目で確かめる →</Link>
             </div>
 
             {/* ★こちらも、ふだん見るのは5行だけ。 */}

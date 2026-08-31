@@ -1,6 +1,7 @@
 import { GMAIL_ADAPTER_CONNECTED, JOB_ALERT_SENDERS, gmailQuery } from '../../../lib/jobs/inbox';
 import { jobInventory } from '../../../lib/jobs/inventory';
 import { listSitePolicies } from '../../../lib/jobs/sites';
+import { top5Stage } from '../../../lib/jobs/stage';
 import { Empty, Kpi, Kpis, Page, Panel, Tag } from '../../ui';
 import { csvJobsAction, gmailAlertAction, pasteJobsAction, quickJobAction, referralJobAction } from './actions';
 
@@ -43,6 +44,7 @@ export default async function JobInbox({ searchParams }: { searchParams: Promise
   const sp = await searchParams;
   const inv = await jobInventory();
   const sites = await listSitePolicies();
+  const stage = await top5Stage();
 
   return (
     <Page
@@ -104,6 +106,47 @@ export default async function JobInbox({ searchParams }: { searchParams: Promise
         <Kpi label="同じ依頼として束ねた" value={inv.duplicates} unit="件" />
         <Kpi label="足切りに当たった" value={inv.hardBlocked} unit="件" hint="常駐・週5・AI利用禁止など" />
       </Kpis>
+
+      {/* ★あと何件でTOP5が「正式」になるかを、貼る画面にも出す。
+          貼る手を止めるかどうかは、この数字だけで決められるようにする。 */}
+      <div className="banner">
+        <b>
+          いまの案件TOP5は{stage.headingJa}です（{stage.badgeJa}）。
+        </b>
+        {stage.noteJa}
+      </div>
+
+      <Panel title="本物の案件が、どの入口から入ったか" note="0件の入口も消さずに出します（使っていないのか、そもそも無いのかを分けるため）。">
+        <div className="tablewrap">
+          <table>
+            <thead>
+              <tr>
+                <th style={{ width: 190 }}>入力元</th>
+                <th>意味</th>
+                <th style={{ width: 80 }}>件数</th>
+              </tr>
+            </thead>
+            <tbody>
+              {inv.realByOrigin.map((r) => (
+                <tr key={r.key}>
+                  <td className="small">{r.key}</td>
+                  <td className="small">{r.labelJa}</td>
+                  <td>{r.count.toLocaleString()}</td>
+                </tr>
+              ))}
+              <tr>
+                <td className="small">
+                  <strong>合計（本物）</strong>
+                </td>
+                <td className="small">練習用（TEST）は1件も含みません</td>
+                <td>
+                  <strong>{inv.real.toLocaleString()}</strong>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </Panel>
 
       {/* ---------------------------------------------------------------- ここから下は畳んでおく */}
       <details className="more">
@@ -349,6 +392,13 @@ export default async function JobInbox({ searchParams }: { searchParams: Promise
               </li>
               <li>
                 <strong>入口を言えない案件は本物として数えません。</strong>練習用（TEST）のまま残り、本物の件数には混ざりません。
+              </li>
+              <li>
+                <strong>知らないサイトの案件でも、捨てずに受け取ります。</strong>
+                規約台帳に無いドメインのURLだったときは、そのドメインを台帳に足したうえで取り込みます。
+                ただし規約はまだ誰も読んでいないので「未確認」のままです。
+                <strong>未確認は「安全」ではありません。</strong>未確認のサイトの案件は、点数が高くても
+                「人が読む」に回り、応募する5件には入りません。
               </li>
             </ul>
           </Panel>

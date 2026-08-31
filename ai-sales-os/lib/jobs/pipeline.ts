@@ -41,7 +41,11 @@ export type JobPipelineResult = {
   summaryJa: string;
 };
 
-const REQUIRED_MIN_REAL = 20;
+/**
+ * 本物の案件が何件そろったら「正式なTOP5」と呼んでよいか。
+ * ★この数字は lib/jobs/stage.ts が持つ。暫定か正式かの言い回しも全部そこで作る。
+ */
+import { REQUIRED_MIN_REAL, top5StageOf } from './stage';
 
 function step(key: string, label: string, state: JobStepState, detail: string): JobStep {
   return { key, label, state, detail };
@@ -270,10 +274,10 @@ export async function runRankingAndAudit(): Promise<RankingResult> {
     await run('UPDATE job_scores SET final_rank = ? WHERE job_id = ?', [i + 1, Number(top5[i].id)]);
   }
 
-  const thresholdMet = realTotal >= REQUIRED_MIN_REAL;
-  const noteJa = thresholdMet
-    ? `本物の案件が${realTotal}件そろったので、10個の見方で順位を付け、上位${jobs.length}件を別の目で監査しました。`
-    : `本物の案件は${realTotal}件で、まだ${REQUIRED_MIN_REAL}件に届いていません。いまあるぶんだけで暫定の順位を出しています。件数を揃えるために基準は下げていません。`;
+  // ★暫定か正式かの言い回しは stage.ts の1か所だけで作る。ここで書き分けない。
+  const stage = top5StageOf(realTotal);
+  const thresholdMet = stage.official;
+  const noteJa = `${stage.headingJa}（${stage.badgeJa}）：上位${jobs.length}件を別の目で監査しました。${stage.noteJa}`;
 
   return {
     realTotal,

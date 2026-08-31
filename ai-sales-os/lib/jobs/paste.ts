@@ -17,7 +17,12 @@
 
 /** 貼られた文章から読み取った1件。読み取れなかった項目は null。 */
 export type PastedJob = {
-  siteCode: string;
+  /**
+   * 規約台帳のサイトコード。
+   * URLが無ければ 'MANUAL'。URLはあるが台帳に無いドメインなら null
+   * （取り込み側で、そのドメインの行を台帳へ作る）。
+   */
+  siteCode: string | null;
   title: string;
   body: string;
   url: string | null;
@@ -127,14 +132,13 @@ export function parsePastedJob(text: string): PastedJob {
     problems.push('本文が短すぎます（30文字未満）。URLだけでは、受けるかどうかを判断できません。');
   }
 
-  // ★URLがあるのに、規約台帳に無いサイトなら取り込まない。
-  //   どのサイトの規約でこの案件を判断すればよいのか言えなくなるため。
-  let siteCode = 'MANUAL';
-  if (url) {
-    const code = siteCodeForUrl(url);
-    if (code) siteCode = code;
-    else problems.push(`URL「${url}」のサイトが規約台帳にありません。台帳に足すまで取り込みません。`);
-  }
+  // ★URLがあるのに規約台帳に無いサイトでも、その1件を捨てない。
+  //   以前はここで断っていたが、断ると外で見つけた本物の案件が貼った瞬間に消えていた。
+  //   代わりにサイトコードを null にして返し、取り込み側（intake.ts）で
+  //   台帳へドメインの行だけ作る。規約の判定は全部 UNKNOWN のまま入る。
+  //   UNKNOWN は「安全」ではないので、そのサイトの案件は自動では応募へ進まない。
+  let siteCode: string | null = 'MANUAL';
+  if (url) siteCode = siteCodeForUrl(url);
 
   const b = readBudget(body);
   const deadline = readDeadline(body);

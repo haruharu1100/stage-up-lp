@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { jobDossiers, type JobDossier } from '../../../lib/jobs/dossier';
+import { top5Stage } from '../../../lib/jobs/stage';
 import { Empty, Money, Page, Panel, SafetyBanner, Tag, Unknown } from '../../ui';
 
 export const dynamic = 'force-dynamic';
@@ -295,13 +296,23 @@ function Dossier({ d }: { d: JobDossier }) {
 
 export default async function JobsTop5() {
   const list = await jobDossiers();
+  const stage = await top5Stage();
 
   return (
     <Page
-      title="最初に応募する5案件"
+      title={`最初に応募する5案件（${stage.headingJa}）`}
       lead="1案件につき19項目を1枚にまとめています。分からない欄は空欄にせず「—（理由）」と出します。数字が出せない欄に0は入れません。"
     >
       <SafetyBanner what="案件への応募と納品" />
+
+      {/* ★この順位が暫定か正式かを、案件が1件も無いときも含めて必ず先に言う。
+          同じ見た目の資料で意味が違うと、人は暫定を確定と思って1件目を出してしまう。 */}
+      <div className="banner">
+        <b>
+          {stage.headingJa}（{stage.badgeJa}）
+        </b>
+        {stage.noteJa}
+      </div>
 
       {list.length === 0 ? (
         <Empty>
