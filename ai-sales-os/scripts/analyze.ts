@@ -3,17 +3,20 @@ import { initSettings } from '../lib/settings';
 import { analyzeCompany, saveAnalysis } from '../lib/sales/analyze';
 import { INDUSTRY_LABEL, type IndustryKey } from '../lib/industry';
 import { NEED_LABEL, type NeedKey } from '../lib/needs';
+import { SCOPE_JA, scopeFromArgv, scopeSql } from './_scope';
 
 /**
  * 会社を1社ずつ読んで「何をしている会社か」「何に困っていそうか」を出す。
  * 会社側へは何も送らない。読んで書き留めるだけ。
  *
- * 使い方: npm run analyze
+ * 使い方: npm run analyze -- --real （本物だけ）／ --test （練習用だけ）／ 省略で全部
  */
 
 async function main() {
   await initSettings();
-  const companies = await all('SELECT * FROM companies ORDER BY id');
+  const scope = scopeFromArgv();
+  console.log(`■ 対象: ${SCOPE_JA[scope]}`);
+  const companies = await all(`SELECT * FROM companies WHERE ${scopeSql(scope)} ORDER BY id`);
   if (companies.length === 0) {
     console.log('会社が1件も入っていません。先に npm run seed か npm run companies:import を実行してください。');
     return;

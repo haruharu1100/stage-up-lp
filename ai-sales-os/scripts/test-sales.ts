@@ -1,4 +1,6 @@
-import { all, one, scalar } from '../lib/db/client';
+import { all, one, scalar, type Row } from '../lib/db/client';
+import { auditCopy, type CopyAudit } from '../lib/sales/audit-copy';
+import { loadOffers } from '../lib/catalog/sync';
 import { initSettings } from '../lib/settings';
 import { TESTDATA_EXPECT } from '../lib/testdata';
 import { normalizeEmail, normalizePhone, sameOrganization, isOwnSiteUrl, similarity } from '../lib/text';
@@ -7,7 +9,8 @@ import { detectNoSales } from '../lib/sales/nosales';
 import { guessIndustry } from '../lib/industry';
 import { senderIdentity } from '../lib/sales/sender-identity';
 import { canOutreach } from '../lib/sales/guards';
-import { trustedByRegistry, verifyWebsiteIdentity } from '../lib/sales/identity';
+import { looksLikeDirectoryPage, trustedByRegistry, verifyWebsiteIdentity } from '../lib/sales/identity';
+import { looksLikeNavigation, ownWords, sentencesOf } from '../lib/sales/facts';
 import { htmlToText, parseRobots, pickSubPagesFromUrls, robotsAllowsPath } from '../lib/sales/website';
 import { sourceStatuses } from '../lib/sales/sources';
 import { Suite, finish } from './_harness';
@@ -63,14 +66,16 @@ async function main() {
   i.eq('壊れたメールは使わない印がついている', await scalar("SELECT COUNT(*) FROM companies WHERE name LIKE '%テストメール%' AND email_valid = 1"), 0, '社');
   i.eq('HPと別ドメインのメールは捨てられている', await scalar("SELECT COUNT(*) FROM companies WHERE name = '株式会社ドメイン違い' AND email IS NOT NULL"), 0, '社');
   i.eq('HPと別ドメインのフォームも捨てられている', await scalar("SELECT COUNT(*) FROM companies WHERE name = '株式会社ドメイン違い' AND contact_form_url IS NOT NULL"), 0, '社');
-  i.eq('営業お断りの会社に印がついている', await scalar('SELECT COUNT(*) FROM companies WHERE no_sales_flag = 1'), TESTDATA_EXPECT.companyNoSales, '社');
+  // ★数えるのは練習用データだけ。本物のデータと混ぜて数えると期待値と合わないだけでなく、
+  //   「練習の合格」と「本物の状態」が区別できなくなる。
+  i.eq('営業お断りの会社に印がついている', await scalar("SELECT COUNT(*) FROM companies WHERE source = 'TEST' AND no_sales_flag = 1"), TESTDATA_EXPECT.companyNoSales, '社');
   i.atLeast('営業お断りの会社はNG名簿にも入っている', await scalar('SELECT COUNT(*) FROM ng_registry'), TESTDATA_EXPECT.companyNoSales, '件');
   i.print();
 
   // ---------------------------------------------------------------- 判断
   const j = new Suite('売るものと連絡手段の判断');
-  j.eq('全社に読み取り結果がある', await scalar('SELECT COUNT(*) FROM company_analyses'), companies, '社');
-  j.eq('全社に点数がついている', await scalar('SELECT COUNT(*) FROM company_scores'), companies, '社');
+  j.eq('全社に読み取り結果がある', await scalar("SELECT COUNT(*) FROM company_analyses a JOIN companies c ON c.id = a.company_id WHERE c.source = 'TEST'"), companies, '社');
+  j.eq('全社に点数がついている', await scalar("SELECT COUNT(*) FROM company_scores s JOIN companies c ON c.id = s.company_id WHERE c.source = 'TEST'"), companies, '社');
 
   const noSalesChannels = await all("SELECT ch.channel FROM channel_decisions ch JOIN companies c ON c.id = ch.company_id WHERE c.no_sales_flag = 1");
   j.check('営業お断りの会社には営業しない判断になる', noSalesChannels.every((r) => String(r.channel) === 'SKIP'), noSalesChannels.map((r) => String(r.channel)).join(',') || 'なし');
@@ -293,7 +298,294 @@ async function main() {
   );
   w.print();
 
-  finish([p, i, j, d, g, w]);
+  // ---------------------------------------------------------------- 実際に起きた事故の再発防止
+  // ★どちらも、10社を目で見て初めて分かった不具合。
+  //   数字（KPI）は「問題なし」と出ていた。数字だけ見ていると気づけない種類の事故なので、
+  //   ここで必ず機械が引っかかるようにしておく。
+  const r = new Suite('前に起きた事故の再発防止');
+
+  // ① こちらの架電メモを、その会社が書いた事実として営業文に引用してしまった
+  //    例:「2026-07-28 人が応答/手応えC/取次で終了」→ 電話台本がこれを相手に読み上げていた
+  r.check(
+    'こちらのメモは、その会社が書いた事実として使わない',
+    ownWords({ business_detail: '2026-07-28 人が応答/手応えC/取次で終了', business_detail_source: 'MANUAL', description: null }).length === 0,
+    '出どころがHP本文でないものは引用しない',
+  );
+  r.check(
+    'HP本文から取った事業内容は、その会社が書いた事実として使える',
+    ownWords({ business_detail: '当社は新築戸建ての販売と賃貸仲介を行っています。', business_detail_source: 'OFFICIAL_WEBSITE', description: null }).length > 0,
+    'OFFICIAL_WEBSITE のものだけ引用する',
+  );
+  const memoLike = await all(
+    `SELECT id, name, business_detail FROM companies
+      WHERE business_detail IS NOT NULL AND business_detail_source = 'OFFICIAL_WEBSITE'
+        AND (business_detail LIKE '%手応え%' OR business_detail LIKE '%取次%' OR business_detail LIKE '%不応答%'
+             OR business_detail LIKE '%留守電%' OR business_detail LIKE '%人が応答%')`,
+  );
+  r.eq('こちらの架電メモが「HP本文」として保存されている', memoLike.length, 0, '社');
+  if (memoLike.length > 0) console.log(`         ${memoLike.slice(0, 5).map((x) => `${x.name}: ${String(x.business_detail).slice(0, 30)}`).join(' | ')}`);
+  const quotedMemo = await all(
+    `SELECT c.name, s.opening, s.purpose FROM call_scripts s JOIN companies c ON c.id = s.company_id`,
+  );
+  r.eq(
+    'ここで作った電話の台本に、こちらの架電メモが混ざっている',
+    quotedMemo.filter((x) => /手応え[ＡＢＣＤA-D]|取次で終了|不応答|留守電|人が応答/.test(`${x.opening ?? ''}${x.purpose ?? ''}`)).length,
+    0,
+    '件',
+  );
+
+  // ② 企業名鑑（建設マップ等）の1ページを、その会社の公式HPとして採用してしまった
+  //    名鑑は会社名も電話も住所も正しく載っているので、照合だけでは見抜けなかった
+  const directoryPage = {
+    url: 'https://www.kensetumap.com/company/373596/profile.php',
+    title: '新泉工業株式会社の企業情報',
+    text: '新泉工業株式会社 大阪府大阪市西区1-1-1 TEL 06-1111-2222 掲載企業を検索できます。無料で掲載を承ります。この企業にお問い合わせ 株式会社さくら建設 株式会社みどり工務店 有限会社あおば設備 運営会社：建設マップ',
+  };
+  r.check(
+    '企業名鑑の1ページを、その会社が書いたHPとして採用しない',
+    looksLikeDirectoryPage(directoryPage, '新泉工業株式会社') !== null,
+    String(looksLikeDirectoryPage(directoryPage, '新泉工業株式会社')),
+  );
+  // 名前も電話も住所も正しく載っているので、照合の点数だけを見ると「一致」になってしまう。
+  // ホスト名の名簿と、ページの作りの両方で必ず落ちること。
+  const dirVerdict = verifyWebsiteIdentity({ name: '新泉工業株式会社', phone: '06-1111-2222', address: '大阪府大阪市西区1-1-1' }, directoryPage);
+  r.check('名鑑のページは、名前も電話も合っていてもHPとして採用しない', dirVerdict.verdict !== 'MATCH', `${dirVerdict.verdict} / ${dirVerdict.reason}`);
+  // ホスト名の名簿に載っていない名鑑でも、ページの作りだけで落とせること。
+  const unknownDirectory = {
+    url: 'https://kigyou-db-example.jp/company/884512/profile',
+    title: '新泉工業株式会社の企業情報',
+    text: '新泉工業株式会社 大阪府大阪市西区1-1-1 TEL 06-1111-2222 掲載企業を検索できます。無料で掲載を承ります。この企業にお問い合わせ 株式会社さくら建設 株式会社みどり工務店 有限会社あおば設備 運営会社：企業データベース',
+  };
+  const unknownDirVerdict = verifyWebsiteIdentity({ name: '新泉工業株式会社', phone: '06-1111-2222', address: '大阪府大阪市西区1-1-1' }, unknownDirectory);
+  r.check(
+    '知らない名鑑サイトでも、ページの作りだけで「分からない」にできる',
+    unknownDirVerdict.verdict === 'UNKNOWN',
+    `${unknownDirVerdict.verdict} / ${unknownDirVerdict.reason}`,
+  );
+  // ★逆方向の事故も止める。取引先一覧に他社名が並ぶ「自社サイトの会社概要」を名鑑と間違えない。
+  const ownAboutPage = {
+    url: 'https://sun-f-access.co.jp/company.html',
+    title: '会社概要｜株式会社サン・エフ・アクセス',
+    text: '株式会社サン・エフ・アクセス 会社概要 主な取引先 株式会社さくら建設 株式会社みどり工務店 有限会社あおば設備 株式会社ひまわり住宅 掲載の内容は変更になる場合があります。',
+  };
+  r.check(
+    '取引先を並べただけの自社の会社概要を、名鑑と間違えない',
+    looksLikeDirectoryPage(ownAboutPage, '株式会社サン・エフ・アクセス') === null,
+    String(looksLikeDirectoryPage(ownAboutPage, '株式会社サン・エフ・アクセス')),
+  );
+  r.eq(
+    '企業名鑑・求人サイトのURLがHP欄に残っている',
+    (await all('SELECT website FROM companies WHERE website IS NOT NULL')).filter((x) => !isOwnSiteUrl(String(x.website))).length,
+    0,
+    '社',
+  );
+
+  // ③ 別会社と判断して外したページの「題名」だけが残り、営業文の書き出しに使われていた
+  //    実例: 新泉工業株式会社。企業名鑑のページを読んで題名「会社概要｜新泉工業株式会社」を
+  //    紹介文の欄に入れた。あとで「そこは本人のサイトではない」と分かってHP欄からは外したが、
+  //    題名は残り、電話の書き出しが「『会社概要｜新泉工業株式会社』と書かれているのを読み」に
+  //    なっていた。本人が書いていない文章を、本人に読み上げる形。
+  r.check(
+    '出どころの分からない紹介文は、その会社が書いた事実として使わない',
+    ownWords({ business_detail: null, business_detail_source: null, description: '会社概要｜新泉工業株式会社', description_source: null }).length === 0,
+    '出どころがHPでないものは引用しない',
+  );
+  r.check(
+    '本人のHPから取った紹介文は、その会社が書いた事実として使える',
+    ownWords({ business_detail: null, business_detail_source: null, description: '大阪で精密部品の加工をしています', description_source: 'OFFICIAL_WEBSITE' }).length > 0,
+    'OFFICIAL_WEBSITE のものだけ引用する',
+  );
+  r.eq(
+    '本人のHPと確認できていないのに、紹介文が「HPから取った」ことになっている',
+    await scalar("SELECT COUNT(*) FROM companies WHERE description_source = 'OFFICIAL_WEBSITE' AND COALESCE(website_verified, 0) = 0"),
+    0,
+    '社',
+  );
+  const quotedTitle = await all('SELECT c.name, d.body FROM outreach_drafts d JOIN companies c ON c.id = d.company_id WHERE d.body IS NOT NULL');
+  r.eq(
+    '営業文に「会社概要｜…」というページの題名が引用されている',
+    quotedTitle.filter((x) => /「[^」]*会社概要[｜|][^」]*」/.test(String(x.body))).length,
+    0,
+    '件',
+  );
+
+  // ④ 業種を、URLの中の文字列で決めてしまった
+  //    実例: 株式会社ナガセテクノス（プラスチック製造）。HP本文に載っていたURL
+  //    「nagasetechnos.com」の中の "ec" に当たり「EC・小売」と判定され、
+  //    「ネット販売が弱い」という、事実でない切り口の営業文ができていた。
+  r.check(
+    'URLの中の文字列だけで業種を決めない',
+    guessIndustry('株式会社ナガセテクノス', 'プラスチック製造業の会社、成形用原料の着色コンパウンドや射出成形をしている。 https://nagasetechnos.com/').key === 'MANUFACTURING',
+    String(guessIndustry('株式会社ナガセテクノス', 'プラスチック製造業の会社 https://nagasetechnos.com/').key),
+  );
+  r.check(
+    '「EC」と書いてある会社は、これまでどおりEC・小売と判定できる',
+    guessIndustry('株式会社さくら', '自社EC事業と通販を運営しています').key === 'EC_RETAIL',
+    String(guessIndustry('株式会社さくら', '自社EC事業と通販を運営しています').key),
+  );
+  // ★HP本文のメニュー欄に1回出ただけの言葉が、本業を上書きしないこと。
+  //   実例: ナガセテクノスは「製造」と何度も書いてあるのに、1回だけの「配送」で
+  //   「運送・物流」と判定され、運送会社向けの切り口で営業文ができていた。
+  const nagase = guessIndustry(
+    '株式会社ナガセテクノス',
+    'プラスチック製造業の会社、成形用原料の着色コンパウンドや射出成形をしている。製造品目一覧。製造設備の紹介。 事業紹介 会社概要 配送について お問い合わせ',
+  );
+  r.check('本文に1回だけ出た言葉で、本業を上書きしない', nagase.key === 'MANUFACTURING', `${nagase.key} / 手がかり「${nagase.matched}」`);
+
+  // ⑤ HPのメニュー欄を、その会社が書いた一文として営業文に引用してしまった
+  //    実例: 花田工業株式会社・株式会社日本ファクト。電話の書き出しが
+  //    「『総合建設業の花田工業株式会社｜大阪府｜和泉市GREETINGごあいさつBUSINESS事業COMPANY会社概要CONT』
+  //      という記載を拝見してお電話しています」になっていた。日本語として意味を成さない。
+  r.check(
+    'HPのメニュー欄を、その会社が書いた一文として引用しない',
+    looksLikeNavigation('総合建設業の花田工業株式会社｜大阪府｜和泉市GREETINGごあいさつBUSINESS事業COMPANY会社概要CONT'),
+    'メニューだと判定できる',
+  );
+  r.check(
+    '日本語のメニュー欄も引用しない',
+    looksLikeNavigation('総合介護サービスの株式会社日本ファクト会社概要|株式会社日本ファクトホーム会社案内会社概要経営方針'),
+    'メニューだと判定できる',
+  );
+  r.check(
+    'ふつうの本文は、メニューと間違えない',
+    !looksLikeNavigation('和泉市から全国の対応を行う泉陽工業株式会社、高精密部品の製造から加工、組立までを一貫して自社で行える体制を持つ'),
+    '本文はそのまま引用してよい',
+  );
+
+  // ⑥ 長い一文を60文字で機械的に切り、語の途中で終わる文面を作ってしまった
+  //    実例: 株式会社ナガセテクノス「…同じ断面をもつ形状の製品を製造するこ」
+  const chopped = sentencesOf('熱した樹脂を引き延ばしながら金型からサイジングを通り成形することで同じ断面をもつ形状の製品を製造することができます');
+  r.eq('語の途中で切れた文を引用している', chopped.filter((s) => s.length >= 60).length, 0, '件');
+  // ⑥-2 読点で切ると、文法的には途中で終わった節になる。
+  //     実例: 株式会社大日ロジテック「安全と安心、倫理的価値観を持つ判断基準を念頭に、物流という血流を滞らせる」
+  //     長すぎる一文は、読点があっても使わない（引用が減るほうを選ぶ）。
+  r.eq(
+    '長い一文を読点で切って引用している',
+    sentencesOf('安全と安心、倫理的価値観を持つ判断基準を念頭に、物流という血流を滞らせることなく社会の基盤を支え続けることを私たちの使命としています').length,
+    0,
+    '件',
+  );
+  // ⑦ どのHPにも書いてある挨拶を「その会社が書いた事実」として引用してしまった
+  //    実例:「サイトには『どうぞよろしくお願いいたします』とも書かれていましたね」
+  r.eq(
+    'どの会社にも書いてある挨拶を、その会社の事実として引用している',
+    sentencesOf('どうぞよろしくお願いいたします\nお気軽にお問い合わせください\nありがとうございました').length,
+    0,
+    '件',
+  );
+  const navQuoted = await all('SELECT c.name, d.body FROM outreach_drafts d JOIN companies c ON c.id = d.company_id WHERE d.body IS NOT NULL');
+  r.eq(
+    '営業文にHPのメニュー欄がそのまま引用されている',
+    navQuoted.filter((x) => (String(x.body).match(/「[^」]{10,}」/g) ?? []).some((q) => looksLikeNavigation(q))).length,
+    0,
+    '件',
+  );
+  r.print();
+
+  // ---------------------------------------------------------------- 第二の目（PHASE A4）
+  //
+  // ★ここで確かめるのは「監査そのものが正しく働くか」。
+  //   検査がゆるすぎれば実害のある文面を通してしまうし、
+  //   厳しすぎれば正しい文面まで落として、結局その分だけ人が読む羽目になる。
+  //   実際に上位20社で見つかった誤判定を、そのまま固定して二度と戻らないようにする。
+  const a = new Suite('第二の目：営業文の監査（PHASE A4）');
+
+  const auditCompany: Row = {
+    id: 999001,
+    name: '株式会社テスト製作所',
+    website: 'https://www.test-seisakusho.co.jp/',
+    website_verdict: 'VERIFIED',
+    business_detail: '当社は大阪府和泉市で精密部品の加工を続けています。お客様の図面どおりに確実に仕上げることを大切にしています。前身は2001年4月ヒタチ工業株式会社です。',
+    business_detail_source: 'OFFICIAL_WEBSITE',
+    description: null,
+    description_source: null,
+    prefecture: '大阪府',
+    phone: '0725502700',
+    email: null,
+    corporate_number: null,
+    no_sales_flag: 0,
+    no_sales_evidence: null,
+    form_policy: null,
+    industry_guess: 'MANUFACTURING',
+  };
+  const auditOffer = (await loadOffers(false)).find((o) => o.status === 'SELLABLE') ?? null;
+
+  const runAudit = (body: string, channel = 'EMAIL') =>
+    auditCopy({
+      company: auditCompany,
+      draft: { id: 1, body, channel, offer_code: auditOffer?.code ?? '' },
+      offer: auditOffer,
+      analysis: null,
+      primaryOfferCode: auditOffer?.code ?? null,
+    });
+  const ngOf = (r0: CopyAudit, code: string) => r0.checks.find((k) => k.code === code && !k.ok);
+
+  // ① 電話台本の締めを切り落として「CTAが無い」と誤判定していた（20社中20社が不合格になった）
+  const phoneBody = [
+    '突然のお電話失礼いたします。株式会社テスト製作所様のホームページで「当社は大阪府和泉市で精密部品の加工を続けています」と拝見し、ご連絡しました。',
+    '',
+    '【聞くこと】',
+    '・今はどんなやり方で回しておられますか。',
+    '',
+    '【切り返し】',
+    '・「間に合っています」→ 承知しました。',
+    '',
+    '承知しました。まずは資料をメールでお送りしますので、ご覧ください。',
+  ].join('\n');
+  a.check('電話台本の締め（CTA）を読み落として不合格にする', ngOf(await runAudit(phoneBody, 'PHONE'), 'CTA_CLARITY') === undefined, '締めの一言を読めている');
+
+  // ② 「〜している株式会社」を別会社の名前として拾い、正しい文面をBLOCKにしていた
+  const bogusName = 'お客様の元へお届けしている株式会社テスト製作所様、突然のご連絡失礼いたします。お話を伺えませんか。ご不要でしたらご放念ください。';
+  a.check('「〜している株式会社」を別会社の名前と読み違える', ngOf(await runAudit(bogusName), 'COMPANY_IDENTITY') === undefined, '会社名ではないと分かる');
+
+  // ③ 本物の別会社名は、今でも必ず止める（②の直しで甘くなっていないこと）
+  const realOther = '株式会社テスト製作所様、突然のご連絡失礼いたします。同業の丸和運輸株式会社様の事例をお持ちしました。お話を伺えませんか。ご不要でしたらご放念ください。';
+  a.check('本物の別会社名を見逃す', ngOf(await runAudit(realOther), 'COMPANY_IDENTITY') !== undefined, '別会社の名前は止める');
+
+  // ④ 所在地の欄から組み立てた言い方を「作り話の引用」と誤判定していた
+  const derived = '株式会社テスト製作所様、突然のご連絡失礼いたします。「大阪府で事業をされている」と拝見しました。お話を伺えませんか。ご不要でしたらご放念ください。';
+  a.check('記録の欄から作った言い方を作り話と誤判定する', ngOf(await runAudit(derived), 'EVIDENCE_PROVENANCE') === undefined, '欄の値と一致すれば根拠あり');
+
+  // ⑤ 会社の記録に無い文字列の引用は、今でも必ず止める（④の直しで甘くなっていないこと）
+  const fabricated = '株式会社テスト製作所様、突然のご連絡失礼いたします。「弊社は全国で三千社の導入実績があります」と拝見しました。お話を伺えませんか。ご不要でしたらご放念ください。';
+  a.check('会社が書いていない引用を見逃す', ngOf(await runAudit(fabricated), 'EVIDENCE_PROVENANCE') !== undefined, '作り話の引用は止める');
+
+  // ⑥ 相手が自分で書いた「確実に」を、こちらの誇張として不合格にしていた
+  const quotedPuffery = '株式会社テスト製作所様、突然のご連絡失礼いたします。「お客様の図面どおりに確実に仕上げることを大切にしています」と拝見しました。お話を伺えませんか。ご不要でしたらご放念ください。';
+  a.check('相手が書いた言葉を、こちらの誇張として不合格にする', ngOf(await runAudit(quotedPuffery), 'EXAGGERATION') === undefined, '引用の中は相手の言葉');
+
+  // ⑦ こちらが書いた誇張は、今でも必ず止める（⑥の直しで甘くなっていないこと）
+  const ourPuffery = '株式会社テスト製作所様、突然のご連絡失礼いたします。導入すれば作業時間を大幅に削減できます。お話を伺えませんか。ご不要でしたらご放念ください。';
+  a.check('こちらが書いた誇張を見逃す', ngOf(await runAudit(ourPuffery), 'EXAGGERATION') !== undefined, 'こちらの誇張は止める');
+
+  // ⑧ 完結した文を「途中で切れている」と誤判定していた
+  const completeQuote = '株式会社テスト製作所様、突然のご連絡失礼いたします。「当社は大阪府和泉市で精密部品の加工を続けています」と拝見しました。お話を伺えませんか。ご不要でしたらご放念ください。';
+  a.check('完結した文を、途中で切れていると誤判定する', ngOf(await runAudit(completeQuote), 'QUOTE_SANITY') === undefined, '句点で終わる文は完結している');
+
+  // ⑨ 本当に途中で切り取った引用は、今でも必ず止める（⑧の直しで甘くなっていないこと）
+  const cutQuote = '株式会社テスト製作所様、突然のご連絡失礼いたします。「当社は大阪府和泉市で精密部品の加工を続けて」と拝見しました。お話を伺えませんか。ご不要でしたらご放念ください。';
+  a.check('元の文章の途中で切った引用を見逃す', ngOf(await runAudit(cutQuote), 'QUOTE_SANITY') !== undefined, '途中で切った引用は止める');
+
+  // ⑩ 断りの一言が無い文面は止める（どの言い回しを引いても断りが入るようにした）
+  const rude = '株式会社テスト製作所様。「当社は大阪府和泉市で精密部品の加工を続けています」と拝見しました。お話を伺えませんか。ご不要でしたらご放念ください。';
+  a.check('断りの一言が無い文面を見逃す', ngOf(await runAudit(rude), 'POLITENESS') !== undefined, '突然の連絡への断りは必須');
+
+  // ⑪ 実データ：保存済みの文面に、断りの一言が無いものが残っていないか
+  const openings = await all("SELECT c.name, d.body FROM outreach_drafts d JOIN companies c ON c.id = d.company_id WHERE d.status = 'READY' AND c.data_origin <> 'TEST'");
+  a.eq(
+    '断りの一言が無いまま出来上がっている営業文',
+    openings.filter((x) => !/(突然|失礼|恐れ入り|恐縮|お忙し|はじめてご連絡|お世話になり)/.test(String(x.body).slice(0, 200))).length,
+    0,
+    '件',
+  );
+
+  // ⑫ 監査を通したのに、外部へ送ったものが1件でもあってはならない
+  a.eq('監査の時点で外部へ実行したもの（下書き）', Number(await scalar('SELECT COUNT(*) FROM outreach_logs WHERE executed = 1')) || 0, 0, '件');
+  a.eq('監査の時点で外部へ実行したもの（下見）', Number(await scalar('SELECT COUNT(*) FROM dry_runs WHERE executed = 1')) || 0, 0, '件');
+
+  a.print();
+
+  finish([p, i, j, d, g, w, r, a]);
 }
 
 main().catch((e) => {

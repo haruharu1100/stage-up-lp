@@ -1,6 +1,7 @@
 import { nowIso, upsert, type Row } from '../db/client';
 import { isNg } from './ingest';
 import { emailDomain } from '../text';
+import { formAutoAllowed, FORM_POLICY_JA, type FormPolicy } from './form-policy';
 
 export type Channel = 'PHONE' | 'EMAIL' | 'FORM' | 'MANUAL' | 'SKIP';
 
@@ -41,7 +42,11 @@ export async function decideChannel(company: Row, opts: { phoneFriendly: boolean
 
   const hasPhone = Number(company.phone_valid) === 1 && !!company.phone && !ngPhone;
   const hasEmail = Number(company.email_valid) === 1 && !!company.email && !ngEmail;
+  // ★フォームは「あるから使える」ではない。そのフォーム自身が営業の受付を明記しているときだけ使える。
+  //   ALLOWED 以外（BLOCKED・APPROVAL_REQUIRED・未判定）は自動送信の手段に選ばない。
+  const formPolicy = (company.form_policy as FormPolicy | null) ?? null;
   const hasForm = !!company.contact_form_url;
+  const formUsable = hasForm && formAutoAllowed(formPolicy);
 
   // 3) 手段を選ぶ
   if (hasPhone && opts.phoneFriendly) {
@@ -50,8 +55,19 @@ export async function decideChannel(company: Row, opts: { phoneFriendly: boolean
   if (hasEmail) {
     return { channel: 'EMAIL', reason: '公式のメールアドレスがある' };
   }
-  if (hasForm) {
-    return { channel: 'FORM', reason: '問い合わせフォームだけがある' };
+  if (formUsable) {
+    return { channel: 'FORM', reason: `問い合わせフォームがあり、営業の受付が明記されている：${company.form_policy_reason ?? ''}` };
+  }
+  if (hasForm && formPolicy === 'BLOCKED') {
+    return { channel: 'SKIP', reason: `問い合わせフォームに営業お断りの表記がある：${company.form_policy_reason ?? ''}` };
+  }
+  if (hasForm && !hasPhone) {
+    return {
+      channel: 'MANUAL',
+      reason: formPolicy
+        ? `問い合わせフォームはあるが「${FORM_POLICY_JA[formPolicy]}」。人が見て決める：${company.form_policy_reason ?? ''}`
+        : '問い合わせフォームはあるが、営業を受け付けているかまだ読めていない。人が見て決める',
+    };
   }
   if (hasPhone) {
     return { channel: 'PHONE', reason: '電話番号しか連絡先が無い' };

@@ -50,7 +50,7 @@ export function contactabilityScore(company: Row): number {
   return Math.min(100, s);
 }
 
-export function needScore(flags: NeedFlags, offer: OfferRow | null): number {
+export function needScore(flags: NeedFlags, offer: { fitNeeds: string[] } | null): number {
   if (!offer) {
     const t = topNeeds(flags, 3);
     return t.length === 0 ? 0 : Math.round(t.reduce((s, x) => s + x.score, 0) / t.length);

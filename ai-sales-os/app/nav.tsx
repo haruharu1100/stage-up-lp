@@ -17,6 +17,7 @@ const GROUPS: { group: string; items: { href: string; label: string }[] }[] = [
     items: [
       { href: '/companies', label: '会社一覧' },
       { href: '/leads', label: '営業候補' },
+      { href: '/leads/top5', label: '最初に営業する5社' },
       { href: '/outreach/call', label: '電話営業' },
       { href: '/outreach/email', label: 'メール営業' },
       { href: '/outreach/form', label: 'フォーム営業' },
@@ -27,9 +28,11 @@ const GROUPS: { group: string; items: { href: string; label: string }[] }[] = [
   {
     group: '案件受注',
     items: [
+      { href: '/jobs/inbox', label: '案件を取り込む' },
       { href: '/jobs', label: '案件検索' },
       { href: '/jobs/sites', label: '規約台帳' },
       { href: '/jobs/candidates', label: '応募候補' },
+      { href: '/jobs/top5', label: '最初に応募する5案件' },
       { href: '/jobs/applied', label: '応募済み' },
       { href: '/replies', label: '返信' },
       { href: '/orders', label: '受注' },
@@ -47,6 +50,7 @@ const GROUPS: { group: string; items: { href: string; label: string }[] }[] = [
   {
     group: '設定',
     items: [
+      { href: '/pricing', label: '商品・価格設定' },
       { href: '/system', label: 'システム状態' },
       { href: '/obsidian', label: 'Obsidian同期' },
     ],

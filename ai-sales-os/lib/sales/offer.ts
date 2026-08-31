@@ -1,6 +1,6 @@
 import { nowIso, run, type Row } from '../db/client';
 import { NEED_LABEL, type NeedFlags, type NeedKey } from '../needs';
-import { INDUSTRY_LABEL, type IndustryKey } from '../industry';
+import { INDUSTRY_LABEL, SCALE_LABEL, type IndustryKey, type ScaleBand } from '../industry';
 import type { OfferRow } from '../catalog/sync';
 
 /**
@@ -22,10 +22,33 @@ export type OfferMatch = {
   blockedReason: string | null;
 };
 
-export function matchOffers(industry: IndustryKey, needFlags: NeedFlags, offers: OfferRow[]): OfferMatch[] {
+/**
+ * 会社の規模と、商品が想定している規模が合うか。
+ *
+ * ★合わない商品は候補から外す（点を下げるのではなく外す）。
+ *   点を下げるだけだと、他に当たる商品が無かったときに結局それが1位になる。
+ *   相手の規模が分からないのに基幹連携の専用システムを提案するのは、
+ *   相手にとって見当違いの高い提案で、こちらの信用も落ちる。
+ *
+ * ★空配列は「規模を問わない商品」。全部通す。
+ * ★規模が分かっていない会社（UNKNOWN）には、UNKNOWN を明示的に許している商品だけ通す。
+ *   3段階商品では LIGHT だけが UNKNOWN を許している＝いちばん小さい入口しか提案しない。
+ */
+function scaleAllows(offer: OfferRow, scale: ScaleBand): boolean {
+  if (!offer.scaleFit || offer.scaleFit.length === 0) return true;
+  return offer.scaleFit.includes(scale);
+}
+
+export function matchOffers(
+  industry: IndustryKey,
+  needFlags: NeedFlags,
+  offers: OfferRow[],
+  scale: ScaleBand = 'UNKNOWN',
+): OfferMatch[] {
   const results: OfferMatch[] = [];
 
   for (const o of offers) {
+    if (!scaleAllows(o, scale)) continue;
     const industryHit = o.fitIndustries.includes(industry);
     const industryPoints = industryHit ? 45 : o.fitIndustries.length === 0 ? 0 : 0;
 
@@ -46,6 +69,7 @@ export function matchOffers(industry: IndustryKey, needFlags: NeedFlags, offers:
     if (industryHit) reasonParts.push(`業種が${INDUSTRY_LABEL[industry]}で合う`);
     if (top.length > 0) reasonParts.push(`${top.map((t) => NEED_LABEL[t.key]).join('・')}に効く`);
     if (!industryHit) reasonParts.push('業種の一致は無いので課題だけで判断している');
+    if (o.tier) reasonParts.push(`規模「${SCALE_LABEL[scale]}」に合わせて${o.tier}を選んでいる`);
 
     results.push({
       offerCode: o.code,

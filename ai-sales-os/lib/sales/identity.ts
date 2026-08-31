@@ -24,6 +24,122 @@ import { extractCity, extractPrefecture, hostOf, isOwnSiteUrl, normalizeAddress,
 
 export type IdentityVerdict = 'MATCH' | 'MISMATCH' | 'UNKNOWN';
 
+/**
+ * 会社ごとの「HPの状態」。判定結果（MATCH/MISMATCH/UNKNOWN）とは別に、
+ * 「そもそもHPが無い」「たぶん本人だが決め手が足りない」を分けて持つ。
+ *
+ *  VERIFIED    … その会社のHPだと確認できた。営業文の事実根拠に使ってよい。
+ *  PROBABLE    … たぶん本人。ただし決め手が足りない。人が見て決める。
+ *  UNVERIFIED  … 候補はあるが、本人かどうか何も確かめられていない。
+ *  CONFLICT    … 別の会社のHPである材料が出た。完全に使わない。
+ *  NO_WEBSITE  … HPの候補すら見つからなかった。
+ *
+ * ★VERIFIED以外のHPから取った話を、営業文の事実として書かない。
+ * ★社名が一致しただけでは絶対にVERIFIEDにしない（同名の別会社が全国にいる）。
+ */
+export const WEBSITE_VERDICTS = ['VERIFIED', 'PROBABLE', 'UNVERIFIED', 'CONFLICT', 'NO_WEBSITE'] as const;
+export type WebsiteVerdict = (typeof WEBSITE_VERDICTS)[number];
+
+export const WEBSITE_VERDICT_JA: Record<WebsiteVerdict, string> = {
+  VERIFIED: '本人と確認できた',
+  PROBABLE: 'たぶん本人（人の確認待ち）',
+  UNVERIFIED: '確かめていない',
+  CONFLICT: '別会社の可能性あり（使わない）',
+  NO_WEBSITE: 'HPが見つからない',
+};
+
+/** PROBABLE と言ってよい下限。ここに届かないものは UNVERIFIED のまま。 */
+export const IDENTITY_PROBABLE_SCORE = 45;
+
+/**
+ * 判定結果を5段階へ落とす。
+ *
+ * ★VERIFIED になるのは次のどちらかだけ。
+ *   ① ページにその会社の法人番号が書いてある
+ *   ② 法人番号・電話・住所・代表者名のうち1つ以上を含む2種類以上が一致し、合計60点以上
+ *   これは verifyWebsiteIdentity が MATCH を返す条件と同じ。
+ *
+ * ★PROBABLE は「社名は合っているが決め手が無い」状態。ここは人が見る。
+ *   自動で営業文の根拠にはしない。
+ */
+export function toWebsiteVerdict(result: IdentityResult | null, hasCandidate: boolean): WebsiteVerdict {
+  if (!hasCandidate) return 'NO_WEBSITE';
+  if (!result) return 'UNVERIFIED';
+  if (result.verdict === 'MISMATCH' || result.conflicts.length > 0) return 'CONFLICT';
+  if (result.verdict === 'MATCH') return 'VERIFIED';
+  // 社名だけ当たっている、住所の市区町村までしか当たっていない、などはここ。
+  if (result.evidence.length > 0 && result.score >= IDENTITY_PROBABLE_SCORE) return 'PROBABLE';
+  return 'UNVERIFIED';
+}
+
+/** その判定のHPを、営業文の「事実」として使ってよいか。 */
+export function canUseAsFact(verdict: WebsiteVerdict): boolean {
+  return verdict === 'VERIFIED';
+}
+
+/** そのHPと同じドメインの連絡先（メール・フォーム）を使ってよいか。 */
+export function canUseSameDomainContact(verdict: WebsiteVerdict): { ok: boolean; reason: string } {
+  if (verdict === 'CONFLICT') {
+    return { ok: false, reason: 'HPが別会社の可能性ありと判定されたので、同じドメインのメール・フォームも使わない。' };
+  }
+  if (verdict === 'VERIFIED') return { ok: true, reason: '' };
+  return { ok: false, reason: `HPが「${WEBSITE_VERDICT_JA[verdict]}」なので、そこから取った連絡先は自動では使わない。` };
+}
+
+/** 人が見て決める必要があるか。 */
+export function needsHumanCheck(verdict: WebsiteVerdict): boolean {
+  return verdict === 'PROBABLE';
+}
+
+/**
+ * その会社を「自動で営業してよい相手」に上げてよいか。
+ *
+ * ★連絡先が正しいことと、相手が本人であることは別の話。
+ *   電話番号は人が台帳から書き写した正しい番号かもしれない。
+ *   だが、その番号が「こちらが調べたつもりの会社」のものだと確かめられていなければ、
+ *   別の会社に営業電話をかけている可能性が残る。
+ *   番号の正しさは、相手が誰かを保証しない。
+ *
+ * ★だから VERIFIED（本人と確認できた）だけを通す。
+ *   PROBABLE も UNVERIFIED も NO_WEBSITE も通さない。
+ *   「たぶん本人」で電話をかけて別会社だった場合、謝って済む話ではないし、
+ *   何件それをやったかも後から数えられない。
+ *
+ * ★通らなかった会社を消すわけではない。人が確認すれば通る。
+ *   だから理由には「何をすれば通るか」を必ず書く。
+ */
+export function canAutoOutreachByIdentity(verdict: WebsiteVerdict): { ok: boolean; reasonJa: string } {
+  if (verdict === 'VERIFIED') {
+    return { ok: true, reasonJa: 'その会社本人のHPだと確認できている（連絡先と会社が一致している）。' };
+  }
+  if (verdict === 'CONFLICT') {
+    return {
+      ok: false,
+      reasonJa:
+        '別会社のHPである材料が出ている。連絡先が正しく見えても、別の会社へ営業する危険があるので自動営業候補には上げない。',
+    };
+  }
+  if (verdict === 'PROBABLE') {
+    return {
+      ok: false,
+      reasonJa:
+        'HPは「たぶん本人」止まりで、本人だと決められていない。電話番号が正しくても相手が誰かは保証されないので、人がHPを確認するまで自動営業候補には上げない。',
+    };
+  }
+  if (verdict === 'NO_WEBSITE') {
+    return {
+      ok: false,
+      reasonJa:
+        'HPが見つかっておらず、連絡先とこの会社が同じ相手だと確かめる材料が1つも無い。人が公式HPを登録するまで自動営業候補には上げない。',
+    };
+  }
+  return {
+    ok: false,
+    reasonJa:
+      'HPが本人のものか確かめていない。電話番号が正しくても、それがこの会社の番号だという確認にはならないので自動営業候補には上げない。',
+  };
+}
+
 export type IdentityEvidenceKind = 'CORPORATE_NUMBER' | 'NAME' | 'NAME_TITLE' | 'PHONE' | 'ADDRESS' | 'REPRESENTATIVE';
 
 export type IdentityEvidence = {
@@ -113,6 +229,66 @@ export function legalNamesIn(text: string): string[] {
 }
 
 /**
+ * そのページは「企業紹介サイト（名鑑・ポータル）の1ページ」ではないか。
+ *
+ * ★これを見ないと、実際に事故が起きる。
+ *   例：新泉工業株式会社に対して kensetumap.com/company/373596/profile.php を
+ *   「公式HP」として採用してしまった。そのページには社名も電話も住所も正しく載っているので、
+ *   社名・電話・住所の照合はすべて通ってしまう。だが、そこはその会社が書いたページではない。
+ *   ここを公式HPとして扱うと、
+ *     ・「御社の公式サイトを拝見しました」が嘘になる
+ *     ・そのページにある問い合わせフォームは紹介サイト宛てで、その会社には届かない
+ *   という2つの事故が同時に起きる。
+ *
+ * ★禁止ホストを並べるだけでは足りない。名鑑サイトは無数にあり、数え上げられない。
+ *   なので「形」で見る。名鑑サイトは、1社ごとに連番のページを持ち、
+ *   1ページの中に他社の名前や「掲載」「登録」「一覧」といった言葉が並ぶ。
+ */
+export function looksLikeDirectoryPage(page: IdentityPage, companyName: string): string | null {
+  let path = '';
+  try {
+    path = new URL(page.url).pathname;
+  } catch {
+    return null;
+  }
+
+  // ① 1社ごとに連番が振られたURL。自社のHPが自分を番号で呼ぶことはまずない。
+  //
+  // ★これは「必須の条件」にしてある。言葉づかいだけで判断すると誤って弾く。
+  //   実際、株式会社サン・エフ・アクセスの自社サイト（/company.html）を
+  //   「他社名が10社ぶん並ぶ／掲載という語がある」だけで名鑑と誤判定してしまった。
+  //   取引先一覧を載せている会社のHPは、どれもこの形になる。
+  //   会社のHPを1件失うのも事故なので、連番URLという動かない証拠がある時だけ疑う。
+  const numbered = /\/(company|companies|corp|corporate|kigyo|kaisha|shop|store|detail|profile|list)\/\d{3,}(\/|$)/i.test(path);
+  if (!numbered) return null;
+
+  const body = `${page.title ?? ''}\n${page.text ?? ''}`.normalize('NFKC');
+
+  // ② 自分以外の会社名がページの中に何社ぶん並んでいるか。
+  const self = normalizeCompanyName(companyName);
+  const others = legalNamesIn(body).filter((n) => n !== self && !self.includes(n) && !n.includes(self));
+
+  // ③ 名鑑サイトに特有の言い回し。
+  const directoryWords = [
+    /掲載(企業|会社|件数|数|依頼|停止)/,
+    /(企業|会社|建設会社|工務店)(を)?(検索|探す|一覧)/,
+    /この(企業|会社)(に|へ)(お問い合わせ|問い合わせ)/,
+    /無料(で)?(掲載|登録)/,
+    /(運営会社|情報提供)：/,
+    /会員登録(は)?(無料|こちら)/,
+  ].filter((re) => re.test(body)).length;
+
+  const hits: string[] = [];
+  if (numbered) hits.push('URLが1社ごとの連番になっている');
+  if (others.length >= 3) hits.push(`同じページに他社の名前が${others.length}社ぶん並んでいる`);
+  if (directoryWords >= 1) hits.push('「掲載」「企業を検索」など名鑑サイトの言い回しがある');
+
+  // 決め手は1つでは弱い。2つ以上そろったときだけ名鑑と判断する。
+  if (hits.length >= 2) return hits.join('／');
+  return null;
+}
+
+/**
  * 会社と、あるページが同じ会社のものかを判定する。
  * 通信はしない。判定に使った材料はすべて返し、あとから人が確かめられるようにする。
  */
@@ -128,6 +304,20 @@ export function verifyWebsiteIdentity(company: IdentityCompany, page: IdentityPa
       evidence: [],
       conflicts: [`会社自身のサイトではない場所（${hostOf(page.url) ?? page.url}）`],
       reason: '求人サイトやプレスリリースは、その会社が書いた文章ではないのでHPとして扱わない。',
+    };
+  }
+
+  // 企業名鑑・ポータルの1ページは、社名も電話も住所も正しく載っているので照合を通ってしまう。
+  // だが「その会社が書いたページ」ではないので、公式HPとしては採用しない。
+  // ★別会社ではないので MISMATCH（別会社）とは言わない。UNKNOWN（本人のページか確認できない）に留める。
+  const directory = looksLikeDirectoryPage(page, company.name);
+  if (directory) {
+    return {
+      verdict: 'UNKNOWN',
+      score: 0,
+      evidence: [],
+      conflicts: [],
+      reason: `企業紹介サイトの1ページに見えるので、その会社が書いたHPとしては使わない（${directory}）。`,
     };
   }
 

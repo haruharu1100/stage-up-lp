@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { migrate } from '../lib/db/client';
+import { migrate, nowIso } from '../lib/db/client';
 import { initSettings } from '../lib/settings';
 import { seedJobSites, sitePolicy } from '../lib/jobs/sites';
 import { ingestJob, type JobInput } from '../lib/jobs/ingest';
@@ -106,7 +106,8 @@ async function main() {
   const unknownSites = new Set<string>();
 
   for (const r of rows.slice(1)) {
-    const j: Partial<JobInput> = { source: 'CSV' };
+    // ★入口は「人がCSVで取り込んだ」。ここを書いておかないと本物として数えない。
+    const j: Partial<JobInput> = { source: 'CSV', inboxSource: 'CSV_IMPORT', inboxReceivedAt: nowIso() };
     cols.forEach((key, i) => {
       if (!key) return;
       const v = (r[i] ?? '').trim();

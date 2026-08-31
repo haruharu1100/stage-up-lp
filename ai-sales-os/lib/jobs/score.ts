@@ -3,9 +3,11 @@ import { num } from '../settings';
 import { getLearnedRate } from '../learning';
 import type { JobAnalysis } from './analyze';
 import { EXCLUSION_RULES, type ExclusionHit } from './exclude';
-import { computeOpportunity, revisionRisk } from './opportunity';
+import { capabilityReadiness, clientRisk, computeOpportunity, revisionRisk, type CapabilityReadiness } from './opportunity';
 
-export const JOB_FORMULA_VERSION = 'job-v2';
+// v3 … 依頼主の危なさ（CLIENT_RISK）と道具の仕上がり具合（CAPABILITY_READINESS）を
+//       名前を付けた指標として持ち、取りに行く順番の計算にも入れた版。
+export const JOB_FORMULA_VERSION = 'job-v3';
 
 /**
  * 案件の点数。
@@ -35,6 +37,16 @@ export type JobScore = {
   /** 手直しの起きやすさ（0〜100。高いほど直しが増える）。 */
   revisionRisk: number;
   revisionRiskReason: string;
+  /**
+   * 依頼主の危なさ（0〜100。高いほど危ない）。
+   * ★手直しの起きやすさとは別の指標。同じ欄に入れない。
+   */
+  clientRisk: number;
+  clientRiskReason: string;
+  /** 自社の道具の仕上がり具合。段階と内訳を分けて持つ（混同しない）。 */
+  capabilityReadiness: CapabilityReadiness['level'];
+  capabilityReadinessScore: number;
+  capabilityReadinessDetail: string;
   /** どの案件から先に取りに行くか（0〜100）。 */
   opportunityScore: number;
   opportunityReason: string;
@@ -43,6 +55,13 @@ export type JobScore = {
   verdict: 'APPLY' | 'HOLD' | 'EXCLUDE';
   verdictReason: string;
 };
+
+/**
+ * 依頼主の危なさがここを超えたら、自動で「応募する」と言わない（人が決める）。
+ * ★35点＝サイト外でのやり取りへの誘い1つ、30点＝ただ働きのテスト1つ、で超える線に置く。
+ *   これらは1つでも当てはまれば、時給がいくら高くても人が見るべきものだから。
+ */
+export const CLIENT_RISK_HOLD = 30;
 
 /** 予算の真ん中。高い方に寄せない（発注者は下限で決めることが多い）。 */
 export function budgetMid(job: Row): number | null {
@@ -129,6 +148,11 @@ export async function computeJobScore(args: { job: Row; analysis: JobAnalysis; e
   // --- 利益で並べ替えるための点数 -----------------------------------
   // 手直しは見積りに入っていない時間として必ず効くので、先に見積もっておく。
   const risk = revisionRisk(job, analysis);
+  // ★依頼主の危なさは、手直しの起きやすさとは別に出す。
+  //   「直しは少ないが、払ってもらえない」案件を上位に上げないため。
+  const cRisk = clientRisk(job);
+  // ★道具の仕上がり具合。完成済み／レビュー付き／試作を1つの数字に潰さず、内訳も持つ。
+  const readiness = capabilityReadiness(analysis);
   const opp = computeOpportunity({
     expectedProfit,
     expectedHours: hours > 0 ? hours : null,
@@ -136,6 +160,7 @@ export async function computeJobScore(args: { job: Row; analysis: JobAnalysis; e
     winProbability: winRate,
     automationRate: analysis.automationRate,
     revisionRisk: risk.score,
+    clientRisk: cRisk.score,
     targetHourly,
   });
 
@@ -146,8 +171,9 @@ export async function computeJobScore(args: { job: Row; analysis: JobAnalysis; e
   // ★実績として書ける道具が1つでもあるか。
   //   試作しか当たっていない案件に自動で応募すると、
   //   「実際に運用しています」と書けないまま応募することになる。人が決める。
-  const proven = analysis.matchedCaps.filter((m) => m.readiness === 'PRODUCTION_READY' || m.readiness === 'USABLE_WITH_REVIEW');
-  const prototypeOnly = analysis.matchedCaps.length > 0 && proven.length === 0;
+  //   （完成済み／レビュー付き／試作の区別は capabilityReadiness が1か所で持つ）
+  const proven = readiness.provenNames;
+  const prototypeOnly = readiness.level === 'PROTOTYPE';
 
   if (exclusions.length > 0) {
     verdict = 'EXCLUDE';
@@ -172,11 +198,15 @@ export async function computeJobScore(args: { job: Row; analysis: JobAnalysis; e
     verdictReason = '時給での支払い。時間を売る形になるので人が判断する。';
   } else if (prototypeOnly) {
     verdict = 'HOLD';
-    verdictReason = `当たったのが試作段階の仕組みだけ（${analysis.matchedCaps.map((m) => m.name).join('・')}）。実績として書けないので、応募するかは人が決める。`;
+    verdictReason = `当たったのが試作段階の仕組みだけ（${readiness.prototypeNames.join('・')}）。実績として書けないので、応募するかは人が決める。`;
+  } else if (cRisk.score >= CLIENT_RISK_HOLD) {
+    // ★お金が払われない形の危険は、時給がいくら高くても自動では通さない。
+    verdict = 'HOLD';
+    verdictReason = `依頼主の条件に危ないところがある（危なさ${cRisk.score}）：${cRisk.reasons.join('／')}。応募するかは人が決める。`;
   } else {
     verdict = 'APPLY';
     // 実績として書ける道具の名前だけを理由に出す（試作を成果のように見せない）
-    verdictReason = `自社の道具（${proven.map((m) => m.name).join('・')}）で作れて、時間あたり約${expectedHourly?.toLocaleString()}円の見込み`;
+    verdictReason = `自社の道具（${proven.join('・')}）で作れて、時間あたり約${expectedHourly?.toLocaleString()}円の見込み`;
   }
 
   return {
@@ -196,6 +226,11 @@ export async function computeJobScore(args: { job: Row; analysis: JobAnalysis; e
     winProbability: Number(winRate.toFixed(3)),
     revisionRisk: risk.score,
     revisionRiskReason: risk.reasons.join('／'),
+    clientRisk: cRisk.score,
+    clientRiskReason: cRisk.reasons.join('／'),
+    capabilityReadiness: readiness.level,
+    capabilityReadinessScore: readiness.score,
+    capabilityReadinessDetail: readiness.detail,
     opportunityScore: opp.score,
     opportunityReason: opp.reason,
     estimateConfidence: opp.estimateConfidence,
@@ -224,6 +259,11 @@ export async function saveJobScore(s: JobScore): Promise<void> {
       win_probability: s.winProbability,
       revision_risk: s.revisionRisk,
       revision_risk_reason: s.revisionRiskReason,
+      client_risk: s.clientRisk,
+      client_risk_reason: s.clientRiskReason,
+      capability_readiness: s.capabilityReadiness,
+      capability_readiness_score: s.capabilityReadinessScore,
+      capability_readiness_detail: s.capabilityReadinessDetail,
       opportunity_score: s.opportunityScore,
       opportunity_reason: s.opportunityReason,
       estimate_confidence: s.estimateConfidence,
@@ -256,6 +296,11 @@ export function rowToJobScore(s: Row): JobScore {
     winProbability: Number(s.win_probability ?? 0),
     revisionRisk: Number(s.revision_risk ?? 0),
     revisionRiskReason: String(s.revision_risk_reason ?? ''),
+    clientRisk: Number(s.client_risk ?? 0),
+    clientRiskReason: String(s.client_risk_reason ?? ''),
+    capabilityReadiness: (String(s.capability_readiness ?? 'NONE') as JobScore['capabilityReadiness']),
+    capabilityReadinessScore: Number(s.capability_readiness_score ?? 0),
+    capabilityReadinessDetail: String(s.capability_readiness_detail ?? ''),
     opportunityScore: Number(s.opportunity_score ?? 0),
     opportunityReason: String(s.opportunity_reason ?? ''),
     estimateConfidence: (String(s.estimate_confidence ?? 'NORMAL') as JobScore['estimateConfidence']),

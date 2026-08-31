@@ -128,6 +128,15 @@ const NOT_OWN_SITE_HOSTS = [
   'ameblo.jp', 'hatenablog.com', 'wixsite.com', 'jimdofree.com', 'goo.ne.jp',
   'google.com', 'goo.gl', 'maps.app.goo.gl', 'ekiten.jp', 'itp.ne.jp', 'navitime.co.jp',
   'hotpepper.jp', 'tabelog.com', 'r.gnavi.co.jp', 'gnavi.co.jp', 'jpnumber.com',
+  // ★企業名鑑・業種別ポータル。社名も電話も住所も正しく載っているので照合は通ってしまうが、
+  //   その会社が書いたページではない。ここを「公式HP」にすると
+  //   「公式サイトを拝見しました」が嘘になり、フォームも紹介サイト宛てになる。
+  //   実際に kensetumap.com のページを公式HPとして採用してしまった事故がある。
+  //   ★この一覧だけでは足りない（名鑑サイトは無数にある）。
+  //     形で見分ける判定を lib/sales/identity.ts の looksLikeDirectoryPage に置いてある。
+  'kensetumap.com', 'mapion.co.jp', 'townpage.goo.ne.jp', 'nttbj.itp.ne.jp',
+  'craft-bank.com', 'tsr-net.co.jp', 'tdb.co.jp', 'salesnow.jp',
+  'houjinbangou.com', 'navit-j.com', 'shoko-navi.com', 'job-gear.jp',
 ];
 
 /** そのURLは「その会社自身のホームページ」と見てよいか。 */

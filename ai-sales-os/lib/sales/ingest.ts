@@ -14,6 +14,8 @@ import {
 import { guessIndustry } from '../industry';
 import { detectNoSales } from './nosales';
 import { trustedByRegistry } from './identity';
+import { originForCompanySource, type DataOrigin } from '../origin';
+import { SALES_TARGET_KINDS, CORPORATE_KIND_JA } from './official-data';
 
 export type CompanySource =
   | 'HOUJIN_BANGOU'
@@ -43,11 +45,54 @@ export type CompanyInput = {
   establishedOn?: string | null;
   employeesEstimate?: number | null;
   description?: string | null;
+  /** 一言紹介がどこから来たか。OFFICIAL_WEBSITE のときだけ営業文に引用してよい。 */
+  descriptionSource?: string | null;
   businessDetail?: string | null;
+  /**
+   * businessDetail がどこから来た文章か。
+   * ★OFFICIAL_WEBSITE 以外は営業文の引用に使わない。
+   *   ここを空のままにすると「こちらのメモ」を「相手が書いた文章」として扱ってしまう。
+   */
+  businessDetailSource?: string | null;
+  /**
+   * こちらの手元のメモ（CSVの「メモ」「備考」列など）。
+   * ★相手について相手が書いた文章ではない。営業文には絶対に出さない。
+   *   例:「2026-07-28 人が応答/手応えC/取次で終了」。これを相手に読み上げたら事故。
+   */
+  internalNote?: string | null;
   /** HP本文など、営業拒否表記を探す対象のテキスト */
   pageText?: string | null;
   source: CompanySource;
   sourceUrl?: string | null;
+  /**
+   * 本物のデータか、練習用か。
+   * ★指定しなければ source から決める。推測で REAL にはしない。
+   */
+  dataOrigin?: DataOrigin;
+  /** 国の公開データから来た「法人の種別」コード（301=株式会社 など）。 */
+  corporateKind?: string | null;
+  /** 登記記録の閉鎖等年月日。入っていたら営業候補から外す。 */
+  closedAt?: string | null;
+  /** 連絡先をどこから取ったか。 */
+  phoneSource?: ContactSource | null;
+  emailSource?: ContactSource | null;
+  formSource?: ContactSource | null;
+  websiteSource?: ContactSource | null;
+};
+
+/**
+ * 連絡先の取得元。
+ * ★どこから取ったか言えない連絡先は使わない。空欄のままにする。
+ */
+export const CONTACT_SOURCES = ['OFFICIAL_WEBSITE', 'GBIZINFO', 'GOOGLE_PLACES', 'OTHER_OFFICIAL', 'MANUAL'] as const;
+export type ContactSource = (typeof CONTACT_SOURCES)[number];
+
+export const CONTACT_SOURCE_JA: Record<ContactSource, string> = {
+  OFFICIAL_WEBSITE: '会社の公式HPに書いてあった',
+  GBIZINFO: '国のgBizINFOに載っていた',
+  GOOGLE_PLACES: '地図サービスが返した',
+  OTHER_OFFICIAL: 'その他の公的な公開情報',
+  MANUAL: '人が手で入れた',
 };
 
 export type IngestResult = {
@@ -151,6 +196,24 @@ export async function ingestCompany(input: CompanyInput): Promise<IngestResult> 
   const industry = guessIndustry(name, input.description, input.businessDetail, input.pageText);
   const at = nowIso();
 
+  const dataOrigin = input.dataOrigin ?? originForCompanySource(input.source);
+
+  // ★営業の相手にしてよい法人かを、ここで一度だけ決める。
+  //   閉鎖した法人・国の機関・地方公共団体・宗教法人などは営業候補から外す。
+  //   ただし行そのものは消さない。あとで種別の扱いを見直せるようにしておく。
+  let salesExcluded = 0;
+  let salesExcludedReason: string | null = null;
+  if (input.closedAt) {
+    salesExcluded = 1;
+    salesExcludedReason = `登記が閉じている（${input.closedAt}）ので営業しない`;
+  } else if (input.corporateKind && !SALES_TARGET_KINDS.has(input.corporateKind)) {
+    salesExcluded = 1;
+    salesExcludedReason = `${CORPORATE_KIND_JA[input.corporateKind] ?? '会社以外の法人'}なので営業の相手にしない`;
+  } else if (noSales.found) {
+    salesExcluded = 1;
+    salesExcludedReason = '営業お断りの表記がある';
+  }
+
   const id = await insert('companies', {
     dedupe_key: dedupeKey,
     corporate_number: corporateNumber,
@@ -174,11 +237,26 @@ export async function ingestCompany(input: CompanyInput): Promise<IngestResult> 
     employees_estimate: input.employeesEstimate ?? null,
     scale_band: estimateScaleBand(input.employeesEstimate),
     description: input.description ?? null,
+    // ★取り込みで入る一言紹介は、こちらの一覧に書いてあった言葉（CSVの「業種」欄など）。
+    //   その会社が自分で書いた文章ではないので MANUAL。営業文には引用しない。
+    description_source: input.description ? (input.descriptionSource ?? 'MANUAL') : null,
     business_detail: input.businessDetail ?? null,
+    business_detail_source: input.businessDetail ? (input.businessDetailSource ?? 'MANUAL') : null,
+    internal_note: input.internalNote ?? null,
     no_sales_flag: noSales.found ? 1 : 0,
     no_sales_evidence: noSales.evidence,
     source: input.source,
     source_url: input.sourceUrl ?? null,
+    data_origin: dataOrigin,
+    website_verdict: verified ? 'VERIFIED' : website || websiteCandidate ? 'UNVERIFIED' : 'NO_WEBSITE',
+    website_source: website || websiteCandidate ? (input.websiteSource ?? null) : null,
+    phone_source: phone.value ? (input.phoneSource ?? null) : null,
+    email_source: emailValue ? (input.emailSource ?? null) : null,
+    form_source: contactFormUrl ? (input.formSource ?? null) : null,
+    corporate_kind: input.corporateKind ?? null,
+    closed_at: input.closedAt ?? null,
+    sales_excluded: salesExcluded,
+    sales_excluded_reason: salesExcludedReason,
     fetched_at: at,
     created_at: at,
     updated_at: at,

@@ -1,4 +1,5 @@
 import { listApprovals, listPendingApprovals, type ApprovalItem } from '../../lib/approval';
+import { ORIGIN_JA, ORIGIN_SHORT_JA, isReal } from '../../lib/origin';
 import { approveAction, excludeKindAction, holdAction, rejectAction, reviseAction } from './actions';
 import { Money, Page, Panel, Tag, verdictTag } from '../ui';
 
@@ -39,10 +40,21 @@ function Card({ a }: { a: ApprovalItem }) {
     <div className="appr">
       <div className="appr-head">
         <Tag kind="warn">{KIND_JA[a.kind] ?? a.kind}</Tag>
+        {/* ★本物か練習用かを、いちばん目に入る位置に出す。 */}
+        {isReal(a.dataOrigin) ? (
+          <Tag kind="ok">{ORIGIN_SHORT_JA[a.dataOrigin]}</Tag>
+        ) : (
+          <Tag kind="mute">TEST／送信不可</Tag>
+        )}
         {a.status === 'HELD' ? <Tag kind="mute">保留中</Tag> : null}
         <h3>{a.title}</h3>
       </div>
       <div className="small">{d.subtitle || a.summary}</div>
+      {isReal(a.dataOrigin) ? null : (
+        <div className="small" style={{ marginTop: 4 }}>
+          これは練習用のデータです。承認しても外部への操作には進みません（{ORIGIN_JA[a.dataOrigin]}）。
+        </div>
+      )}
 
       <Sec label="何を提案するか">
         <div style={{ fontSize: 13 }}>{d.offer ?? <span className="small">—（提案内容が読み取れていない）</span>}</div>
@@ -213,7 +225,10 @@ export default async function Approvals() {
         このシステムには送る処理コードが入っていません。承認は「人がこの内容でよいと確認した」という記録として残ります。
       </div>
 
-      <Panel title={`あなたの判断を待っているもの（${pending.length}件）`}>
+      <Panel
+        title={`あなたの判断を待っているもの（${pending.length}件）`}
+        note={`うち 本物のデータ ${pending.filter((a) => isReal(a.dataOrigin)).length}件 / 練習用（送信不可） ${pending.filter((a) => !isReal(a.dataOrigin)).length}件。足した数字では判断しないでください。`}
+      >
         {pending.length === 0 ? <p className="empty">今は判断を待っているものはありません。</p> : pending.map((a) => <Card key={a.id} a={a} />)}
       </Panel>
 

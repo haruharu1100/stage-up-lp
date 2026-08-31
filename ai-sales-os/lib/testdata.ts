@@ -101,8 +101,35 @@ const STRENGTHS = [
 ];
 const AREAS = ['市内中心部', '沿線沿いの3市', '県内全域', '近隣2県まで', '半径15km圏', '駅前商店街', '郊外の住宅地', '工業団地の周辺', '観光地の周辺', '旧市街', '新興住宅地', '港湾エリア', '大学の周辺'];
 
+/**
+ * 練習用の会社の「問い合わせフォームのページに書いてある文章」。
+ *
+ * ★フォームは、あるだけでは営業に使わない。
+ *   そのフォーム自身が取引・提案の受付を書いているときだけ使う（form-policy.ts）。
+ *   その分かれ道を練習データでも本物と同じ処理で通すために、
+ *   実際のページ本文に相当する文章をここに置く。判定は必ず judgeFormPolicy に任せる。
+ */
+export const TEST_FORM_PAGE_TEXT: Record<string, string> = {
+  株式会社フォームのみ:
+    'お問い合わせフォームです。製品についてのご質問のほか、お取引のご相談や業務提携のご提案もこちらの窓口で受け付けております。担当者より順次ご連絡いたします。',
+  株式会社建設テスト3:
+    'お問い合わせはこちらのフォームからお願いいたします。なお、営業目的のお問い合わせはお断りしております。',
+};
+
+/**
+ * 練習用の会社の事業内容は「その会社が自分のHPに書いた文章」という設定にする。
+ *
+ * ★なぜ明示するか。
+ *   事業内容は、出どころが「その会社のHP本文」のときだけ営業文へ引用してよい（facts.ts）。
+ *   出どころを書かないと「人が入れたメモ」扱いになり、練習データでは
+ *   本物と同じ引用の経路がまったく通らないまま「文面OK」に見えてしまう。
+ *   ここは決め打ちの合格ではなく、練習データの前提（HPに書いてある）を正しく申告するもの。
+ */
 export function buildTestCompanies(): CompanyInput[] {
-  const out: CompanyInput[] = COMPANY_FIXTURES.map(({ _expect, ...c }) => c);
+  const out: CompanyInput[] = COMPANY_FIXTURES.map(({ _expect, ...c }) => ({
+    ...c,
+    businessDetailSource: c.businessDetail ? (c.businessDetailSource ?? 'OFFICIAL_WEBSITE') : null,
+  }));
   let i = 0;
   while (out.length < 100) {
     const p = PROFILES[i % PROFILES.length];
@@ -133,6 +160,7 @@ export function buildTestCompanies(): CompanyInput[] {
       employeesEstimate: [3, 8, 15, 40, 120, 350][n % 6],
       description: `${pref}の${p.kind}の会社。${SCALE_NOTES[n % SCALE_NOTES.length]}。`,
       businessDetail: detail,
+      businessDetailSource: 'OFFICIAL_WEBSITE',
       pageText: `${detail} お問い合わせはお気軽にどうぞ。`,
       source: 'TEST',
     });

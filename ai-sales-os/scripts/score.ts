@@ -5,19 +5,22 @@ import { matchOffers, primarySellable, saveOfferMatches } from '../lib/sales/off
 import { decideChannel, isPhoneFriendly, saveChannelDecision, CHANNEL_LABEL, type Channel } from '../lib/sales/channel';
 import { computeCompanyScore, saveCompanyScore } from '../lib/sales/score';
 import type { NeedFlags } from '../lib/needs';
-import type { IndustryKey } from '../lib/industry';
+import { toScaleBand, type IndustryKey } from '../lib/industry';
+import { SCOPE_JA, scopeFromArgv, scopeSql } from './_scope';
 
 /**
  * 「この会社に何を売るか」「どうやって連絡するか」「いくらの見込みか」を出す。
  * 読み取り済みの結果（company_analyses）を使うので、先に npm run analyze が必要。
  *
- * 使い方: npm run score
+ * 使い方: npm run score -- --real （本物だけ）／ --test （練習用だけ）／ 省略で全部
  */
 
 async function main() {
   await initSettings();
   const offers = await loadOffers(false);
-  const companies = await all('SELECT * FROM companies ORDER BY id');
+  const scope = scopeFromArgv();
+  console.log(`■ 対象: ${SCOPE_JA[scope]}`);
+  const companies = await all(`SELECT * FROM companies WHERE ${scopeSql(scope)} ORDER BY id`);
   if (companies.length === 0) {
     console.log('会社が1件も入っていません。先に npm run seed か npm run companies:import を実行してください。');
     return;
@@ -40,7 +43,7 @@ async function main() {
     const industry = String(a.industry) as IndustryKey;
     const confidence = Number(a.confidence ?? 0);
 
-    const matches = matchOffers(industry, needFlags, offers);
+    const matches = matchOffers(industry, needFlags, offers, toScaleBand(c.scale_band));
     await saveOfferMatches(Number(c.id), matches);
     const primary = primarySellable(matches);
     const primaryOffer = primary ? offers.find((o) => o.code === primary.offerCode) ?? null : null;

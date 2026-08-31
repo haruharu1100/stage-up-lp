@@ -12,7 +12,7 @@ import { computeJobScore, loadExclusionHits, saveJobScore } from './jobs/score';
 import { buildProposal, saveProposal } from './jobs/proposal';
 import { decideApply, saveApplication } from './jobs/apply';
 import { evaluateExclusions } from './jobs/exclude';
-import { INDUSTRY_LABEL, type IndustryKey } from './industry';
+import { INDUSTRY_LABEL, toScaleBand, type IndustryKey } from './industry';
 
 /**
  * 調べる → 判断する → 文面を作る、までを一気に流す。
@@ -144,7 +144,9 @@ export async function runSalesPipeline(limit = 1000): Promise<SalesPipelineRepor
     analyzed++;
 
     // 2. 何を売るか
-    const matches = matchOffers(analysis.industry as IndustryKey, analysis.needFlags, offers);
+    // ★会社の規模に合う商品だけを候補にする。
+    //   規模が分かっていない会社（UNKNOWN）には、いちばん小さい入口の商品しか当たらない。
+    const matches = matchOffers(analysis.industry as IndustryKey, analysis.needFlags, offers, toScaleBand(c.scale_band));
     await saveOfferMatches(companyId, matches);
     const primary = primarySellable(matches);
     const primaryOffer = primary ? offers.find((o) => o.code === primary.offerCode) ?? null : null;

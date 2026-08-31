@@ -6,6 +6,10 @@
  */
 export const METRIC_DEFS: { key: string; label: string; want: 'up' | 'down' | 'flat' }[] = [
   { key: 'companies', label: '会社の件数', want: 'flat' },
+  // ★このシステムで一番大事な数字。ほかがどれだけ良くなっても、ここが0でなければ全部やり直し。
+  //   別会社のHP・電話・メールを1件でも営業候補に通したら、送った先で取り返しがつかない。
+  { key: 'wrong_link_leaked', label: '★別会社の連絡先を営業候補へ通した件数（0でなければ重大不具合）', want: 'down' },
+  { key: 'wrong_link_rate', label: '★別会社の連絡先を営業候補へ通した割合(%)', want: 'down' },
   { key: 'analyzed_rate', label: '会社を読み取れた割合(%)', want: 'up' },
   { key: 'offer_matched_rate', label: '売る商品が決まった割合(%)', want: 'up' },
   { key: 'contactable_rate', label: '連絡先が使える割合(%)', want: 'up' },

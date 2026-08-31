@@ -1,8 +1,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { config } from '../env';
-import { nowIso, upsert, all, parseJson } from '../db/client';
-import { CAPABILITIES, OFFERS, type CapabilityDef, type OfferDef, type Readiness } from './definitions';
+import { nowIso, upsert, all, run, parseJson } from '../db/client';
+import { CAPABILITIES, OFFERS, type CapabilityDef, type OfferDef, type PriceStatus, type Readiness } from './definitions';
 
 /**
  * Obsidian（正本）と、このOSが持っているカタログを突き合わせる。
@@ -19,6 +19,8 @@ export type CatalogSyncReport = {
   capabilities: { code: string; status: string; readiness: Readiness; evidenceOk: boolean }[];
   unclassifiedVaultDirs: string[];
   sellableCount: number;
+  /** カタログから外したのでBLOCKEDに落とした商品コード（行は残してある）。 */
+  retiredOfferCodes: string[];
 };
 
 function evidenceExists(rel: string): boolean {
@@ -52,6 +54,10 @@ export async function syncCatalog(): Promise<CatalogSyncReport> {
         price_min: o.priceMin,
         price_max: o.priceMax,
         gross_margin_rate: o.grossMarginRate,
+        price_status: o.priceStatus,
+        price_evidence: o.priceEvidence,
+        tier: o.tier,
+        scale_fit: JSON.stringify(o.scaleFit),
         summary: o.summary,
         fit_industries: JSON.stringify(o.fitIndustries),
         fit_needs: JSON.stringify(o.fitNeeds),
@@ -62,6 +68,31 @@ export async function syncCatalog(): Promise<CatalogSyncReport> {
       ['code'],
     );
     offerRows.push({ code: o.code, status, evidenceOk: ok, note: reason ?? '' });
+  }
+
+  /**
+   * ★カタログから外した商品を、行ごと消さずに BLOCKED へ落とす。
+   *
+   *   消してしまうと、その商品で作った過去の下書き・過去の実績が
+   *   「存在しない商品コード」を指したまま残り、あとから内訳が読めなくなる。
+   *   かといって残したままにすると、外したはずの商品で営業に行ってしまう。
+   *   だから「行は残す・営業には使わせない」の形にする。
+   *
+   *   実例：業務効率化・AI導入は1つの商品では値段が付けられなかったので
+   *   3段階（LIGHT/STANDARD/CUSTOM）へ分けた。元の GYOMU_KAIZEN がここで止まる。
+   */
+  const known = new Set(OFFERS.map((o) => o.code));
+  const existing = await all(`SELECT code, status FROM offers`);
+  const retired: string[] = [];
+  for (const r of existing) {
+    const code = String(r.code);
+    if (known.has(code)) continue;
+    retired.push(code);
+    if (String(r.status) === 'BLOCKED') continue;
+    await run(
+      `UPDATE offers SET status = 'BLOCKED', status_reason = ?, price_status = 'UNKNOWN', updated_at = ? WHERE code = ?`,
+      ['カタログから外した商品。営業には使わない（過去の記録を読めるように行は残してある）。', at, code],
+    );
   }
 
   const capRows: CatalogSyncReport['capabilities'] = [];
@@ -116,6 +147,7 @@ export async function syncCatalog(): Promise<CatalogSyncReport> {
     capabilities: capRows,
     unclassifiedVaultDirs: unclassified,
     sellableCount: sellable,
+    retiredOfferCodes: retired,
   };
 }
 
@@ -129,10 +161,23 @@ export type OfferRow = {
   price_min: number | null;
   price_max: number | null;
   gross_margin_rate: number | null;
+  /** その値段がどこまで決まっているか。CONFIRMED / PROVISIONAL / UNKNOWN。 */
+  price_status: PriceStatus;
+  price_evidence: string | null;
+  /** 段階商品のときだけ LIGHT / STANDARD / CUSTOM。それ以外は null。 */
+  tier: string | null;
+  /** 提案してよい会社の規模。空配列＝規模を問わない。 */
+  scaleFit: string[];
   summary: string;
   fitIndustries: string[];
   fitNeeds: string[];
 };
+
+function toPriceStatus(v: unknown): PriceStatus {
+  const s = String(v ?? '').trim().toUpperCase();
+  // ★知らない値・空欄は UNKNOWN。勝手に「確定」へ寄せない。
+  return s === 'CONFIRMED' || s === 'PROVISIONAL' ? s : 'UNKNOWN';
+}
 
 export async function loadOffers(onlySellable = false): Promise<OfferRow[]> {
   const rows = await all(
@@ -148,6 +193,10 @@ export async function loadOffers(onlySellable = false): Promise<OfferRow[]> {
     price_min: r.price_min === null ? null : Number(r.price_min),
     price_max: r.price_max === null ? null : Number(r.price_max),
     gross_margin_rate: r.gross_margin_rate === null ? null : Number(r.gross_margin_rate),
+    price_status: toPriceStatus(r.price_status),
+    price_evidence: r.price_evidence === null || r.price_evidence === undefined ? null : String(r.price_evidence),
+    tier: r.tier === null || r.tier === undefined ? null : String(r.tier),
+    scaleFit: parseJson<string[]>(r.scale_fit, []),
     summary: String(r.summary),
     fitIndustries: parseJson<string[]>(r.fit_industries, []),
     fitNeeds: parseJson<string[]>(r.fit_needs, []),

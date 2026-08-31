@@ -7,3 +7,7 @@ data/*.db-*
 *.log
 tsconfig.tsbuildinfo
 next-env.d.ts
+data/inbox/
+data/official/
+data/_*
+.vercel

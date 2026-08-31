@@ -33,6 +33,11 @@ export type DraftInput = {
   evidence: string[];
   offer: OfferRow;
   channel: Channel;
+  /**
+   * 使ってはいけないと監査で判定された一文。書き直しのときだけ渡す。
+   * ここに入れた一文は、引用にも「その会社の仕事」にも使わない。
+   */
+  avoidFacts?: string[];
 };
 
 export type Draft = {
@@ -143,7 +148,7 @@ function buildEmailBody(input: DraftInput, footer: string): Built {
   const c = input.company;
   const seed = Number(c.id) || 1;
   const needs = topNeedLabels(input.needFlags, input.offer);
-  const facts = chooseFacts(c, seed);
+  const facts = chooseFacts(c, seed, input.avoidFacts ?? []);
   const { f0, f1, work } = facts;
   const whyOffer = whyThisOffer(input, facts, needs);
   const industry = INDUSTRY_LABEL[input.industry];
@@ -151,23 +156,30 @@ function buildEmailBody(input: DraftInput, footer: string): Built {
 
   // ★「公式サイトを拝見し」と書けるのは、そのHPが本人のものだと確かめられているときだけ。
   //   確かめていないときは「公開されている情報を拝見し」と書く。読んでいないものを読んだと書かない。
+  //
+  // ★どの言い回しを引いても、必ず「突然の連絡である」という断りから始める。
+  //   以前は6つのうち3つに断りが無く、seed次第で
+  //   「○○様のホームページを読み、…」といきなり始まる文面ができていた。
+  //   知らない相手からの営業でこの入り方をすると、読んだ側は不快になる。
+  //   引き出しを増やすのは同じ文面を配らないためであって、
+  //   礼儀のある版と無い版を混ぜるためではない。
   const opening = variant(
     siteVerified(c)
       ? [
-          `${c.name}様の公式サイトを拝見し、「${f0}」というところに目が留まりご連絡しました。`,
+          `突然のご連絡失礼いたします。${c.name}様の公式サイトを拝見し、「${f0}」というところに目が留まりご連絡しました。`,
           `突然のご連絡失礼いたします。${c.name}様のサイトで「${f0}」と拝見しました。`,
-          `${c.name}様のホームページを読み、「${f0}」という点が印象に残っています。`,
+          `はじめてご連絡いたします。${c.name}様のホームページを読み、「${f0}」という点が印象に残っています。`,
           `はじめてご連絡いたします。${c.name}様の「${f0}」という記載を拝見しました。`,
-          `${c.name}様のサイトにある「${f0}」という説明を読んで、お手紙のつもりで書いています。`,
-          `${c.name}様のことをサイトで知りました。「${f0}」とのこと、興味深く読みました。`,
+          `お忙しいところ恐れ入ります。${c.name}様のサイトにある「${f0}」という説明を読んで、お手紙のつもりで書いています。`,
+          `突然の連絡で恐縮です。${c.name}様のことをサイトで知りました。「${f0}」とのこと、興味深く読みました。`,
         ]
       : [
-          `${c.name}様について公開されている情報を拝見し、「${f0}」というところに目が留まりご連絡しました。`,
+          `突然のご連絡失礼いたします。${c.name}様について公開されている情報を拝見し、「${f0}」というところに目が留まりご連絡しました。`,
           `突然のご連絡失礼いたします。公開されている情報で、${c.name}様の「${f0}」を拝見しました。`,
-          `${c.name}様の会社情報を読み、「${f0}」という点が印象に残っています。`,
+          `はじめてご連絡いたします。${c.name}様の会社情報を読み、「${f0}」という点が印象に残っています。`,
           `はじめてご連絡いたします。${c.name}様の「${f0}」という記載を拝見しました。`,
-          `${c.name}様の「${f0}」という説明を読んで、お手紙のつもりで書いています。`,
-          `${c.name}様のことを公開されている情報で知りました。「${f0}」とのこと、興味深く読みました。`,
+          `お忙しいところ恐れ入ります。${c.name}様の「${f0}」という説明を読んで、お手紙のつもりで書いています。`,
+          `突然の連絡で恐縮です。${c.name}様のことを公開されている情報で知りました。「${f0}」とのこと、興味深く読みました。`,
         ],
     seed,
     0,
@@ -267,22 +279,23 @@ function buildFormBody(input: DraftInput): Built {
   const c = input.company;
   const seed = Number(c.id) || 1;
   const needs = topNeedLabels(input.needFlags, input.offer);
-  const facts = chooseFacts(c, seed);
+  const facts = chooseFacts(c, seed, input.avoidFacts ?? []);
   const { f0, f1, work } = facts;
   const whyOffer = whyThisOffer(input, facts, needs);
 
+  // ★フォームも同じ。どの言い回しでも必ず突然の連絡であることを断る。
   const opening = variant(
     siteVerified(c)
       ? [
-          `サイトを拝見し、「${f0}」というところを知ってご連絡しました。`,
-          `「${f0}」という記載を読み、フォームからご連絡しています。`,
-          `ホームページの「${f0}」という部分が印象に残り、ご連絡しました。`,
+          `突然のご連絡失礼いたします。サイトを拝見し、「${f0}」というところを知ってご連絡しました。`,
+          `突然のご連絡失礼いたします。「${f0}」という記載を読み、フォームからご連絡しています。`,
+          `はじめてご連絡いたします。ホームページの「${f0}」という部分が印象に残り、ご連絡しました。`,
           `「${f0}」とのこと、拝見しました。突然の連絡で失礼いたします。`,
         ]
       : [
-          `公開されている情報で「${f0}」というところを知り、ご連絡しました。`,
-          `「${f0}」という記載を読み、フォームからご連絡しています。`,
-          `「${f0}」という部分が印象に残り、ご連絡しました。`,
+          `突然のご連絡失礼いたします。公開されている情報で「${f0}」というところを知り、ご連絡しました。`,
+          `突然のご連絡失礼いたします。「${f0}」という記載を読み、フォームからご連絡しています。`,
+          `はじめてご連絡いたします。「${f0}」という部分が印象に残り、ご連絡しました。`,
           `「${f0}」とのこと、拝見しました。突然の連絡で失礼いたします。`,
         ],
     seed,
@@ -323,6 +336,37 @@ function buildFormBody(input: DraftInput): Built {
   return { subject: null, body, personal: personalTextOf(c, facts), facts, usedFacts: usedFactsOf(facts), needs, whyOffer };
 }
 
+/**
+ * 相手から返ってきそうな言葉と、その返し方。
+ *
+ * ★電話だけのものにしない。
+ *   メールでもフォームでも、返信で同じことを言われる。
+ *   「営業はお断りしています」と言われたときの返しは、チャネルが違っても同じでなければならない
+ *   （＝以後送らない、と即答する）。ここを電話台本の中だけに置いていると、
+ *   メールで断られたときの扱いが人によってばらつく。
+ *
+ * ★1つ目は必ず「間に合っています」。2つ目は必ず「営業はお断りしています」。
+ *   断られたときの返しを最初に書いておかないと、押し返す文言を先に読んでしまう。
+ */
+export function objectionSet(offer: OfferRow, channel: Channel): { say: string; reply: string }[] {
+  const priceReply =
+    offer.price_min !== null
+      ? `${offer.price_min.toLocaleString()}円からです。`
+      : 'ご要望を伺ってからお見積りします。金額だけ先にお伝えすることもできます。';
+  const common: { say: string; reply: string }[] = [
+    { say: '間に合っています', reply: '承知しました。今のやり方で困っていないのであれば、無理にお勧めするものではありません。資料だけお送りしてもよろしいでしょうか。' },
+    { say: '営業はお断りしています', reply: '失礼しました。以後ご連絡はいたしません。お時間をいただきありがとうございました。' },
+    { say: '料金は？', reply: priceReply },
+  ];
+  if (channel === 'PHONE') {
+    common.push({ say: '担当は今いません', reply: 'かしこまりました。何時ごろでしたらお戻りでしょうか。改めておかけ直しします。' });
+  } else {
+    common.push({ say: '誰が送っているのか', reply: '差出人・所在地・問い合わせ先は本文末尾に記載しています。ご不明な点があればそちらへご返信ください。' });
+    common.push({ say: '実績はあるのか', reply: `${offer.name}については自社で運用している内容をそのままお見せできます。他社の成果を保証するものではありません。` });
+  }
+  return common;
+}
+
 export function buildCallScript(input: DraftInput): {
   opening: string;
   purpose: string;
@@ -338,7 +382,7 @@ export function buildCallScript(input: DraftInput): {
   const c = input.company;
   const seed = Number(c.id) || 1;
   const needs = topNeedLabels(input.needFlags, input.offer);
-  const facts = chooseFacts(c, seed);
+  const facts = chooseFacts(c, seed, input.avoidFacts ?? []);
   const { f0, f1, work } = facts;
   const whyOffer = whyThisOffer(input, facts, needs);
 
@@ -373,7 +417,7 @@ export function buildCallScript(input: DraftInput): {
           `突然のお電話失礼いたします。${c.name}様のホームページで「${f0}」と拝見し、ご連絡しました。ご担当の方をお願いできますでしょうか。`,
           `恐れ入ります。${c.name}様のサイトを読み、「${f0}」という点でご連絡しました。少しだけお時間よろしいでしょうか。`,
           `お世話になります。${c.name}様の「${f0}」という記載を拝見してお電話しています。ご担当の方はご在席でしょうか。`,
-          `${c.name}様のお電話でよろしいでしょうか。サイトに「${f0}」とありましたので、ご連絡しました。ご担当の方はおられますか。`,
+          `突然のお電話恐れ入ります。${c.name}様のお電話でよろしいでしょうか。サイトに「${f0}」とありましたので、ご連絡しました。ご担当の方はおられますか。`,
           `失礼いたします。「${f0}」と書かれているのを読み、${c.name}様へお電話しました。今よろしいでしょうか。`,
         ]
       : [
@@ -381,7 +425,7 @@ export function buildCallScript(input: DraftInput): {
           `突然のお電話失礼いたします。${c.name}様の会社情報で「${f0}」と拝見し、ご連絡しました。ご担当の方をお願いできますでしょうか。`,
           `恐れ入ります。${c.name}様の「${f0}」という点を読み、ご連絡しました。少しだけお時間よろしいでしょうか。`,
           `お世話になります。${c.name}様の「${f0}」という記載を拝見してお電話しています。ご担当の方はご在席でしょうか。`,
-          `${c.name}様のお電話でよろしいでしょうか。「${f0}」とありましたので、ご連絡しました。ご担当の方はおられますか。`,
+          `突然のお電話恐れ入ります。${c.name}様のお電話でよろしいでしょうか。「${f0}」とありましたので、ご連絡しました。ご担当の方はおられますか。`,
           `失礼いたします。「${f0}」と書かれているのを読み、${c.name}様へお電話しました。今よろしいでしょうか。`,
         ],
     seed,
@@ -419,12 +463,7 @@ export function buildCallScript(input: DraftInput): {
         2,
       ),
     ],
-    objections: [
-      { say: '間に合っています', reply: '承知しました。今のやり方で困っていないのであれば、無理にお勧めするものではありません。資料だけお送りしてもよろしいでしょうか。' },
-      { say: '営業はお断りしています', reply: '失礼しました。以後ご連絡はいたしません。お時間をいただきありがとうございました。' },
-      { say: '料金は？', reply: input.offer.price_min !== null ? `${input.offer.price_min.toLocaleString()}円からです。` : 'ご要望を伺ってからお見積りします。金額だけ先にお伝えすることもできます。' },
-      { say: '担当は今いません', reply: 'かしこまりました。何時ごろでしたらお戻りでしょうか。改めておかけ直しします。' },
-    ],
+    objections: objectionSet(input.offer, 'PHONE'),
     closing: variant(
       [
         `ありがとうございます。それでは${c.email ? 'メールで' : '改めてお電話で'}詳しい資料をお送りします。`,

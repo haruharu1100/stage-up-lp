@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { createClient, type Client, type InValue } from '@libsql/client';
-import { ALL_SCHEMA, COLUMN_ADDITIONS } from './schema';
+import { ALL_SCHEMA, COLUMN_ADDITIONS, REPAIRS } from './schema';
 import { config, DATA_DIR } from '../env';
 
 let client: Client | null = null;
@@ -20,8 +20,12 @@ function resolveUrl(): string {
 
 export function db(): Client {
   if (!client) {
-    fs.mkdirSync(DATA_DIR, { recursive: true });
-    client = createClient({ url: resolveUrl() });
+    const url = config.databaseUrl;
+    // ★手元のパソコンで動かすとき（file:）だけ、保存用のフォルダを作る。
+    //   サーバー上（libsql:／https:）は書き込めない場所で動くので、フォルダ作成をしない。
+    if (url.startsWith('file:')) fs.mkdirSync(DATA_DIR, { recursive: true });
+    const authToken = process.env.DATABASE_AUTH_TOKEN?.trim() || undefined;
+    client = createClient(authToken ? { url: resolveUrl(), authToken } : { url: resolveUrl() });
   }
   return client;
 }
@@ -38,6 +42,8 @@ export async function migrate(): Promise<void> {
       if (!String((e as Error).message).includes('duplicate column name')) throw e;
     }
   }
+  // 列を足したときに既存の行へ入った「初期値の嘘」を直す（何度流しても同じ結果になる）。
+  for (const stmt of REPAIRS) await c.execute(stmt);
   migrated = true;
 }
 

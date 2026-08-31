@@ -1,6 +1,9 @@
 import { all, one, nowIso, insert, run, type Row } from '../db/client';
 import { checkExternalAction } from '../gate';
+import { canReachExecutor } from '../origin';
 import { emailDomain, hostOf } from '../text';
+import { canAutoOutreachByIdentity, WEBSITE_VERDICT_JA, type WebsiteVerdict } from './identity';
+import { cooldownDays } from './limits';
 import type { Channel } from './channel';
 
 /**
@@ -14,11 +17,21 @@ import type { Channel } from './channel';
  * 最後に必ず checkExternalAction() で止まる（二重の鍵）。
  */
 
-/** 1日に触ってよい会社数の上限。ここを超えたら、その日はもう作らない。 */
+/**
+ * 1日に触ってよい会社数の上限。ここを超えたら、その日はもう作らない。
+ *
+ * ★これは「下書きを作る」段階の天井であって、設定で上げ下げできない。
+ *   設定側（exec.daily_limit）は外へ実際に出す段階の上限で、別物。
+ *   設定でこの天井を超えられるようにすると、天井の意味が無くなる。
+ */
 export const DAILY_CAP_HARD_MAX = 20;
 
-/** 同じ会社に次に触れてよくなるまでの日数。 */
-export const REAPPROACH_DAYS = 90;
+/**
+ * 同じ会社に次に触れてよくなるまでの日数。
+ * 実体は limits.ts にある（設定で「もっと長くする」ことだけができる）。
+ * 既存の呼び出し元のために、ここからも読めるようにしてある。
+ */
+export { REAPPROACH_DAYS } from './limits';
 
 /** 会社情報がこれより古いと、電話番号やメールが変わっている可能性があるので使わない。 */
 export const FRESHNESS_DAYS = 180;
@@ -166,9 +179,11 @@ export async function canOutreach(companyId: number, channel: Channel): Promise<
   push('DRAFT_READY', String(draft?.status ?? '') === 'READY', draft ? (String(draft.status) === 'READY' ? '下書きは作成済み' : `下書きが使えない状態（${draft.blocked_reason ?? draft.status}）`) : 'この手段の下書きがまだ無い');
 
   // 6. 同じ会社への重複営業（数えるのは実際の接触だけ。予定・見送りは数えない）
+  //    ★空ける日数は設定で「もっと長く」だけ変えられる。短くはできない。
+  const cd = await cooldownDays();
   const sinceLast = daysSince(await lastContactAt(companyId));
-  const dupOk = sinceLast === null || sinceLast >= REAPPROACH_DAYS;
-  push('DUPLICATE', dupOk, sinceLast === null ? 'この会社にはまだ一度も営業していない' : `前回の営業から${Math.floor(sinceLast)}日（${REAPPROACH_DAYS}日空けるまで再度は営業しない）`);
+  const dupOk = sinceLast === null || sinceLast >= cd.days;
+  push('DUPLICATE', dupOk, sinceLast === null ? 'この会社にはまだ一度も営業していない' : `前回の営業から${Math.floor(sinceLast)}日（${cd.days}日空けるまで再度は営業しない）`);
 
   // 7. 別名で同じ運営者を触っていないか
   const sameOp = await sameOperatorAlreadyTouched(company);
@@ -194,11 +209,40 @@ export async function canOutreach(companyId: number, channel: Channel): Promise<
   }
   push('CONTACT', contactOk, contactDetail);
 
+  // 9-2. 連絡先が有効なだけでなく、その連絡先が「この会社のもの」だと確かめられているか。
+  //
+  //      ★連絡先の正しさと、相手が誰かは別の話。
+  //        電話番号は人が台帳から書き写した正しい番号かもしれない。
+  //        だがその番号がこの会社のものだと確かめられていなければ、
+  //        別の会社へ営業電話をかけている可能性が残る。
+  //        「番号が正しい」は「相手が合っている」の証明にならない。
+  //      ★だから連絡先の確認（CONTACT）と本人性の確認（ここ）の両方を求める。
+  //        片方だけでは通さない。
+  const verdict = String(company.website_verdict ?? 'NO_WEBSITE') as WebsiteVerdict;
+  const idOk = canAutoOutreachByIdentity(verdict);
+  push(
+    'IDENTITY_CONTACT_MISMATCH_RISK',
+    idOk.ok,
+    `HPの本人性判定＝${WEBSITE_VERDICT_JA[verdict] ?? verdict}。${idOk.reasonJa}`,
+  );
+
   // 10. 1日の上限
   const today = await touchedToday(companyId);
   push('DAILY_CAP', today < DAILY_CAP_HARD_MAX, `今日はすでに${today}件（上限${DAILY_CAP_HARD_MAX}件）`);
 
-  // 11. 最後の鍵。外部操作は実装そのものが無いので、必ずここで止まる。
+  // 11. すでに閉じている法人ではないか。
+  //     ★閉鎖・解散した法人へ営業をかけるのは、相手にとっても失礼で、こちらの信用も落ちる。
+  //       国税庁の公開データには閉鎖の日付が入る。日付が入っている＝もう営業しない。
+  const closedAt = company.closed_at ? String(company.closed_at) : null;
+  push('CLOSED', closedAt === null, closedAt ? `すでに閉鎖・解散した法人（${closedAt.slice(0, 10)}）` : '閉鎖の記録は無い');
+
+  // 12. 練習用のデータではないか。
+  //     ★TEST は、人が承認ボタンを押しても外部への操作へ進めない。
+  //       設定ではなくコードの分岐で止める（origin.ts の canReachExecutor と同じ判断）。
+  const originOk = canReachExecutor(company.data_origin);
+  push('DATA_ORIGIN', originOk.ok, originOk.ok ? `本物のデータ（${String(company.data_origin ?? '')}）` : originOk.reason);
+
+  // 13. 最後の鍵。外部操作は実装そのものが無いので、必ずここで止まる。
   const gate = checkExternalAction(channel === 'PHONE' ? 'CALL' : channel === 'EMAIL' ? 'EMAIL' : 'FORM');
   push('EXTERNAL_GATE', gate.allowed, gate.reasonJa);
 

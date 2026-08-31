@@ -66,12 +66,26 @@ export function analyzeByRule(company: Row): CompanyAnalysis {
   const texts = [company.name, company.description, company.business_detail].filter(Boolean).map(String);
   const pageText = String(company.description ?? '') + '\n' + String(company.business_detail ?? '');
   const guessed = guessIndustry(...texts);
-  const industry: IndustryKey =
-    (company.industry_guess && company.industry_guess !== 'UNKNOWN' ? (company.industry_guess as IndustryKey) : guessed.key) || 'UNKNOWN';
+  const fromList = Boolean(company.industry_guess && company.industry_guess !== 'UNKNOWN');
+  const industry: IndustryKey = (fromList ? (company.industry_guess as IndustryKey) : guessed.key) || 'UNKNOWN';
 
   const needFlags: NeedFlags = { ...(INDUSTRY_NEEDS[industry] ?? {}) };
   const evidence: string[] = [];
-  if (guessed.matched) evidence.push(`業種の手がかり: 「${guessed.matched}」`);
+
+  // ★根拠には「その業種をそう決めた理由」だけを書く。
+  //   取り込み時の業種を採用したのに、本文で当たった別の言葉を根拠として並べると、
+  //   人は「その言葉を見てそう決めたのだ」と読む。実際には見ていない。
+  //   根拠の欄に、判断に使っていない言葉を書いてはいけない。
+  if (fromList) {
+    evidence.push(`業種は取り込み時の記録（${INDUSTRY_LABEL[industry] ?? industry}）を使った`);
+    if (guessed.key !== 'UNKNOWN' && guessed.key !== industry) {
+      evidence.push(
+        `★HP本文からは別の業種（${INDUSTRY_LABEL[guessed.key]}／手がかり「${guessed.matched}」）にも読める。人が確かめること`,
+      );
+    }
+  } else if (guessed.matched) {
+    evidence.push(`業種の手がかり: 「${guessed.matched}」`);
+  }
 
   let signalHits = 0;
   for (const s of SIGNALS) {

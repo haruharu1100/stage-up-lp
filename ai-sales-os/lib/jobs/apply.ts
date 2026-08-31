@@ -2,6 +2,7 @@ import { all, nowIso, one, parseJson, upsert, type Row } from '../db/client';
 import { checkExternalAction } from '../gate';
 import { enqueueApproval, isKindExcluded, EMPTY_DETAIL, type ApprovalDetail } from '../approval';
 import { READINESS_LABEL, type Readiness } from '../catalog/definitions';
+import { canReachExecutor } from '../origin';
 import { EXCLUSION_RULES } from './exclude';
 import { sitePolicy, type AutoApplyPolicy, type SitePolicy } from './sites';
 
@@ -159,7 +160,18 @@ export async function decideApply(job: Row): Promise<ApplyDecision> {
     return { jobId, route: policy.effectivePolicy, action: 'QUEUED_FOR_APPROVAL', gateReason: why };
   }
 
-  // 5. 最後の鍵。応募を送る処理コードが無いので、必ずここで止まる。
+  // 5. 練習用の案件は、ここから先へ進めない。
+  //    ★会社側（guards.ts の DATA_ORIGIN）と同じ判断を、案件側でも必ず通す。
+  //      片方だけに入れると、案件側からだけ練習用データが本番の数字に混ざる。
+  //    ★止めるのはここ（自動応募の一歩手前）であって、判断そのものではない。
+  //      手前で止めてしまうと、練習用データでは「人が1クリックで判断する」流れ自体が
+  //      一度も動かなくなり、その流れが壊れていても誰も気づけない。
+  const originOk = canReachExecutor(job.data_origin);
+  if (!originOk.ok) {
+    return { jobId, route: policy.effectivePolicy, action: 'BLOCKED', gateReason: originOk.reason };
+  }
+
+  // 6. 最後の鍵。応募を送る処理コードが無いので、必ずここで止まる。
   const gate = checkExternalAction('APPLY');
   return { jobId, route: 'AUTO_ALLOWED', action: 'PLANNED', gateReason: gate.reasonJa };
 }

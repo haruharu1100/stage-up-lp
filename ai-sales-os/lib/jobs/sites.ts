@@ -62,6 +62,48 @@ export const SITE_SEEDS: SiteSeed[] = [
   { code: 'MANUAL', name: '手入力・紹介', url: '', tosUrl: null, note: 'サイトを経由しない案件。応募の可否は人が判断する' },
 ];
 
+/**
+ * 「機械で案件を取れる公式API」を実際に叩いて調べた結果（2026-08-30）。
+ *
+ * ★なぜ結果を残すか。
+ *   ここに書いておかないと、次に作業するAIが同じ調査をやり直し、
+ *   そのうえ「APIがあるから使える」と早合点して、使えないデータを本物の件数に混ぜる。
+ *   叩いた事実と、使わないと決めた理由を、日付つきで残しておく。
+ *
+ * ★結論
+ *   日本語の受託案件（このシステムが狙う仕事）を機械で取れる公式APIは、現時点で1つも無い。
+ *   海外の求人APIは繋がるが、中身が「海外企業の正社員求人」なので受託案件ではない。
+ *   件数を増やすためだけに取り込むことはしない。
+ */
+export const PUBLIC_JOB_API_SURVEY = [
+  {
+    name: 'Arbeitnow Job Board API',
+    endpoint: 'https://www.arbeitnow.com/api/job-board-api',
+    checkedAt: '2026-08-30',
+    reachable: true,
+    findingJa:
+      'HTTP 200で175件取得できた。APIキー不要の公開APIだと公式が明記している。'
+      + 'ただし中身はドイツ企業の正社員求人で、Full time / Permanent が大半、Freelance は1件のみ。'
+      + '日本語の案件は0件だった。',
+    usedJa:
+      '使わない。受託案件ではなく雇用の求人なので、取り込んでも「8時間拘束」で全部除外されるだけになる。'
+      + '本物の案件の件数を見かけ上ふくらませることになるので入れない。',
+  },
+  {
+    name: 'Remotive Remote Jobs API',
+    endpoint: 'https://remotive.com/api/remote-jobs',
+    checkedAt: '2026-08-30',
+    reachable: true,
+    findingJa:
+      'HTTP 200で取得できたが、返ってくるJSONの中に規約文が入っており、'
+      + '「求人をさらに広めてもらうためにAPIを公開している。掲載元としてRemotiveを明記しリンクを張ること」'
+      + 'という条件が付いていた。中身は海外のリモート正社員求人。',
+    usedJa:
+      '使わない。こちらは求人を再掲載するのではなく自分が応募先を探す用途なので、公開の趣旨から外れる。'
+      + '加えて中身も受託案件ではない。',
+  },
+] as const;
+
 export async function seedJobSites(): Promise<number> {
   let n = 0;
   for (const s of SITE_SEEDS) {

@@ -1,7 +1,38 @@
 import { all, one, scalar } from '../lib/db/client';
 import { initSettings, num } from '../lib/settings';
 import { findExclusions } from '../lib/jobs/exclude';
-import { listSitePolicies, sitePolicy, recordTosCheck, canCollect } from '../lib/jobs/sites';
+import { listSitePolicies, sitePolicy, recordTosCheck, canCollect, PUBLIC_JOB_API_SURVEY, SITE_SEEDS } from '../lib/jobs/sites';
+import { decideApply } from '../lib/jobs/apply';
+import {
+  GMAIL_ADAPTER_CONNECTED,
+  INBOX_SOURCES,
+  JOB_ALERT_SENDERS,
+  checkGmailJobAlert,
+  gmailQuery,
+  isJobAlertSender,
+  isMachineCollection,
+  jobAlertSiteFor,
+  originForInbox,
+  toInboxSource,
+} from '../lib/jobs/inbox';
+import { parsePastedJob } from '../lib/jobs/paste';
+import {
+  budgetConflicts,
+  canonicalUrl,
+  judgeDuplicate,
+  stripBodyNoise,
+  stripTitleDecor,
+  type DupeCandidate,
+} from '../lib/jobs/dedupe';
+import { checkIntake, intakeRouteJa, parseBudgetText, splitPastedJobs } from '../lib/jobs/intake';
+import { jobInventory } from '../lib/jobs/inventory';
+import { JOB_DATA_ORIGINS, originForJobSource } from '../lib/origin';
+import { capabilityReadiness, clientRisk } from '../lib/jobs/opportunity';
+import { CLIENT_RISK_HOLD } from '../lib/jobs/score';
+import { auditJob, CLIENT_RISK_REVIEW, REVISION_RISK_REVIEW, type AuditVerdict } from '../lib/jobs/audit';
+import { jobDossiers } from '../lib/jobs/dossier';
+import type { Row } from '../lib/db/client';
+import { REAL_SQL, TEST_SQL, canReachExecutor } from '../lib/origin';
 import { TOS_RECORDS } from '../lib/jobs/tos-records';
 import { similarity } from '../lib/text';
 import { TESTDATA_EXPECT } from '../lib/testdata';
@@ -48,6 +79,14 @@ const RULE_CASES: { text: string; expect: string | null; note: string }[] = [
   { text: 'Hubstaffの導入をお願いしています。', expect: 'TIME_TRACKING', note: '時間計測ソフト名' },
   { text: '作業中はスクリーンショットを定期的に取得します。', expect: 'PC_MONITORING', note: 'スクショ監視' },
   { text: '監視ツールのインストールが必須です。', expect: 'PC_MONITORING', note: 'PC監視' },
+  // ★実際の募集文の書き方で取りこぼしていた分（2026-08-30に見つけた不具合の再発防止）。
+  //   「以上」「必須」まで書いてある募集のほうがむしろ少なく、
+  //   下のような1行の書き方で全部すり抜けていた。
+  { text: '週5日・1日8時間の常駐でお願いします。', expect: 'WEEKLY_FIXED', note: '「週5日・」で切れる書き方' },
+  { text: '週5日〜の稼働をお願いします。', expect: 'WEEKLY_FIXED', note: '「週5日〜」で切れる書き方' },
+  { text: '稼働中はPC監視ツールを入れていただきます。', expect: 'PC_MONITORING', note: '「監視ツールを入れて」だけの書き方' },
+  { text: 'PC監視のもとで作業していただきます。', expect: 'PC_MONITORING', note: '「PC監視」だけの書き方' },
+  { text: '稼働時間の管理ツールを利用していただきます。', expect: 'TIME_TRACKING', note: '「管理ツールを利用」だけの書き方' },
   // 誤爆よけ。ここが落ちると、受けてよい案件まで捨ててしまう。
   { text: 'Amazonの商品説明文を20件作成してください。固定報酬でお支払いします。', expect: null, note: '普通の良い案件' },
   { text: '固定報酬でお支払いします。時給換算で3000円ほどを想定しています。', expect: null, note: '固定報酬なら時給の記載があっても除外しない' },
@@ -56,6 +95,8 @@ const RULE_CASES: { text: string; expect: string | null; note: string }[] = [
   { text: 'サーバー監視ツールの機能を実装してください。固定報酬。', expect: null, note: '監視ツールを「作る」依頼は受けてよい' },
   { text: '固定報酬でお願いします。週5時間ほどの想定です。', expect: null, note: '週5時間なら拘束とみなさない' },
   { text: '全体で30時間ほどかかる想定の制作物です。固定報酬。', expect: null, note: '総作業時間の目安を週の拘束と取り違えない' },
+  { text: '週2〜3日の稼働を想定しています。成果物単位でのお支払いです。', expect: null, note: '週5日より少ない日数は拘束とみなさない' },
+  { text: '作業時間管理アプリの制作をお願いします。固定報酬。', expect: null, note: '時間管理アプリを「作る」依頼は受けてよい' },
 ];
 
 /** テストデータに仕込んだ案件のタイトルと、期待する結果。 */
@@ -460,7 +501,741 @@ async function main() {
   g.eq('止めた理由が書かれていない件数', anyReason, 0, '件');
   g.print();
 
-  finish([r, i, v, o, p, q, g]);
+  // ---------------------------------------------------------------- 案件の入口（JOB_INBOX）
+  const b = new Suite('案件の入口（JOB_INBOX）');
+
+  // ★入口が書かれていない案件を本物として数えていないこと。
+  //   ここが崩れると「本物の応募候補◯件」が、どこから来たか言えない数字になる。
+  b.eq(
+    '入口が書かれていないのに本物として数えている案件',
+    await scalar(`SELECT COUNT(*) FROM jobs WHERE inbox_source IS NULL AND ${REAL_SQL}`),
+    0,
+    '件',
+  );
+  b.eq(
+    '知らない入口の名前が入っている案件',
+    (await all('SELECT DISTINCT inbox_source AS s FROM jobs WHERE inbox_source IS NOT NULL'))
+      .filter((x) => toInboxSource(x.s) === null).length,
+    0,
+    '件',
+  );
+  b.check(
+    '練習用の案件と本物の案件を足すと全件になる',
+    (await scalar(`SELECT COUNT(*) FROM jobs WHERE ${REAL_SQL}`)) + (await scalar(`SELECT COUNT(*) FROM jobs WHERE ${TEST_SQL}`)) ===
+      (await scalar('SELECT COUNT(*) FROM jobs')),
+    `本物${await scalar(`SELECT COUNT(*) FROM jobs WHERE ${REAL_SQL}`)}件 / 練習用${await scalar(`SELECT COUNT(*) FROM jobs WHERE ${TEST_SQL}`)}件`,
+  );
+
+  // ★機械で取りにいく入口は公式APIだけ。ほかを自動収集扱いにすると規約違反になる。
+  b.check('機械で取りにいく入口は公式APIだけ', INBOX_SOURCES.filter((s) => isMachineCollection(s)).join(',') === 'OFFICIAL_API', INBOX_SOURCES.filter((s) => isMachineCollection(s)).join(',') || 'なし');
+  b.check('どの入口も、本物か練習用かを言い切れる', INBOX_SOURCES.every((s) => originForInbox(s) !== 'TEST'), INBOX_SOURCES.map((s) => `${s}=${originForInbox(s)}`).join(' '));
+
+  // ★Gmail は「つないでいない」と言い切れること。つないでいないものを繋がっていると書かない。
+  b.check('求人メール通知の読み取りは、まだつないでいないと言い切れる', GMAIL_ADAPTER_CONNECTED === false, `GMAIL_ADAPTER_CONNECTED=${GMAIL_ADAPTER_CONNECTED}`);
+
+  // ★足りない項目を推測で埋めないこと。
+  const MAIL = { source_site: 'LANCERS', message_id: 'msg-0001', sender: 'noreply@lancers.jp' };
+  const bad = checkGmailJobAlert({ ...MAIL, title: '記事作成', body: '', received_at: '' });
+  b.check('本文と受信日時が無いメール通知は受け取らない', bad.ok === false && bad.normalized === null, bad.problems.join(' / '));
+  const good = checkGmailJobAlert({
+    ...MAIL,
+    title: '記事作成',
+    body: '記事を5本お願いします。',
+    received_at: '2026-08-29T09:00:00+09:00',
+  });
+  b.check('予算も締切も書いていないメール通知は、空のまま受け取る', good.ok === true && good.normalized?.budget === null && good.normalized?.deadline === null, `予算=${String(good.normalized?.budget)} 締切=${String(good.normalized?.deadline)}`);
+  b.check('URLがhttpで始まっていないメール通知は受け取らない', checkGmailJobAlert({ ...MAIL, title: 'a', body: 'b'.repeat(10), received_at: '2026-08-29T09:00:00+09:00', job_url: 'lancers.jp/work/1' }).ok === false, '');
+
+  // ★練習用の案件は、1件も自動応募の予定にならないこと。
+  //   人が判断する行き先（承認待ち）には進んでよい。そこは流れが動いているかを見る場所で、
+  //   承認を押しても外部へは行かない。止めるのは「自動で応募する」の一歩手前だけ。
+  const testJobs = await all(`SELECT * FROM jobs WHERE ${TEST_SQL}`);
+  const testPlanned: string[] = [];
+  for (const j of testJobs) {
+    const d = await decideApply(j);
+    if (d.action === 'PLANNED') testPlanned.push(String(j.title));
+  }
+  b.eq('練習用なのに自動応募の予定になった案件', testPlanned.length, 0, '件');
+  b.check('練習用の案件が実際に存在する（確かめる対象がある）', testJobs.length > 0, `${testJobs.length}件`);
+
+  // ★自動応募の一歩手前に、練習用を止める分岐が本当に入っているか。
+  //   ここまで来られる案件（規約OK・応募文READY）を作って直接ぶつける。
+  const originGate = canReachExecutor('TEST');
+  b.check('練習用のデータは外部への操作へ進めないと判定される', originGate.ok === false, originGate.reason);
+  b.print();
+
+  // ================================================================
+  // 求人メール通知の送信元フィルタと、人が貼った案件の読み取り（PHASE D・E）
+  // ================================================================
+  const m = new Suite('メール通知の送信元しぼり込みと、貼った案件の読み取り');
+
+  // ---- ① 受信箱を全部読まないこと（送信元フィルタ）
+  m.check('求人サイトからのメールは読める', isJobAlertSender('noreply@lancers.jp'), 'lancers.jp → 読む');
+  m.check('子ドメインからのメールも同じサイトとして読める', jobAlertSiteFor('info@mail.crowdworks.jp') === 'CROWDWORKS', String(jobAlertSiteFor('info@mail.crowdworks.jp')));
+  m.check('「名前 <アドレス>」の形でも差出人を読み取れる', jobAlertSiteFor('ランサーズ <noreply@lancers.jp>') === 'LANCERS', String(jobAlertSiteFor('ランサーズ <noreply@lancers.jp>')));
+
+  // ★ここが一番大事。求人サイト以外のメールは、中身を一切見ない。
+  for (const other of ['tanaka@example.com', 'info@mybank.co.jp', 'friend@gmail.com']) {
+    m.check(`求人サイト以外のメールは読まない（${other}）`, isJobAlertSender(other) === false, '読まない');
+  }
+  // ★後ろに別のドメインを足した偽装を通さない。
+  m.check(
+    '「lancers.jp」を名前に含むだけの別ドメインは読まない',
+    isJobAlertSender('a@lancers.jp.evil.example.com') === false && isJobAlertSender('a@notlancers.jp') === false,
+    '両方とも読まない',
+  );
+  const rejected = checkGmailJobAlert({
+    source_site: 'LANCERS', message_id: 'x', sender: 'tanaka@example.com',
+    title: '重要なお知らせ', body: '個人的な内容です。'.repeat(5), received_at: '2026-08-29T09:00:00+09:00',
+  });
+  m.check('求人サイト以外からのメールは、件名も本文も検査せずに断る', rejected.ok === false && rejected.normalized === null, rejected.problems.join(' / '));
+
+  // ★Gmailにつなぐときの検索条件が、一覧のドメインだけに絞られていること。
+  const gq = gmailQuery();
+  m.check('検索条件が求人サイトの差出人だけになっている', JOB_ALERT_SENDERS.every((s) => gq.includes(`from:${s.domain}`)) && /^(?:from:[^\s]+)(?: OR from:[^\s]+)*$/.test(gq), gq);
+  m.check('読んでよい差出人が、すべて規約台帳のサイトと対になっている', JOB_ALERT_SENDERS.every((s) => SITE_SEEDS.some((x) => x.code === s.siteCode)), JOB_ALERT_SENDERS.map((s) => s.siteCode).join('、'));
+
+  // ★差出人から分かるサイトと、書かれているサイト名が食い違ったら通さない。
+  m.check(
+    '差出人と自己申告のサイト名が食い違ったら受け取らない',
+    checkGmailJobAlert({ source_site: 'CROWDWORKS', message_id: 'y', sender: 'noreply@lancers.jp', title: 'a', body: 'あ'.repeat(40), received_at: '2026-08-29T09:00:00+09:00' }).ok === false,
+    '食い違いを検出した',
+  );
+  m.check(
+    'メールのIDが無い通知は受け取らない（同じ通知を二重に取り込まないため）',
+    checkGmailJobAlert({ source_site: 'LANCERS', message_id: '', sender: 'noreply@lancers.jp', title: 'a', body: 'あ'.repeat(40), received_at: '2026-08-29T09:00:00+09:00' }).ok === false,
+    'IDが無いので断った',
+  );
+
+  // ---- ② 人が貼った案件の読み取り（推測しない）
+  const pasted = parsePastedJob(
+    'WordPressサイトの記事を10本書いてほしい\n'
+    + 'https://www.lancers.jp/work/detail/1234567\n'
+    + '予算：50,000円 〜 100,000円\n'
+    + '納期：2026年9月20日まで\n'
+    + '既存のブログに、SEOを意識した記事を10本追加したいです。文字数は各3000字程度を想定しています。',
+  );
+  m.eq('貼ったURLからサイトを判定できる', pasted.siteCode, 'LANCERS');
+  m.eq('件名は1行目から取る', pasted.title, 'WordPressサイトの記事を10本書いてほしい');
+  m.eq('書いてある予算の下限を読み取る', pasted.budgetMin, 50_000);
+  m.eq('書いてある予算の上限を読み取る', pasted.budgetMax, 100_000);
+  m.check('締切は書いてある文字のまま持つ', String(pasted.deadline).includes('2026年9月20日'), String(pasted.deadline));
+  m.check('金額と締切の根拠を残している', pasted.evidence.length === 2, pasted.evidence.map((e) => `${e.field}=${e.matched}`).join(' / '));
+  m.eq('読み取れなかった項目', pasted.problems.length, 0, '件');
+
+  // ★書いていない予算を、こちらで想像して埋めないこと。
+  const noBudget = parsePastedJob(
+    'ロゴのデザインをお願いします\n'
+    + '予算：応相談\n'
+    + '会社のロゴを作り直したいと考えています。イメージはこれから相談させてください。よろしくお願いします。',
+  );
+  m.eq('「応相談」を金額として埋めない', noBudget.budgetMin, null);
+  m.eq('予算の根拠が無いのに根拠を作らない', noBudget.evidence.filter((e) => e.field === '予算').length, 0, '件');
+
+  // ★本文の中の関係ない数字を予算にしないこと。
+  const decoy = parsePastedJob(
+    'SNS運用の代行をお願いしたい\n'
+    + 'フォロワーは3万人ほどです。月に20本ほど投稿しています。\n'
+    + '継続してお願いできる方を探しています。まずはご相談させてください。',
+  );
+  m.eq('予算と書かれていない数字を金額にしない', decoy.budgetMin, null);
+
+  // ★台帳に無いサイトのURLは取り込まない。
+  const pastedUnknown = parsePastedJob(
+    'テスト案件\nhttps://example.com/jobs/1\n'
+    + '本文をある程度の長さで書いておかないと、短すぎるという別の理由で断られてしまいます。',
+  );
+  m.check('規約台帳に無いサイトのURLは取り込まない', pastedUnknown.problems.some((p) => p.includes('規約台帳')), pastedUnknown.problems.join(' / '));
+
+  // ★URLだけ貼られても受け取らない（中身が無ければ判断できない）。
+  m.check('URLだけの貼り付けは受け取らない', parsePastedJob('https://www.lancers.jp/work/detail/1').problems.length > 0, '断った');
+
+  // ---- ③ 公式APIの調査結果が、日付と理由つきで残っていること
+  m.check('公式APIを実際に調べた記録が残っている', PUBLIC_JOB_API_SURVEY.length > 0, `${PUBLIC_JOB_API_SURVEY.length}件`);
+  m.check(
+    '調べたAPIすべてに「使う・使わない」の理由が書いてある',
+    PUBLIC_JOB_API_SURVEY.every((s) => s.usedJa.length > 20 && /^\d{4}-\d{2}-\d{2}$/.test(s.checkedAt)),
+    PUBLIC_JOB_API_SURVEY.map((s) => `${s.name}(${s.checkedAt})`).join('、'),
+  );
+
+  // ---- ④ 本物の案件が、どこから来たか全部言えること
+  const realBySource = await all(`SELECT inbox_source AS s, COUNT(*) AS n FROM jobs WHERE ${REAL_SQL} GROUP BY 1`);
+  m.eq('入口を言えない本物の案件', realBySource.filter((x) => toInboxSource(x.s) === null).length, 0, '種類');
+  m.eq('外部へ応募した件数', await scalar('SELECT COUNT(*) FROM applications WHERE executed = 1'), 0, '件');
+  m.print();
+
+  // ══════════════════════════════════════════════════════════════
+  // 依頼主の危なさ（CLIENT_RISK）と、道具の仕上がり具合（CAPABILITY_READINESS）
+  // ══════════════════════════════════════════════════════════════
+  const cr = new Suite('依頼主の危なさと、道具の仕上がり具合');
+
+  const mkJob = (title: string, description: string, url: string | null = 'https://www.lancers.jp/work/detail/1') =>
+    ({ id: 1, title, description, category: null, url, budget_min: 50000, budget_max: 50000 }) as unknown as Row;
+
+  // ---- ① 危ない条件を、1つずつ名前を挙げて拾えること
+  const RISK_CASES: { code: string; text: string; note: string }[] = [
+    { code: 'OFFSITE_CONTACT', text: '詳細はLINEでやり取りさせていただきます。', note: 'サイト外へ誘う' },
+    { code: 'OFFSITE_CONTACT', text: 'プラットフォーム外での取引をお願いします。', note: 'サイト外取引' },
+    { code: 'UNPAID_TEST', text: 'まずは無償のテストライティングをお願いします。', note: 'ただ働きのテスト' },
+    { code: 'NO_ESCROW', text: '仮払いはなしで、完了後にお支払いします。', note: '仮払いを使わない' },
+    { code: 'HIDDEN_SCOPE', text: '契約後に詳細な仕様をお伝えします。', note: '受けてから中身が分かる' },
+    { code: 'RIGHTS_TRANSFER', text: '納品物の著作権はすべて当方へ譲渡いただきます。', note: '権利を全部渡す' },
+    { code: 'CONTINUOUS_DISCOUNT', text: '継続を前提としているため、初回はお安くお願いします。', note: '安いまま続く' },
+    { code: 'RUSH_DECISION', text: '先着1名様です。本日中にご連絡ください。', note: '急かす' },
+  ];
+  for (const k of RISK_CASES) {
+    cr.check(`危ない条件を拾える（${k.note}）`, clientRisk(mkJob('件名', k.text)).score > 0, `「${k.text.slice(0, 20)}」→ 危なさあり`);
+  }
+
+  // ---- ② 拾いすぎないこと（ここを間違えると、まともな案件が全部HOLDになる）
+  cr.eq(
+    'LINE公式アカウントを「作る」案件を、サイト外への誘いと取り違えない',
+    clientRisk(mkJob('LINE公式アカウント構築', 'LINE公式アカウントのリッチメニューを作成してください。やり取りは本サイトのメッセージ機能で行います。')).score,
+    0,
+    '点',
+  );
+  cr.eq(
+    '普通の案件では危なさが0のままであること',
+    clientRisk(mkJob('LP制作', 'コーポレートサイトのLPを1ページ制作してください。デザインデータはこちらで用意します。')).score,
+    0,
+    '点',
+  );
+
+  // ---- ③ 分からないことを「危なくない」と言い切らないこと
+  const noUrl = clientRisk(mkJob('件名', 'ふつうの依頼文です。', null));
+  cr.check('案件ページのURLが無いときは「確かめられない」分を足す', noUrl.score > 0, `${noUrl.score}点：${noUrl.reasons[0]}`);
+  cr.check(
+    '危なさ0のときも「依頼主の評価は不明」と書き残す',
+    clientRisk(mkJob('LP制作', 'コーポレートサイトのLPを1ページ制作してください。')).reasons.join('').includes('不明'),
+    '不明と書いている',
+  );
+
+  // ---- ④ 手直しの起きやすさとは別物であること（同じ数字にしない）
+  const subjective = mkJob('イラスト制作', 'かわいい雰囲気のイラストをお任せでご提案ください。何度でも修正いたします。');
+  const cheat = mkJob('件名', '無償のテスト課題をご提出ください。仮払いはなしでお願いします。');
+  cr.check(
+    '「直しが多いが依頼主は普通」と「直しは少ないが依頼主が危ない」を別々に測れる',
+    clientRisk(subjective).score < clientRisk(cheat).score,
+    `直しが多い案件の依頼主危なさ${clientRisk(subjective).score}点 ＜ ただ働き案件${clientRisk(cheat).score}点`,
+  );
+
+  // ---- ⑤ 完成済み／レビュー付き利用可／試作 を混同しないこと
+  const mkCap = (name: string, readiness: Readiness) => ({ code: name, name, hits: ['x'], readiness, readinessReason: '' });
+  const mix = capabilityReadiness({ matchedCaps: [mkCap('試作の道具', 'PROTOTYPE'), mkCap('本番の道具', 'PRODUCTION_READY')] } as never);
+  cr.eq('一番上の段階を返す', mix.level, 'PRODUCTION_READY');
+  cr.eq('本番で動いている道具の数', mix.counts.PRODUCTION_READY, 1, '件');
+  cr.eq('試作の道具の数', mix.counts.PROTOTYPE, 1, '件');
+  cr.check('実績として名前を出してよい道具に、試作が混ざっていない', !mix.provenNames.includes('試作の道具'), mix.provenNames.join('・'));
+  cr.check('試作の道具は「試作」の側に入っている', mix.prototypeNames.includes('試作の道具'), mix.prototypeNames.join('・'));
+  cr.check('内訳の文章に3つの段階が全部書いてある', /本番で動いている 1件.*人の確認を入れて使える 0件.*試作 1件/.test(mix.detail), mix.detail);
+
+  const reviewOnly = capabilityReadiness({ matchedCaps: [mkCap('確認つきの道具', 'USABLE_WITH_REVIEW')] } as never);
+  cr.eq('レビュー付きだけのときを「本番で動いている」に格上げしない', reviewOnly.level, 'USABLE_WITH_REVIEW');
+  cr.check('レビュー付きは本番より低い点になる', reviewOnly.score < mix.score, `${reviewOnly.score}点 ＜ ${mix.score}点`);
+  const protoOnly = capabilityReadiness({ matchedCaps: [mkCap('試作の道具', 'PROTOTYPE')] } as never);
+  cr.eq('試作しか無いときの段階', protoOnly.level, 'PROTOTYPE');
+  cr.eq('試作しか無いときは実績として書ける道具が0件', protoOnly.provenNames.length, 0, '件');
+  cr.eq('当たる道具が無いとき', capabilityReadiness({ matchedCaps: [] } as never).level, 'NONE');
+  cr.eq('当たる道具が無いときの点', capabilityReadiness({ matchedCaps: [] } as never).score, 0, '点');
+
+  // ---- ⑥ 依頼主が危ないときは、時給が高くても自動で「応募する」にしないこと
+  cr.check('危ないと判断する線が、ただ働きのテスト1つで超える高さである', CLIENT_RISK_HOLD <= 30, `${CLIENT_RISK_HOLD}点`);
+  const risky = await all(
+    `SELECT COUNT(*) AS n FROM job_scores WHERE verdict = 'APPLY' AND client_risk >= ?`,
+    [CLIENT_RISK_HOLD],
+  );
+  cr.eq('依頼主が危ないのに「応募する」になっている案件', Number(risky[0].n), 0, '件');
+
+  // ---- ⑦ 保存された値が、読み戻しても同じであること
+  const badRange = await scalar(
+    'SELECT COUNT(*) FROM job_scores WHERE client_risk IS NULL OR client_risk < 0 OR client_risk > 100',
+  );
+  cr.eq('依頼主の危なさが0〜100の外にある案件', badRange, 0, '件');
+  const noRiskReason = await scalar("SELECT COUNT(*) FROM job_scores WHERE client_risk_reason IS NULL OR client_risk_reason = ''");
+  cr.eq('危なさの理由が書かれていない案件', noRiskReason, 0, '件');
+  const badReadinessValue = await scalar(
+    `SELECT COUNT(*) FROM job_scores WHERE capability_readiness NOT IN ('PRODUCTION_READY','USABLE_WITH_REVIEW','PROTOTYPE','NONE')`,
+  );
+  cr.eq('仕上がり具合が決められた4つ以外になっている案件', badReadinessValue, 0, '件');
+  const protoApplyStored = await scalar(
+    `SELECT COUNT(*) FROM job_scores WHERE verdict = 'APPLY' AND capability_readiness IN ('PROTOTYPE','NONE')`,
+  );
+  cr.eq('試作しか無いのに「応募する」になっている案件', protoApplyStored, 0, '件');
+  cr.print();
+
+  // ================================================================
+  // 同じ依頼を2件として持たないこと（重複判定）
+  //
+  // ★ここが壊れると、同じ相手に同じ応募文を2通出すことになる。
+  //   出したあとでは取り消せないので、取り込みの時点で束ねる。
+  // ================================================================
+  const dd = new Suite('同じ依頼を2件にしない（重複判定）');
+
+  dd.eq(
+    '追跡用のクエリ（utm_source）が付いていても同じページとみなす',
+    canonicalUrl('https://www.lancers.jp/work/detail/123/?utm_source=mail'),
+    canonicalUrl('https://lancers.jp/work/detail/123'),
+  );
+  dd.eq('URLとして読めない文字はnullにする（無理に形を作らない）', canonicalUrl('案件ページ'), null);
+  dd.eq('空欄はnull', canonicalUrl(null), null);
+
+  const cand = (o: Partial<DupeCandidate>): DupeCandidate => ({
+    id: 1, title: '', description: '', url: null, budgetMin: null, budgetMax: null, siteCode: 'LANCERS', ...o,
+  });
+  dd.check(
+    '予算が書いていない側を「0円」と読み替えて別案件にしない',
+    !budgetConflicts({ title: '', description: '', url: null, budgetMin: null, budgetMax: null }, cand({ budgetMin: 50000 })),
+    '片方が未記入なら、ぶつかったとは言わない',
+  );
+  dd.check(
+    '3万円と30万円は別の依頼として扱う',
+    budgetConflicts({ title: '', description: '', url: null, budgetMin: 30000, budgetMax: null }, cand({ budgetMin: 300000 })),
+    '10倍差はぶつかり',
+  );
+  dd.check(
+    '5万円と5.5万円は同じ依頼の書き方のちがいとして許す',
+    !budgetConflicts({ title: '', description: '', url: null, budgetMin: 50000, budgetMax: null }, cand({ budgetMin: 55000 })),
+    '1割程度の差はぶつかりにしない',
+  );
+
+  dd.check(
+    'タイトルの「【新着】」「急募」などの飾りを落とす',
+    stripTitleDecor('【新着】急募 LP制作をお願いします') === stripTitleDecor('LP制作をお願いします'),
+    `${stripTitleDecor('【新着】急募 LP制作をお願いします')} / ${stripTitleDecor('LP制作をお願いします')}`,
+  );
+  dd.check(
+    '本文からURLとメールの定型文を落とす',
+    !/https|配信停止/.test(stripBodyNoise('詳細はこちら https://example.com/a\n配信停止はこちらから\n本文です')),
+    stripBodyNoise('詳細はこちら https://example.com/a\n配信停止はこちらから\n本文です'),
+  );
+
+  // ---- ① 同じURL（クエリ違い）は同じ依頼
+  const sameUrl = judgeDuplicate(
+    { title: '全然ちがう件名', description: '全然ちがう本文です。', url: 'https://www.lancers.jp/work/detail/999?utm_source=mail', budgetMin: null, budgetMax: null },
+    [cand({ id: 11, title: 'もとの件名', description: 'もとの本文', url: 'https://lancers.jp/work/detail/999/' })],
+  );
+  dd.eq('URLが同じなら、件名も本文も違っても同じ依頼', sameUrl.duplicateOf, 11);
+  dd.check('URLで束ねたときは、その根拠を文章で残す', sameUrl.reasonJa.includes('URLが同じ'), sameUrl.reasonJa);
+
+  // ---- ② 別サイトへの同じ募集（URLは違う）
+  const crossSite = judgeDuplicate(
+    {
+      title: '【急募】コーポレートサイトのLP制作をお願いします',
+      description: '自社のサービス紹介LPを1枚作っていただきたいです。デザインからコーディングまでお願いします。',
+      url: 'https://crowdworks.jp/public/jobs/777',
+      budgetMin: 100000, budgetMax: 100000,
+    },
+    [
+      cand({
+        id: 21,
+        title: 'コーポレートサイトのLP制作をお願いします',
+        description: '自社のサービス紹介LPを1枚作っていただきたいです。デザインからコーディングまでお願いします。',
+        url: 'https://www.lancers.jp/work/detail/777',
+        budgetMin: 100000, budgetMax: 100000, siteCode: 'LANCERS',
+      }),
+    ],
+  );
+  dd.eq('同じ募集が別サイトに出ていても、URLが違うだけで別案件にしない', crossSite.duplicateOf, 21);
+  dd.check('束ねた根拠に一致度の数字が入っている（人が覆せる）', /\d+%/.test(crossSite.reasonJa), crossSite.reasonJa);
+
+  // ---- ③ 件名が同じでも金額が桁違いなら別の依頼
+  const sameTitleFarPrice = judgeDuplicate(
+    { title: 'LP制作', description: 'LPを1枚作ってください。', url: null, budgetMin: 30000, budgetMax: 30000 },
+    [cand({ id: 31, title: 'LP制作', description: 'LPを1枚作ってください。', budgetMin: 300000, budgetMax: 300000 })],
+  );
+  dd.eq('件名が同じでも3万円と30万円は別の依頼', sameTitleFarPrice.duplicateOf, null);
+
+  // ---- ④ まったく別の依頼を束ねない
+  const different = judgeDuplicate(
+    { title: '動画編集をお願いします', description: 'YouTube向けの動画を毎週2本編集していただきたいです。', url: null, budgetMin: null, budgetMax: null },
+    [cand({ id: 41, title: '経理の記帳代行', description: '毎月の領収書の入力をお願いします。会計ソフトはfreeeです。' })],
+  );
+  dd.eq('内容が違う案件は束ねない', different.duplicateOf, null);
+  dd.print();
+
+  // ================================================================
+  // 案件の入口（JOB_INBOX）— 書いていない値を埋めないこと
+  // ================================================================
+  const ib = new Suite('案件の入口（推測で埋めない）');
+
+  ib.eq('「応相談」を金額にしない（下限）', parseBudgetText('応相談').min, null);
+  ib.eq('「スキルによる」を金額にしない（下限）', parseBudgetText('スキルによる').min, null);
+  ib.eq('空欄を0円にしない', parseBudgetText(null).min, null);
+  ib.eq('「0円」を金額として受け取らない（ただ働きを通さない）', parseBudgetText('0円').min, null);
+  ib.eq('「50,000円」を読む', parseBudgetText('50,000円').min, 50000, '円');
+  ib.eq('「5万円〜10万円」の下限', parseBudgetText('5万円〜10万円').min, 50000, '円');
+  ib.eq('「5万円〜10万円」の上限', parseBudgetText('5万円〜10万円').max, 100000, '円');
+  ib.eq('単位の無い「50000」も予算欄の値として読む', parseBudgetText('50000').min, 50000, '円');
+
+  // ---- 求人以外のメールは、中身を見る前に断る
+  const notJobMail = checkIntake({
+    inboxSource: 'EMAIL_ALERT',
+    sender: '家族 <family@gmail.com>',
+    message_id: 'm1',
+    title: '明日の予定',
+    body: 'あしたの待ち合わせは駅前でいいですか。よろしくお願いします。よろしくお願いします。',
+  });
+  ib.check('求人サイト以外からのメールは受け取らない', notJobMail.problems.length > 0, notJobMail.problems.join(' / '));
+  ib.check(
+    '断る理由に、件名や本文の中身が出てこない（見ていないから）',
+    !notJobMail.problems.join(' ').includes('明日の予定'),
+    notJobMail.problems.join(' / '),
+  );
+  ib.eq('断る理由は差出人の1件だけ（本文の検査へ進んでいない）', notJobMail.problems.length, 1, '件');
+
+  const noMessageId = checkIntake({
+    inboxSource: 'EMAIL_ALERT', sender: 'info@lancers.jp', message_id: null,
+    title: '件名', body: 'x'.repeat(50),
+  });
+  ib.check('メールのIDが無ければ受け取らない（二重取り込みを止められないため）', noMessageId.problems.length > 0, noMessageId.problems.join(' / '));
+
+  const noReferrer = checkIntake({
+    inboxSource: 'REFERRAL', referral_from: null, title: '件名', body: 'x'.repeat(50),
+  });
+  ib.check('紹介者が書かれていない紹介案件は受け取らない', noReferrer.problems.some((p) => p.includes('紹介者')), noReferrer.problems.join(' / '));
+
+  const noUrlIntake = checkIntake({ inboxSource: 'MANUAL_URL', job_url: null, title: '件名', body: 'x'.repeat(50) });
+  ib.check('URLを貼る入口なのにURLが無ければ受け取らない', noUrlIntake.problems.some((p) => p.includes('job_url')), noUrlIntake.problems.join(' / '));
+
+  const noTitleIntake = checkIntake({ inboxSource: 'MANUAL_TEXT', title: null, body: 'x'.repeat(50) });
+  ib.check('件名が読み取れなければ「無題」と入れずに断る', noTitleIntake.problems.some((p) => p.includes('件名')), noTitleIntake.problems.join(' / '));
+
+  const shortBody = checkIntake({ inboxSource: 'MANUAL_TEXT', title: '件名', body: 'よろしくお願いします' });
+  ib.check('本文が短すぎるものは受け取らない', shortBody.problems.some((p) => p.includes('短すぎ')), shortBody.problems.join(' / '));
+
+  const urlOnlyBody = checkIntake({ inboxSource: 'MANUAL_TEXT', title: '件名', body: 'https://example.com/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' });
+  ib.check('URLだけの本文は「本文がある」と数えない', urlOnlyBody.problems.some((p) => p.includes('短すぎ')), urlOnlyBody.problems.join(' / '));
+
+  const okPaste = checkIntake({
+    inboxSource: 'MANUAL_TEXT', title: 'LP制作', body: 'サービス紹介のLPを1枚作っていただきたいです。デザインからコーディングまでお願いします。',
+  });
+  ib.eq('必要なものがそろっていれば受け取る', okPaste.problems.length, 0, '件');
+
+  ib.eq('区切り線で分けた2件は2件として読む', splitPastedJobs('案件A\n本文\n\n----\n\n案件B\n本文').length, 2, '件');
+  ib.eq('区切りが無ければ1件として読む（段落で勝手に割らない）', splitPastedJobs('案件A\n本文1行目\n本文2行目').length, 1, '件');
+
+  // ---- 入口ごとの素性（TEST/REALの分かれ目）
+  ib.eq('メール通知の素性', originForJobSource('EMAIL_ALERT'), 'REAL_EMAIL_ALERT');
+  ib.eq('人が貼った本文の素性', originForJobSource('MANUAL_TEXT'), 'REAL_MANUAL');
+  ib.eq('人が貼ったURLの素性', originForJobSource('MANUAL_URL'), 'REAL_MANUAL');
+  ib.eq('CSVの素性', originForJobSource('CSV_IMPORT'), 'REAL_CSV');
+  ib.eq('紹介の素性', originForJobSource('REFERRAL'), 'REAL_REFERRAL');
+  ib.eq('公式APIの素性', originForJobSource('OFFICIAL_API'), 'REAL_OFFICIAL_API');
+  ib.eq('入口が分からないものは練習用のまま（本物に格上げしない）', originForJobSource('なにこれ'), 'TEST');
+  ib.check(
+    '案件側の本物の素性は5種類とも REAL_ で始まる',
+    JOB_DATA_ORIGINS.every((o) => o.startsWith('REAL_')),
+    JOB_DATA_ORIGINS.join('・'),
+  );
+  ib.check('入口の説明が日本語で出せる', intakeRouteJa('EMAIL_ALERT').origin.includes('本物'), intakeRouteJa('EMAIL_ALERT').origin);
+  ib.print();
+
+  // ================================================================
+  // 保存されている案件そのものの筋が通っているか
+  // ================================================================
+  const iv = new Suite('取り込み済みの案件の筋（DBの中身）');
+  const inv = await jobInventory();
+  iv.eq('合計 ＝ 本物＋練習用（数え漏れが無い）', inv.real + inv.test, inv.total, '件');
+  iv.eq('合計 ＝ 本家＋束ねた分', inv.originals + inv.duplicates, inv.total, '件');
+
+  const realNoInbox = await scalar(`SELECT COUNT(*) FROM jobs WHERE data_origin <> 'TEST' AND (inbox_source IS NULL OR inbox_source = '')`);
+  iv.eq('入口を言えないのに本物として数えられている案件', realNoInbox, 0, '件');
+
+  const testWithRealInbox = await scalar(
+    `SELECT COUNT(*) FROM jobs WHERE data_origin = 'TEST' AND inbox_source IS NOT NULL AND inbox_source <> ''`,
+  );
+  iv.eq('入口があるのに練習用のまま止まっている案件', testWithRealInbox, 0, '件');
+
+  const dupNoReason = await scalar("SELECT COUNT(*) FROM jobs WHERE duplicate_of IS NOT NULL AND (duplicate_reason IS NULL OR duplicate_reason = '')");
+  iv.eq('束ねた理由が書かれていない案件（人が覆せない）', dupNoReason, 0, '件');
+
+  const selfDup = await scalar('SELECT COUNT(*) FROM jobs WHERE duplicate_of = id');
+  iv.eq('自分自身を重複先にしている案件', selfDup, 0, '件');
+
+  // ★あとから入った行を本家にすると、取り込む順番で結果が変わる。必ず若いIDを本家にする。
+  const backwards = await scalar('SELECT COUNT(*) FROM jobs WHERE duplicate_of IS NOT NULL AND duplicate_of > id');
+  iv.eq('あとから入った案件を本家にしてしまっている件数', backwards, 0, '件');
+
+  // ★重複の重複を作らない。作ると、どれが本家か誰にも言えなくなる。
+  const chain = await scalar(
+    'SELECT COUNT(*) FROM jobs a JOIN jobs b ON b.id = a.duplicate_of WHERE a.duplicate_of IS NOT NULL AND b.duplicate_of IS NOT NULL',
+  );
+  iv.eq('重複の重複（本家がたどれなくなる連鎖）', chain, 0, '件');
+
+  const danglingDup = await scalar(
+    'SELECT COUNT(*) FROM jobs a WHERE a.duplicate_of IS NOT NULL AND NOT EXISTS (SELECT 1 FROM jobs b WHERE b.id = a.duplicate_of)',
+  );
+  iv.eq('存在しない案件を重複先にしている件数', danglingDup, 0, '件');
+
+  // ★予算に「応相談」と書いてあったことを捨てない。捨てると「予算欄が無かった案件」と同じに見える。
+  const zeroBudget = await scalar('SELECT COUNT(*) FROM jobs WHERE budget_min = 0 OR budget_max = 0');
+  iv.eq('予算が0円として保存されている案件（未記入を0で埋めていないか）', zeroBudget, 0, '件');
+
+  const badOrigin = await scalar(
+    `SELECT COUNT(*) FROM jobs WHERE data_origin NOT IN ('TEST','REAL_EMAIL_ALERT','REAL_MANUAL','REAL_CSV','REAL_REFERRAL','REAL_OFFICIAL_API')`,
+  );
+  iv.eq('決められた素性以外が入っている案件', badOrigin, 0, '件');
+
+  const emailNoMessageId = await scalar(
+    `SELECT COUNT(*) FROM jobs WHERE inbox_source = 'EMAIL_ALERT' AND (inbox_message_id IS NULL OR inbox_message_id = '')`,
+  );
+  iv.eq('メール通知なのにメールIDが残っていない案件', emailNoMessageId, 0, '件');
+
+  const referralNoFrom = await scalar(
+    `SELECT COUNT(*) FROM jobs WHERE inbox_source = 'REFERRAL' AND (referral_from IS NULL OR referral_from = '')`,
+  );
+  iv.eq('紹介案件なのに紹介者が残っていない案件', referralNoFrom, 0, '件');
+  iv.print();
+
+  // ================================================================
+  // 別の目（監査）が、本当に落とせるか
+  // ================================================================
+  // ★合格しか出ない検査は、検査していないのと同じ。
+  //   だから1項目ずつわざと壊して、狙った項目だけが落ちることを確かめる。
+  // ★DBには一切書かない。存在しない案件ID(-1)の作り物の行を渡して読ませるだけ。
+  //   監査が対象を書き換えると、1件目を見た副作用が2件目の判定に混ざる。実際に一度やらかした。
+  const au = new Suite('別の目（監査）が本当に落とせるか');
+
+  const AUDIT_DESC =
+    'トレカ通販サイトのブログに載せる商品紹介記事を10本お願いします。'
+    + '1本あたり2000文字程度、写真は当方で用意します。'
+    + 'SEOを意識した見出し構成にしてください。納期は2週間、成果物単位のお支払いです。';
+
+  const AUDIT_BODY = [
+    'はじめまして。ご依頼を拝見しました。',
+    '「SEOを意識した見出し構成」という点について、検索意図を整理してから見出しを作る手順で進めます。',
+    '「1本あたり2000文字程度」の分量で、10本まとめてお受けできます。',
+    'お見積りは80,000円、納期は7日で考えております。',
+    'ご検討のほど、よろしくお願いいたします。',
+  ].join('\n');
+
+  const baseJob = (): Row => ({
+    id: -1,
+    title: 'ECサイト用の商品紹介ブログ記事を10本執筆',
+    description: AUDIT_DESC,
+    site_code: 'CROWDWORKS',
+    data_origin: 'REAL_MANUAL',
+    inbox_source: 'MANUAL_TEXT',
+    budget_min: 80000,
+    budget_max: 100000,
+    budget_text: '80,000円〜100,000円',
+    duplicate_of: null,
+    duplicate_reason: null,
+    work_style: null,
+    category: null,
+    url: 'https://example.invalid/jobs/1',
+  });
+
+  const baseScore = (): Row => ({
+    job_id: -1,
+    expected_profit: 85890,
+    expected_hours: 3.7,
+    expected_hourly_profit: 23214,
+    ev_unavailable_reason: null,
+    estimate_confidence: 'NORMAL',
+    client_risk: 0,
+    client_risk_reason: '文面には危ない条件は書かれていなかった',
+    revision_risk: 20,
+    revision_risk_reason: '依頼文が短く要件が固まっていない',
+    capability_readiness: 'PRODUCTION_READY',
+    capability_readiness_detail: '本番で動いている道具が当たっている',
+  });
+
+  const baseProposal = (): Row => ({
+    id: -1,
+    job_id: -1,
+    body: AUDIT_BODY,
+    personal_text: '「SEOを意識した見出し構成」トレカ通販サイトの商品紹介記事10本、検索意図の整理から着手する。',
+    price: 80000,
+    delivery_days: 7,
+    evidence_used: '[]',
+    status: 'READY',
+    blocked_reason: null,
+  });
+
+  /** 1項目だけ壊して監査にかけ、狙った項目が狙った重さで落ちたかを見る。 */
+  async function auditCase(
+    name: string,
+    code: string,
+    severity: AuditVerdict,
+    tamper: (t: { job: Row; score: Row; proposal: Row; application: Row | null }) => void,
+  ): Promise<void> {
+    const t = { job: baseJob(), score: baseScore(), proposal: baseProposal(), application: null as Row | null };
+    tamper(t);
+    const a = await auditJob(t);
+    const k = a.checks.find((x) => x.code === code);
+    au.check(
+      name,
+      k !== undefined && !k.ok && k.severity === severity,
+      k === undefined
+        ? `検査項目 ${code} が存在しない`
+        : k.ok
+          ? `${k.label} が合格のまま（落ちていない）／全体の判定=${a.verdict}`
+          : `実際: ${k.severity} / 期待: ${severity}（${k.detail}）`,
+    );
+  }
+
+  // 壊していない状態は、14項目すべて合格すること。
+  // ここが落ちるなら、以下の「1項目だけ壊した」試験の意味が無くなる。
+  const clean = await auditJob({ job: baseJob(), score: baseScore(), proposal: baseProposal(), application: null });
+  au.eq('壊していない案件は14項目すべて合格', clean.ngCount, 0, '件');
+  if (clean.ngCount > 0) {
+    for (const k of clean.checks.filter((x) => !x.ok)) au.check(`（内訳）${k.label}`, false, k.detail);
+  }
+  au.eq('検査項目の数', clean.checks.length, 14, '項目');
+  au.check('壊していない案件の判定', clean.verdict === 'PASS', `実際: ${clean.verdict} / 期待: PASS`);
+
+  await auditCase('練習用（TEST）は候補から外す', 'REAL_ORIGIN', 'BLOCK', (t) => {
+    t.job.data_origin = 'TEST';
+  });
+  await auditCase('入口の記録が無い案件は候補から外す', 'REAL_ORIGIN', 'BLOCK', (t) => {
+    t.job.inbox_source = null;
+  });
+  await auditCase('同じ依頼の重複は候補から外す', 'NOT_DUPLICATE', 'BLOCK', (t) => {
+    t.job.duplicate_of = 1;
+    t.job.duplicate_reason = '件名がほぼ同じ';
+  });
+  // ★取り込み時に見落とした拘束条件を、本文から自分で拾い直せるか。
+  await auditCase('本文に隠れた常駐・週5を自分で拾い直す', 'HARD_BLOCK', 'BLOCK', (t) => {
+    t.job.description = `${AUDIT_DESC}\n※週5日・1日8時間の常駐でお願いします。`;
+  });
+  await auditCase('規約を確かめていないサイトは人が読む', 'SITE_TOS', 'HUMAN_REVIEW', (t) => {
+    t.job.site_code = 'NOT_A_REGISTERED_SITE';
+  });
+  await auditCase('応募文が止まっているものは候補から外す', 'PROPOSAL_EXISTS', 'BLOCK', (t) => {
+    t.proposal.status = 'BLOCKED';
+    t.proposal.blocked_reason = '使えない表現が入っている';
+  });
+  await auditCase('案件本文に無い引用は作り話として外す', 'PROPOSAL_GROUNDED', 'BLOCK', (t) => {
+    t.proposal.body = `${AUDIT_BODY}\n本文にある「毎月30万円の広告予算をお持ちとのこと」も承知しています。`;
+  });
+  await auditCase('景表法で使えない表現は候補から外す', 'EXAGGERATION', 'BLOCK', (t) => {
+    t.proposal.body = `${AUDIT_BODY}\n必ず成果が出ます。`;
+  });
+  await auditCase('穴埋めの記号が残っていたら書き直す', 'NATURALNESS', 'REWRITE', (t) => {
+    t.proposal.body = `${AUDIT_BODY}\nご予算はundefined円と伺っています。`;
+  });
+  await auditCase('決めた金額が本文に無ければ書き直す', 'OFFER_TERMS', 'REWRITE', (t) => {
+    t.proposal.price = 999999;
+  });
+  await auditCase('当てられる道具が無い案件は候補から外す', 'CAPABILITY_HONESTY', 'BLOCK', (t) => {
+    t.score.capability_readiness = 'NONE';
+    t.score.capability_readiness_detail = '当たる道具が無い';
+  });
+  // ★試作の道具しか無いのに「実際に運用しています」と書くのは優良誤認。
+  await auditCase('試作の道具を実績として書いたら外す', 'CAPABILITY_HONESTY', 'BLOCK', (t) => {
+    t.score.capability_readiness = 'USABLE_WITH_REVIEW';
+    t.proposal.body = `${AUDIT_BODY}\n同種の仕事は実際に運用している仕組みで対応しています。`;
+  });
+  // ★「不明」を0で埋めた跡を見つけられるか。恒久ルールそのもの。
+  await auditCase('予想作業時間が0時間なら候補から外す', 'MONEY_HONESTY', 'BLOCK', (t) => {
+    t.score.expected_hours = 0;
+  });
+  await auditCase('予算が無いのに利益だけ出ていたら人が読む', 'MONEY_HONESTY', 'HUMAN_REVIEW', (t) => {
+    t.job.budget_min = null;
+    t.job.budget_max = null;
+    t.job.budget_text = '応相談';
+  });
+  await auditCase('見積りの確からしさが低ければ人が読む', 'MONEY_HONESTY', 'HUMAN_REVIEW', (t) => {
+    t.score.estimate_confidence = 'LOW';
+  });
+  await auditCase('依頼主の危なさが高ければ人が読む', 'RISK', 'HUMAN_REVIEW', (t) => {
+    t.score.client_risk = CLIENT_RISK_REVIEW;
+    t.score.client_risk_reason = '前払いを求められている';
+  });
+  await auditCase('手直しの起きやすさが高ければ人が読む', 'RISK', 'HUMAN_REVIEW', (t) => {
+    t.score.revision_risk = REVISION_RISK_REVIEW;
+    t.score.revision_risk_reason = '要件がほとんど書かれていない';
+  });
+  await auditCase('応募済みの印が付いていたら候補から外す', 'NO_EXTERNAL_ACTION', 'BLOCK', (t) => {
+    t.application = { id: -1, job_id: -1, executed: 1, route: 'APPROVAL_REQUIRED' };
+  });
+
+  // 書き直しで直せるものと、直せないものを取り違えないか。
+  // ★案件そのものが理由（足切り・規約・予算）のときに fixable が true になると、
+  //   文章を書き直しただけで通ってしまう。そこを確かめる。
+  const fixableCase = await auditJob({
+    job: baseJob(),
+    score: baseScore(),
+    proposal: { ...baseProposal(), price: 999999 },
+    application: null,
+  });
+  au.check('文章で直せるものは「直せる」と判定する', fixableCase.fixable, `実際: fixable=${fixableCase.fixable} / 判定=${fixableCase.verdict}`);
+
+  const unfixableJob = baseJob();
+  unfixableJob.description = `${AUDIT_DESC}\n※週5日・1日8時間の常駐でお願いします。`;
+  const unfixableCase = await auditJob({ job: unfixableJob, score: baseScore(), proposal: baseProposal(), application: null });
+  au.check(
+    '案件そのものが理由なら「直せない」と判定する',
+    unfixableCase.fixable === false && unfixableCase.verdict === 'BLOCK',
+    `実際: fixable=${unfixableCase.fixable} / 判定=${unfixableCase.verdict}`,
+  );
+
+  // ★監査は対象を書き換えてはならない。
+  //   1件目を見た副作用が2件目の判定に混ざると、原因の切り分けができなくなる。
+  const beforeExclusions = await scalar('SELECT COUNT(*) FROM job_exclusions');
+  const beforeAudits = await scalar('SELECT COUNT(*) FROM job_audits');
+  await auditJob({ job: unfixableJob, score: baseScore(), proposal: baseProposal(), application: null });
+  au.eq('監査しても足切りの記録は増えない（副作用が無い）', await scalar('SELECT COUNT(*) FROM job_exclusions'), beforeExclusions, '件');
+  au.eq('監査しただけでは監査結果も保存されない', await scalar('SELECT COUNT(*) FROM job_audits'), beforeAudits, '件');
+  au.print();
+
+  // ================================================================
+  // 「最初に応募する5案件」の資料が、不明を不明のまま出せているか
+  // ================================================================
+  const ds = new Suite('最初に応募する5案件の資料（19項目）');
+  const dossiers = await jobDossiers();
+  ds.atMost('資料に出る案件は5件まで', dossiers.length, 5, '件');
+  ds.check(
+    '監査に合格した案件だけが資料に出る',
+    dossiers.every((d) => d.auditVerdict === null || d.auditVerdict === 'PASS'),
+    dossiers.map((d) => `${d.rank}位=${d.auditVerdict ?? '監査記録なし'}`).join('／') || '（0件）',
+  );
+  ds.check(
+    '練習用（TEST）の案件が資料に混ざっていない',
+    dossiers.every((d) => d.dataOrigin !== 'TEST'),
+    dossiers.map((d) => d.dataOriginJa).join('／') || '（0件）',
+  );
+  ds.check(
+    '順位が1から抜けなく並んでいる',
+    dossiers.every((d, i) => d.rank === i + 1),
+    dossiers.map((d) => d.rank).join('・') || '（0件）',
+  );
+  // ★数字が出せない欄に0を書かない。0円・0%は「計算した結果」に見えてしまう。
+  ds.check(
+    '報酬が不明な案件は0円で埋めず理由を書いている',
+    dossiers.every((d) => (d.budgetMin === null && d.budgetMax === null ? d.budgetUnsetReasonJa !== null : d.budgetMin !== 0 && d.budgetMax !== 0)),
+    dossiers.map((d) => `${d.rank}位=${d.budgetMin ?? '不明'}`).join('／') || '（0件）',
+  );
+  ds.check(
+    '利益・時間・時給が出せない案件は理由を書いている',
+    dossiers.every((d) => (d.expectedProfit !== null && d.expectedHours !== null && d.expectedHourlyProfit !== null) || d.expectedUnavailableReasonJa !== null),
+    dossiers.map((d) => `${d.rank}位=${d.expectedProfit ?? '不明'}`).join('／') || '（0件）',
+  );
+  ds.check(
+    '受注確率が出せない案件は0%で埋めていない',
+    dossiers.every((d) => d.winProbability !== null || d.winProbabilityUnsetReasonJa !== null),
+    dossiers.map((d) => `${d.rank}位=${d.winProbability ?? '不明'}`).join('／') || '（0件）',
+  );
+  // ★人がやる作業と受注後の流れを空にしない。空だと「AIが全部やる」と読めてしまう。
+  ds.check(
+    '人間がする作業が必ず書いてある',
+    dossiers.every((d) => d.humanWork.length > 0),
+    dossiers.map((d) => `${d.rank}位=${d.humanWork.length}件`).join('／') || '（0件）',
+  );
+  ds.check(
+    '受注後にやることが必ず書いてある',
+    dossiers.every((d) => d.afterOrderFlow.length > 0),
+    dossiers.map((d) => `${d.rank}位=${d.afterOrderFlow.length}件`).join('／') || '（0件）',
+  );
+  ds.check(
+    '予行（DRY RUN）で外へ出たものは1件も無い',
+    dossiers.every((d) => d.dryRun === null || d.dryRun.executed === false),
+    dossiers.map((d) => `${d.rank}位=${d.dryRun ? (d.dryRun.executed ? '外へ出た' : '出ていない') : '予行なし'}`).join('／') || '（0件）',
+  );
+  ds.print();
+
+  finish([r, i, v, o, p, q, g, b, m, cr, dd, ib, iv, au, ds]);
 }
 
 main().catch((e) => {

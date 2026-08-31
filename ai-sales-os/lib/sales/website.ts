@@ -36,6 +36,12 @@ export type PageRead = {
   reason: string;
   /** ページ内のリンク（同じサイトのものだけ）。 */
   links: { url: string; label: string }[];
+  /**
+   * 生のHTML（先頭のみ）。
+   * ★用途は1つだけ：フォームにCAPTCHA・ログインがあるかを見るため。
+   *   本文として使わない（文章は text を使う）。回避のためには使わない。
+   */
+  html: string;
 };
 
 // ── robots.txt ────────────────────────────────────────────────
@@ -294,7 +300,7 @@ async function politeWait(url: string, delayMs: number): Promise<void> {
   lastHitAt.set(h, Date.now());
 }
 
-const EMPTY_READ = (url: string, reason: string): PageRead => ({ ok: false, url, status: null, title: null, text: '', reason, links: [] });
+const EMPTY_READ = (url: string, reason: string): PageRead => ({ ok: false, url, status: null, title: null, text: '', reason, links: [], html: '' });
 
 /** 公開ページを1つだけ読む（GETのみ）。 */
 export async function fetchPublicPage(url: string): Promise<PageRead> {
@@ -339,6 +345,7 @@ export async function fetchPublicPage(url: string): Promise<PageRead> {
       text: htmlToText(html).slice(0, 20_000),
       reason: '読めた',
       links: extractLinks(html, finalUrl),
+      html: html.slice(0, 60_000),
     };
   } catch (e) {
     return EMPTY_READ(url, `つながらなかった（${(e as Error).message}）`);

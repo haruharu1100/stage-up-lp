@@ -22,12 +22,14 @@ async function main() {
 
   const limit = Number(arg('limit') ?? 20);
   const force = process.argv.includes('--force');
+  // ★フォーム方針（営業を受け付けているか）がまだ空欄の会社だけを読み直す。
+  const missingFormPolicy = process.argv.includes('--missing-form-policy');
 
   console.log('■ 公式HPの照合（robots.txt を守り、1社あたり最大3ページ。フォーム送信はしません）');
-  console.log(`  今回見る上限: ${limit}社${force ? '（前に読んだ会社も読み直す）' : ''}`);
+  console.log(`  今回見る上限: ${limit}社${force ? '（前に読んだ会社も読み直す）' : ''}${missingFormPolicy ? '（フォーム方針が空欄の会社だけ）' : ''}`);
   console.log('');
 
-  const results = await enrichPending(limit, { force });
+  const results = await enrichPending(limit, { force, missingFormPolicy });
   if (results.length === 0) {
     console.log('確かめる会社がありませんでした。');
   }

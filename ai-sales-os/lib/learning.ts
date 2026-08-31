@@ -1,5 +1,6 @@
 import { all, nowIso, upsert, one } from './db/client';
 import { num } from './settings';
+import { REAL_SQL } from './origin';
 
 /**
  * 学習。
@@ -71,10 +72,13 @@ export async function listLearnings(scope?: Scope): Promise<LearningRow[]> {
  * どの業種 × どの商品 × どの手段 で決まりやすいかを数える。
  */
 export async function rebuildSalesLearnings(): Promise<{ dimensions: number; measured: number }> {
+  // ★練習用（TEST）の会社は1件も入れない。
+  //   入れると、練習用に作った成約が「この業種は決まりやすい」という学習になり、
+  //   本物の営業の順番がその数字で動いてしまう。
   const rows = await all(`
     SELECT d.stage, d.offer_code, d.channel, c.industry_guess
       FROM deals d JOIN companies c ON c.id = d.company_id
-     WHERE d.stage IN ('WON', 'LOST')`);
+     WHERE d.stage IN ('WON', 'LOST') AND c.${REAL_SQL}`);
   const buckets = new Map<string, { samples: number; wins: number; dimension: string; key: string }>();
   const push = (dimension: string, key: string, won: boolean) => {
     const id = `${dimension}::${key}`;
@@ -115,12 +119,14 @@ export async function rebuildSalesLearnings(): Promise<{ dimensions: number; mea
 
 /** 案件側の実績（applications × orders）から学習表を作り直す。 */
 export async function rebuildJobLearnings(): Promise<{ dimensions: number; measured: number }> {
+  // ★練習用（TEST）の案件は1件も入れない（法人側と同じ理由）。
   const rows = await all(`
     SELECT j.site_code, j.category, j.budget_min, j.budget_max,
            CASE WHEN o.id IS NULL THEN 0 ELSE 1 END AS won
       FROM applications a
       JOIN jobs j ON j.id = a.job_id
-      LEFT JOIN orders o ON o.job_id = j.id`);
+      LEFT JOIN orders o ON o.job_id = j.id
+     WHERE j.${REAL_SQL}`);
   const buckets = new Map<string, { samples: number; wins: number; dimension: string; key: string }>();
   const push = (dimension: string, key: string, won: boolean) => {
     const id = `${dimension}::${key}`;

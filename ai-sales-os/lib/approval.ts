@@ -1,4 +1,5 @@
 import { all, nowIso, one, parseJson, run, upsert } from './db/client';
+import { toOrigin, type DataOrigin } from './origin';
 import { checkExpression } from './text';
 
 /**
@@ -81,6 +82,13 @@ export type ApprovalItem = {
   detail: ApprovalDetail;
   /** 人が直した文章。あればこちらを送る。 */
   revisedBody: string | null;
+  /**
+   * 元になったデータが本物か練習用か。
+   * ★画面に必ず出す。練習用は承認ボタンを押しても外部へ進めないが、
+   *   「押したのに何も起きない」という体験そのものが仕組みの誤解を生む。
+   *   押す前に、これが練習用だと画面で分かるようにする。
+   */
+  dataOrigin: DataOrigin;
   status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'HELD';
   createdAt: string;
   decidedAt: string | null;
@@ -190,6 +198,17 @@ export async function listApprovals(status?: ApprovalItem['status']): Promise<Ap
       ]);
       if (rev) revisedBody = String(rev.body);
     }
+
+    // ★元データの出どころを、承認カードに出すために引いてくる。
+    //   引けない（表が違う・行が消えた）ときは TEST 扱いにする。
+    //   分からないものを「本物」と表示するほうが、はるかに危ない。
+    let dataOrigin: DataOrigin = 'TEST';
+    const table = String(r.ref_table);
+    if (table === 'companies' || table === 'jobs') {
+      const src = await one(`SELECT data_origin FROM ${table} WHERE id = ?`, [Number(r.ref_id)]);
+      dataOrigin = toOrigin(src?.data_origin);
+    }
+
     out.push({
       id: Number(r.id),
       kind: String(r.kind) as ApprovalKind,
@@ -200,6 +219,7 @@ export async function listApprovals(status?: ApprovalItem['status']): Promise<Ap
       riskNote: String(r.risk_note),
       detail,
       revisedBody,
+      dataOrigin,
       status: String(r.status) as ApprovalItem['status'],
       createdAt: String(r.created_at),
       decidedAt: r.decided_at ? String(r.decided_at) : null,

@@ -22,12 +22,17 @@ const HEADER_MAP: Record<string, keyof CompanyInput> = {
   住所: 'address',
   所在地: 'address',
   address: 'address',
-  'hp url': 'website',
-  hp: 'website',
-  url: 'website',
-  情報源url: 'website',
-  ホームページ: 'website',
-  website: 'website',
+  // ★ここに入るURLは「候補」であって「確認済みのHP」ではない。
+  //   CSVの列名がどうであれ、人が中身を照合したわけではない。
+  //   確認済みの欄に入れてしまうと、別会社のページを根拠に営業文を書くことになる。
+  //   （実際、既存リストの「情報源URL」には kensetumap.com のような
+  //     その会社が書いたのではない紹介サイトが混ざっている）
+  'hp url': 'websiteCandidate',
+  hp: 'websiteCandidate',
+  url: 'websiteCandidate',
+  情報源url: 'websiteCandidate',
+  ホームページ: 'websiteCandidate',
+  website: 'websiteCandidate',
   電話番号: 'phone',
   電話: 'phone',
   tel: 'phone',
@@ -44,8 +49,13 @@ const HEADER_MAP: Record<string, keyof CompanyInput> = {
   業種: 'description',
   業種予測: 'description',
   事業内容: 'businessDetail',
-  備考: 'businessDetail',
-  メモ: 'businessDetail',
+  // ★「備考」「メモ」は相手が書いた文章ではなく、こちらの営業記録。
+  //   実際の中身は「2026-07-28 人が応答/手応えC/取次で終了」のような架電メモだった。
+  //   これを事業内容として入れると、営業文が自分の営業メモを相手に読み上げる形になる。
+  //   なので相手の情報としては扱わず、内部メモの欄へ入れる。営業文には出さない。
+  備考: 'internalNote',
+  メモ: 'internalNote',
+  担当者: 'internalNote',
 };
 
 /** ダブルクォート対応の最小限のCSV読み。 */
@@ -86,6 +96,12 @@ function parseCsv(text: string): string[][] {
 async function main() {
   const file = process.argv[2];
   const sourceArg = process.argv.includes('--source') ? process.argv[process.argv.indexOf('--source') + 1] : 'CSV';
+  // ★何件まで入れるか。既存リストは数千件あるので、検証では区切って入れる。
+  const limit = process.argv.includes('--limit')
+    ? Number(process.argv[process.argv.indexOf('--limit') + 1])
+    : Number.MAX_SAFE_INTEGER;
+  // ★URLを持っている行だけを入れる。HPの照合を実際に動かして確かめたいときに使う。
+  const onlyWithUrl = process.argv.includes('--only-with-url');
   if (!file) {
     console.log('CSVのパスを渡してください。例: npm run companies:import -- ../automation_500_existing.csv');
     process.exit(1);
@@ -124,8 +140,19 @@ async function main() {
       (c as Record<string, unknown>)[key] = v;
     });
     if (!c.name) continue;
+    if (onlyWithUrl && !c.websiteCandidate) continue;
+    if (inserted >= limit) break;
     // 業種の列は「その会社が何屋か」の手掛かりなので、営業拒否表記を探す本文にも回す。
-    c.pageText = [c.description, c.businessDetail].filter(Boolean).join(' ') || null;
+    // ★内部メモも「営業お断り」と書かれていることがあるので、拒否表記を探す対象には入れる。
+    //   （探すだけで、営業文には使わない）
+    c.pageText = [c.description, c.businessDetail, c.internalNote].filter(Boolean).join(' ') || null;
+    // ★CSVから来た事業内容は「その会社のHPから取った文章」ではない。出どころを必ず残す。
+    if (c.businessDetail) c.businessDetailSource = 'MANUAL';
+    // ★このCSVは「自分が持っているリスト」。取得元は人の手なので MANUAL と記録する。
+    //   どこから来た電話番号か言えないまま営業に使わないため。
+    if (c.phone) c.phoneSource = 'MANUAL';
+    if (c.email) c.emailSource = 'MANUAL';
+    if (c.websiteCandidate) c.websiteSource = 'MANUAL';
     const res = await ingestCompany(c as CompanyInput);
     if (res.status === 'INSERTED') inserted++;
     else if (res.status === 'DUPLICATE') duplicate++;

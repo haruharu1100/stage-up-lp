@@ -5,12 +5,13 @@ import { buildCallScript, buildDraft, saveCallScript, saveDraft } from '../lib/s
 import type { Channel } from '../lib/sales/channel';
 import type { NeedFlags } from '../lib/needs';
 import type { IndustryKey } from '../lib/industry';
+import { SCOPE_JA, scopeFromArgv, scopeSql } from './_scope';
 
 /**
  * 会社ごとの文面（メール／フォーム／電話の台本）を作る。送信は一切しない。
  * 先に npm run analyze と npm run score が必要。
  *
- * 使い方: npm run draft [-- --show 3]（--show で中身を何件か表示）
+ * 使い方: npm run draft -- --real [--show 3]（--show で中身を何件か表示）
  */
 
 function arg(name: string): string | null {
@@ -21,7 +22,9 @@ function arg(name: string): string | null {
 async function main() {
   await initSettings();
   const offers = await loadOffers(false);
-  const companies = await all('SELECT * FROM companies ORDER BY id');
+  const scope = scopeFromArgv();
+  console.log(`■ 対象: ${SCOPE_JA[scope]}`);
+  const companies = await all(`SELECT * FROM companies WHERE ${scopeSql(scope)} ORDER BY id`);
   if (companies.length === 0) {
     console.log('会社が1件も入っていません。');
     return;

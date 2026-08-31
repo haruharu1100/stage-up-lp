@@ -276,7 +276,7 @@ export async function readinessSummary(): Promise<ReadinessSummary> {
   const nextStep = noData
     ? '本物の会社データがまだ1件も取れない。まず gBizINFO と 法人番号Web-API の鍵（どちらも無料）を .env に入れる。ここが入るまで、その先の準備をしても試せない。'
     : config.aiEnabled
-      ? '会社データは取れる。次は「どの操作を1件目にするか」を1つだけ決める。おすすめは問い合わせフォーム（相手の同意が要らず、失敗しても電話ほど印象を悪くしない）。'
+      ? '会社データは取れる。次は「どの操作を1件目にするか」を1つだけ決める。問い合わせフォームを選ぶ場合は、そのフォーム自身が営業目的の送信を受け付けているかを先に読む。「営業お断り」と書いてあるフォームは非常に多く、同意が要らないから安全という考え方は取らない。'
       : '会社データは取れる。文章を書くAIを使うなら .env の AI_ENABLED を true にする。';
 
   return { actions, totalMissing, totalBlocked, nextStep, dataKeys };
