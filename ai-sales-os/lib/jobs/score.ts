@@ -4,6 +4,7 @@ import { getLearnedRate } from '../learning';
 import type { JobAnalysis } from './analyze';
 import { EXCLUSION_RULES, type ExclusionHit } from './exclude';
 import { capabilityReadiness, clientRisk, computeOpportunity, revisionRisk, type CapabilityReadiness } from './opportunity';
+import { computeProfit, type LearningMode, type ProfitBreakdown, type WinProbabilityKind } from './profit';
 
 // v3 … 依頼主の危なさ（CLIENT_RISK）と道具の仕上がり具合（CAPABILITY_READINESS）を
 //       名前を付けた指標として持ち、取りに行く順番の計算にも入れた版。
@@ -34,6 +35,15 @@ export type JobScore = {
   priorityScore: number;
   /** 取れる見込み（0〜1）。実績が溜まればサイト別の実測に差し替わる。 */
   winProbability: number;
+  /**
+   * ★上の数字が「AIの予測」か「実際に数えた実測」か。
+   *   実績0件のうちは必ず AI_PREDICTION。画面でも「AI予測」と書く。
+   */
+  winProbabilityKind: WinProbabilityKind;
+  /** 実績が足りているか（足りないうちは OBSERVE_ONLY＝見るだけ）。 */
+  learningMode: LearningMode;
+  /** 費用を分けたままの利益計算。合計1本にまとめない。 */
+  profit: ProfitBreakdown;
   /** 手直しの起きやすさ（0〜100。高いほど直しが増える）。 */
   revisionRisk: number;
   revisionRiskReason: string;
@@ -77,7 +87,6 @@ export async function computeJobScore(args: { job: Row; analysis: JobAnalysis; e
   const { job, analysis, exclusions } = args;
   const jobId = Number(job.id);
 
-  const aiCostPerHour = await num('job.ai_cost_per_hour');
   const targetHourly = await num('job.target_hourly');
   const minHourly = await num('job.min_hourly');
   const baseWin = await num('job.base_win_rate');
@@ -97,17 +106,18 @@ export async function computeJobScore(args: { job: Row; analysis: JobAnalysis; e
   const mid = budgetMid(job);
   const isHourlyPay = String(job.budget_type) === 'HOURLY';
 
-  let expectedProfit: number | null = null;
+  // ★利益は費用を分けたまま計算する（合計1本にまとめない・分からない費用を0にしない）。
+  const profit = await computeProfit(mid, hours > 0 ? hours : null);
+
+  const expectedProfit: number | null = profit.expectedProfit;
   let expectedHourly: number | null = null;
   let evUnavailableReason: string | null = null;
 
-  if (mid === null) {
-    evUnavailableReason = '予算が書かれていないので、利益を計算できない（想像で埋めない）';
+  if (expectedProfit === null) {
+    evUnavailableReason = profit.reasonJa;
   } else if (hours <= 0) {
     evUnavailableReason = '作業時間を見積もれないので、時間あたりの利益を出せない';
   } else {
-    const cost = Math.round(hours * aiCostPerHour);
-    expectedProfit = mid - cost;
     expectedHourly = Math.round(expectedProfit / hours);
   }
 
@@ -118,8 +128,12 @@ export async function computeJobScore(args: { job: Row; analysis: JobAnalysis; e
   }
 
   // 取れる見込み。実績が溜まっていればサイト別の実測に差し替える。
+  // ★実測に差し替わるまで、この数字は「AIの予測」でしかない。
+  //   予測であることを数字と一緒に持ち歩かせて、画面でも実績と同じ見た目にしない。
   const learned = await getLearnedRate('JOB', 'site', String(job.site_code ?? 'UNKNOWN'));
   const winRate = learned ?? baseWin;
+  const winProbabilityKind: WinProbabilityKind = learned === null ? 'AI_PREDICTION' : 'MEASURED';
+  const learningMode: LearningMode = learned === null ? 'OBSERVE_ONLY' : 'LEARNING';
   const winScore = Math.round(Math.min(100, winRate * 100 * (1 + matchScore / 200)));
 
   // 危険度（高いほど危ない）
@@ -186,13 +200,22 @@ export async function computeJobScore(args: { job: Row; analysis: JobAnalysis; e
     verdictReason = '自社のAI・システムで作れる部分が無い。手作業になるので受けない。';
   } else if (expectedProfit !== null && expectedProfit <= 0) {
     verdict = 'EXCLUDE';
-    verdictReason = `赤字になる見込み（想定報酬${mid?.toLocaleString()}円 − 想定コスト${Math.round(hours * aiCostPerHour).toLocaleString()}円）`;
+    verdictReason = `赤字になる見込み（想定報酬${mid?.toLocaleString()}円 − 出ていくお金${(profit.cashCostTotal ?? 0).toLocaleString()}円）`;
   } else if (expectedHourly !== null && expectedHourly < minHourly) {
     verdict = 'EXCLUDE';
     verdictReason = `時間あたりの利益が${expectedHourly.toLocaleString()}円で、下限の${minHourly.toLocaleString()}円を下回る`;
   } else if (mid === null) {
     verdict = 'HOLD';
     verdictReason = '予算が書かれていない。金額を確認してから人が決める。';
+  } else if (expectedProfit === null) {
+    // ★情報が足りないことは、危ないこととは違う。落とさずに人へ回す。
+    verdict = 'HOLD';
+    verdictReason = `利益を確定できない（${profit.unknownItemsJa.join('・') || '費用が不明'}）。分からない費用を0にはしないので、人が確認してから決める。`;
+  } else if (String(job.duplicate_verdict ?? 'UNIQUE') === 'LIKELY_DUPLICATE') {
+    // ★「たぶん同じ依頼」は捨てない。ただし自動では応募候補に上げない。
+    //   同じ相手に2通出すのは相手に届いてしまうが、人が見比べるのは取り返しがつく。
+    verdict = 'HOLD';
+    verdictReason = `すでにある案件と同じ依頼かもしれない（${job.duplicate_reason ?? '根拠は残っていない'}）。見比べてから人が決める。`;
   } else if (isHourlyPay) {
     verdict = 'HOLD';
     verdictReason = '時給での支払い。時間を売る形になるので人が判断する。';
@@ -224,6 +247,9 @@ export async function computeJobScore(args: { job: Row; analysis: JobAnalysis; e
     evUnavailableReason,
     priorityScore,
     winProbability: Number(winRate.toFixed(3)),
+    winProbabilityKind,
+    learningMode,
+    profit,
     revisionRisk: risk.score,
     revisionRiskReason: risk.reasons.join('／'),
     clientRisk: cRisk.score,
@@ -257,6 +283,15 @@ export async function saveJobScore(s: JobScore): Promise<void> {
       ev_unavailable_reason: s.evUnavailableReason,
       priority_score: s.priorityScore,
       win_probability: s.winProbability,
+      win_probability_kind: s.winProbabilityKind,
+      learning_mode: s.learningMode,
+      // ★費用は列を分けて残す。合計だけ残すと、あとから「何が分からなかったか」が消える。
+      cost_api: s.profit.costs.find((c) => c.key === 'API')?.amount ?? null,
+      cost_outsource: s.profit.costs.find((c) => c.key === 'OUTSOURCE')?.amount ?? null,
+      cost_other: s.profit.costs.find((c) => c.key === 'OTHER')?.amount ?? null,
+      cost_labor: s.profit.laborCost,
+      cost_unknown_items: JSON.stringify(s.profit.unknownItemsJa),
+      profit_status: s.profit.profitStatus,
       revision_risk: s.revisionRisk,
       revision_risk_reason: s.revisionRiskReason,
       client_risk: s.clientRisk,
@@ -274,6 +309,46 @@ export async function saveJobScore(s: JobScore): Promise<void> {
     },
     ['job_id'],
   );
+}
+
+function numOrNullOf(v: unknown): number | null {
+  return v === null || v === undefined ? null : Number(v);
+}
+
+/** 保存した費用の内訳を読み戻す。★NULL は 0 にしない（分からないものは分からないまま）。 */
+function rowToProfit(s: Row): ProfitBreakdown {
+  const api = numOrNullOf(s.cost_api);
+  const outsource = numOrNullOf(s.cost_outsource);
+  const other = numOrNullOf(s.cost_other);
+  const unknownItemsJa = parseUnknownItems(s.cost_unknown_items);
+  const cashCostTotal = api === null || outsource === null || other === null ? null : api + outsource + other;
+  const expectedProfit = numOrNullOf(s.expected_profit);
+  const laborCost = numOrNullOf(s.cost_labor);
+  return {
+    reward: null,
+    costs: [
+      { key: 'API', ja: '外部API費用（AIを動かすのにかかるお金）', amount: api, reasonJa: '' },
+      { key: 'OUTSOURCE', ja: '外注費（人に頼む部分の支払い）', amount: outsource, reasonJa: '' },
+      { key: 'OTHER', ja: 'その他の直接費用（素材購入・有料フォント・サーバー代など）', amount: other, reasonJa: '' },
+    ],
+    cashCostTotal,
+    expectedProfit,
+    profitStatus: String(s.profit_status ?? 'UNKNOWN') === 'KNOWN' ? 'KNOWN' : 'UNKNOWN',
+    unknownItemsJa,
+    laborCost,
+    profitAfterLabor: expectedProfit !== null && laborCost !== null ? expectedProfit - laborCost : null,
+    reasonJa: String(s.ev_unavailable_reason ?? ''),
+  };
+}
+
+function parseUnknownItems(v: unknown): string[] {
+  if (typeof v !== 'string' || v.trim() === '') return [];
+  try {
+    const parsed = JSON.parse(v);
+    return Array.isArray(parsed) ? parsed.map(String) : [];
+  } catch {
+    return [];
+  }
 }
 
 /** 保存済みの点数を読み戻す。列が増えたときに読み側を直し忘れないよう、1か所にまとめる。 */
@@ -294,6 +369,10 @@ export function rowToJobScore(s: Row): JobScore {
     evUnavailableReason: s.ev_unavailable_reason ? String(s.ev_unavailable_reason) : null,
     priorityScore: Number(s.priority_score),
     winProbability: Number(s.win_probability ?? 0),
+    // ★保存されていない古い行は、安全側（AI予測・見るだけ）として読む。
+    winProbabilityKind: (String(s.win_probability_kind ?? 'AI_PREDICTION') as WinProbabilityKind),
+    learningMode: (String(s.learning_mode ?? 'OBSERVE_ONLY') as LearningMode),
+    profit: rowToProfit(s),
     revisionRisk: Number(s.revision_risk ?? 0),
     revisionRiskReason: String(s.revision_risk_reason ?? ''),
     clientRisk: Number(s.client_risk ?? 0),

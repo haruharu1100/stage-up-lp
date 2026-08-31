@@ -5,6 +5,9 @@ import { isReal, ORIGIN_JA, toOrigin } from '../origin';
 import { EXTERNAL_ACTIONS_IMPLEMENTED } from '../env';
 import { READINESS_LABEL, type Readiness } from '../catalog/definitions';
 import { findExclusions } from './exclude';
+import { missingProposalElements } from './proposal';
+import { extractJobFacts, loadJobFacts, readAiPolicy, type FactField } from './facts';
+import { JOB_TYPE_JA, JOB_TYPE_MIN_HOURS, MIN_OVERHEAD_HOURS, type JobType } from './jobtype';
 import { sitePolicy, TOS_RECHECK_DAYS, type SitePolicy } from './sites';
 
 /**
@@ -592,6 +595,267 @@ function checkNoExternalAction(app: Row | null): AuditCheck {
   return { code: 'NO_EXTERNAL_ACTION', label, ok: true, severity: 'PASS', detail: `応募は0件（外部へ応募する処理コードがそもそも無い）。想定の出し方＝${route}。` };
 }
 
+// ── 検査15: 応募文に必要な6要素がそろっている ──────────────────
+
+function checkProposalElements(p: Row | null): AuditCheck {
+  const code = 'PROPOSAL_ELEMENTS';
+  const label = '応募文に必要な6つの要素がそろっている';
+  if (!p || String(p.status ?? '') !== 'READY') {
+    return { code, label, ok: true, severity: 'PASS', detail: '応募文が無いので対象なし。' };
+  }
+  const missing = missingProposalElements(String(p.body ?? ''));
+  if (missing.length > 0) {
+    return {
+      code,
+      label,
+      ok: false,
+      severity: 'REWRITE',
+      detail: `応募文に足りない要素がある（${missing.join('・')}）。足りないまま出すと、読んでいない応募に見えるうえ、受注後に食い違う。`,
+    };
+  }
+  return {
+    code,
+    label,
+    ok: true,
+    severity: 'PASS',
+    detail: '案件理解・進め方・お渡しするもの・納期の考え方・使える道具・人が確認する工程の6つがそろっている。',
+  };
+}
+
+// ── 検査16: 本文に書いていないことを事実にしていない ────────────
+
+/**
+ * これが不明のままだと、金額・時間・手直しの見積りがそもそも立たない項目。
+ * ★不明でも落とさない。「人が読む」に回すだけ。
+ *   落としてしまうと、依頼主に一言聞けば分かることまで捨てることになる。
+ */
+const CRITICAL_FACT_FIELDS: FactField[] = ['REWARD', 'DEADLINE', 'WORK_HOURS', 'REVISION_COUNT'];
+
+async function checkFactsGrounded(job: Row): Promise<AuditCheck> {
+  const code = 'FACTS_GROUNDED';
+  const label = '本文に書いていないことを事実にしていない';
+  const source = flat(`${String(job.title ?? '')} ${String(job.description ?? '')}`);
+  const saved = await loadJobFacts(Number(job.id));
+
+  if (saved.length === 0) {
+    return {
+      code,
+      label,
+      ok: false,
+      severity: 'HUMAN_REVIEW',
+      detail:
+        '案件本文から9項目（報酬・納期・必要スキル・勤務時間・勤務場所・AI利用可否・成果物・修正回数・依頼内容）を'
+        + '読み取った記録が残っていない。何を根拠に判断したのかを追えないので、人が本文を読む。',
+    };
+  }
+
+  // ① 出典が本当に案件本文にあるか。1件ずつ照合し直す。
+  //    ★ここが「書いていないことを事実として埋めない」の最後の砦。
+  const fabricated = saved.filter(
+    (f) => f.status === 'FOUND' && (f.sourceText === null || !source.includes(flat(f.sourceText))),
+  );
+  if (fabricated.length > 0) {
+    return {
+      code,
+      label,
+      ok: false,
+      severity: 'BLOCK',
+      detail:
+        `案件本文に無い言葉を、本文から取った事実として記録している（`
+        + `${fabricated.map((f) => `${f.fieldJa}＝「${String(f.sourceText ?? '出典なし').slice(0, 24)}」`).join('／')}）。`
+        + 'この数字や条件を信じて応募すると、書いていない約束を引き受けることになる。',
+    };
+  }
+
+  // ② 保存された読み取りと、いま本文を読み直した結果が食い違わないか。
+  //    足切りと同じ考え方で、監査は保存された結果を信じない。
+  const fresh = extractJobFacts(job);
+  const freshBy = new Map(fresh.facts.map((f) => [f.field, f]));
+  const jaOf = (s: string): string => (s === 'FOUND' ? '読み取れた' : '不明');
+  const drift = saved.filter((f) => {
+    const g = freshBy.get(f.field);
+    return g !== undefined && g.status !== f.status;
+  });
+  if (drift.length > 0) {
+    return {
+      code,
+      label,
+      ok: false,
+      severity: 'HUMAN_REVIEW',
+      detail:
+        `保存されている読み取りと、いま本文を読み直した結果が食い違う（`
+        + `${drift.map((f) => `${f.fieldJa}＝保存は${jaOf(f.status)}／読み直すと${jaOf(freshBy.get(f.field)?.status ?? 'UNKNOWN')}`).join('／')}）。`
+        + '本文が書き換わったか、読み取りの規則が変わった。どちらが正しいかは人が本文で確かめる。',
+    };
+  }
+
+  // ③ 判断に効く項目が不明のまま。★不明を理由に落とさず、人が読むに回す。
+  const unknownCritical = saved.filter((f) => f.status === 'UNKNOWN' && CRITICAL_FACT_FIELDS.includes(f.field));
+  if (unknownCritical.length > 0) {
+    return {
+      code,
+      label,
+      ok: false,
+      severity: 'HUMAN_REVIEW',
+      detail:
+        `判断に効く項目が本文に書かれていない（${unknownCritical.map((f) => f.fieldJa).join('・')}）。`
+        + '★0や都合のよい値では埋めていない。候補から外さず、人が読んで依頼主へ確認する。',
+    };
+  }
+
+  const foundCount = saved.filter((f) => f.status === 'FOUND').length;
+  return {
+    code,
+    label,
+    ok: true,
+    severity: 'PASS',
+    detail: `9項目のうち${foundCount}項目を出典つきで読み取り、その出典がすべて案件本文の中にあることを確かめ直した。`,
+  };
+}
+
+// ── 検査17: AIを使ってよい案件か ───────────────────────────────
+
+/**
+ * ★このシステムは成果物をAIで作る。だから「AIを使ってよいか」は納品可否そのもの。
+ *   本文にAIの話が出てこないことを「使ってよい」と読むと、
+ *   AI不可の依頼にAIの成果物を出すことになり、取り消しやアカウント停止につながる。
+ *   書いていない場合は AI_POLICY_UNKNOWN ＝「人が確かめる」であって、許可ではない。
+ */
+function checkAiPolicy(job: Row): AuditCheck {
+  const code = 'AI_POLICY';
+  const label = 'AIを使ってよい案件である';
+  const lines = [String(job.title ?? ''), ...String(job.description ?? '').split('\n')];
+  const { policy, fact } = readAiPolicy(lines);
+
+  if (policy === 'AI_PROHIBITED') {
+    return {
+      code,
+      label,
+      ok: false,
+      severity: 'BLOCK',
+      detail:
+        `本文でAIの利用を断っている（「${String(fact.sourceText ?? '').slice(0, 30)}」＝${fact.sourceLocation ?? '場所の記録なし'}）。`
+        + 'この案件の成果物はAIで作るので、受けない。',
+    };
+  }
+  if (policy === 'AI_POLICY_UNKNOWN') {
+    return {
+      code,
+      label,
+      ok: false,
+      severity: 'HUMAN_REVIEW',
+      detail:
+        'AIを使ってよいかが本文に書かれていない。★「書いていない」は「使ってよい」ではない。'
+        + '成果物はAIで作るので、応募の前に人が依頼主へ確かめる（候補からは外さない）。',
+    };
+  }
+  return {
+    code,
+    label,
+    ok: true,
+    severity: 'PASS',
+    detail: `本文にAIを使ってよいと明記されている（「${String(fact.sourceText ?? '').slice(0, 30)}」＝${fact.sourceLocation ?? ''}）。`,
+  };
+}
+
+// ── 検査18: 作業時間を小さく見積もっていない ───────────────────
+
+type StageRow = { stage?: string; stageJa?: string; hours?: number };
+
+/**
+ * ★REAL案件でいちばん危ないのが「作業時間の過小評価」。
+ *   AIが生成する時間だけを作業時間として数えると、時間あたりの利益が実態の何倍にも見え、
+ *   割に合わない案件が上位に並ぶ。上位から手を付けるので、被害がそのまま出る。
+ *   だから7工程の内訳を見て、AI生成以外の6工程が最低0.5時間を割っていないかを見張る。
+ */
+async function checkHoursEstimate(job: Row): Promise<AuditCheck> {
+  const code = 'HOURS_ESTIMATE';
+  const label = '作業時間を小さく見積もっていない';
+  const a = await one('SELECT job_type, est_hours, hours_breakdown, hours_note FROM job_analyses WHERE job_id = ?', [Number(job.id)]);
+  if (!a) {
+    return { code, label, ok: false, severity: 'BLOCK', detail: '案件を読み取った記録が無い。作業時間の根拠が無いまま順位だけ付いている。' };
+  }
+
+  const hours = n(a.est_hours);
+  if (hours === null || hours <= 0) {
+    return {
+      code,
+      label,
+      ok: false,
+      severity: 'BLOCK',
+      detail: `予想作業時間が${hours === null ? '空欄' : `${hours}時間`}。0時間で終わる案件は無いので、不明を0で埋めた跡と見る。`,
+    };
+  }
+
+  let stages: StageRow[] = [];
+  try {
+    const parsed = JSON.parse(String(a.hours_breakdown ?? '[]'));
+    if (Array.isArray(parsed)) stages = parsed as StageRow[];
+  } catch {
+    stages = [];
+  }
+  if (stages.length === 0) {
+    return {
+      code,
+      label,
+      ok: false,
+      severity: 'HUMAN_REVIEW',
+      detail:
+        '作業時間の内訳（案件理解・素材確認・AI生成・人間確認・修正・クライアント対応・納品準備）が残っていない。'
+        + 'AIが作る時間だけを作業時間として数えていないか、人が確かめる。',
+    };
+  }
+
+  const overhead = Number(
+    stages
+      .filter((s) => String(s.stage ?? '') !== 'GENERATE')
+      .reduce((x, s) => x + (Number(s.hours) || 0), 0)
+      .toFixed(2),
+  );
+  const generate = Number(
+    stages
+      .filter((s) => String(s.stage ?? '') === 'GENERATE')
+      .reduce((x, s) => x + (Number(s.hours) || 0), 0)
+      .toFixed(2),
+  );
+  if (overhead < MIN_OVERHEAD_HOURS) {
+    return {
+      code,
+      label,
+      ok: false,
+      severity: 'BLOCK',
+      detail:
+        `AI生成以外の6工程が合計${overhead}時間しかない。どんなに小さい案件でも`
+        + `最低${MIN_OVERHEAD_HOURS}時間はかかる決まりなので、見積りが壊れている。`,
+    };
+  }
+
+  const type = String(a.job_type ?? 'OTHER') as JobType;
+  const typeJa = JOB_TYPE_JA[type] ?? String(type);
+  const typeMin = JOB_TYPE_MIN_HOURS[type] ?? JOB_TYPE_MIN_HOURS.OTHER;
+  if (hours < typeMin) {
+    return {
+      code,
+      label,
+      ok: false,
+      severity: 'HUMAN_REVIEW',
+      detail:
+        `「${typeJa}」の案件を${hours}時間で見積もっている。この種類は最低でも${typeMin}時間かかるものとしているので、`
+        + '短すぎる。時間が短いぶんだけ時給が大きく出るので、人が見積りを見直す。',
+    };
+  }
+
+  return {
+    code,
+    label,
+    ok: true,
+    severity: 'PASS',
+    detail:
+      `${typeJa}として${hours}時間（AI生成${generate}時間＋前後の6工程${overhead}時間）。`
+      + `${a.hours_note ? String(a.hours_note) : ''}`,
+  };
+}
+
 // ── 監査の本体 ─────────────────────────────────────────────────
 
 function capNamesOf(matchedCaps: unknown): string[] {
@@ -613,9 +877,13 @@ export async function auditJob(input: JobAuditInput): Promise<JobAudit> {
     checkRealOrigin(job),
     await checkNotDuplicate(job),
     await checkHardBlock(job),
+    await checkFactsGrounded(job),
+    checkAiPolicy(job),
+    await checkHoursEstimate(job),
     checkSiteTos(policy),
     checkProposalExists(input.proposal),
     checkProposalGrounded(job, input.proposal, capNames),
+    checkProposalElements(input.proposal),
     checkExaggeration(input.proposal),
     checkNaturalness(input.proposal),
     checkOfferTerms(input.proposal),

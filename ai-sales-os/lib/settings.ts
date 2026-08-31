@@ -35,6 +35,19 @@ export const DEFAULT_SETTINGS: SettingDef[] = [
   { key: 'job.ai_cost_per_hour', value: '300', valueType: 'int', label: '作業1時間あたりのAI費用（円）', group: 'job', hint: '未実測の仮置き。' },
   { key: 'job.base_win_rate', value: '0.15', valueType: 'float', label: '受注率の初期値', group: 'job', hint: '未実測の仮置き。実績が溜まったら実測値へ。' },
 
+  // ---- 案件の費用の内訳。
+  //
+  // ★「原価いくら」の1つの数字にまとめない。
+  //   まとめると、分からない費用があっても合計は出てしまい、
+  //   出た合計を人は「確かめた数字」として読む。
+  //   費用ごとに分けて、空欄のものは「分からない」として扱う（0にしない）。
+  //
+  // ★人件費（自分の時間の値段）は、外へ出ていくお金とは別物なので必ず分けて置く。
+  //   混ぜると「利益が出ている」のか「自分がただ働きしている」のかが見えなくなる。
+  { key: 'job.cost_outsource_default', value: '0', valueType: 'int', label: '外注費の既定（円）', group: 'job', hint: '人に頼む部分が無い案件は0。頼む案件は案件ごとに人が入れる。' },
+  { key: 'job.cost_other_default', value: '0', valueType: 'int', label: 'その他の直接費用の既定（円）', group: 'job', hint: '素材の購入費・有料フォント・サーバー代など。無ければ0。' },
+  { key: 'job.labor_cost_per_hour', value: '', valueType: 'string', label: '自分の時間の値段（円/時）', group: 'job', hint: '空欄＝利益から人件費を引かない（＝出ていくお金だけで利益を見る）。入れると「人件費を引いた利益」も別に出す。' },
+
   // ---- 品質のしきい値
   { key: 'draft.max_similarity', value: '0.6', valueType: 'float', label: '文面の使い回し上限', group: 'quality', hint: '他社宛ての文面とこれ以上似ていたら、その下書きは止める。' },
   { key: 'draft.min_personalization', value: '1', valueType: 'int', label: '個別化の最低点数', group: 'quality', hint: 'その会社を実際に読んで書いた要素が、最低いくつ入っている必要があるか。' },

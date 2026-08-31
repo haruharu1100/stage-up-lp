@@ -2,7 +2,7 @@ import { nowIso, one, run, upsert, type Row } from '../db/client';
 import { originForJobSource } from '../origin';
 import { normalizeText } from '../text';
 import { evaluateExclusions } from './exclude';
-import { findDuplicate } from './dedupe';
+import { findDuplicate, type DupeLevel } from './dedupe';
 import { collectSourceFor, type InboxSource } from './inbox';
 import { canCollect } from './sites';
 
@@ -91,6 +91,14 @@ export type IngestResult = {
   duplicateOf: number | null;
   /** 重複と判定した根拠。重複でないときは null。 */
   duplicateReason: string | null;
+  /**
+   * 重複の判定（3段階）。
+   * ★LIKELY_DUPLICATE は束ねない。束ねると人の目に触れないまま消えるから。
+   *   代わりに「人が見比べる」扱いにして、案件そのものは残す。
+   */
+  duplicateVerdict: DupeLevel;
+  /** 似ていると判断した相手の案件ID（LIKELY のときも入る）。 */
+  similarTo: number | null;
 };
 
 /** 取り込みを断ったときに投げる。理由をそのまま画面と記録に出す。 */
@@ -163,6 +171,8 @@ export async function ingestJob(input: JobInput): Promise<IngestResult> {
   const originalId = minRow && minRow.id !== null ? Number(minRow.id) : selfId;
   let duplicateOf: number | null = originalId === selfId ? null : originalId;
   let duplicateReason: string | null = duplicateOf === null ? null : '件名・本文・予算がまったく同じ案件が既にある。';
+  let duplicateVerdict: DupeLevel = duplicateOf === null ? 'UNIQUE' : 'EXACT_DUPLICATE';
+  let similarTo: number | null = duplicateOf;
 
   // ② 中身は少し違うが、同じ依頼（別サイトへの重複投稿・メール通知と本文の貼り付け）。
   //    ★自分より前に入った案件だけを本家にする。あとから入った行を本家にすると、
@@ -172,14 +182,33 @@ export async function ingestJob(input: JobInput): Promise<IngestResult> {
       { title: input.title, description: input.description, url: input.url ?? null, budgetMin: input.budgetMin ?? null, budgetMax: input.budgetMax ?? null },
       selfId,
     );
-    if (near.duplicateOf !== null && near.duplicateOf < selfId) {
-      duplicateOf = near.duplicateOf;
+    if (near.similarTo !== null && near.similarTo < selfId) {
+      similarTo = near.similarTo;
       duplicateReason = near.reasonJa;
+      duplicateVerdict = near.level;
+      // ★束ねるのは「はっきり同じ」と言い切れるときだけ。
+      //   「たぶん同じ」で束ねると、束ねた側はこの先の解析も応募文づくりも走らず、
+      //   画面にもほとんど出ない。つまり本物の別案件が黙って消える。
+      //   「たぶん」のときは束ねず、あとで人が見比べられるように残す。
+      if (near.level === 'EXACT_DUPLICATE' && near.duplicateOf !== null) duplicateOf = near.duplicateOf;
     }
   }
-  await run('UPDATE jobs SET duplicate_of = ?, duplicate_reason = ? WHERE id = ?', [duplicateOf, duplicateReason, selfId]);
+  await run('UPDATE jobs SET duplicate_of = ?, duplicate_reason = ?, duplicate_verdict = ? WHERE id = ?', [
+    duplicateOf,
+    duplicateReason,
+    duplicateVerdict,
+    selfId,
+  ]);
 
   const row = (await one('SELECT * FROM jobs WHERE dedupe_key = ?', [dedupeKey])) as Row;
   const hits = await evaluateExclusions(row);
-  return { jobId: Number(row.id), isNew: !before, excluded: hits.map((h) => h.code), duplicateOf, duplicateReason };
+  return {
+    jobId: Number(row.id),
+    isNew: !before,
+    excluded: hits.map((h) => h.code),
+    duplicateOf,
+    duplicateReason,
+    duplicateVerdict,
+    similarTo,
+  };
 }

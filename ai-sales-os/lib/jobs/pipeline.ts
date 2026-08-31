@@ -6,6 +6,7 @@ import { computeJobScore, loadExclusionHits, rowToJobScore, saveJobScore } from 
 import { buildProposal, saveProposal } from './proposal';
 import { decideApply, saveApplication } from './apply';
 import { auditJob, saveJobAudit, VERDICT_JA, type AuditVerdict } from './audit';
+import { AI_POLICY_JA, extractJobFacts, saveJobFacts, type JobFactSheet } from './facts';
 
 /**
  * 案件1件を、取り込んだ直後にそのまま最後まで通す。
@@ -15,7 +16,7 @@ import { auditJob, saveJobAudit, VERDICT_JA, type AuditVerdict } from './audit';
  *   それでは貼った本人が結果を見られないので、貼った瞬間に最後まで走らせる。
  *
  * ★順番には意味がある。
- *   足切り → 解析 → 点数 → 応募文 → 規約判定。
+ *   重複 → 事実の読み取り → 足切り → 解析 → 点数 → 応募文 → 規約判定。
  *   足切りに当たった案件でも解析まではやる。「なぜ落ちたか」を人が読めるようにするため。
  *   ただし応募文は作らない（作れば、出せない案件の文章が候補一覧に並ぶ）。
  *
@@ -68,13 +69,40 @@ export async function runJobPipelineOne(jobId: number): Promise<JobPipelineResul
 
   // ── ① 重複判定（取り込みの時点で既に済んでいる。ここでは結果を読むだけ）
   const dupOf = job.duplicate_of === null || job.duplicate_of === undefined ? null : Number(job.duplicate_of);
+  const dupLevel = String(job.duplicate_verdict ?? 'UNIQUE');
   steps.push(
-    dupOf === null
-      ? step('DUPLICATE', '重複判定', 'OK', '同じ依頼は見つからなかった。')
-      : step('DUPLICATE', '重複判定', 'SKIP', `案件#${dupOf}と同じ依頼として束ねた。二重応募になるため、この先は進めない。`),
+    dupOf !== null
+      ? step('DUPLICATE', '重複判定', 'SKIP', `案件#${dupOf}と同じ依頼として束ねた。二重応募になるため、この先は進めない。`)
+      : dupLevel === 'LIKELY_DUPLICATE'
+        ? step('DUPLICATE', '重複判定', 'OK', `すでにある案件と同じ依頼かもしれない（${job.duplicate_reason ?? '根拠は残っていない'}）。捨てずに残し、人が見比べる扱いにした。`)
+        : step('DUPLICATE', '重複判定', 'OK', '同じ依頼は見つからなかった。'),
   );
 
-  // ── ② 足切り（HARD BLOCK）
+  // ── ② 事実の読み取り（9項目。本文に書いてあることだけを、出典つきで残す）
+  //     ★ここを足切りより前に置く。何が書いてあって何が書いていないかを先に確定させないと、
+  //       あとの工程が「書いていないこと」を都合よく埋めてしまう。
+  let factSheet: JobFactSheet;
+  try {
+    factSheet = extractJobFacts(job);
+    await saveJobFacts(factSheet);
+    const unknownPart =
+      factSheet.unknownCount === 0
+        ? '9項目すべて本文から読み取れた。'
+        : `読み取れなかったのは ${factSheet.unknownFieldsJa.join('・')}（${factSheet.unknownCount}項目）。★0や都合のよい値では埋めていない。`;
+    steps.push(
+      step(
+        'FACTS',
+        '本文から事実を読み取る（報酬・納期・勤務時間・AI可否など9項目）',
+        'OK',
+        `出典つきで${factSheet.foundCount}項目。${unknownPart}／AI利用可否＝${AI_POLICY_JA[factSheet.aiPolicy]}`,
+      ),
+    );
+  } catch (e) {
+    steps.push(step('FACTS', '本文から事実を読み取る', 'FAIL', String((e as Error).message)));
+    return { jobId, title, steps, candidate: false, summaryJa: `${title}：本文の読み取りでつまずきました。` };
+  }
+
+  // ── ③ 足切り（HARD BLOCK）
   const hits = await evaluateExclusions(job);
   steps.push(
     hits.length === 0
@@ -82,7 +110,7 @@ export async function runJobPipelineOne(jobId: number): Promise<JobPipelineResul
       : step('HARD_BLOCK', '足切り（常駐・週5・8時間拘束など）', 'SKIP', `${hits.map((h) => h.label).join('・')} に当たった。`),
   );
 
-  // ── ③ 解析（何の仕事か・どの道具で作るか・どれだけ自動化できるか）
+  // ── ④ 解析（何の仕事か・どの道具で作るか・どれだけ自動化できるか）
   let analysis;
   try {
     analysis = await analyzeJob(job);
@@ -94,26 +122,35 @@ export async function runJobPipelineOne(jobId: number): Promise<JobPipelineResul
     return { jobId, title, steps, candidate: false, summaryJa: `${title}：解析でつまずきました。` };
   }
 
-  // ── ④ 能力照合＋利益分析（点数）
+  // ── ⑤ 能力照合＋利益分析（点数）
   let scoreRow: Row | null = null;
   try {
     const score = await computeJobScore({ job, analysis, exclusions: await loadExclusionHits(jobId) });
     await saveJobScore(score);
     scoreRow = await one('SELECT * FROM job_scores WHERE job_id = ?', [jobId]);
     const cap = score.capabilityReadiness ?? '不明';
+    // ★「予想」の数字は、必ず予想と分かる言葉を付けて出す。
+    //   本文に書いてあった報酬と同じ見た目で出すと、確かめた数字と区別がつかなくなる。
     const money =
       score.expectedProfit === null
-        ? '利益は算出しない（報酬か原価が不明）'
-        : `予想利益 ${Math.round(score.expectedProfit).toLocaleString()}円`;
+        ? `利益は出せない（${score.profit.unknownItemsJa.join('・') || '報酬が不明'}）。分からない費用は0にしない。`
+        : `【AI予測】予想利益 ${Math.round(score.expectedProfit).toLocaleString()}円`;
     steps.push(step('CAPABILITY', '能力照合（自分の道具で作れるか）', 'OK', `仕上がり=${cap}`));
-    steps.push(step('PROFIT', '利益・時間の見立て', 'OK', money));
+    steps.push(
+      step(
+        'PROFIT',
+        '利益・時間の見立て',
+        'OK',
+        `${money}／【AI予測】想定${score.expectedHours ?? '不明'}時間（${analysis.hourBreakdown.noteJa}）／案件の種類＝${analysis.jobTypeJa}`,
+      ),
+    );
     steps.push(step('VERDICT', '受けてよいかの判定', score.verdict === 'EXCLUDE' ? 'SKIP' : 'OK', score.verdict === 'APPLY' ? '応募候補に入れた。' : score.verdict === 'HOLD' ? '人が読む扱いにした。' : '受けない。'));
   } catch (e) {
     steps.push(step('PROFIT', '利益・時間の見立て', 'FAIL', String((e as Error).message)));
     return { jobId, title, steps, candidate: false, summaryJa: `${title}：点数付けでつまずきました。` };
   }
 
-  // ── ⑤ 応募文（足切り・重複に当たったものは作らない）
+  // ── ⑥ 応募文（足切り・重複に当たったものは作らない）
   const blockedEarlier = dupOf !== null || hits.length > 0 || String(scoreRow?.verdict ?? '') === 'EXCLUDE';
   if (blockedEarlier) {
     steps.push(step('PROPOSAL', '応募文の作成', 'SKIP', '出せない案件なので、応募文は作らない。'));
@@ -140,7 +177,7 @@ export async function runJobPipelineOne(jobId: number): Promise<JobPipelineResul
     steps.push(step('PROPOSAL', '応募文の作成', 'FAIL', String((e as Error).message)));
   }
 
-  // ── ⑥ 規約判定
+  // ── ⑦ 規約判定
   try {
     const d = await decideApply(job);
     await saveApplication(d);

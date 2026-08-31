@@ -214,7 +214,14 @@ export async function registerUnknownSite(url: string): Promise<{ code: string; 
       official_automation_available: 'UNKNOWN',
       read_policy: 'UNKNOWN',
       auto_apply_policy: 'UNKNOWN',
-      application_mode: 'UNKNOWN',
+      // ★応募の扱いは APPROVAL_REQUIRED（人の1クリック承認が要る）で始める。
+      //   規約の判定そのもの（POLICY_STATUS）は UNKNOWN のまま＝誰も読んでいない。
+      //   だが「どう扱うか」まで UNKNOWN にしておくと、扱いが決まっていない状態を
+      //   どこかのコードが「特に決まりが無い＝通してよい」と読む余地が残る。
+      //   最初から人の承認が要る側に固定すれば、その余地が消える。
+      //   なお根拠（原文引用・確認日）が無い限り sitePolicy() は実効の判定を UNKNOWN に落とすので、
+      //   自動応募の候補にも上がらない。二重に止めている。
+      application_mode: 'APPROVAL_REQUIRED',
       automation_status: 'UNKNOWN',
       evidence_quote: null,
       policy_quote_or_summary: null,

@@ -1,5 +1,5 @@
-import { all, one, scalar } from '../lib/db/client';
-import { initSettings, num } from '../lib/settings';
+import { all, one, run, scalar } from '../lib/db/client';
+import { initSettings, num, setSetting } from '../lib/settings';
 import { findExclusions } from '../lib/jobs/exclude';
 import {
   listSitePolicies,
@@ -33,8 +33,23 @@ import {
   judgeDuplicate,
   stripBodyNoise,
   stripTitleDecor,
+  DUPE_LEVEL_JA,
   type DupeCandidate,
 } from '../lib/jobs/dedupe';
+import { extractJobFacts, saveJobFacts, readAiPolicy, FACT_FIELDS } from '../lib/jobs/facts';
+import {
+  breakdownHours,
+  classifyJobType,
+  JOB_TYPES,
+  JOB_TYPE_JA,
+  JOB_TYPE_MIN_HOURS,
+  MIN_OVERHEAD_HOURS,
+  STAGE_FLOOR_HOURS,
+  WORK_STAGES,
+} from '../lib/jobs/jobtype';
+import { computeProfit } from '../lib/jobs/profit';
+import { missingProposalElements } from '../lib/jobs/proposal';
+import { JOB_OVERHEAD_HOURS } from '../lib/jobs/analyze';
 import { checkIntake, intakeRouteJa, parseBudgetText, splitPastedJobs } from '../lib/jobs/intake';
 import { jobInventory } from '../lib/jobs/inventory';
 import { JOB_DATA_ORIGINS, originForJobSource } from '../lib/origin';
@@ -1137,18 +1152,315 @@ async function main() {
   //   だから1項目ずつわざと壊して、狙った項目だけが落ちることを確かめる。
   // ★DBには一切書かない。存在しない案件ID(-1)の作り物の行を渡して読ませるだけ。
   //   監査が対象を書き換えると、1件目を見た副作用が2件目の判定に混ざる。実際に一度やらかした。
+  // ================================================================
+  // REAL案件の品質：事実の出典・案件の種類・作業時間・費用・重複の3段階
+  // ================================================================
+  const fx = new Suite('本文から読み取った事実に、必ず出典が付いているか');
+
+  const FACT_JOB = {
+    id: -2,
+    title: 'ネットショップの商品紹介記事を5本執筆してください',
+    description: [
+      '自社ECサイトのブログ記事を5本お願いします。',
+      '報酬：50,000円',
+      '納期：2週間以内',
+      '稼働時間：とくに指定はありません。',
+      '修正は2回まででお願いします。',
+      '成果物：Wordファイルでご提出ください。',
+      'AIの利用は可能です。',
+    ].join('\n'),
+  };
+
+  const sheet = extractJobFacts(FACT_JOB);
+  const factBody = `${FACT_JOB.title}\n${FACT_JOB.description}`;
+  fx.eq('追跡する項目は9つ', sheet.facts.length, FACT_FIELDS.length, '項目');
+  fx.check(
+    '読み取れた項目には必ず出典（本文の文字と場所）が付く',
+    sheet.facts.filter((f) => f.status === 'FOUND').every((f) => f.sourceText !== null && f.sourceLocation !== null && f.confidence !== null),
+    sheet.facts.filter((f) => f.status === 'FOUND').map((f) => `${f.fieldJa}=${f.sourceLocation ?? '出典なし'}`).join('／'),
+  );
+  fx.check(
+    '出典の文字は、本当に案件本文の中にある（作り話でない）',
+    sheet.facts.filter((f) => f.status === 'FOUND').every((f) => factBody.includes(String(f.sourceText))),
+    sheet.facts.filter((f) => f.status === 'FOUND' && !factBody.includes(String(f.sourceText))).map((f) => f.fieldJa).join('／') || '全件一致',
+  );
+  fx.check(
+    '読み取れなかった項目は、0や空文字で埋めずnullのまま',
+    sheet.facts.filter((f) => f.status === 'UNKNOWN').every((f) => f.value === null && f.sourceText === null && f.reasonJa.length > 0),
+    sheet.unknownFieldsJa.join('／') || '（不明な項目なし）',
+  );
+
+  // ★今回いちばん大事な区別。「書いていない」＝「使ってよい」ではない。
+  fx.check(
+    'AIの記載が無い案件は「使ってよい」ではなく「不明」にする',
+    readAiPolicy(['ブログ記事を5本お願いします。', '報酬は5万円です。']).policy === 'AI_POLICY_UNKNOWN',
+    readAiPolicy(['ブログ記事を5本お願いします。', '報酬は5万円です。']).policy,
+  );
+  fx.check(
+    'AI禁止と書いてあれば禁止と読む',
+    readAiPolicy(['生成AIの利用は禁止です。']).policy === 'AI_PROHIBITED',
+    readAiPolicy(['生成AIの利用は禁止です。']).policy,
+  );
+  fx.check(
+    'AI利用可と書いてあるときだけ「使ってよい」',
+    readAiPolicy(['AIの利用は可能です。']).policy === 'AI_ALLOWED',
+    readAiPolicy(['AIの利用は可能です。']).policy,
+  );
+  // 報酬・納期・修正回数が書いていない案件でも、落とさずUNKNOWNで残せるか。
+  const thin = extractJobFacts({ id: -3, title: 'ロゴを作ってください', description: 'ロゴを1点お願いします。' });
+  fx.check(
+    '情報の少ない案件でも、9項目そろって記録される（捨てない）',
+    thin.facts.length === FACT_FIELDS.length && thin.unknownCount > 0,
+    `不明${thin.unknownCount}項目＝${thin.unknownFieldsJa.join('・')}`,
+  );
+  fx.check(
+    '報酬が書いていない案件を0円にしない',
+    thin.facts.find((f) => f.field === 'REWARD')?.value === null,
+    String(thin.facts.find((f) => f.field === 'REWARD')?.value),
+  );
+  fx.check(
+    '修正回数が書いていない案件を0回にしない',
+    thin.facts.find((f) => f.field === 'REVISION_COUNT')?.value === null,
+    String(thin.facts.find((f) => f.field === 'REVISION_COUNT')?.value),
+  );
+  fx.print();
+
+  // ---------------------------------------------------------------- 案件の種類と作業時間
+  const jt = new Suite('案件の種類と、作業時間を小さく見積もらないこと');
+
+  jt.eq('種類は16こ', JOB_TYPES.length, 16, '種類');
+  jt.check(
+    'すべての種類に日本語名と最低時間がある',
+    JOB_TYPES.every((t) => (JOB_TYPE_JA[t] ?? '').length > 0 && JOB_TYPE_MIN_HOURS[t] > 0),
+    JOB_TYPES.map((t) => `${JOB_TYPE_JA[t]}=${JOB_TYPE_MIN_HOURS[t]}h`).join('／'),
+  );
+
+  const TYPE_CASES: { text: string; expect: string }[] = [
+    { text: '会員管理システムの開発をお願いします。Next.jsで実装。', expect: 'WEB_SYSTEM' },
+    { text: 'ChatGPTを活用した問い合わせ対応の自動化をお願いします。', expect: 'AI_AUTOMATION' },
+    { text: '化粧品のLP制作をお願いします。', expect: 'LP' },
+    { text: 'WordPressのテーマカスタマイズをお願いします。', expect: 'WORDPRESS' },
+    { text: 'GASでスプレッドシートの集計を自動にしてください。', expect: 'GAS' },
+    { text: 'Amazonの商品ページを10点作ってください。', expect: 'AMAZON_EC' },
+    { text: 'YouTubeショートの動画編集をお願いします。', expect: 'VIDEO' },
+    { text: 'GA4のデータ分析とレポート作成をお願いします。', expect: 'DATA_ANALYSIS' },
+    { text: 'SEOの内部対策をお願いします。', expect: 'SEO' },
+    { text: '競合調査のリサーチをお願いします。', expect: 'RESEARCH' },
+    { text: 'テレアポ代行をお願いします。', expect: 'SALES' },
+    { text: 'Instagramの投稿を30本作ってください。', expect: 'SNS' },
+    { text: 'ブログ記事の執筆を5本お願いします。', expect: 'ARTICLE' },
+    { text: 'サムネイルのデザインを10枚お願いします。', expect: 'IMAGE' },
+    { text: 'キャッチコピーを考えてください。', expect: 'COPYWRITING' },
+    { text: '手伝ってくれる方を探しています。', expect: 'OTHER' },
+  ];
+  for (const c of TYPE_CASES) {
+    const v = classifyJobType(c.text);
+    jt.check(`「${c.text.slice(0, 18)}…」→${JOB_TYPE_JA[c.expect as (typeof JOB_TYPES)[number]]}`, v.type === c.expect, `実際: ${v.type} / 期待: ${c.expect}（${v.reasonJa}）`);
+  }
+  // ★重いほうを先に当てる。軽いほうに寄せると時間を小さく見積もることになる。
+  jt.check(
+    'LPをWordPressで作る案件は、重いほう（LP）で見積もる',
+    classifyJobType('WordPressでLP制作をお願いします。').type === 'LP',
+    classifyJobType('WordPressでLP制作をお願いします。').type,
+  );
+
+  // ★どんなに小さい案件でも0.5時間の下限を割らない（これまでのルールを1分も下げていない）。
+  jt.eq('AI生成以外の6工程の下限の合計は、これまでと同じ0.5時間', MIN_OVERHEAD_HOURS, JOB_OVERHEAD_HOURS, '時間');
+  jt.eq(
+    '工程は7つ（AI生成＋その前後の6つ）',
+    WORK_STAGES.length,
+    Object.keys(STAGE_FLOOR_HOURS).length + 1,
+    '工程',
+  );
+  const tiny = breakdownHours(0, 1, false);
+  jt.check(
+    'AI生成が0時間でも、前後の工程で0.5時間はかかる',
+    tiny.overheadHours >= MIN_OVERHEAD_HOURS,
+    `実際: ${tiny.overheadHours}時間 / 下限: ${MIN_OVERHEAD_HOURS}時間`,
+  );
+  jt.check(
+    '種類の最低時間を下回ったら、そこまで引き上げる',
+    breakdownHours(0.1, 6, false).totalHours >= 6,
+    `実際: ${breakdownHours(0.1, 6, false).totalHours}時間 / 下限: 6時間`,
+  );
+  jt.check(
+    '修正回数が不明なら、手直しの時間を多めに見る',
+    breakdownHours(2, 1, true).overheadHours > breakdownHours(2, 1, false).overheadHours,
+    `不明のとき ${breakdownHours(2, 1, true).overheadHours}時間 ／ 分かっているとき ${breakdownHours(2, 1, false).overheadHours}時間`,
+  );
+  jt.check(
+    '内訳の合計は、出している合計時間と食い違わない',
+    (() => {
+      const b = breakdownHours(3, 1, false);
+      const sum = Number(b.stages.reduce((x, y) => x + y.hours, 0).toFixed(2));
+      return Math.abs(sum - b.totalHours) < 0.02;
+    })(),
+    (() => {
+      const b = breakdownHours(3, 1, false);
+      return `内訳合計 ${b.stages.reduce((x, y) => x + y.hours, 0).toFixed(2)}時間 ／ 合計 ${b.totalHours}時間`;
+    })(),
+  );
+  jt.print();
+
+  // ---------------------------------------------------------------- 利益の費用明細
+  const pf = new Suite('利益は「分からない費用を0にしない」で計算する');
+
+  const okProfit = await computeProfit(80000, 4, { api: 500, outsource: 0, other: 0 });
+  pf.check('費用が全部分かっていれば利益を出す', okProfit.profitStatus === 'KNOWN' && okProfit.expectedProfit === 79500, `実際: ${okProfit.expectedProfit ?? '出せない'}円（${okProfit.reasonJa}）`);
+  // ★外注費の設定を空欄にする＝「頼むかどうか分からない」状態。
+  //   ここで0円と決めつけると、利益だけが実際より大きく出る。
+  await setSetting('job.cost_outsource_default', '');
+  const unknownCost = await computeProfit(80000, 4, { api: 500, other: 0 });
+  await setSetting('job.cost_outsource_default', '0');
+  pf.check(
+    '外注費が不明なら、0にせず「利益は出せない」にする',
+    unknownCost.profitStatus === 'UNKNOWN' && unknownCost.expectedProfit === null,
+    `実際: ${unknownCost.expectedProfit ?? '出せない'}（不明な費用＝${unknownCost.unknownItemsJa.join('・') || 'なし'}）`,
+  );
+  const costRestored = await computeProfit(80000, 4, { api: 500, other: 0 });
+  pf.check('試験のあと、外注費の設定を元（0円）へ戻している', costRestored.profitStatus === 'KNOWN', `実際: ${costRestored.expectedProfit ?? '出せない'}円`);
+  const noReward = await computeProfit(null, 4, { api: 500, outsource: 0, other: 0 });
+  pf.check(
+    '報酬が不明なら、利益も出さない（0円にしない）',
+    noReward.expectedProfit === null && noReward.profitStatus === 'UNKNOWN',
+    `実際: ${noReward.expectedProfit ?? '出せない'}（${noReward.reasonJa}）`,
+  );
+  const noLabor = await computeProfit(80000, 4, { api: 500, outsource: 0, other: 0 });
+  pf.check(
+    '自分の時間の値段が未設定なら、勝手な時給で利益を削らない',
+    noLabor.laborCost === null && noLabor.profitAfterLabor === null,
+    `人件費${noLabor.laborCost ?? '引いていない'}`,
+  );
+
+  // ★人件費は「設定してあるときだけ」別枠で出す。利益本体からは引かない。
+  await setSetting('job.labor_cost_per_hour', '3000');
+  const withLabor = await computeProfit(80000, 4, { api: 500, outsource: 0, other: 0 });
+  await setSetting('job.labor_cost_per_hour', '');
+  pf.check(
+    '人件費は利益から引かず、別の欄で出す',
+    withLabor.expectedProfit === 79500 && withLabor.laborCost === 12000 && withLabor.profitAfterLabor === 67500,
+    `利益${withLabor.expectedProfit ?? '—'}円／人件費${withLabor.laborCost ?? '—'}円／人件費を引いた後${withLabor.profitAfterLabor ?? '—'}円`,
+  );
+  const restored = await computeProfit(80000, 4, { api: 500, outsource: 0, other: 0 });
+  pf.check('試験のあと、時間の値段の設定を元（空欄）へ戻している', restored.laborCost === null, `人件費${restored.laborCost ?? '引いていない'}`);
+  pf.print();
+
+  // ---------------------------------------------------------------- 重複の3段階
+  const d3 = new Suite('重複は3段階で判定し、「たぶん」では消さない');
+
+  const dupBase: DupeCandidate = {
+    id: 1,
+    title: 'ECサイトのブログ記事を10本執筆',
+    description: 'トレカ通販サイトのブログに載せる商品紹介記事を10本お願いします。1本2000文字程度。',
+    url: 'https://a.example.invalid/jobs/1',
+    budgetMin: 80000,
+    budgetMax: 100000,
+    siteCode: 'CROWDWORKS',
+  };
+  d3.check('3段階すべてに日本語の説明がある', Object.keys(DUPE_LEVEL_JA).length === 3, Object.values(DUPE_LEVEL_JA).join('／'));
+
+  const d3SameUrl = judgeDuplicate(
+    { title: '【新着】ECサイトのブログ記事を10本執筆', description: '（メール本文の抜粋）', url: 'https://a.example.invalid/jobs/1?utm_source=mail', budgetMin: null, budgetMax: null },
+    [dupBase],
+  );
+  d3.check('同じページのURLなら、追跡用の文字が付いていても同じ依頼', d3SameUrl.level === 'EXACT_DUPLICATE' && d3SameUrl.duplicateOf === 1, `${d3SameUrl.level}／${d3SameUrl.reasonJa}`);
+
+  const d3CrossSite = judgeDuplicate(
+    { title: 'ECサイトのブログ記事を10本執筆', description: 'トレカ通販サイトのブログに載せる商品紹介記事を10本お願いします。1本2000文字程度。', url: 'https://b.example.invalid/works/99', budgetMin: 80000, budgetMax: 100000 },
+    [dupBase],
+  );
+  d3.check('別サイトへの同じ投稿は、件名と本文から同じ依頼と分かる', d3CrossSite.level === 'EXACT_DUPLICATE', `${d3CrossSite.level}／${d3CrossSite.reasonJa}`);
+
+  const titleOnly = judgeDuplicate(
+    { title: 'ECサイトのブログ記事を10本執筆', description: '飲食店の紹介ページに載せる原稿を、取材同行のうえで作成してください。', url: null, budgetMin: null, budgetMax: null },
+    [dupBase],
+  );
+  d3.check(
+    '件名だけ同じで本文が違うものは「たぶん同じ」に留め、束ねない',
+    titleOnly.level === 'LIKELY_DUPLICATE' && titleOnly.duplicateOf === null && titleOnly.similarTo === 1,
+    `${titleOnly.level}／束ねる相手=${titleOnly.duplicateOf ?? 'なし'}／見比べる相手=${titleOnly.similarTo ?? 'なし'}`,
+  );
+
+  const priceGap = judgeDuplicate(
+    { title: 'ECサイトのブログ記事を10本執筆', description: 'トレカ通販サイトのブログに載せる商品紹介記事を10本お願いします。1本2000文字程度。', url: null, budgetMin: 5000, budgetMax: 8000 },
+    [dupBase],
+  );
+  d3.check('件名が同じでも予算が2倍以上ちがえば別の依頼', priceGap.level === 'UNIQUE', `${priceGap.level}／${priceGap.reasonJa || '根拠なし'}`);
+
+  const d3Other = judgeDuplicate(
+    { title: 'Instagramの投稿画像を30枚作成', description: 'アパレルブランドのInstagram用に、商品写真を使ったバナーを30枚作ってください。', url: null, budgetMin: 30000, budgetMax: 30000 },
+    [dupBase],
+  );
+  d3.check('関係のない案件は別の依頼になる', d3Other.level === 'UNIQUE' && d3Other.duplicateOf === null, `${d3Other.level}`);
+  d3.print();
+
+  // ---------------------------------------------------------------- 応募文の6要素
+  const pe = new Suite('応募文に必要な6つの要素');
+
+  const goodBody = [
+    '「SEOを意識した見出し構成」という点を踏まえて進めます。',
+    '【できること】',
+    '・記事作成の仕組み',
+    '【進め方】',
+    '1. ご依頼内容と素材を確認して進めます。',
+    '3. できたものを私が読み直し、事実関係と表現を点検します。',
+    '【お渡しするもの】Wordでお渡しします。',
+    '【納期】ご依頼確定から7日',
+    '納期は、確認と手直しの時間を入れて合計3時間かかる前提で出しています。',
+    'よろしくお願いいたします。',
+  ].join('\n');
+  pe.check('6要素がそろった応募文は通る', missingProposalElements(goodBody).length === 0, missingProposalElements(goodBody).join('／') || '不足なし');
+  pe.check(
+    '進め方が無い応募文は通さない',
+    missingProposalElements(goodBody.replace('【進め方】', '')).length > 0,
+    missingProposalElements(goodBody.replace('【進め方】', '')).join('／'),
+  );
+  pe.check(
+    '何を渡すかが無い応募文は通さない',
+    missingProposalElements(goodBody.replace('【お渡しするもの】Wordでお渡しします。', '')).length > 0,
+    missingProposalElements(goodBody.replace('【お渡しするもの】Wordでお渡しします。', '')).join('／'),
+  );
+  pe.print();
+
   const au = new Suite('別の目（監査）が本当に落とせるか');
 
-  const AUDIT_DESC =
-    'トレカ通販サイトのブログに載せる商品紹介記事を10本お願いします。'
-    + '1本あたり2000文字程度、写真は当方で用意します。'
-    + 'SEOを意識した見出し構成にしてください。納期は2週間、成果物単位のお支払いです。';
+  // ★9項目（報酬・納期・勤務時間・修正回数・成果物・AI利用可否など）が
+  //   本文にそろっている案件を「壊れていない状態」の基準にする。
+  //   ここが欠けていると、事実性の検査が常に「人が読む」になり、
+  //   1項目だけ壊す試験の意味が無くなる。
+  const AUDIT_DESC = [
+    'トレカ通販サイトのブログに載せる商品紹介記事を10本お願いします。',
+    '1本あたり2000文字程度、写真は当方で用意します。',
+    'SEOを意識した見出し構成にしてください。',
+    '報酬：80,000円（記事1本ごとのお支払いです）',
+    '納期：ご依頼から2週間以内',
+    '稼働時間：とくに指定はありません。ご自身のペースで進めてください。',
+    '修正は2回までを想定しています。',
+    '成果物：Googleドキュメントでご提出ください。',
+    '制作にあたってAIの利用は可能です。',
+  ].join('\n');
 
   const AUDIT_BODY = [
     'はじめまして。ご依頼を拝見しました。',
     '「SEOを意識した見出し構成」という点について、検索意図を整理してから見出しを作る手順で進めます。',
     '「1本あたり2000文字程度」の分量で、10本まとめてお受けできます。',
-    'お見積りは80,000円、納期は7日で考えております。',
+    '',
+    '【できること】',
+    '・記事作成の仕組み（本番で動いています）',
+    '',
+    '【進め方】',
+    '1. ご依頼内容と、お預かりする素材を確認します。',
+    '2. 上に挙げた道具で初稿を作ります。',
+    '3. できたものを私が読み直し、事実関係と表現を点検します。',
+    '4. 初稿をお送りし、ご指摘をいただいて直します。',
+    '5. 形式をそろえてお渡しします。',
+    '',
+    '【お渡しするもの】本文に「成果物：Googleドキュメントでご提出ください。」とありましたので、その形でお渡しします。',
+    '',
+    '【お見積り】80,000円',
+    '【納期】ご依頼確定から7日',
+    '納期は、作る時間だけでなく、内容の確認と手直しにかかる時間を入れて合計3.7時間かかる前提で出しています。',
+    '',
     'ご検討のほど、よろしくお願いいたします。',
   ].join('\n');
 
@@ -1218,14 +1530,38 @@ async function main() {
     );
   }
 
-  // 壊していない状態は、14項目すべて合格すること。
+  // ★監査は「保存されている読み取り結果」を入口にする検査を持つので、
+  //   基準の案件についても、事実の読み取りと作業時間の内訳をDBに用意してから測る。
+  //   （job_id = -1 は試験専用。このスイートの最後で必ず消す）
+  await saveJobFacts(extractJobFacts(baseJob()));
+  await run('DELETE FROM job_analyses WHERE job_id = ?', [-1]);
+  await run(
+    `INSERT INTO job_analyses (job_id, engine, tasks, matched_caps, missing_caps, est_hours, automation_rate, notes, job_type, hours_breakdown, hours_note, analyzed_at)
+     VALUES (?, 'rule', '[]', '[]', '[]', ?, 0.7, '試験用', 'ARTICLE', ?, '試験用の内訳', ?)`,
+    [
+      -1,
+      3.7,
+      JSON.stringify([
+        { stage: 'UNDERSTAND', stageJa: '案件理解', hours: 0.2 },
+        { stage: 'MATERIAL', stageJa: '素材確認', hours: 0.1 },
+        { stage: 'GENERATE', stageJa: 'AI生成', hours: 2.2 },
+        { stage: 'REVIEW', stageJa: '人間確認', hours: 0.4 },
+        { stage: 'FIX', stageJa: '修正', hours: 0.6 },
+        { stage: 'CLIENT', stageJa: 'クライアント対応', hours: 0.1 },
+        { stage: 'DELIVER', stageJa: '納品準備', hours: 0.1 },
+      ]),
+      new Date().toISOString(),
+    ],
+  );
+
+  // 壊していない状態は、18項目すべて合格すること。
   // ここが落ちるなら、以下の「1項目だけ壊した」試験の意味が無くなる。
   const clean = await auditJob({ job: baseJob(), score: baseScore(), proposal: baseProposal(), application: null });
-  au.eq('壊していない案件は14項目すべて合格', clean.ngCount, 0, '件');
+  au.eq('壊していない案件は18項目すべて合格', clean.ngCount, 0, '件');
   if (clean.ngCount > 0) {
     for (const k of clean.checks.filter((x) => !x.ok)) au.check(`（内訳）${k.label}`, false, k.detail);
   }
-  au.eq('検査項目の数', clean.checks.length, 14, '項目');
+  au.eq('検査項目の数', clean.checks.length, 18, '項目');
   au.check('壊していない案件の判定', clean.verdict === 'PASS', `実際: ${clean.verdict} / 期待: PASS`);
 
   await auditCase('練習用（TEST）は候補から外す', 'REAL_ORIGIN', 'BLOCK', (t) => {
@@ -1321,6 +1657,11 @@ async function main() {
   await auditJob({ job: unfixableJob, score: baseScore(), proposal: baseProposal(), application: null });
   au.eq('監査しても足切りの記録は増えない（副作用が無い）', await scalar('SELECT COUNT(*) FROM job_exclusions'), beforeExclusions, '件');
   au.eq('監査しただけでは監査結果も保存されない', await scalar('SELECT COUNT(*) FROM job_audits'), beforeAudits, '件');
+
+  // 試験専用に置いた行を消す。本物の集計に混ざらないようにする。
+  await run('DELETE FROM job_facts WHERE job_id = ?', [-1]);
+  await run('DELETE FROM job_analyses WHERE job_id = ?', [-1]);
+  au.eq('試験用の行を残していない', Number(await scalar('SELECT COUNT(*) FROM job_analyses WHERE job_id = -1')), 0, '件');
   au.print();
 
   // ================================================================
@@ -1378,7 +1719,7 @@ async function main() {
   );
   ds.print();
 
-  finish([r, i, v, o, p, q, g, b, m, cr, dd, ib, iv, st, us, au, ds]);
+  finish([r, i, v, o, p, q, g, b, m, cr, dd, ib, iv, st, fx, jt, pf, d3, pe, us, au, ds]);
 }
 
 main().catch((e) => {

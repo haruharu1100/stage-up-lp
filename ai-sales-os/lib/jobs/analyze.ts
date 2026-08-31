@@ -1,6 +1,8 @@
 import { nowIso, upsert, type Row } from '../db/client';
 import { loadCapabilities, type CapabilityRow } from '../catalog/sync';
 import type { Readiness } from '../catalog/definitions';
+import { breakdownHours, classifyJobType, type HourBreakdown, type JobType, type JobTypeVerdict } from './jobtype';
+import { extractJobFacts } from './facts';
 
 /**
  * 案件の中身を読んで、自社（＝すでに作ってあるAI・システム）で作れるかを見る。
@@ -25,6 +27,12 @@ export type JobAnalysis = {
   estHours: number;
   automationRate: number;
   notes: string;
+  /** 案件の種類（16種）。応募文と能力照合の向き先を決める。 */
+  jobType: JobType;
+  jobTypeJa: string;
+  jobTypeReasonJa: string;
+  /** 作業時間の7工程の内訳。AI生成だけを作業時間と呼ばないための記録。 */
+  hourBreakdown: HourBreakdown;
 };
 
 /** 案件文から作業のかたまりを拾う。 */
@@ -72,11 +80,18 @@ export function matchCapabilities(text: string, caps: CapabilityRow[]): MatchedC
  * 依頼文を読む・確認のやりとり・出来上がりの点検・受け渡し・1回分の手直し。
  * これを入れないと、AIが生成する時間だけで数分の案件に見えてしまい、
  * 時間あたりの利益が実態からかけ離れた大きさになる。
+ *
+ * ★この0.5時間は jobtype.ts の6工程の下限の合計と同じ数字。
+ *   内訳が出せるようになっただけで、下限は下げていない。テストで見張る。
  */
 const JOB_OVERHEAD_HOURS = 0.5;
 
-/** 想定作業時間。当たった道具の想定時間を足す。当たらなければ「分からない」ではなく多めに見る。 */
-function estimateHours(matched: { code: string }[], caps: CapabilityRow[], text: string): { hours: number; automation: number; note: string } {
+/**
+ * AI（自社の道具）で作る時間だけを出す。
+ * ★これは「作業時間」ではない。案件理解・素材確認・人間確認・修正・やりとり・納品準備は
+ *   このあと jobtype.ts の breakdownHours で足す。
+ */
+function estimateGenerateHours(matched: { code: string }[], caps: CapabilityRow[], text: string): { hours: number; automation: number; note: string } {
   if (matched.length === 0) {
     // 自社の道具が1つも当たらない＝手作業になる。多めに見積もって、割に合わないことを見えるようにする。
     return { hours: 12, automation: 0, note: '自社の道具が当たらないので、手作業として多めに見積もっている' };
@@ -99,18 +114,19 @@ function estimateHours(matched: { code: string }[], caps: CapabilityRow[], text:
   const qty = text.match(/([0-9０-９]{1,3})\s*(本|記事|件|ページ|枚)/);
   const n = qty ? Number(qty[1].replace(/[０-９]/g, (d) => String('０１２３４５６７８９'.indexOf(d)))) : 1;
   const mult = Number.isFinite(n) && n >= 1 && n <= 200 ? n : 1;
-  const work = hours + (mult > 1 ? (mult - 1) * heaviest * 0.6 : 0);
-  const total = Number((work + JOB_OVERHEAD_HOURS).toFixed(2));
+  const work = Number((hours + (mult > 1 ? (mult - 1) * heaviest * 0.6 : 0)).toFixed(2));
   const automation = hours > 0 ? Number((weighted / hours).toFixed(2)) : 0;
   return {
-    hours: total,
+    hours: work,
     automation,
     note:
-      (mult > 1
+      mult > 1
         ? `分量${mult}${qty?.[2] ?? '件'}として計算（1件目は準備込みで${hours}時間、2件目以降は1件あたり${(heaviest * 0.6).toFixed(2)}時間）`
-        : '1件分として計算') + `＋どの案件にもかかる${JOB_OVERHEAD_HOURS}時間`,
+        : '1件分として計算',
   };
 }
+
+export { JOB_OVERHEAD_HOURS };
 
 export async function analyzeJob(job: Row): Promise<JobAnalysis> {
   const jobId = Number(job.id);
@@ -124,7 +140,17 @@ export async function analyzeJob(job: Row): Promise<JobAnalysis> {
     .filter((m) => m.readiness === 'NOT_SELLABLE')
     .map((m) => ({ code: m.code, name: m.name, reason: m.readinessReason }));
   const tasks = decomposeTasks(text);
-  const est = estimateHours(matched, caps, text);
+  const gen = estimateGenerateHours(matched, caps, text);
+
+  // 案件の種類を決めて、その種類の最低時間を守る。
+  const type: JobTypeVerdict = classifyJobType(text);
+
+  // ★修正回数が本文に書いていないなら、手直しの時間を多めに見る。
+  //   書いていないものを「0回」と読むのがいちばん危ない。
+  const sheet = extractJobFacts(job);
+  const revisionUnknown = sheet.facts.some((f) => f.field === 'REVISION_COUNT' && f.status === 'UNKNOWN');
+
+  const breakdown = breakdownHours(gen.hours, type.minHours, revisionUnknown);
 
   const missing = matched.length === 0 ? ['この案件に当たる自社の道具が無い'] : [];
 
@@ -135,9 +161,13 @@ export async function analyzeJob(job: Row): Promise<JobAnalysis> {
     matchedCaps: matched,
     missingCaps: missing,
     blockedCaps: blocked,
-    estHours: est.hours,
-    automationRate: est.automation,
-    notes: est.note,
+    estHours: breakdown.totalHours,
+    automationRate: gen.automation,
+    notes: `${gen.note}／${breakdown.noteJa}`,
+    jobType: type.type,
+    jobTypeJa: type.typeJa,
+    jobTypeReasonJa: type.reasonJa,
+    hourBreakdown: breakdown,
   };
 }
 
@@ -153,6 +183,9 @@ export async function saveJobAnalysis(a: JobAnalysis): Promise<void> {
       est_hours: a.estHours,
       automation_rate: a.automationRate,
       notes: a.notes,
+      job_type: a.jobType,
+      hours_breakdown: JSON.stringify(a.hourBreakdown.stages),
+      hours_note: a.hourBreakdown.noteJa,
       analyzed_at: nowIso(),
     },
     ['job_id'],

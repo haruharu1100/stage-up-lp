@@ -489,6 +489,29 @@ export const SCHEMA_JOBS: string[] = [
     UNIQUE(job_id, rule_code)
   )`,
 
+  // 案件本文から読み取った「事実」と、その出典。
+  // ★1項目=1行。値だけでなく、本文のどこから取ったか（source_text / source_location）を必ず持つ。
+  //   出典が無い値は、後から人が確かめられないので事実として扱えない。
+  // ★読み取れなかった項目も status='UNKNOWN' の行として残す。
+  //   行が無い＝まだ読んでいない、行がある＝読んで「書いていない」と確かめた、を区別するため。
+  `CREATE TABLE IF NOT EXISTS job_facts (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    job_id          INTEGER NOT NULL,
+    field           TEXT NOT NULL,                  -- REWARD / DEADLINE / SKILLS / WORK_HOURS / WORK_PLACE / AI_POLICY / DELIVERABLE / REVISION_COUNT / REQUEST
+    value           TEXT,                           -- 読み取れた値。読めなければNULL（0や空文字で埋めない）
+    status          TEXT NOT NULL,                  -- FOUND / UNKNOWN
+    source_text     TEXT,                           -- 本文から切り出した、そのままの文字
+    source_location TEXT,                           -- 「3行目の12〜28文字目」
+    source_line     INTEGER,
+    confidence      TEXT,                           -- HIGH / MEDIUM / LOW
+    reason_ja       TEXT NOT NULL DEFAULT '',
+    extracted_at    TEXT NOT NULL,
+    UNIQUE(job_id, field)
+  )`,
+
+  `CREATE INDEX IF NOT EXISTS idx_job_facts_job ON job_facts(job_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_job_facts_status ON job_facts(status)`,
+
   `CREATE TABLE IF NOT EXISTS job_analyses (
     id                INTEGER PRIMARY KEY AUTOINCREMENT,
     job_id            INTEGER NOT NULL UNIQUE,
@@ -853,6 +876,38 @@ export const COLUMN_ADDITIONS: string[] = [
   `ALTER TABLE companies ADD COLUMN corporate_number_reason TEXT`,
   `ALTER TABLE companies ADD COLUMN corporate_number_source TEXT`,
   `ALTER TABLE companies ADD COLUMN corporate_number_checked_at TEXT`,
+
+  // ★案件の種類（16種）と、作業時間の7工程の内訳。
+  //   これまでは合計時間しか残していなかったので、時間を小さく見積もっていても
+  //   どの工程を落としたのかが分からなかった。工程ごとに残せば、人がその場で気づける。
+  `ALTER TABLE job_analyses ADD COLUMN job_type TEXT`,
+  `ALTER TABLE job_analyses ADD COLUMN hours_breakdown TEXT`,
+  `ALTER TABLE job_analyses ADD COLUMN hours_note TEXT`,
+
+  // ★利益の内訳。これまでは「報酬 − ざっくりの原価」の1行だった。
+  //   1行にまとめると、原価が分からないときに0を入れて計算を通してしまう。
+  //   費用ごとに列を分け、分からない費用は NULL のまま残す（0で埋めない）。
+  //   分からない費用が1つでもあれば profit_status = 'UNKNOWN' にして、利益を確定値として出さない。
+  `ALTER TABLE job_scores ADD COLUMN cost_api INTEGER`,
+  `ALTER TABLE job_scores ADD COLUMN cost_outsource INTEGER`,
+  `ALTER TABLE job_scores ADD COLUMN cost_other INTEGER`,
+  // 人件費（自分の時間の値段）。★上の3つとは別物なので混ぜない。
+  //   これは実際に出ていくお金ではなく、設定で決めた自分の時給。
+  `ALTER TABLE job_scores ADD COLUMN cost_labor INTEGER`,
+  `ALTER TABLE job_scores ADD COLUMN cost_unknown_items TEXT NOT NULL DEFAULT '[]'`,
+  `ALTER TABLE job_scores ADD COLUMN profit_status TEXT NOT NULL DEFAULT 'UNKNOWN'`,
+
+  // ★受注確率は「予測」であって「実績」ではない。
+  //   本物の受注実績が0件の今、この数字は当たったことが一度も確かめられていない。
+  //   実績（actual_win_rate）とは別の列に置き、画面でも「AI予測」と書く。
+  `ALTER TABLE job_scores ADD COLUMN win_probability_kind TEXT NOT NULL DEFAULT 'AI_PREDICTION'`,
+  `ALTER TABLE job_scores ADD COLUMN learning_mode TEXT NOT NULL DEFAULT 'OBSERVE_ONLY'`,
+
+  // ★重複の判定を3段階にする。
+  //   これまでは「同じ／違う」の2つだけで、迷ったものも「同じ」に寄せていた。
+  //   別サイトへ転載された同じ依頼と、たまたま似ている別の依頼は、見分けきれない。
+  //   はっきり同じ＝EXACT_DUPLICATE、たぶん同じ＝LIKELY_DUPLICATE（人が読む）、違う＝UNIQUE。
+  `ALTER TABLE jobs ADD COLUMN duplicate_verdict TEXT NOT NULL DEFAULT 'UNIQUE'`,
 ];
 
 /**

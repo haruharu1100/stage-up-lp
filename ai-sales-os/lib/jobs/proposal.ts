@@ -4,6 +4,7 @@ import { num } from '../settings';
 import { READINESS_CLAIM } from '../catalog/definitions';
 import type { JobAnalysis } from './analyze';
 import type { JobScore } from './score';
+import { extractJobFacts, type JobFactSheet } from './facts';
 
 /**
  * 応募文。
@@ -117,7 +118,46 @@ export function quoteFromDescription(job: Row): string | null {
  * どの応募文でも同じになる部分だけで似た判定になり、
  * ちゃんと個別に書けている文まで止まってしまう。だから比べるのは personal だけにする。
  */
-function buildBody(job: Row, analysis: JobAnalysis, price: number | null, days: number): { body: string; personal: string } {
+/**
+ * 応募文に必ず入れる6つの要素。
+ *
+ * ★1つでも欠けたら送らない。
+ *   欠けた応募文は「読んでいないのに応募だけしてきた人」に見える。
+ *   特に「どう進めるか」と「何を渡すか」が無い応募文は、受注してから話が食い違う。
+ *
+ * ★ここで見るのは「書いてあるか」だけ。書いてある中身が本当かは
+ *   audit.ts の別の検査（引用の照合・実績の言い切り）が見る。
+ */
+export const PROPOSAL_ELEMENTS: { key: string; ja: string; test: (body: string) => boolean }[] = [
+  { key: 'UNDERSTAND', ja: '案件内容を理解している具体的な一文', test: (b) => /「[^」]{4,}」/.test(b) },
+  { key: 'PLAN', ja: 'どう進めるか', test: (b) => b.includes('【進め方】') },
+  { key: 'DELIVERABLE', ja: '成果物（何をお渡しするか）', test: (b) => b.includes('【お渡しするもの】') },
+  { key: 'DEADLINE', ja: '納期への考え方', test: (b) => b.includes('【納期】') && b.includes('前提で出しています') },
+  { key: 'CAPABILITY', ja: '使える既存の道具', test: (b) => b.includes('【できること】') },
+  { key: 'HUMAN_CHECK', ja: '人が確認する工程', test: (b) => /(確認して|見直し|点検)/.test(b) },
+];
+
+/** 応募文に足りない要素の名前（日本語）を返す。すべてそろっていれば空。 */
+export function missingProposalElements(body: string): string[] {
+  return PROPOSAL_ELEMENTS.filter((e) => !e.test(body)).map((e) => e.ja);
+}
+
+/**
+ * 「何をお渡しするか」の一文。
+ * ★本文に成果物の形が書いていなければ、勝手に決めない。
+ *   「Wordで納品します」と書いて実はスプレッドシート希望だった、が起きる。
+ *   書いていないなら「書いていないので確認させてください」とそのまま書くほうが誠実で、
+ *   本文を読んでいる証拠にもなる。
+ */
+function deliverableLine(sheet: JobFactSheet): string {
+  const f = sheet.facts.find((x) => x.field === 'DELIVERABLE');
+  if (f && f.status === 'FOUND' && f.value) {
+    return `【お渡しするもの】本文に「${f.value.slice(0, 40)}」とありましたので、その形でお渡しします。`;
+  }
+  return '【お渡しするもの】本文に成果物の形（ファイル形式・本数など）の記載が見当たりませんでした。着手前に確認させてください。';
+}
+
+function buildBody(job: Row, analysis: JobAnalysis, price: number | null, days: number, sheet: JobFactSheet): { body: string; personal: string } {
   const seed = Number(job.id) || 1;
   const title = String(job.title ?? '').slice(0, 40);
   const quote = quoteFromDescription(job);
@@ -177,8 +217,30 @@ function buildBody(job: Row, analysis: JobAnalysis, price: number | null, days: 
     personal.push(m.name);
   }
   lines.push('');
+
+  // ★どう進めるか。ここが無い応募文は、受注してから話が食い違う。
+  //   工程は analyze.ts で時間を積んだ7工程と同じ並びにする（見積り時間と説明が食い違わないため）。
+  lines.push('【進め方】');
+  lines.push('1. ご依頼内容と、お預かりする素材（資料・画像・アカウントなど）を確認します。');
+  lines.push('2. 上に挙げた道具で初稿を作ります。');
+  lines.push('3. できたものを私が読み直し、事実関係と表現を点検します。');
+  lines.push('4. 初稿をお送りし、ご指摘をいただいて直します。');
+  lines.push('5. 形式をそろえてお渡しします。');
+  lines.push('');
+
+  const deliv = deliverableLine(sheet);
+  lines.push(deliv);
+  // 本文から読み取れたときだけ、その案件について書いた部分として数える。
+  // 読み取れなかったときの文はどの案件でも同じなので、個別に書いた部分には入れない。
+  if (deliv.includes('とありましたので')) personal.push(deliv);
+  lines.push('');
+
   if (price !== null) lines.push(`【お見積り】${price.toLocaleString()}円`);
   lines.push(`【納期】ご依頼確定から${days}日`);
+  lines.push(
+    `納期は、作る時間だけでなく、内容の確認と手直しにかかる時間を入れて合計${analysis.estHours}時間かかる前提で出しています。`
+    + 'お急ぎのご事情があれば、範囲を相談させてください。',
+  );
   lines.push('');
   lines.push(
     variant(
@@ -245,7 +307,8 @@ export async function buildProposal(job: Row, analysis: JobAnalysis, score: JobS
   const evidence = evidenceFromJob(job, analysis);
   const price = await proposePrice(job, analysis);
   const days = proposeDeliveryDays(analysis);
-  const { body, personal } = buildBody(job, analysis, price, days);
+  const sheet = extractJobFacts(job);
+  const { body, personal } = buildBody(job, analysis, price, days, sheet);
 
   const expressionNg = checkExpression(body);
   const similarityMax = await maxSimilarityAgainstExisting(jobId, personal);
@@ -256,6 +319,11 @@ export async function buildProposal(job: Row, analysis: JobAnalysis, score: JobS
   if (expressionNg.length > 0) {
     status = 'BLOCKED';
     blockedReason = `使えない表現が入っている: ${expressionNg.map((e) => `「${e.matched}」`).join('、')}`;
+  } else if (missingProposalElements(body).length > 0) {
+    // ★6要素のどれかが欠けた応募文は出さない。欠けたまま出すと、
+    //   読んでいない応募に見えるうえ、受注後に「何を渡すか」で揉める。
+    status = 'BLOCKED';
+    blockedReason = `応募文に必要な要素が足りない（${missingProposalElements(body).join('・')}）。`;
   } else if (evidence.length < 2) {
     status = 'BLOCKED';
     blockedReason = '案件本文から読み取れた内容が少なすぎる。テンプレ文になるので応募しない。';

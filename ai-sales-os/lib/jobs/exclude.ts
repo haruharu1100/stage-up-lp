@@ -1,4 +1,5 @@
 import { insert, nowIso, run, type Row } from '../db/client';
+import { AI_PROHIBITED_RE } from './facts';
 
 /**
  * 案件の足切り。
@@ -212,7 +213,9 @@ export const EXCLUSION_RULES: ExclusionRule[] = [
     label: 'AI利用が禁止されている',
     why: 'AIを使えない仕事は、自分がやる意味がない（時間だけ消える）',
     severity: 'HARD_BLOCK',
-    patterns: [/AI.{0,6}(禁止|不可|使用しないで|使わないで)/, /ChatGPT.{0,6}(禁止|不可)/i, /生成AI.{0,6}(禁止|不可)/, /手作業(のみ|で)/],
+    // ★「AI禁止」の読み方は facts.ts の AI_PROHIBITED_RE と同じものを使う。
+    //   足切りと事実の読み取りで判定がずれると、「禁止と記録したのに応募候補に残る」が起きる。
+    patterns: [AI_PROHIBITED_RE, /AI.{0,6}(禁止|不可|使用しないで|使わないで)/, /ChatGPT.{0,6}(禁止|不可)/i, /生成AI.{0,6}(禁止|不可)/, /手作業(のみ|で)/],
   },
   {
     code: 'ADULT',
