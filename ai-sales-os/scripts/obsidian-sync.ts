@@ -6,6 +6,21 @@ import { externalActionStatus } from '../lib/gate';
 import { EXTERNAL_ACTIONS_IMPLEMENTED } from '../lib/env';
 import { DEFAULT_SETTINGS, loadSettings } from '../lib/settings';
 import { EXCLUSION_RULES } from '../lib/jobs/exclude';
+import { DUPE_LEVEL_JA } from '../lib/jobs/dedupe';
+import { AI_POLICY_JA, FACT_FIELDS, FACT_FIELD_JA } from '../lib/jobs/facts';
+import {
+  JOB_TYPES,
+  JOB_TYPE_JA,
+  JOB_TYPE_MIN_HOURS,
+  JOB_TYPE_WHAT_JA,
+  MIN_OVERHEAD_HOURS,
+  STAGE_FLOOR_HOURS,
+  WORK_STAGES,
+  WORK_STAGE_JA,
+  type WorkStage,
+} from '../lib/jobs/jobtype';
+import { LEARNING_MODE_JA, WIN_PROBABILITY_KIND_JA } from '../lib/jobs/profit';
+import { PROPOSAL_ELEMENTS } from '../lib/jobs/proposal';
 import { listSitePolicies, TOS_RECHECK_DAYS } from '../lib/jobs/sites';
 import { REQUIRED_MIN_REAL, top5StageOf } from '../lib/jobs/stage';
 import { listLearnings } from '../lib/learning';
@@ -1203,6 +1218,139 @@ ${
   REWRITE は自動で直してもう一度監査にかけます。
 - 監査に合格したものだけが「最初に応募する5案件」に出ます。
 - 監査前の順位は「仮の順位」と画面にはっきり書きます。仮を確定と読み違えないようにするためです。
+`,
+  );
+
+  // ---------------------------------------------------------------- 27
+  const factsSaved = Number(await scalar('SELECT COUNT(*) FROM job_facts').catch(() => 0));
+  write(
+    '27_REAL案件の品質監査.md',
+    head(
+      '本物の案件を1件目から監査する',
+      '20件そろうのを待ちません。1件入った時点で、書いてあることだけを根拠に全工程を通し、人が目で読んで確かめます。',
+    ) +
+      `## ★今回追加した恒久ルール（このOSに触る全てのAIが従うこと）
+
+1. **REAL案件は1件目から目視監査する。**
+   1件目・5件目・10件目・20件目に到達したら、案件本文／解析結果／HARD BLOCK判定／能力照合／
+   利益／時間／応募文／監査結果を、実際に人が読んで確かめる。
+   **テストが全部緑でも、実データでおかしければ根本から直す。**
+2. **案件本文に無い情報を、事実として補完しない。**
+   9項目それぞれに「本文のどこに、どう書いてあったか」を必ず持たせる。
+   出典が本文に見つからない事実は、作り話として **BLOCK** にする。
+3. **AI_POLICY_UNKNOWN ≠ AI_ALLOWED。**
+   「AIについて何も書かれていない」を「使ってよい」と読み替えない。
+   成果物はAIで作るので、書かれていない案件は応募の前に人が依頼主へ確かめる。
+   **ただし候補からは外さない**（外すと、ほとんどの案件が消える）。
+4. **予測値と事実を、画面でも区別する。**
+   予想利益・予想作業時間・受注確率は「AI予測」と明記し、
+   報酬のような「本文に書いてあった数字」と同じ見た目にしない。
+5. **REAL案件が20件未満でも、暫定ランキングは動かす。**
+   止めない。ただし「暫定：REAL案件◯件中」と必ず添える。
+   候補が2件しかなければTOP2で出す。**数を揃えるために低品質な案件を足さない。**
+
+## 事実として保存する9項目（\`job_facts\`）
+
+いま保存されている行数: **${factsSaved}件**
+
+${table(
+  ['項目', '保存するもの'],
+  FACT_FIELDS.map((f) => [FACT_FIELD_JA[f], '本文の該当箇所（SOURCE_TEXT）／どこに書いてあったか（SOURCE_LOCATION）／確からしさ（CONFIDENCE）']),
+)}
+
+- 読み取れなかった項目は **UNKNOWN**。**0や都合のよい値では埋めない。**
+- ただし **情報不足だけを理由に案件を捨てない。** 報酬・納期・稼働時間・修正回数が不明なら
+  「人が読む（HUMAN_REVIEW）」へ回す。依頼主へ聞けば済むことを、機械が勝手に諦めない。
+
+## AI利用可否の3つの状態
+
+${table(['状態', '意味', 'このOSの動き'], [
+  ['AI_PROHIBITED', AI_POLICY_JA.AI_PROHIBITED, 'HARD BLOCK。候補から外す'],
+  ['AI_ALLOWED', AI_POLICY_JA.AI_ALLOWED, 'そのまま進む'],
+  ['AI_POLICY_UNKNOWN', AI_POLICY_JA.AI_POLICY_UNKNOWN, '候補には残すが、応募の前に人が確認する'],
+])}
+
+## 案件の種類（${JOB_TYPES.length}種類）と、種類ごとの最低作業時間
+
+${table(
+  ['種類', 'どんな仕事か', '最低時間'],
+  JOB_TYPES.map((t) => [JOB_TYPE_JA[t], JOB_TYPE_WHAT_JA[t], `${JOB_TYPE_MIN_HOURS[t]}時間`]),
+)}
+
+どの種類の言葉も本文に出てこなければ **「その他」** にする。無理にどれかへ寄せない。
+種類が重なるときは**重いほう**で見積もる（軽いほうに寄せると時間を小さく見積もることになる）。
+
+> **REALの実績がまだ0件なので、この最低時間は「これ以下にはならない」という下限にすぎません。**
+> 実績が少ないうちに、案件ごとの数字へ細かく合わせにいくことはしません（過学習を避けます）。
+
+## 作業時間に必ず含める${WORK_STAGES.length}工程
+
+一番危ないのは、AIが動いている時間だけを作業時間だと思い込むことです。
+
+${table(
+  ['工程', '下限'],
+  WORK_STAGES.map((s) => [
+    WORK_STAGE_JA[s],
+    s === 'GENERATE' ? '案件による' : `${STAGE_FLOOR_HOURS[s as Exclude<WorkStage, 'GENERATE'>]}時間`,
+  ]),
+)}
+
+AI生成以外の6工程の下限の合計は **${MIN_OVERHEAD_HOURS}時間**。
+これは前からのルールで、**1分も下げていません。** 修正回数が本文に無い案件は、手直しの時間を多めに見ます。
+
+## 利益の出し方
+
+    予想利益 ＝ 報酬 − 外部API費用 − 外注費 − その他の直接費用
+
+- 費用は**1つの「原価」にまとめない。** まとめると、分からない費用があっても合計だけは出てしまう。
+- **分からない費用を0にしない。** 1つでも分からなければ、利益は **UNKNOWN**（出さない）。
+- **人件費（自分の時間の値段）は別枠。** 利益からは引かない。
+  引くと「お金は残ったのに自分がただ働きしていた」が見えなくなるため、別の行に出す。
+  設定が空欄なら人件費は計算しない（勝手な時給で利益を削らない）。
+
+## 受注確率の扱い
+
+${table(['種類', '意味'], [
+  ['AI_PREDICTION', WIN_PROBABILITY_KIND_JA.AI_PREDICTION],
+  ['MEASURED', WIN_PROBABILITY_KIND_JA.MEASURED],
+])}
+
+本物の受注が0件のいま、受注確率は全て **AI_PREDICTION** です。実測（\`actual_win_rate\`）とは列ごと分けています。
+学習は **${LEARNING_MODE_JA.OBSERVE_ONLY}** のままで、REAL案件が${REQUIRED_MIN_REAL}件そろうまで数字を動かしません。
+
+## 重複の3段階
+
+${table(['判定', '意味', 'このOSの動き'], [
+  ['EXACT_DUPLICATE', DUPE_LEVEL_JA.EXACT_DUPLICATE, '同じ依頼として束ねる'],
+  ['LIKELY_DUPLICATE', DUPE_LEVEL_JA.LIKELY_DUPLICATE, '**束ねない。**画面に並べて人が見比べる'],
+  ['UNIQUE', DUPE_LEVEL_JA.UNIQUE, '別の依頼として扱う'],
+])}
+
+URLだけでは判定しません。件名・本文・報酬・依頼内容から見ます。
+別サイトへ転載された同じ募集も、URLが違うだけで別案件にはしません。
+逆に、件名が同じでも**予算が2倍以上ちがえば別の依頼**とみなします。
+
+## 応募文に必ず入れる${PROPOSAL_ELEMENTS.length}要素
+
+${PROPOSAL_ELEMENTS.map((e, i) => `${i + 1}. ${e.ja}`).join('\n')}
+
+1つでも欠けたら応募文は **BLOCKED**（出さない）になり、監査でも **REWRITE** になります。
+
+- **存在しない実績を書きません。**「多数の実績があります」のような、根拠のない言い方は使いません。
+- 使える道具は、実際に動いているものだけを名前で挙げます。
+  試作（PROTOTYPE）だけで対応する案件は原則HOLDです。**「作れそう」と「実績がある」を混同しません。**
+
+## 別AIの監査（18項目）
+
+案件の理解／作り話／利益／時間／AI利用条件／納期／応募文の固有性／道具の仕上がり／規約 を見ます。
+判定は **PASS ／ REWRITE ／ HUMAN_REVIEW ／ BLOCK** の4つ。
+REWRITEだけが自動で直せます。事実・AI利用可否・作業時間の問題は、書き直しでは通り抜けられません。
+
+## 今回やらなかったこと
+
+- 求人サイトへの規約違反の機械収集：**しません**
+- 実応募・実電話・実メール・実フォーム・実納品：**すべて0件のまま**（送る処理コードが存在しません）
+- REAL案件が足りないことを理由にした、余計な新機能の追加：**しません**
 `,
   );
 
