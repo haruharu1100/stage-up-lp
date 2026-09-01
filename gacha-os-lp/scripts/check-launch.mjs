@@ -70,20 +70,6 @@ const REQUIRED_ENV = [
     fix: "問い合わせを受け取る先（スプレッドシート／CRM／通知先）のURLを設定してください。これが空だと、お客様が送信しても誰にも届きません。",
   },
   {
-    key: "ga4",
-    envs: ["NEXT_PUBLIC_GA4_ID"],
-    code: "GA4_NOT_CONNECTED",
-    label: "② GA4（アクセス解析）",
-    fix: "GA4 の測定ID（G- から始まる）を設定してください。未設定だと、どこで離脱しているかが一切分からないまま公開することになります。",
-  },
-  {
-    key: "clarity",
-    envs: ["NEXT_PUBLIC_CLARITY_ID"],
-    code: "CLARITY_NOT_CONNECTED",
-    label: "③ Microsoft Clarity（録画・ヒートマップ）",
-    fix: "Clarity のプロジェクトIDを設定してください。",
-  },
-  {
     key: "domain",
     envs: ["NEXT_PUBLIC_SITE_URL"],
     code: "SITE_URL_MISSING",
@@ -101,11 +87,63 @@ const REQUIRED_ENV = [
   },
 ];
 
+/**
+ * 計測の項目。
+ *
+ * ★ここに入れたものは、未設定でも公開を止めません。
+ *   「やらなくてよい」ではなく「やるまで待つ理由が無い」ものです。
+ *
+ *   分ける基準は1つだけです。
+ *
+ *       空のまま公開したとき、訪問した人に不利益が出るか。
+ *
+ *   ・問い合わせの通知先が空 → 出る。
+ *     送信ボタンを押した人は「送れた」と思ったまま放置されます。
+ *     その人にとっては無視された会社です。あとから直しても戻りません。
+ *     だから REQUIRED_ENV に置き、ビルドを止めます。
+ *
+ *   ・GA4 / Clarity が空 → 出ない。
+ *     訪問した人の画面は何も変わりません。
+ *     困るのはこちらだけで、IDを入れればその日から計測が始まります。
+ *     失うのは「入れるまでの期間の数字」だけです。
+ *
+ * ★なぜ、わざわざ緩めるのか。
+ *   止める理由を説明できないものを止めていると、
+ *   ブロッカー全体が「とりあえず何か入れて黙らせるもの」になります。
+ *   架空のIDを1つ入れて通した瞬間から、この仕組みは
+ *   本当に止めたい1つ目も止められなくなります。
+ *
+ * ★ただし、黙って通しはしません。本番ビルドでは必ず目立つ形で出します。
+ */
+const MEASUREMENT_ENV = [
+  {
+    key: "ga4",
+    envs: ["NEXT_PUBLIC_GA4_ID"],
+    code: "GA4_NOT_CONNECTED",
+    label: "② GA4（アクセス解析）",
+    fix: "GA4 の測定ID（G- から始まる）を設定してください。未設定でも公開できますが、入れるまでの期間は、どこで離脱したかが取れません。",
+    /** 未設定のまま公開したとき、実際に何が起きるか */
+    consequence:
+      "LPの中でどこまで読まれたか・どこで離脱したかが記録されません。営業メールのクリック計測は別の仕組みで動くので、そちらは影響を受けません。",
+  },
+  {
+    key: "clarity",
+    envs: ["NEXT_PUBLIC_CLARITY_ID"],
+    code: "CLARITY_NOT_CONNECTED",
+    label: "③ Microsoft Clarity（録画・ヒートマップ）",
+    fix: "Clarity のプロジェクトIDを設定してください。入れる前に、録画へ氏名・メール・電話・問い合わせ本文が写らないことを自分の目で確認してください。",
+    consequence:
+      "訪問者の操作の録画とヒートマップが残りません。なおこの項目は、確認せずに急いで入れるほうが危険です（録画に個人情報が写り込むと、それ自体が事故になります）。",
+  },
+];
+
 /** lib/readiness.ts と、このファイルの定義がずれていないか確認する */
 function verifyInSync() {
   try {
     const src = readFileSync(join(root, "lib", "readiness.ts"), "utf8");
-    const missing = REQUIRED_ENV.filter((r) => !src.includes(r.code));
+    const missing = [...REQUIRED_ENV, ...MEASUREMENT_ENV].filter(
+      (r) => !src.includes(r.code),
+    );
     if (missing.length > 0) {
       console.log(
         C.yellow(
@@ -361,6 +399,23 @@ for (const r of REQUIRED_ENV) {
   }
 }
 
+/* ────────────────────────────────
+   計測（未設定でも公開できる。ただし黙っては通さない）
+   ──────────────────────────────── */
+const measurementMissing = MEASUREMENT_ENV.filter(
+  (r) => !r.envs.every((e) => has(env[e])),
+);
+
+for (const r of MEASUREMENT_ENV) {
+  if (r.envs.every((e) => has(env[e]))) {
+    console.log(`  ${C.green("✓")} ${r.label}  ${C.dim("CONNECTED")}`);
+  } else {
+    console.log(
+      `  ${C.yellow("!")} ${r.label}  ${C.dim(`[${r.code}] 未設定・公開は止めません`)}`,
+    );
+  }
+}
+
 /* 推奨項目（欠けていても止めない） */
 const RECOMMENDED = [
   { env: "NEXT_PUBLIC_GSC_VERIFICATION", label: "Search Console" },
@@ -467,6 +522,33 @@ if (kiraretaMamori.length === 0) {
 }
 
 console.log(C.bold("  ────────────────────────────────────────────"));
+
+/* ★計測が未設定なら、通す場合でも必ず言う。
+     黙って通すと「設定した」と記憶が書き換わります。
+     公開してから半年後に「数字が無い」と気づくのが、いちばん高くつきます。 */
+if (measurementMissing.length > 0) {
+  console.log("");
+  console.log(
+    C.yellow(
+      `  計測が ${measurementMissing.length}件 未設定のままです（公開は止めません）。`,
+    ),
+  );
+  for (const m of measurementMissing) {
+    console.log(C.yellow(`    ・${m.label}  ${C.dim(`[${m.code}]`)}`));
+    console.log(C.dim(`      このまま公開すると：${m.consequence}`));
+    console.log(C.dim(`      入れ方：${m.fix}`));
+    console.log(C.dim(`      環境変数: ${m.envs.join(" / ")}`));
+  }
+  console.log(
+    C.dim(
+      "    ★あとからIDを入れれば、その日から計測が始まります。\n" +
+        "      取り返せないのは、入れるまでの期間の数字だけです。\n" +
+        "      架空のIDでこの警告を消さないでください。消すと、\n" +
+        "      計測できていないことに誰も気づけなくなります。",
+    ),
+  );
+  console.log("");
+}
 
 if (failures.length === 0) {
   console.log(C.green("  CONNECTED まではそろっています。"));

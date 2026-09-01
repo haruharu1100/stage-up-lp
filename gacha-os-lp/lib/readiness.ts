@@ -69,6 +69,30 @@ export type CheckItem = {
   why: string;
   /** 公開してはいけない項目か（＝公開ブロッカー） */
   required: boolean;
+  /**
+   * ★ビルドを止めてよいか（既定は true ＝ 止める）。
+   *
+   *   required と、わざと分けています。理由：
+   *
+   *   required=true は「いつかは必ずやること」。
+   *   blocksLaunch=true は「やるまで世に出してはいけないこと」。
+   *   この2つは、同じではありません。
+   *
+   *   ・問い合わせの通知先が空 … 出してはいけない。
+   *     お客様がフォームを送っても誰にも届かず、その人は
+   *     「無視された会社」として二度と戻ってきません。取り返せません。
+   *
+   *   ・GA4 が空 … 出してよい。
+   *     訪問した人には何も起きません。困るのはこちらだけで、
+   *     しかも後からIDを入れれば、その日から計測が始まります。
+   *     失うのは「入れるまでの期間の数字」だけです。
+   *
+   *   ★「あとで直せる／訪問者に不利益が無い」ものを公開ブロッカーにすると、
+   *     ブロッカー全体が「とりあえず何か入れて黙らせるもの」になります。
+   *     そうなった時点で、本当に止めたい1つ目も止められなくなります。
+   *     だから、止める理由を説明できるものだけを止めます。
+   */
+  blocksLaunch?: boolean;
   stages: Record<StageId, Stage>;
   /**
    * E2E VERIFIED にするために、全部通す必要がある細目。
@@ -167,6 +191,12 @@ export function buildChecklist(env: NodeJS.ProcessEnv): CheckItem[] {
       label: "② GA4（アクセス解析）",
       why: "どこで離脱しているかが分からないと、改善が感覚になります。IDを入れただけでは計測できているとは限りません。",
       required: true,
+      /* ★未設定でも公開できます。訪問者には何も起きません。
+           取れなくなるのは、入れるまでの期間の数字だけです。
+           なお営業メールのクリック計測は、こちらとは別の仕組み
+           （gacha-os-outbound の /r/ 転送）で動くので、
+           GA4が空でも「どの会社がLPと動画を開いたか」は記録できます。 */
+      blocksLaunch: false,
       code: "GA4_NOT_CONNECTED",
       stages: {
         implemented: {
@@ -204,6 +234,14 @@ export function buildChecklist(env: NodeJS.ProcessEnv): CheckItem[] {
       label: "③ Microsoft Clarity（録画・ヒートマップ）",
       why: "実際にどこまで読まれ、どこで止まったかを見ます。ただし録画に個人情報が写り込むと、それ自体が事故になります。",
       required: true,
+      /* ★未設定でも公開できます。
+           むしろ、この項目は「入れないほうが安全な状態」が存在します。
+           録画に氏名・メール・電話・問い合わせ本文が写り込むと、
+           それ自体が個人情報の事故になるためです。
+           マスキング設定は実装済みですが、人が録画を再生して
+           4項目とも写っていないことを確かめるまでは、
+           急いで入れる理由はありません。 */
+      blocksLaunch: false,
       code: "CLARITY_NOT_CONNECTED",
       stages: {
         implemented: {
@@ -700,9 +738,24 @@ export function hardFailures(items: CheckItem[]): CheckItem[] {
   return items.filter(
     (i) =>
       i.required &&
+      /* ★blocksLaunch=false のものは、ここでは止めません。
+           /launch の一覧には「まだ済んでいない」として残り続けます。
+           消えるわけではなく、公開を止めないだけです。 */
+      i.blocksLaunch !== false &&
       STAGE_ORDER.some(
         (s) => i.stages[s].auto && i.stages[s].state === "todo"
       )
+  );
+}
+
+/**
+ * 必須だが、公開は止めない項目（＝計測など、あとから入れても取り返せるもの）。
+ * 「止めない」ことと「やらなくてよい」ことを混同させないため、
+ * 一覧として別に出せるようにしておきます。
+ */
+export function nonBlockingTodos(items: CheckItem[]): CheckItem[] {
+  return items.filter(
+    (i) => i.required && i.blocksLaunch === false && !isItemReady(i)
   );
 }
 

@@ -10,9 +10,18 @@ const inter = Inter({
   variable: "--font-inter",
   display: "swap",
 });
+/*
+  ★800 と 900 を消さないこと（2026-08-27 追加）。
+    日本語の書体に太字が用意されていないと、ブラウザは
+    細い字を横に引き伸ばして「太字のように見せる」だけの処理をします。
+    その字は、輪郭がにじんで、線の太さがそろいません。
+    small くらいの大きさなら気づきませんが、
+    デモ動画の大きな見出しに使うと、はっきり素人くさく見えます。
+    実際、動画のテロップがそうなっていました。
+*/
 const noto = Noto_Sans_JP({
   subsets: ["latin"],
-  weight: ["400", "500", "700"],
+  weight: ["400", "500", "700", "800", "900"],
   variable: "--font-noto",
   display: "swap",
   preload: false,
@@ -36,6 +45,10 @@ export const metadata: Metadata = {
   },
   description,
   keywords: [...seoKeywords],
+  /* リンクプレビュー用の画像。
+     LINE・メール・X にURLを貼ったとき、これが無いと文字だけの小さな枠になります。
+     中身は作り物の絵ではなく、実際に動いているデモ画面（public/og.jpg）です。
+     作り直すときは python3 scripts/make-og-image.py。 */
   openGraph: {
     type: "website",
     locale: "ja_JP",
@@ -43,11 +56,20 @@ export const metadata: Metadata = {
     siteName: "AI GACHA OS",
     title,
     description,
+    images: [
+      {
+        url: "/og.jpg",
+        width: 1200,
+        height: 630,
+        alt: "AI GACHA OS の運営画面とお客様画面。同じ瞬間に運営の数字が動きます。",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
     title,
     description,
+    images: ["/og.jpg"],
   },
   robots: { index: true, follow: true },
   alternates: { canonical: "/" },
