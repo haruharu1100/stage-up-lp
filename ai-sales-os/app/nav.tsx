@@ -18,6 +18,7 @@ const GROUPS: { group: string; items: { href: string; label: string }[] }[] = [
       { href: '/companies', label: '会社一覧' },
       { href: '/leads', label: '営業候補' },
       { href: '/leads/top5', label: '最初に営業する5社' },
+      { href: '/first-send', label: '最初に手で送る1社' },
       { href: '/outreach/call', label: '電話営業' },
       { href: '/outreach/email', label: 'メール営業' },
       { href: '/outreach/form', label: 'フォーム営業' },

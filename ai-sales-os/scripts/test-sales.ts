@@ -23,6 +23,7 @@ import {
   sentencesOf,
 } from '../lib/sales/facts';
 import { htmlToText, parseRobots, pickSubPagesFromUrls, robotsAllowsPath } from '../lib/sales/website';
+import { bulkFeel, checkFormUrl, isFormPolicyOnlyNotice, judgeQuoteQuality, pickFirstSend, quoteSources, rankFirstSend } from '../lib/sales/first-send';
 import { sourceStatuses } from '../lib/sales/sources';
 import { Suite, finish } from './_harness';
 
@@ -706,7 +707,89 @@ async function main() {
 
   a.print();
 
-  finish([p, i, j, d, g, w, r, a]);
+  // ── 最初に手で送る1社の選び方 ─────────────────────────────
+  const f = new Suite('最初に手で送る1社（順位と送信前監査）');
+
+  // ① 順位は毎回同じでなければならない。順番が揺れると「なぜこの会社なのか」を説明できない。
+  const rank1 = await rankFirstSend({ channel: 'FORM', realOnly: true });
+  const rank2 = await rankFirstSend({ channel: 'FORM', realOnly: true });
+  f.check(
+    '同じデータで2回並べたときに順位が変わる',
+    rank1.map((r) => `${r.rank}:${r.companyId}:${r.total.toFixed(3)}`).join('|') === rank2.map((r) => `${r.rank}:${r.companyId}:${r.total.toFixed(3)}`).join('|'),
+    `${rank1.length}社`,
+  );
+  f.check('順位が1から連番になっていない', rank1.every((r, i) => r.rank === i + 1), `${rank1.length}社`);
+
+  // ② 練習用のデータが順位に混ざっていないこと
+  const testIds = new Set((await all("SELECT id FROM companies WHERE data_origin = 'TEST'")).map((x) => Number(x.id)));
+  f.eq('練習用の会社が順位に混ざっている', rank1.filter((r) => testIds.has(r.companyId)).length, 0, '社');
+
+  // ③ 測れなかった観点を0点で埋めていないこと（分母からも外れている）
+  for (const r of rank1.slice(0, 3)) {
+    const nulls = r.scores.filter((s) => s.score === null);
+    f.check(`${r.companyName}：測れない観点に0点を入れている`, nulls.every((s) => s.points === null), `未測定${nulls.length}件`);
+    f.check(`${r.companyName}：未測定の数が合計と食い違う`, r.unknownCount === nulls.length, `${r.unknownCount}件`);
+    f.check(`${r.companyName}：点数が0〜100の外に出ている`, r.total >= 0 && r.total <= 100, `${r.total.toFixed(1)}点`);
+  }
+
+  // ④ 従業員数が取れていない会社を「0人」として扱っていないこと
+  const noEmp = rank1.find((r) => r.scores.some((s) => s.key === 'COMPANY_SIZE' && s.score === null));
+  if (noEmp) {
+    const sz = noEmp.scores.find((s) => s.key === 'COMPANY_SIZE')!;
+    f.check('従業員数が不明な会社に、規模の点を付けてしまっている', sz.points === null, sz.reason);
+  } else {
+    f.check('従業員数が不明な会社が1社も無い（確認省略）', true, '該当なし');
+  }
+
+  // ⑤ 引用の質：数字の入った具体的な引用のほうが、理念だけの引用より高く出ること
+  const concrete = judgeQuoteQuality(['年間300から400種類の金型を製造し、検査工程まで自社で行っています']);
+  const creed = judgeQuoteQuality(['私たちは誠実と信頼を大切に、社会に貢献する企業を目指してまいります']);
+  f.check('数字の入った具体的な引用が、理念だけの引用より低く出る', concrete.score > creed.score, `具体${concrete.score.toFixed(2)} / 理念${creed.score.toFixed(2)}`);
+
+  // ⑥ フォームURLが公式HPと別の持ち主なら、必ず落とすこと
+  f.check('よその会社のフォームURLを通してしまう', checkFormUrl('https://a-corp.co.jp/', 'https://b-corp.co.jp/contact/').ok === false, 'ドメインが違う');
+  f.check('同じ会社の問い合わせページを落としてしまう', checkFormUrl('https://a-corp.co.jp/company/', 'https://a-corp.co.jp/contact/').ok === true, '同じドメイン');
+
+  // ⑦ 一斉営業らしさ：同じ文面を配っている状態を見抜くこと
+  const same = 'ご担当者様、突然のご連絡失礼いたします。業務効率化のご提案です。お話を伺えませんか。';
+  f.check('同じ文面を配っているのに一斉営業だと気づかない', bulkFeel(same, [same]).score < 0.5, `似かた${bulkFeel(same, [same]).max.toFixed(2)}`);
+
+  // ⑧ 「フォームの可否が未確認」だけを、他の理由と取り違えないこと。
+  //    ★ここを広く取ると、営業お断りの記載まで一緒に見逃すことになる。
+  f.check(
+    'フォーム可否の未確認だけを選り分けられていない',
+    isFormPolicyOnlyNotice({ code: 'NO_SALES_NOTICE', label: '営業禁止の表記がない', ok: false, severity: 'HUMAN_REVIEW', detail: '問い合わせフォームを営業に使ってよいか確認できていない（判定=APPROVAL_REQUIRED）。' }) === true,
+    '未確認は人が読む扱い',
+  );
+  f.check(
+    '営業お断りの記載を「未確認」と取り違えている',
+    isFormPolicyOnlyNotice({ code: 'NO_SALES_NOTICE', label: '営業禁止の表記がない', ok: false, severity: 'BLOCK', detail: 'ホームページに営業お断りの記載がある。' }) === false,
+    'お断りは止めたまま',
+  );
+
+  // ⑨ 送信前監査：選ばれた1社は、文面の項目がすべて合格していること
+  const pick = await pickFirstSend({ channel: 'FORM', realOnly: true });
+  if (pick.chosen) {
+    const copyChecks = pick.chosen.audit.checks.filter((k) => k.group === '文面');
+    f.check('選んだ1社の文面に、合格していない項目が残っている', copyChecks.every((k) => k.ok), `${copyChecks.length}項目`);
+    f.check('文面の確認項目が11項目に足りていない', copyChecks.length >= 11, `${copyChecks.length}項目`);
+    f.check('選んだ1社の判定が合格になっていない', pick.chosen.audit.verdict === 'PASS', pick.chosen.audit.verdictJa);
+    f.check('引用が1件も入っていない営業文を選んでいる', pick.chosen.candidate.quotes.length >= 1, `引用${pick.chosen.candidate.quotes.length}件`);
+    f.check('選んだ1社にフォームURLが無い', !!pick.chosen.candidate.formUrl, pick.chosen.candidate.formUrl ?? '—');
+    f.check('選んだ1社が順位の1位から外れている', pick.chosen.candidate.rank <= rank1.filter((r) => r.disqualified).length + 1, `${pick.chosen.candidate.rank}位`);
+    // ★人がやる確認を、機械が済ませたことにしていないか
+    f.check('フォームの注意書きを人が読む手順が消えている', pick.chosen.audit.humanSteps.length >= 1, `${pick.chosen.audit.humanSteps.length}件`);
+  } else {
+    f.check('1件目に送れる会社が1社も無い', false, '順位はあるのに全社が監査で落ちている');
+  }
+
+  // ⑩ 引用の出典：確かめていない引用を「確かめた」ことにしていないこと
+  const srcs = quoteSources(['ある文章'], '2ページ読んだ（https://x.co.jp/a/ / https://x.co.jp/b/）', null);
+  f.check('確かめていない引用に、出典URLを1本に決めてしまっている', srcs[0].verifiedUrl === null, `候補${srcs[0].candidates.length}本`);
+
+  f.print();
+
+  finish([p, i, j, d, g, w, r, a, f]);
 }
 
 main().catch((e) => {

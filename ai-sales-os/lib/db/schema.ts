@@ -664,6 +664,36 @@ export const SCHEMA_OUTCOME: string[] = [
   )`,
   `CREATE INDEX IF NOT EXISTS idx_outcome_origin ON outcome_records(data_origin)`,
   `CREATE INDEX IF NOT EXISTS idx_outcome_actual ON outcome_records(actual_close_result)`,
+
+  // ★「人間が自分の手で送った」という記録だけを置く表。
+  //   outreach_executions（システムが実行したことの記録・executed は常に0）とは別に持つ。
+  //   同じ表に入れると「システムが1件送った」ように見えてしまい、
+  //   外部への送信が0件だという前提が画面からもテストからも読めなくなる。
+  //
+  //   ここに入るのは、画面を開いた本人がフォームに貼り付けて送信ボタンを押した1件だけ。
+  //   フォームへ送信する処理コードはこのシステムに存在しない。
+  //
+  // ★返信の本文はこの表に入れない。
+  //   相手の担当者名・電話番号・社内事情が混ざりうるため、
+  //   残すのは結果の分類（送った／返信あった／前向き／断り／面談／返信なし）と日時だけにする。
+  `CREATE TABLE IF NOT EXISTS manual_sends (
+    id             INTEGER PRIMARY KEY AUTOINCREMENT,
+    company_id     INTEGER NOT NULL,
+    company_name   TEXT NOT NULL,                  -- 後から見て「別会社だ」と気づけるように名前も残す
+    channel        TEXT NOT NULL,                  -- FORM / PHONE / EMAIL（今はFORMだけ）
+    draft_id       INTEGER,
+    destination    TEXT,                           -- 実際に開いたフォームのURL
+    copy_version   TEXT NOT NULL,                  -- 送った本文のハッシュ。あとで文面を直しても送った版が分かる
+    outcome        TEXT NOT NULL,                  -- SENT / REPLIED / POSITIVE / NEGATIVE / MEETING / NO_RESPONSE
+    sent_at        TEXT NOT NULL,
+    replied_at     TEXT,
+    note           TEXT,                           -- 人が書く短いメモ。返信本文の貼り付けは想定しない
+    sent_by        TEXT NOT NULL DEFAULT 'HUMAN',  -- ★常に HUMAN。システムが送ることはない
+    created_at     TEXT NOT NULL,
+    updated_at     TEXT NOT NULL,
+    UNIQUE(company_id, channel)
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_manual_sends_outcome ON manual_sends(outcome)`,
 ];
 
 export const ALL_SCHEMA: string[] = [...SCHEMA_CORE, ...SCHEMA_SALES, ...SCHEMA_JOBS, ...SCHEMA_DRYRUN, ...SCHEMA_OUTCOME];

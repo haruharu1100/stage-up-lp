@@ -41,6 +41,7 @@ import {
 import type { OfferRow } from '../lib/catalog/sync';
 import { draftChannels } from '../lib/sales/channel';
 import { formAutoAllowed, formHumanSendAllowed } from '../lib/sales/form-policy';
+import { learningState, NOTE_MAX, OBSERVE_ONLY_UNTIL, recordManualSend, scrubNote } from '../lib/sales/manual-send';
 import { Suite, finish } from './_harness';
 
 /**
@@ -930,6 +931,27 @@ async function main() {
   sec.check('ページ側にも「検索に載せるな」を書いている', /robots:\s*\{[^}]*index:\s*false/.test(layout), 'app/layout.tsx');
   sec.check('401で返すときも「検索に載せるな」を付けている', /X-Robots-Tag/.test(mw), 'middleware.ts の401応答');
 
+  // ★入口が「401を返せる」こと自体を確かめる。
+  //   HTTPのヘッダーには日本語を入れられない。入れると応答を作る時点で例外が出て、
+  //   401ではなく500になり、ブラウザがIDとパスワードの入力欄を出さなくなる。
+  //   その状態は「鍵が固い」のではなく「誰も入れない」＝本番が開けない事故なので、必ず見張る。
+  const authHeader = mw.match(/'WWW-Authenticate':\s*'([^']*)'/)?.[1] ?? '';
+  sec.check('401のヘッダー（WWW-Authenticate）が見つからない', authHeader.length > 0, authHeader || '未検出');
+  sec.check(
+    '401のヘッダーに日本語が混ざっている（本番でログイン画面が出なくなる）',
+    // eslint-disable-next-line no-control-regex
+    /^[\x00-\xFF]*$/.test(authHeader),
+    authHeader,
+  );
+  let built = '';
+  try {
+    new Response('x', { status: 401, headers: { 'WWW-Authenticate': authHeader } });
+    built = 'つくれた';
+  } catch (e) {
+    built = `例外：${e instanceof Error ? e.message : String(e)}`;
+  }
+  sec.check('401の応答を実際に組み立てられない', built === 'つくれた', built);
+
   // ---- ③ 秘密がブラウザへ出る書き方をしていないこと
   //         Next.js は NEXT_PUBLIC_ で始まる環境変数だけをブラウザへ埋め込む。
   //         1つも使っていなければ、埋め込みようがない。
@@ -1074,7 +1096,113 @@ async function main() {
     handVerdict.conditions.some((c) => c.code === 'POLICY_PASS_OR_APPROVED' && !c.ok), handVerdict.missing.join('、'));
 
   hs.print();
-  finish([s, d, a, x, e, k, sec, hs]);
+
+  // ---- 人が自分の手で送った記録（manual_sends）
+  //      ★ここに記録が入っても「システムが送った」ことにはならない。
+  //        その区別が壊れると、外部への送信0件という前提が画面から読めなくなる。
+  const ms = new Suite('人が自分の手で送った記録');
+
+  ms.eq('システムが外部へ実行した件数（実行記録）', await scalar('SELECT COUNT(*) FROM outreach_executions WHERE executed = 1'), 0, '件');
+  ms.eq('システムが外部へ実行した件数（下書きの記録）', await scalar('SELECT COUNT(*) FROM outreach_logs WHERE executed = 1'), 0, '件');
+  ms.eq('システムが外部へ実行した件数（下見）', await scalar('SELECT COUNT(*) FROM dry_runs WHERE executed = 1'), 0, '件');
+
+  // 手の記録は、システムの実行記録とは別の表に入っていること
+  ms.check(
+    '手で送った記録が、システムの実行記録に混ざっている',
+    Number(await scalar('SELECT COUNT(*) FROM outreach_executions')) === Number(await scalar('SELECT COUNT(*) FROM outreach_executions WHERE executed = 0')),
+    'システム側は常に未実行',
+  );
+  ms.eq('手で送った記録に、人以外が送ったことになっている行', await scalar("SELECT COUNT(*) FROM manual_sends WHERE sent_by <> 'HUMAN'"), 0, '件');
+  ms.eq('手で送った記録に、送信日時が無い行', await scalar("SELECT COUNT(*) FROM manual_sends WHERE IFNULL(sent_at,'') = ''"), 0, '件');
+  ms.eq(
+    '返信が来たことになっているのに、返信日時が無い行',
+    await scalar("SELECT COUNT(*) FROM manual_sends WHERE outcome IN ('REPLIED','POSITIVE','NEGATIVE','MEETING') AND IFNULL(replied_at,'') = ''"),
+    0,
+    '件',
+  );
+  ms.eq(
+    '練習用の会社に、手で送った記録が残っている',
+    await scalar("SELECT COUNT(*) FROM manual_sends m JOIN companies c ON c.id = m.company_id WHERE c.data_origin = 'TEST'"),
+    0,
+    '件',
+  );
+
+  // 練習用のデータには記録を残せないこと（混ざると実績が読めなくなる）
+  const testCompany = await one("SELECT id FROM companies WHERE data_origin = 'TEST' LIMIT 1");
+  if (testCompany) {
+    const refused = await recordManualSend({ companyId: Number(testCompany.id), channel: 'FORM', draftId: null, destination: null, body: '本文', outcome: 'SENT' });
+    ms.check('練習用のデータに送信の記録を残せてしまう', refused.ok === false, refused.message);
+  } else {
+    ms.check('練習用の会社が1社も無い（確認省略）', true, '該当なし');
+  }
+
+  // 「送った」より先に返信の記録はできないこと
+  const realCompany = await one("SELECT id FROM companies WHERE data_origin <> 'TEST' AND id NOT IN (SELECT company_id FROM manual_sends) LIMIT 1");
+  if (realCompany) {
+    const early = await recordManualSend({ companyId: Number(realCompany.id), channel: 'FORM', draftId: null, destination: null, body: '本文', outcome: 'POSITIVE' });
+    ms.check('送った記録が無いのに、返信の記録を先に残せてしまう', early.ok === false, early.message);
+  } else {
+    ms.check('記録の無い会社が1社も無い（確認省略）', true, '該当なし');
+  }
+
+  // メモから相手の連絡先を落としていること（うっかり返信本文を貼ったときの受け止め）
+  const scrubbed = scrubNote('担当の田中さんから返信。tanaka@example.co.jp / 06-1234-5678 https://example.co.jp/reply');
+  ms.check('メモにメールアドレスが残る', !/@example\.co\.jp/.test(scrubbed ?? ''), scrubbed ?? '');
+  ms.check('メモに電話番号が残る', !/06-1234-5678/.test(scrubbed ?? ''), scrubbed ?? '');
+  ms.check('メモにURLが残る', !/https?:\/\//.test(scrubbed ?? ''), scrubbed ?? '');
+  const longNote = scrubNote('あ'.repeat(NOTE_MAX + 200));
+  ms.check('メモに返信本文を丸ごと貼れてしまう長さになっている', (longNote ?? '').length <= NOTE_MAX, `${(longNote ?? '').length}文字（上限${NOTE_MAX}）`);
+
+  // 1件や2件の結果から学び始めないこと
+  const lstate = await learningState();
+  ms.check(
+    '手で送った件数が少ないのに、学習してよいことになっている',
+    lstate.sent >= OBSERVE_ONLY_UNTIL ? lstate.mayLearn === true : lstate.mayLearn === false,
+    `${lstate.sent}件 / ${OBSERVE_ONLY_UNTIL}件`,
+  );
+
+  // ★相手のフォームへ送信する処理コードが、本当にどこにも無いこと。
+  //   「送りません」と書いてあることではなく、送る書き方が1つも無いことで確かめる。
+  //
+  //   POSTそのものは道具のAPI（地図の検索・AIへの問い合わせ）で使う。POSTの有無では判定できない。
+  //   見るのは「相手の会社の住所（フォームURL）へ向けてPOSTしているか」。
+  //   相手のフォームURLは contact_form_url / formUrl / destination という名前でしか持っていないので、
+  //   その名前を扱うファイルにPOSTが1つでもあれば、それは相手へ送る処理になりうる。
+  const srcDirs = ['lib', 'app', 'scripts'];
+  const srcFiles: string[] = [];
+  const walk = (dir: string) => {
+    for (const ent of fs.readdirSync(dir, { withFileTypes: true })) {
+      const p = path.join(dir, ent.name);
+      if (ent.isDirectory()) walk(p);
+      else if (/\.tsx?$/.test(ent.name)) srcFiles.push(p);
+    }
+  };
+  for (const d0 of srcDirs) if (fs.existsSync(d0)) walk(d0);
+
+  const POST_RE = /method:\s*['"`](POST|PUT|PATCH)['"`]/i;
+  const DEST_RE = /(contact_form_url|formUrl|destination)/;
+  const posting = srcFiles.filter((file) => POST_RE.test(fs.readFileSync(file, 'utf8')));
+
+  // ① POSTを書いているファイルは、道具のAPIを呼ぶ2か所だけ。増えていたら人が中身を見る。
+  const ALLOWED_POST_FILES = ['lib/sales/sources.ts', 'lib/ai/provider.ts'];
+  const unexpected = posting.filter((f) => !ALLOWED_POST_FILES.includes(f));
+  ms.eq('見覚えのない場所にPOSTが増えている', unexpected.length, 0, `個${unexpected.length > 0 ? `（${unexpected.join('、')}）` : ''}`);
+
+  // ② POSTの宛先が、コードに直接書かれた道具のAPIであること（相手ごとに変わる宛先ではない）
+  for (const f0 of posting) {
+    const src = fs.readFileSync(f0, 'utf8');
+    ms.check(`${f0}：POSTの宛先が相手ごとに変わる作りになっている`, /fetch\(\s*['"`]https:\/\//.test(src) || /fetch\(\s*`https:\/\/[a-z.]+/.test(src), '宛先がコードに直接書いてある');
+  }
+
+  // ③ 相手のフォームURLを扱うファイルに、送信の処理が1つも無いこと
+  const destFiles = srcFiles.filter((file) => DEST_RE.test(fs.readFileSync(file, 'utf8')));
+  const destPosting = destFiles.filter((file) => POST_RE.test(fs.readFileSync(file, 'utf8')));
+  ms.eq('相手のフォームURLを扱う場所に、送信の処理が書かれている', destPosting.length, 0, '個');
+  ms.check('相手のフォームURLを扱うファイルが見つからない（探せていない）', destFiles.length >= 5, `${destFiles.length}個を確認`);
+  ms.check('確かめたファイルが少なすぎる（探せていない）', srcFiles.length > 50, `${srcFiles.length}個を確認`);
+
+  ms.print();
+  finish([s, d, a, x, e, k, sec, hs, ms]);
 }
 
 main().catch((e) => {

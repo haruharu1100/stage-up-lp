@@ -16,7 +16,11 @@ function unauthorized(message: string): NextResponse {
   return new NextResponse(message, {
     status: 401,
     headers: {
-      'WWW-Authenticate': 'Basic realm="AI営業・案件受注OS", charset="UTF-8"',
+      // ★realm（鍵の名前）は英数字だけにする。
+      //   HTTPのヘッダーには日本語を入れられない決まりで、入れるとヘッダーを作る時点で例外が出る。
+      //   例外が出ると401ではなく500になり、ブラウザがIDとパスワードの入力欄を出さない。
+      //   つまり「鍵が固い」のではなく「鍵穴ごと壊れて誰も入れない」状態になる。ここは必ず英数字。
+      'WWW-Authenticate': 'Basic realm="ai-sales-os", charset="UTF-8"',
       'Content-Type': 'text/plain; charset=utf-8',
       'X-Robots-Tag': 'noindex, nofollow, noarchive, nosnippet, noimageindex',
       'Cache-Control': 'no-store, max-age=0',
