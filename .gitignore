@@ -28,3 +28,6 @@ influencer/*.jpg
 
 # あおいLPの比較データ：登録ツールが作る直前バックアップ
 affiliate/data/*.json.bak
+
+# 投稿用の比較画像と投稿文：いつでも作り直せる生成物なので入れない
+influencer/post_images/
