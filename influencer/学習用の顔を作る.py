@@ -13,7 +13,8 @@
   LoRAができれば、以後の生成に insightface は要らなくなる。
 
 ■ ここで作るもの
-  LoRA を学習させるための「同じ顔の画像 25〜30枚」。
+  LoRA を学習させるための「同じ顔の画像 20枚前後」。
+  （枚数は多ければ良いものではない。20枚前後で質を揃えるのが定石）
   ★この画像を作る工程にも insightface を混ぜてはいけない。
     混ぜると「非商用モデルで作った素材で学習したLoRA」になってしまい、
     せっかく差し替えた意味が無くなる。
@@ -23,13 +24,14 @@
          ここは KSampler だけなので insightface は関与しない。
          ★あおいの顔は seed 778899123 に保存されているので、
            何度でもまったく同じ顔を作り直せる。
-  2段目: その1枚を img2img で少しだけ描き直して、角度・表情・光を変える。
-         denoise を低く（既定 0.42）すると、顔は保ったまま
-         向きや表情だけが変わる。ここも insightface は関与しない。
+  2段目: その1枚を img2img で描き直して、角度・表情・光・服・背景を変える。
+         変化の強さ（denoise）は 0.35/0.45/0.55 の3段階を混ぜる。
+         弱いと顔は保てるが服や背景も変わらず、強いとその逆になるため。
+         ここも insightface は関与しない。
 
 使い方:
     python3 学習用の顔を作る.py --下見     # 何を作るか見るだけ（生成しない）
-    python3 学習用の顔を作る.py            # 基準顔＋30枚を作る
+    python3 学習用の顔を作る.py            # 基準顔＋21枚を作る
     python3 学習用の顔を作る.py --枚数 20
     python3 学習用の顔を作る.py --基準顔だけ
 """
@@ -53,13 +55,27 @@ COMFY_IN = os.path.join(ここ, "ComfyUI", "input")
 
 # 学習用は正方形のほうが扱いやすい（SDXLの標準は1024）
 辺 = 1024
-変化の強さ = 0.42      # img2img の denoise。低いほど顔が変わらない
+
+# ★img2img の「変化の強さ」（denoise）。ここに悩ましい板挟みがある。
+#   低くする → 顔は変わらない。でも服・背景も元のまま変わらない。
+#   高くする → 服・背景は変わる。でも顔まで変わって別人になりうる。
+#   どちらか一方に決め打ちできないので、3段階を混ぜて作る。
+#   出来上がりのファイル名に強さを入れておくので、
+#   「どれが顔を保てたか」を目で見て選べる。
+変化の強さ一覧 = [0.35, 0.45, 0.55]
 
 # ══════════════════════════════════════════ 学習用の「変化」
 #
 # LoRA は「同じ人が、いろんな角度・表情・光で写っている」ほど
 # よく覚える。逆に全部同じ構図だと、その構図ごと覚えてしまう。
-# ★服装や場面の指定はしない（顔を覚えさせたいので）。
+#
+# ★服と背景は「わざとバラす」。ここが分かりにくいので理由を書く。
+#   LoRAは「毎回おなじもの」を人物の特徴だと思って一緒に覚えてしまう。
+#   30枚すべて白いセーター・同じ部屋だと、あおいの顔だけでなく
+#   「白いセーターと同じ部屋」まで焼き付き、あとから服や場所を
+#   変えられないLoRAになる。だから服・背景は毎回変える。
+#   （逆に、変えてはいけないのは顔だけ）
+#
 # ★露出・下着・水着などの語は1つも入れない（健全側の事業のため）。
 
 変化の型 = [
@@ -90,6 +106,31 @@ COMFY_IN = os.path.join(ここ, "ComfyUI", "input")
     ("顔のアップ",   "close-up portrait of her face, head and shoulders"),
     ("胸から上",     "portrait, head and upper chest visible"),
     ("上半身",       "upper body portrait, waist-up"),
+]
+
+# ★服。毎回変える（変えないと服まで顔の一部として覚えてしまう）。
+#   ふだん着だけ。肌の露出を示す語は入れない。
+服 = [
+    "wearing a white knit sweater",
+    "wearing a light blue denim shirt",
+    "wearing a beige cardigan over a white tee",
+    "wearing a grey hoodie",
+    "wearing a navy blouse",
+    "wearing a black turtleneck",
+    "wearing a checked flannel shirt",
+    "wearing a simple olive jacket",
+]
+
+# ★背景。これも毎回変える。
+背景 = [
+    "plain light grey studio background",
+    "in a bright cafe, blurred background",
+    "in a room by a window, soft blurred interior",
+    "outdoors on a quiet street, blurred background",
+    "in a park with green trees blurred behind",
+    "plain white wall background",
+    "in a bookshop, blurred shelves behind",
+    "outdoors at dusk, blurred city lights behind",
 ]
 
 
@@ -143,7 +184,7 @@ def 基準顔の手順(顔):
     return insightfaceが混ざっていないか確かめる(wf)
 
 
-def 変化の手順(顔, 説明, seed):
+def 変化の手順(顔, 説明, seed, 強さ):
     """2段目。基準顔を少しだけ描き直す。insightface は関与しない。"""
     positive = "%s, %s, %s" % (顔["base_face"], 説明, 顔["quality"])
     wf = {
@@ -161,7 +202,7 @@ def 変化の手順(顔, 説明, seed):
               "inputs": {"seed": seed, "steps": 元.STEPS, "cfg": 元.CFG,
                          "sampler_name": 元.SAMPLER,
                          "scheduler": 元.SCHEDULER,
-                         "denoise": 変化の強さ,
+                         "denoise": 強さ,
                          "model": ["4", 0], "positive": ["6", 0],
                          "negative": ["7", 0], "latent_image": ["11", 0]}},
         "8": {"class_type": "VAEDecode",
@@ -173,12 +214,19 @@ def 変化の手順(顔, 説明, seed):
 
 
 def 組み合わせを作る(枚数):
-    """変化の型 × 寄り方 を混ぜて、指定枚数ぶんの指示を作る。"""
+    """変化の型 × 寄り方 × 服 × 背景 を混ぜて、指定枚数ぶんの指示を作る。
+
+    ★服と背景は、わざと毎回ちがう組み合わせにする。
+      同じものが続くと、それを人物の特徴として覚えてしまうため。
+      ずらす数（7と5）は、枚数と割り切れないように選んでいる。"""
     組 = []
     for i in range(枚数):
         名, 説明 = 変化の型[i % len(変化の型)]
         寄り名, 寄り = 寄り方[(i // len(変化の型)) % len(寄り方)]
-        組.append(("%s／%s" % (名, 寄り名), "%s, %s" % (説明, 寄り)))
+        着 = 服[(i * 7) % len(服)]
+        景 = 背景[(i * 5) % len(背景)]
+        組.append(("%s／%s" % (名, 寄り名),
+                  "%s, %s, %s, %s" % (説明, 寄り, 着, 景)))
     return 組
 
 
@@ -197,7 +245,7 @@ def 一枚作る(wf, 保存先, client_id):
 
 def main():
     p = argparse.ArgumentParser()
-    p.add_argument("--枚数", type=int, default=30)
+    p.add_argument("--枚数", type=int, default=21)
     p.add_argument("--下見", action="store_true")
     p.add_argument("--基準顔だけ", action="store_true")
     args = p.parse_args()
@@ -208,7 +256,8 @@ def main():
     print("■ あおいLoRA の学習用画像を作ります")
     print("  顔の種（seed）: %s ← ここが同じなので毎回おなじ顔になります"
           % 顔["seed"])
-    print("  大きさ: %d×%d ／ 変化の強さ: %.2f" % (辺, 辺, 変化の強さ))
+    print("  大きさ: %d×%d ／ 変化の強さ: %s（3段階を混ぜます）"
+          % (辺, 辺, "・".join(str(x) for x in 変化の強さ一覧)))
     print("  ★insightface（非商用）は1か所も通しません")
     print()
     print("  作る内訳（%d枚）:" % len(組))
@@ -245,10 +294,13 @@ def main():
     print("\n[2/2] そこから %d枚 作ります…" % len(組))
     できた = 0
     for i, (名, 説明) in enumerate(組, 1):
-        先 = os.path.join(学習用, "aoi_lora_%02d.png" % i)
-        if 一枚作る(変化の手順(顔, 説明, int(顔["seed"]) + i * 17), 先, client_id):
+        強さ = 変化の強さ一覧[i % len(変化の強さ一覧)]
+        先 = os.path.join(学習用, "aoi_lora_%02d_d%02d.png"
+                        % (i, int(強さ * 100)))
+        if 一枚作る(変化の手順(顔, 説明, int(顔["seed"]) + i * 17, 強さ),
+                 先, client_id):
             できた += 1
-            print("  %2d/%d %s" % (i, len(組), 名))
+            print("  %2d/%d %s（強さ %.2f）" % (i, len(組), 名, 強さ))
         else:
             print("  %2d/%d %s ← 作れませんでした" % (i, len(組), 名))
 
@@ -261,8 +313,9 @@ def main():
     print("\n次にやること:")
     print("  1. %s を開いて、全部おなじ顔に見えるか確かめる" % os.path.basename(学習用))
     print("     ★別人が混ざっていたらその1枚を消す（LoRAが顔を覚えられなくなるため）")
-    print("  2. 顔がバラけていたら『変化の強さ』を下げて作り直す")
-    print("     （いまは %.2f。0.35 くらいまで下げると変わりにくくなります）" % 変化の強さ)
+    print("  2. ファイル名の末尾が『変化の強さ』です。")
+    print("     顔が保てている強さが分かったら、その強さだけで作り直せます。")
+    print("     （強いほど服や背景は変わりますが、顔が別人になりやすい）")
     print("  3. 揃っていたら、この30枚で LoRA を学習させる")
 
 
