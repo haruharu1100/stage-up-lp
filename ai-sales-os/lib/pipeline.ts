@@ -2,7 +2,7 @@ import { all, insert, nowIso, one, run, type Row } from './db/client';
 import { loadOffers } from './catalog/sync';
 import { analyzeCompany, saveAnalysis } from './sales/analyze';
 import { matchOffers, primarySellable, saveOfferMatches } from './sales/offer';
-import { decideChannel, isPhoneFriendly, saveChannelDecision, type Channel } from './sales/channel';
+import { decideChannel, draftChannels, isPhoneFriendly, saveChannelDecision, type Channel } from './sales/channel';
 import { computeCompanyScore, saveCompanyScore } from './sales/score';
 import { buildDraft, saveDraft, saveCallScript, buildCallScript } from './sales/draft';
 import { canOutreach, logOutreachPlan } from './sales/guards';
@@ -111,6 +111,8 @@ export type SalesPipelineReport = {
   analyzed: number;
   channels: Record<Channel, number>;
   draftsReady: number;
+  /** 人が読んで、人が自分の手で送るための文面。★機械が送ってよい文面ではない。 */
+  draftsHandSend: number;
   draftsBlocked: number;
   blockedReasons: Record<string, number>;
   plannedOutreach: number;
@@ -130,6 +132,7 @@ export async function runSalesPipeline(limit = 1000): Promise<SalesPipelineRepor
   const blockedReasons: Record<string, number> = {};
   let analyzed = 0;
   let draftsReady = 0;
+  let draftsHandSend = 0;
   let draftsBlocked = 0;
   let planned = 0;
   let queued = 0;
@@ -187,10 +190,27 @@ export async function runSalesPipeline(limit = 1000): Promise<SalesPipelineRepor
     const draft = await buildDraft(draftInput);
     await saveDraft(draft);
     if (draft.status === 'READY') draftsReady++;
+    else if (draft.status === 'NEEDS_APPROVAL') draftsHandSend++;
     else {
       draftsBlocked++;
       const key = reasonKey(draft.blockedReason ?? '理由不明');
       blockedReasons[key] = (blockedReasons[key] ?? 0) + 1;
+    }
+
+    // ★一番に当たる手段のほかに、用意しておける手段があれば、その文面も作っておく。
+    //   典型例：電話に決まった会社が問い合わせフォームも持っている場合。
+    //   ここで作った分は承認待ちにも並べない。人が画面で見て、自分の手で送るためだけのもの。
+    for (const extra of draftChannels(c, decision.channel)) {
+      if (extra === decision.channel) continue;
+      const extraDraft = await buildDraft({ ...draftInput, channel: extra });
+      await saveDraft(extraDraft);
+      if (extraDraft.status === 'READY') draftsReady++;
+      else if (extraDraft.status === 'NEEDS_APPROVAL') draftsHandSend++;
+      else {
+        draftsBlocked++;
+        const key = reasonKey(extraDraft.blockedReason ?? '理由不明');
+        blockedReasons[key] = (blockedReasons[key] ?? 0) + 1;
+      }
     }
 
     if (decision.channel === 'PHONE') {
@@ -265,6 +285,7 @@ export async function runSalesPipeline(limit = 1000): Promise<SalesPipelineRepor
     analyzed,
     channels,
     draftsReady,
+    draftsHandSend,
     draftsBlocked,
     blockedReasons,
     plannedOutreach: planned,

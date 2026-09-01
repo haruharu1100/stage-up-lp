@@ -83,6 +83,8 @@ export function verdictTag(v: string): { kind: 'ok' | 'warn' | 'stop' | 'mute'; 
       return { kind: 'stop', label: '受けない' };
     case 'READY':
       return { kind: 'ok', label: '使える' };
+    case 'NEEDS_APPROVAL':
+      return { kind: 'warn', label: '手で送る' };
     case 'BLOCKED':
       return { kind: 'stop', label: '止めた' };
     case 'DRAFT':

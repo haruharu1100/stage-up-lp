@@ -1,7 +1,7 @@
 import { nowIso, upsert, type Row } from '../db/client';
 import { isNg } from './ingest';
 import { emailDomain } from '../text';
-import { formAutoAllowed, FORM_POLICY_JA, type FormPolicy } from './form-policy';
+import { formAutoAllowed, formHumanSendAllowed, FORM_POLICY_JA, type FormPolicy } from './form-policy';
 
 export type Channel = 'PHONE' | 'EMAIL' | 'FORM' | 'MANUAL' | 'SKIP';
 
@@ -73,6 +73,32 @@ export async function decideChannel(company: Row, opts: { phoneFriendly: boolean
     return { channel: 'PHONE', reason: '電話番号しか連絡先が無い' };
   }
   return { channel: 'MANUAL', reason: '連絡先が確認できない。人が調べてから決める' };
+}
+
+/**
+ * その会社について、文面を作っておく手段の一覧。
+ *
+ * ★decideChannel が返すのは「一番に当たる手段」1つだけ。
+ *   だがそれを下書きの本数と同じにしていたのが誤りだった。
+ *   電話番号があるという理由だけで電話に決まった会社は、
+ *   問い合わせフォームを持っていても、そのフォームへ送る文面が1本も作られない。
+ *   結果として「フォームから手で送りたい」と思ったとき、送る文面がどこにも無い。
+ *
+ * ★ここで増えるのは下書きだけ。送ってよいかどうかは一切変わらない。
+ *   外へ出す判断は execution.ts の条件（規約の判定・人の承認・全停止スイッチなど）が持っている。
+ *   下書きが増えても、その門は1つも緩まない。
+ *
+ * ★営業お断りの相手・営業お断りのフォームには、下書きも作らない。
+ */
+export function draftChannels(company: Row, decided: Channel): Channel[] {
+  const out: Channel[] = [decided];
+  if (decided === 'SKIP' || decided === 'MANUAL') return out;
+  if (Number(company.no_sales_flag) === 1) return out;
+
+  const policy = (company.form_policy as FormPolicy | null) ?? null;
+  const hasForm = !!company.contact_form_url;
+  if (hasForm && formHumanSendAllowed(policy) && !out.includes('FORM')) out.push('FORM');
+  return out;
 }
 
 /** 電話で話が進みやすい業種か。営業AIコールの実績（受付突破率0%）を踏まえて、今は狭めに取る。 */

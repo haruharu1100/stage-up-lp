@@ -6,6 +6,7 @@ import { num } from '../settings';
 import type { OfferRow } from '../catalog/sync';
 import type { Channel } from './channel';
 import { legalFooter, senderIdentity } from './sender-identity';
+import { formAutoAllowed, FORM_POLICY_JA, type FormPolicy } from './form-policy';
 import { chooseFacts, ownWords, primeFactRarity, rarityReady, type ChosenFacts } from './facts';
 import { qualityBlockReason, scoreDraft, type QualityScores } from './quality';
 
@@ -55,7 +56,13 @@ export type Draft = {
   unfounded: { code: string; why: string; matched: string }[];
   /** 5つの見方での採点。作らなかったときは null。 */
   quality: QualityScores | null;
-  status: 'READY' | 'BLOCKED';
+  /**
+   * READY          … 中身の検査を全部通った文面。
+   * NEEDS_APPROVAL … 中身は同じく全部通っているが、人が読んで手で送るための文面。
+   *                  ★機械が送ってよい文面ではない。READY と混ぜない。
+   * BLOCKED        … 送ってはいけない理由が見つかったので作らなかった／使わない。
+   */
+  status: 'READY' | 'NEEDS_APPROVAL' | 'BLOCKED';
   blockedReason: string | null;
 };
 
@@ -125,7 +132,7 @@ function whyThisOffer(input: DraftInput, facts: ChosenFacts, needs: string[]): s
  * 商品名・料金・あいさつは、どの会社宛てでも同じなので絶対に入れない。
  */
 function personalTextOf(c: Row, f: ChosenFacts): string {
-  const parts = [String(c.name ?? ''), f.fallback ? '' : f.f0, f.f1 ?? '', f.work ?? ''];
+  const parts = [String(c.name ?? ''), f.fallback ? '' : f.f0, f.f1Quoted ? f.f1 ?? '' : '', f.work ?? ''];
   const seen = new Set<string>();
   const uniq: string[] = [];
   for (const p of parts) {
@@ -139,7 +146,56 @@ function personalTextOf(c: Row, f: ChosenFacts): string {
 
 /** 文面に実際に書き込んだ「会社の事実」。採点の裏取りに使う。 */
 function usedFactsOf(f: ChosenFacts): string[] {
-  return [f.fallback ? null : f.f0, f.f1, f.work].filter((x): x is string => x !== null && x !== undefined && x.length > 0).filter((x, i, a) => a.indexOf(x) === i);
+  // ★引用でない補足（f1Quoted=false）は文面に書いていない。書いていないものを「使った事実」に数えない。
+  return [f.fallback ? null : f.f0, f.f1Quoted ? f.f1 : null, f.work]
+    .filter((x): x is string => x !== null && x !== undefined && x.length > 0)
+    .filter((x, i, a) => a.indexOf(x) === i);
+}
+
+/**
+ * 引用ではない事実（所在地・設立年・人数からこちらが組み立てた言い方）で始める書き出し。
+ *
+ * ★鉤括弧を使わない。ここが今回の要点。
+ *   「大阪府で事業をされている」は相手のサイトに書かれていない、こちらが作った文なので、
+ *   「『大阪府で事業をされている』という記載を読み」と書くと、書いていないことを
+ *   書いたことにして送る文面になる。出どころを「公開されている会社情報」と正しく言う。
+ *
+ * ★事実が1つも無いとき（fallback）は、何も知らないふりをせず、ただ名乗るだけにする。
+ *   知らないのに「拝見しました」と書かない。
+ */
+function notQuotedOpenings(name: string, f0: string, fallback: boolean): string[] {
+  if (fallback) {
+    return [
+      `突然のご連絡失礼いたします。${name}様にはじめてご連絡しております。`,
+      `はじめてご連絡いたします。突然の連絡となり恐縮です。`,
+      `突然のご連絡失礼いたします。面識がないまま書いており、恐れ入ります。`,
+      `お忙しいところ恐れ入ります。はじめてお便りしております。`,
+    ];
+  }
+  return [
+    `突然のご連絡失礼いたします。${name}様が${f0}ことを公開されている会社情報で知り、ご連絡しました。`,
+    `はじめてご連絡いたします。公開されている会社情報で、${name}様が${f0}ことを知りました。`,
+    `お忙しいところ恐れ入ります。${name}様が${f0}ことを知り、お手紙のつもりで書いています。`,
+    `突然の連絡で恐縮です。${name}様のことを公開されている会社情報で知りました。${f0}とのことですね。`,
+  ];
+}
+
+/** 電話用。理由は notQuotedOpenings と同じ。 */
+function notQuotedCallOpenings(name: string, f0: string, fallback: boolean): string[] {
+  if (fallback) {
+    return [
+      `お忙しいところ失礼いたします。${name}様でいらっしゃいますか。突然のお電話で恐れ入ります。ご担当の方はいらっしゃいますでしょうか。`,
+      `突然のお電話失礼いたします。${name}様のお電話でよろしいでしょうか。ご担当の方をお願いできますでしょうか。`,
+      `恐れ入ります。${name}様へはじめてお電話しております。少しだけお時間よろしいでしょうか。`,
+      `お世話になります。突然のお電話で恐縮です。ご担当の方はご在席でしょうか。`,
+    ];
+  }
+  return [
+    `お忙しいところ失礼いたします。${name}様でいらっしゃいますか。${f0}とうかがい、お電話しました。ご担当の方はいらっしゃいますでしょうか。`,
+    `突然のお電話失礼いたします。公開されている会社情報で${name}様が${f0}ことを知り、ご連絡しました。ご担当の方をお願いできますでしょうか。`,
+    `恐れ入ります。${name}様が${f0}ことを知り、ご連絡しました。少しだけお時間よろしいでしょうか。`,
+    `突然のお電話恐れ入ります。${name}様のお電話でよろしいでしょうか。${f0}とうかがい、ご連絡しました。ご担当の方はおられますか。`,
+  ];
 }
 
 type Built = { subject: string | null; body: string; personal: string; facts: ChosenFacts; usedFacts: string[]; needs: string[]; whyOffer: string | null };
@@ -163,7 +219,9 @@ function buildEmailBody(input: DraftInput, footer: string): Built {
   //   知らない相手からの営業でこの入り方をすると、読んだ側は不快になる。
   //   引き出しを増やすのは同じ文面を配らないためであって、
   //   礼儀のある版と無い版を混ぜるためではない。
-  const opening = variant(
+  const opening = !facts.f0Quoted
+    ? variant(notQuotedOpenings(String(c.name ?? ''), f0, facts.fallback), seed, 0)
+    : variant(
     siteVerified(c)
       ? [
           `突然のご連絡失礼いたします。${c.name}様の公式サイトを拝見し、「${f0}」というところに目が留まりご連絡しました。`,
@@ -185,7 +243,9 @@ function buildEmailBody(input: DraftInput, footer: string): Built {
     0,
   );
 
-  const second = f1
+  const second = !facts.f1Quoted
+    ? null
+    : f1
     ? variant(
         [
           `「${f1}」も併せて拝見しています。`,
@@ -284,7 +344,9 @@ function buildFormBody(input: DraftInput): Built {
   const whyOffer = whyThisOffer(input, facts, needs);
 
   // ★フォームも同じ。どの言い回しでも必ず突然の連絡であることを断る。
-  const opening = variant(
+  const opening = !facts.f0Quoted
+    ? variant(notQuotedOpenings(String(c.name ?? ''), f0, facts.fallback), seed, 0)
+    : variant(
     siteVerified(c)
       ? [
           `突然のご連絡失礼いたします。サイトを拝見し、「${f0}」というところを知ってご連絡しました。`,
@@ -301,7 +363,9 @@ function buildFormBody(input: DraftInput): Built {
     seed,
     0,
   );
-  const context = f1
+  const context = !facts.f1Quoted
+    ? null
+    : f1
     ? variant(
         [`「${f1}」という点も拝見しました。`, `あわせて「${f1}」とも書かれていましたね。`, `「${f1}」という記載も読んでいます。`, `「${f1}」ということも踏まえてお送りしています。`],
         seed,
@@ -397,7 +461,9 @@ export function buildCallScript(input: DraftInput): {
     5,
   );
   const hearing1 = work ? `「${work}」とのことですが、今はどんなやり方で回しておられますか。` : '今はどんなやり方で対応されていますか。';
-  const context = f1
+  const context = !facts.f1Quoted
+    ? null
+    : f1
     ? variant(
         [
           siteVerified(c) ? `サイトには「${f1}」とも書かれていましたね。` : `「${f1}」とも書かれていましたね。`,
@@ -410,7 +476,9 @@ export function buildCallScript(input: DraftInput): {
       )
     : null;
 
-  const opening = variant(
+  const opening = !facts.f0Quoted
+    ? variant(notQuotedCallOpenings(String(c.name ?? ''), f0, facts.fallback), seed, 0)
+    : variant(
     siteVerified(c)
       ? [
           `お忙しいところ失礼いたします。${c.name}様でいらっしゃいますか。サイトで「${f0}」と拝見してお電話しました。ご担当の方はいらっしゃいますでしょうか。`,
@@ -493,7 +561,13 @@ export function buildCallScript(input: DraftInput): {
  * 1件似ていただけで後続が芋づる式に止まる。
  */
 async function maxSimilarityAgainstExisting(companyId: number, channel: Channel, personalText: string): Promise<number> {
-  const rows = await all("SELECT personal_text FROM outreach_drafts WHERE channel = ? AND company_id <> ? AND status = 'READY' ORDER BY id DESC LIMIT 200", [channel, companyId]);
+  // ★手で送る文面（NEEDS_APPROVAL）も必ず比較相手に入れる。
+  //   ここを READY だけにしていると、手で送る26通が互いに似ていても誰も気づかない。
+  //   人が自分の手で送っても、同じ文章を配れば使い回しであることは変わらない。
+  const rows = await all(
+    "SELECT personal_text FROM outreach_drafts WHERE channel = ? AND company_id <> ? AND status IN ('READY','NEEDS_APPROVAL') ORDER BY id DESC LIMIT 200",
+    [channel, companyId],
+  );
   let max = 0;
   for (const r of rows) {
     const s = similarity(personalText, String(r.personal_text ?? ''));
@@ -570,7 +644,7 @@ export async function buildDraft(input: DraftInput): Promise<Draft> {
     similarityMax,
   });
 
-  let status: 'READY' | 'BLOCKED' = 'READY';
+  let status: Draft['status'] = 'READY';
   let blockedReason: string | null = null;
   if (expressionNg.length > 0) {
     status = 'BLOCKED';
@@ -578,6 +652,14 @@ export async function buildDraft(input: DraftInput): Promise<Draft> {
   } else if (unfounded.length > 0) {
     status = 'BLOCKED';
     blockedReason = `相手が言っていない困りごとを言い切っている: ${unfounded.map((e) => `「${e.matched}」`).join('、')}`;
+  } else if (!built.facts.f0Quoted) {
+    // ★相手のホームページから引用できる一文が1つも取れなかった場合。
+    //   このとき文面に書けるのは「大阪府で事業をされている」のような、
+    //   こちらが所在地から組み立てた言い方だけになる。
+    //   それは同じ都道府県の会社すべてに当てはまる文であり、一斉送信の文面と変わらない。
+    //   出どころを正直に書けば嘘ではないが、送る価値のある文面にはならないので作らない。
+    status = 'BLOCKED';
+    blockedReason = 'ホームページから引用できる一文が1つも取れなかった。当たり障りのない文面になるので作らない。';
   } else if (base.personalization.length < minPers) {
     status = 'BLOCKED';
     blockedReason = 'その会社を読んで書いた要素が1つも無い。これは一斉送信の文面なので送らない。';
@@ -590,6 +672,18 @@ export async function buildDraft(input: DraftInput): Promise<Draft> {
       status = 'BLOCKED';
       blockedReason = q;
     }
+  }
+
+  // ★ここまでの検査を全部通ったフォームの文面でも、
+  //   そのフォームが営業を受け付けていると明記していない限り READY にはしない。
+  //   READY は「機械が送ってよい」を意味する印なので、そこに混ぜてはいけない。
+  //   代わりに NEEDS_APPROVAL（人が読んで、人が手で送る）にする。
+  if (status === 'READY' && input.channel === 'FORM' && !formAutoAllowed(input.company.form_policy as FormPolicy | null)) {
+    status = 'NEEDS_APPROVAL';
+    blockedReason =
+      input.company.form_policy === 'APPROVAL_REQUIRED' || !input.company.form_policy
+        ? 'フォームに営業を受け付けるとも断るとも書かれていない。あなたが注意書きを読んで判断し、自分の手で送ってください。'
+        : `フォームの判定が「${FORM_POLICY_JA[input.company.form_policy as FormPolicy] ?? String(input.company.form_policy)}」。あなたが読んで判断し、自分の手で送ってください。`;
   }
 
   return { ...base, subject, body, personalText, similarityMax, expressionNg, unfounded, quality, status, blockedReason };

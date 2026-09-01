@@ -39,6 +39,8 @@ import {
   type LiveContext,
 } from '../lib/sales/execution';
 import type { OfferRow } from '../lib/catalog/sync';
+import { draftChannels } from '../lib/sales/channel';
+import { formAutoAllowed, formHumanSendAllowed } from '../lib/sales/form-policy';
 import { Suite, finish } from './_harness';
 
 /**
@@ -514,7 +516,7 @@ async function main() {
     `SELECT d.id, c.name, d.offer_code, o.status FROM outreach_drafts d
        JOIN companies c ON c.id = d.company_id
        JOIN offers o ON o.code = d.offer_code
-      WHERE d.status = 'READY' AND o.status <> 'SELLABLE'`,
+      WHERE d.status IN ('READY','NEEDS_APPROVAL') AND o.status <> 'SELLABLE'`,
   );
   x.eq('まだ売れない商品なのに営業文が用意されている', notSellableDrafts.length, 0, '件');
   if (notSellableDrafts.length > 0) console.log(`         ${notSellableDrafts.slice(0, 5).map((r) => `${r.name}: ${r.offer_code}(${r.status})`).join(' | ')}`);
@@ -985,7 +987,94 @@ async function main() {
   }
 
   sec.print();
-  finish([s, d, a, x, e, k, sec]);
+
+  // ================================================================
+  // 手で送るフォームの文面（NEEDS_APPROVAL）
+  //
+  // ★ここで守っているのは1点だけ。
+  //   「文面を作ること」と「送ってよいこと」を、絶対に同じ意味にしない。
+  //   人が手で送るための文面は増やしてよい。だが機械が送れる文面は1件も増やさない。
+  // ================================================================
+  const hs = new Suite('手で送るフォームの文面');
+
+  hs.check('自動で送ってよいのは、営業の受付が明記されたフォームだけ',
+    formAutoAllowed('ALLOWED') && !formAutoAllowed('APPROVAL_REQUIRED') && !formAutoAllowed('BLOCKED') && !formAutoAllowed(null),
+    'ALLOWED以外は自動送信の対象にしない');
+  hs.check('人が手で送ってよいのは、営業お断りが書かれていないフォーム',
+    formHumanSendAllowed('ALLOWED') && formHumanSendAllowed('APPROVAL_REQUIRED') && formHumanSendAllowed(null) && !formHumanSendAllowed('BLOCKED'),
+    'BLOCKEDだけは下書きも作らない');
+
+  const withForm = { id: 1, contact_form_url: 'https://example.co.jp/contact', form_policy: 'APPROVAL_REQUIRED', no_sales_flag: 0 };
+  hs.check('電話に決まった会社でも、フォームがあれば文面を用意する',
+    draftChannels(withForm as never, 'PHONE').includes('FORM'), draftChannels(withForm as never, 'PHONE').join('+'));
+  hs.check('営業お断りのフォームには下書きも作らない',
+    !draftChannels({ ...withForm, form_policy: 'BLOCKED' } as never, 'PHONE').includes('FORM'), 'BLOCKED');
+  hs.check('営業お断りの会社には下書きも作らない',
+    !draftChannels({ ...withForm, no_sales_flag: 1 } as never, 'PHONE').includes('FORM'), 'no_sales_flag=1');
+  hs.check('人が判断する相手には、下書きを勝手に足さない',
+    draftChannels(withForm as never, 'MANUAL').join('+') === 'MANUAL', draftChannels(withForm as never, 'MANUAL').join('+'));
+  hs.check('フォームが無い会社に、フォームの文面を作らない',
+    !draftChannels({ id: 2, contact_form_url: null, form_policy: null, no_sales_flag: 0 } as never, 'PHONE').includes('FORM'), '連絡先が無いものは増やさない');
+
+  // ---- 実データ：手で送る文面が、送ってよい条件を勝手に満たしていないこと
+  hs.eq(
+    '営業の受付が明記されていないのに「使える（自動で送れる）」になっているフォームの文面',
+    await scalar(
+      `SELECT COUNT(*) FROM outreach_drafts d JOIN companies c ON c.id = d.company_id
+        WHERE d.channel = 'FORM' AND d.status = 'READY' AND IFNULL(c.form_policy, '') <> 'ALLOWED'`,
+    ),
+    0,
+    '件',
+  );
+  hs.eq(
+    '営業お断りのフォームなのに文面が作られている会社',
+    await scalar(
+      `SELECT COUNT(*) FROM outreach_drafts d JOIN companies c ON c.id = d.company_id
+        WHERE d.channel = 'FORM' AND (c.form_policy = 'BLOCKED' OR c.no_sales_flag = 1)`,
+    ),
+    0,
+    '社',
+  );
+  hs.eq(
+    '送り先のフォームが分からないのに文面だけある会社',
+    await scalar(
+      `SELECT COUNT(*) FROM outreach_drafts d JOIN companies c ON c.id = d.company_id
+        WHERE d.channel = 'FORM' AND d.status <> 'BLOCKED' AND IFNULL(c.contact_form_url, '') = ''`,
+    ),
+    0,
+    '社',
+  );
+  hs.eq(
+    '手で送る文面が、実際に送った記録になっている件数',
+    await scalar("SELECT COUNT(*) FROM outreach_executions WHERE executed = 1"),
+    0,
+    '件',
+  );
+
+  // ---- 手で送る文面は、本番実行の門を通らないこと
+  const handCtx: LiveContext = {
+    company: { id: 1, name: 'テスト', data_origin: 'HOUJIN_BANGOU', website_verdict: 'VERIFIED', no_sales_flag: 0, contact_form_url: 'https://example.co.jp/contact', form_policy: 'APPROVAL_REQUIRED' } as never,
+    draft: { id: 1, status: 'NEEDS_APPROVAL', body: '本文' } as never,
+    offer: { code: 'X', name: 'テスト商品', status: 'SELLABLE' } as never as OfferRow,
+    action: 'FORM',
+    destination: 'https://example.co.jp/contact',
+    auditVerdict: 'PASS',
+    approvedBy: '本人',
+    duplicateExists: false,
+    todayCount: 0,
+    dailyLimit: 10,
+    channelTodayCount: 0,
+    channelLimit: 5,
+    killSwitch: 'ON',
+    mode: 'LIVE',
+  };
+  const handVerdict = evaluateLiveReadiness(handCtx);
+  hs.eq('人が承認しても、判定が付かないフォームは本番実行が通らない', handVerdict.verdict, 'BLOCK');
+  hs.check('通らない理由に「規約の判定」が入っている',
+    handVerdict.conditions.some((c) => c.code === 'POLICY_PASS_OR_APPROVED' && !c.ok), handVerdict.missing.join('、'));
+
+  hs.print();
+  finish([s, d, a, x, e, k, sec, hs]);
 }
 
 main().catch((e) => {

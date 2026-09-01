@@ -136,3 +136,24 @@ export function judgeFormPolicy(input: {
 export function formAutoAllowed(policy: FormPolicy | null | undefined): boolean {
   return policy === 'ALLOWED';
 }
+
+/**
+ * 「人が読んで、人が手で送る」ための文面を作ってよいか。
+ *
+ * ★自動送信の可否（formAutoAllowed）とは別の問いなので、関数を分けてある。
+ *   ・自動で送ってよいか      … ALLOWED だけ。ここは絶対に広げない。
+ *   ・人が手で送ってよいか    … 営業お断りが読み取れないなら、人が判断する余地がある。
+ *
+ * ★なぜ文面を先に作るのか。
+ *   案件受注の側では既に同じ考え方で動いている（APPROVAL_REQUIRED のサイトでも
+ *   応募文までは作り、送るかどうかだけ人が1クリックで決める）。
+ *   営業の側だけ「分からないから文面も作らない」にしていたため、
+ *   人が手で送ろうとしても、送る文面がどこにも無い状態になっていた。
+ *   文面を作ることは送ることではない。判断の材料を先に用意しておく。
+ *
+ * ★BLOCKED（営業お断りが書いてある）だけは、下書きすら作らない。
+ *   作ってしまうと、画面に「送れそうな文面」として並んでしまう。
+ */
+export function formHumanSendAllowed(policy: FormPolicy | null | undefined): boolean {
+  return policy !== 'BLOCKED';
+}

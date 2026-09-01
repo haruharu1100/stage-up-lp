@@ -10,7 +10,18 @@ import { guessIndustry } from '../lib/industry';
 import { senderIdentity } from '../lib/sales/sender-identity';
 import { canOutreach } from '../lib/sales/guards';
 import { looksLikeDirectoryPage, trustedByRegistry, verifyWebsiteIdentity } from '../lib/sales/identity';
-import { looksLikeNavigation, ownWords, sentencesOf } from '../lib/sales/facts';
+import {
+  chooseFacts,
+  isBrokenFragment,
+  looksBroken,
+  looksLikeContactInstruction,
+  looksLikeDummyText,
+  looksLikeHeadingFusion,
+  looksLikeNavigation,
+  looksLikePrivacyNotice,
+  ownWords,
+  sentencesOf,
+} from '../lib/sales/facts';
 import { htmlToText, parseRobots, pickSubPagesFromUrls, robotsAllowsPath } from '../lib/sales/website';
 import { sourceStatuses } from '../lib/sales/sources';
 import { Suite, finish } from './_harness';
@@ -102,15 +113,24 @@ async function main() {
 
   // ---------------------------------------------------------------- 文面
   const d = new Suite('文面の品質');
-  const drafts = await all("SELECT d.*, c.name, c.business_detail FROM outreach_drafts d JOIN companies c ON c.id = d.company_id WHERE d.status = 'READY'");
+  // ★手で送る文面（NEEDS_APPROVAL）も同じ検査にかける。
+  //   人が自分の手で送っても、使い回し・不当表示・決めつけが許される道理は無い。
+  const drafts = await all(
+    "SELECT d.*, c.name, c.business_detail FROM outreach_drafts d JOIN companies c ON c.id = d.company_id WHERE d.status IN ('READY','NEEDS_APPROVAL')",
+  );
   d.atLeast('使える文面が作られている', drafts.length, 10, '件');
 
   const maxSim = 0.6;
   let worst = 0;
   let worstPair = '';
-  const personals = drafts.map((r) => ({ name: String(r.name), text: String(r.personal_text ?? '') }));
+  // ★同じ会社どうしは比べない。
+  //   1社に「電話の文面」と「フォームの文面」の2本ができるようになったため、
+  //   同じ会社の2本を比べると、同じ会社の事実を書いているのだから当然そっくりになる。
+  //   ここで見たいのは「別の会社に同じ文面を配っていないか」なので、会社が違う組み合わせだけを見る。
+  const personals = drafts.map((r) => ({ id: Number(r.company_id), name: String(r.name), text: String(r.personal_text ?? '') }));
   for (let a = 0; a < personals.length; a++) {
     for (let b = a + 1; b < personals.length; b++) {
+      if (personals[a].id === personals[b].id) continue;
       const sim = similarity(personals[a].text, personals[b].text);
       if (sim > worst) {
         worst = sim;
@@ -120,7 +140,7 @@ async function main() {
   }
   d.check('使い回しの文面が無い（個別化した部分を全組み合わせで比較）', worst <= maxSim, `一番似ている組み合わせ: ${worstPair} = ${worst.toFixed(3)}（上限${maxSim}）`);
 
-  d.eq('景表法などで問題になる表現が入った文面', await scalar("SELECT COUNT(*) FROM outreach_drafts WHERE status = 'READY' AND expression_ng <> '[]'"), 0, '件');
+  d.eq('景表法などで問題になる表現が入った文面', await scalar("SELECT COUNT(*) FROM outreach_drafts WHERE status IN ('READY','NEEDS_APPROVAL') AND expression_ng <> '[]'"), 0, '件');
 
   const noPersonal = drafts.filter((r) => {
     const detail = String(r.business_detail ?? '').replace(/\s+/g, '');
@@ -131,7 +151,7 @@ async function main() {
   });
   d.eq('その会社のことを1つも書いていない文面', noPersonal.length, 0, '件');
 
-  const emailDrafts = await all("SELECT body FROM outreach_drafts WHERE channel = 'EMAIL' AND status = 'READY'");
+  const emailDrafts = await all("SELECT body FROM outreach_drafts WHERE channel = 'EMAIL' AND status IN ('READY','NEEDS_APPROVAL')");
   const identity = senderIdentity();
   if (identity.ok) {
     d.check('営業メールに法律で必要な項目が全部入っている', emailDrafts.every((r) => /配信.{0,4}停止|受け取りたくない/.test(String(r.body))), `${emailDrafts.length}件を確認`);
@@ -473,10 +493,111 @@ async function main() {
     0,
     '件',
   );
+  // ⑧ 画像の代替文字と見出しを二重に拾い、英語の塊がそのまま引用に入っていた
+  //    実例: 花田工業株式会社
+  //    「CONTACTFORMCONTACTFORMお電話でのお問い合わせは下記電話番号よりご連絡ください」
+  //    以前の判定は「大文字の塊が2つ以上」で見ていたので、塊が1つに繋がった形を素通りさせていた。
+  r.check(
+    '見出しの英語が繋がった塊を、その会社が書いた一文として引用しない',
+    looksLikeNavigation('CONTACTFORMCONTACTFORMお電話でのお問い合わせは下記電話番号よりご連絡ください'),
+    'メニューだと判定できる',
+  );
+  r.check(
+    '英語の見出しラベルが1つでも混ざっていれば引用しない',
+    looksLikeNavigation('CONTACT私たちは大阪府和泉市で精密部品の加工をしています'),
+    'CONTACT',
+  );
+  r.check(
+    'ふつうに使う頭文字語（HTML・ISO）は、見出しと間違えない',
+    !looksLikeNavigation('HTML制作とISO9001に基づく品質管理を自社で行っています'),
+    '本文はそのまま引用してよい',
+  );
+
+  // ⑨ 相手のHPに鉤括弧が入っていたため、閉じ括弧だけが頭に残った断片を引用していた
+  //    実例: 有限会社市川工業
+  //    「」の感謝の気持ちを伝え続け、従業員・お取引先様の…心から願っております」
+  //    括弧を足して整えると相手が書いていない形に作り変えることになるので、その一文は使わない。
+  r.check('閉じ括弧から始まる断片は引用しない', looksBroken('」の感謝の気持ちを伝え続けております'), '文の途中を切り取ったもの');
+  // 実例: 花田工業株式会社「を目指して国内リサイクル法に基づいた」
+  r.check('助詞から始まる断片は引用しない', looksBroken('を目指して国内リサイクル法に基づいた'), '日本語の文はこの形で始まらない');
+  r.check('ふつうの本文は、断片と間違えない', !looksBroken('私たちは国内リサイクル法に基づいた処理を行っています'), '正常');
+  // ⑪ ページの題名（縦棒で区切られた名札）を、その会社が書いた一文として引用していた
+  //    実例: 花田工業「総合建設業の花田工業株式会社｜大阪府｜和泉市」
+  //          市川工業「サービス概要|公共工事の事なら大阪和泉市の市川工業和泉市から…」
+  r.check('ページの題名（全角の縦棒）を引用しない', looksLikeNavigation('総合建設業の花田工業株式会社｜大阪府｜和泉市'), '題名は本文ではない');
+  r.check('ページの題名（半角の縦棒）を引用しない', looksLikeNavigation('サービス概要|公共工事の事なら大阪和泉市の市川工業'), '題名は本文ではない');
+  r.check('括弧が閉じていない断片は引用しない', looksBroken('私たちは「地域とともに、を掲げて事業をしています'), '括弧の数が合わない');
+  r.check('括弧が揃っている本文は、そのまま引用してよい', !looksBroken('私たちは「地域とともに」を掲げて事業をしています'), '正常');
+  r.eq(
+    '壊れた断片が引用の候補に残っている',
+    sentencesOf('」の感謝の気持ちを伝え続け、従業員・お取引先様のそれぞれの調和とご家族の方々の幸せを心から願っております').length,
+    0,
+    '件',
+  );
+
+  // ⑩ 漢字の挨拶（宜しくお願い致します）を、その会社の事実として引用していた
+  //    実例: 有限会社市川工業「これからも市川工業を宜しくお願い致します」
+  r.eq(
+    '漢字で書かれた挨拶を、その会社の事実として引用している',
+    sentencesOf('これからも市川工業を宜しくお願い致します\n何卒ご理解のほどお願い申し上げます').length,
+    0,
+    '件',
+  );
+
+  // ⑫ 見出しと本文がくっついた一文を、その会社が書いた文として引用していた
+  //    実例: ナガセテクノス「製品・サービス紹介射出成形業務金型内部へ圧縮した樹脂を…」
+  //          有限会社はな「会社概要はこちら介護業界を支え、明日を創ります」
+  //          市川工業「道路工事「道路」といっても多種多様で…」
+  //          エムアイ工業「保有技術が豊富誤った加工方法によっては…」
+  //          秀英産業「…企画商品を多数開発常に市場のニーズを調査し…」
+  r.check('見出しの言葉が混ざった一文は引用しない', looksLikeHeadingFusion('会社概要はこちら介護業界を支え、明日を創ります'), '見出しが本文にくっついている');
+  r.check('引用の中に鉤括弧が入る一文は引用しない', looksLikeHeadingFusion('道路工事「道路」といっても多種多様で様々なケースがございます'), '二重の鉤括弧になる');
+  r.check('書き出しにてにをはが無い一文は引用しない', looksLikeHeadingFusion('着色加工業務バージン材・再生材へ着色のほか、配合による強度の調整も行います'), '先頭に見出しがくっついている');
+  r.check('見出しの終わりと本文の書き出しが続く一文は引用しない', looksLikeHeadingFusion('独自性の高い自社オリジナル企画商品を多数開発常に市場のニーズを調査しています'), '見出しが本文にくっついている');
+  r.check('ふつうの本文は、見出しと間違えない', !looksLikeHeadingFusion('当社はいち早く長年の販売実績と施工実績を基に、環境改善に寄与してきました'), '正常');
+  r.check('ふつうの本文は、見出しと間違えない（2）', !looksLikeHeadingFusion('あたたかい会話、細やかな配慮、そして心からの笑顔で利用者様を支えます'), '正常');
+  r.check('ふつうの本文は、見出しと間違えない（3）', !looksLikeHeadingFusion('当社技術は、医薬品をはじめ食品・化粧品等の各種分野に活用されています'), '正常');
+
+  // ⑬ 問い合わせページの使い方の説明を、その会社の事実として引用していた
+  //    実例: イズミセキュリティサービス「メールでのお問合せについては、下のお問合せフォームをご利用ください」
+  //          和泉設備工業「数日経っても折り返しがない場合、システムの不具合により…」
+  //          株式会社Trans Value「お急ぎの方はお電話（大阪本社）ください」
+  r.check('窓口の使い方の説明は引用しない', looksLikeContactInstruction('メールでのお問合せについては、下のお問合せフォームをご利用ください'), '会社の事実ではない');
+  r.check('折り返しの案内は引用しない', looksLikeContactInstruction('数日経っても折り返しがない場合、再度お電話にてご連絡をお願いいたします'), '会社の事実ではない');
+  r.check('ふつうの本文は、窓口の説明と間違えない', !looksLikeContactInstruction('私たちは大阪府で警備の仕事を続けています'), '正常');
+
+  // ⑭ ホームページに残っていた仮の文章（吾輩は猫である）を引用していた
+  //    実例: 株式会社鐵心「何でも薄暗いじめじめした所でニャーニャー泣いていた事だけは記憶している」
+  r.check('作りかけの仮の文章は引用しない', looksLikeDummyText('何でも薄暗いじめじめした所でニャーニャー泣いていた事だけは記憶している'), '仮の文章');
+  r.check('作りかけの仮の文章は引用しない（2）', looksLikeDummyText('名前はまだない'), '仮の文章');
+  r.check('ふつうの本文は、仮の文章と間違えない', !looksLikeDummyText('私たちは金属加工の会社です'), '正常');
+
+  // ⑮ 個人情報の掲示を引用していた（タイショーテクノ）
+  r.check('個人情報の掲示は引用しない', looksLikePrivacyNotice('また、お客様等の同意を事前に得た場合、又は法令に基づく場合を除きます'), '会社の事実ではない');
+
+  // ⑯ 引用でない事実（こちらが組み立てた言い方）を、鉤括弧でくくって送っていた
+  //    実例: 西辻工務店「『大阪府で事業をされている』という記載を読み」
+  //          相手のHPのどこにも書かれていない文を、書いてあることにして送っていた。
+  const derivedOnly = { id: 9001, name: 'テスト会社', prefecture: '大阪府', business_detail: null, description: null } as never;
+  const derivedFacts = chooseFacts(derivedOnly, 1);
+  r.check('所在地から組み立てた言い方は、引用として扱わない', derivedFacts.f0Quoted === false, `f0=${derivedFacts.f0}`);
+
   const navQuoted = await all('SELECT c.name, d.body FROM outreach_drafts d JOIN companies c ON c.id = d.company_id WHERE d.body IS NOT NULL');
   r.eq(
     '営業文にHPのメニュー欄がそのまま引用されている',
     navQuoted.filter((x) => (String(x.body).match(/「[^」]{10,}」/g) ?? []).some((q) => looksLikeNavigation(q))).length,
+    0,
+    '件',
+  );
+  r.eq(
+    '営業文に、壊れた断片がそのまま引用されている',
+    navQuoted.filter((x) => (String(x.body).match(/「[^」]{6,}」/g) ?? []).some((q) => isBrokenFragment(q.replace(/^「|」$/g, '')))).length,
+    0,
+    '件',
+  );
+  r.eq(
+    '営業文の書き出しが「」（中身の無い引用）から始まっている',
+    navQuoted.filter((x) => /「」/.test(String(x.body))).length,
     0,
     '件',
   );
@@ -571,7 +692,7 @@ async function main() {
   a.check('断りの一言が無い文面を見逃す', ngOf(await runAudit(rude), 'POLITENESS') !== undefined, '突然の連絡への断りは必須');
 
   // ⑪ 実データ：保存済みの文面に、断りの一言が無いものが残っていないか
-  const openings = await all("SELECT c.name, d.body FROM outreach_drafts d JOIN companies c ON c.id = d.company_id WHERE d.status = 'READY' AND c.data_origin <> 'TEST'");
+  const openings = await all("SELECT c.name, d.body FROM outreach_drafts d JOIN companies c ON c.id = d.company_id WHERE d.status IN ('READY','NEEDS_APPROVAL') AND c.data_origin <> 'TEST'");
   a.eq(
     '断りの一言が無いまま出来上がっている営業文',
     openings.filter((x) => !/(突然|失礼|恐れ入り|恐縮|お忙し|はじめてご連絡|お世話になり)/.test(String(x.body).slice(0, 200))).length,

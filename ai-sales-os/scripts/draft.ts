@@ -2,7 +2,7 @@ import { all, one, parseJson, run } from '../lib/db/client';
 import { initSettings } from '../lib/settings';
 import { loadOffers } from '../lib/catalog/sync';
 import { buildCallScript, buildDraft, saveCallScript, saveDraft } from '../lib/sales/draft';
-import type { Channel } from '../lib/sales/channel';
+import { draftChannels, type Channel } from '../lib/sales/channel';
 import type { NeedFlags } from '../lib/needs';
 import type { IndustryKey } from '../lib/industry';
 import { SCOPE_JA, scopeFromArgv, scopeSql } from './_scope';
@@ -36,6 +36,7 @@ async function main() {
 
   const reasons: Record<string, number> = {};
   let ready = 0;
+  let handSend = 0;
   let blocked = 0;
   const samples: string[] = [];
   const show = Number(arg('show') ?? 0);
@@ -52,29 +53,38 @@ async function main() {
       continue;
     }
 
-    const input = {
+    const decided = String(ch.channel) as Channel;
+    const base = {
       company: c,
       industry: String(a.industry) as IndustryKey,
       needFlags: parseJson<NeedFlags>(a.need_flags, {}),
       issues: parseJson<string[]>(a.issues, []),
       evidence: parseJson<string[]>(a.evidence, []),
       offer,
-      channel: String(ch.channel) as Channel,
     };
-    const d = await buildDraft(input);
-    await saveDraft(d);
-    if (d.status === 'READY') {
-      ready++;
-      if (samples.length < show) samples.push(`--- ${c.name}（${input.channel}）\n${d.subject ? `件名: ${d.subject}\n` : ''}${d.body}`);
-    } else {
-      blocked++;
-      const key = (d.blockedReason ?? '理由不明').replace(/（類似度[\d.]+／上限[\d.]+）/, '').trim();
-      reasons[key] = (reasons[key] ?? 0) + 1;
+
+    // ★1社1本ではなく、その会社に用意しておける手段ぶんだけ作る。
+    //   電話に決まった会社でも、問い合わせフォームがあればフォームの文面を作っておく。
+    //   作るのは下書きだけで、送信の可否は何も変わらない。
+    for (const channel of draftChannels(c, decided)) {
+      const input = { ...base, channel };
+      const d = await buildDraft(input);
+      await saveDraft(d);
+      if (d.status === 'READY') {
+        ready++;
+        if (samples.length < show) samples.push(`--- ${c.name}（${channel}）\n${d.subject ? `件名: ${d.subject}\n` : ''}${d.body}`);
+      } else if (d.status === 'NEEDS_APPROVAL') {
+        handSend++;
+      } else {
+        blocked++;
+        const key = (d.blockedReason ?? '理由不明').replace(/（類似度[\d.]+／上限[\d.]+）/, '').trim();
+        reasons[key] = (reasons[key] ?? 0) + 1;
+      }
     }
-    if (input.channel === 'PHONE') await saveCallScript(Number(c.id), offer.code, buildCallScript(input));
+    if (decided === 'PHONE') await saveCallScript(Number(c.id), offer.code, buildCallScript({ ...base, channel: 'PHONE' }));
   }
 
-  console.log(`■ 文面づくり: 使える${ready}件 / 止めた${blocked}件`);
+  console.log(`■ 文面づくり: 使える${ready}件 / あなたが手で送る${handSend}件 / 止めた${blocked}件`);
   for (const [r, n] of Object.entries(reasons).sort((a, b) => b[1] - a[1])) console.log(`   ・${n}件 … ${r}`);
   for (const s of samples) console.log(`\n${s}`);
   console.log('\n※ここで作るのは下書きだけです。送る処理はこのシステムにありません。');

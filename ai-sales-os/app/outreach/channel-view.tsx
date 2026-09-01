@@ -28,6 +28,7 @@ export async function ChannelView({
 
   const assigned = await scalar('SELECT COUNT(*) FROM channel_decisions WHERE channel = ?', [channel]);
   const ready = await scalar("SELECT COUNT(*) FROM outreach_drafts WHERE channel = ? AND status = 'READY'", [channel]);
+  const handSend = await scalar("SELECT COUNT(*) FROM outreach_drafts WHERE channel = ? AND status = 'NEEDS_APPROVAL'", [channel]);
   const blocked = await scalar("SELECT COUNT(*) FROM outreach_drafts WHERE channel = ? AND status = 'BLOCKED'", [channel]);
   const executed = await scalar('SELECT COUNT(*) FROM outreach_logs WHERE channel = ? AND executed = 1', [channel]);
 
@@ -37,10 +38,11 @@ export async function ChannelView({
   );
 
   const rows = await all(
-    `SELECT d.id, d.status, d.subject, d.body, d.similarity_max, d.blocked_reason, c.id AS company_id, c.name, c.industry_guess AS industry
+    `SELECT d.id, d.status, d.subject, d.body, d.similarity_max, d.blocked_reason,
+            c.id AS company_id, c.name, c.industry_guess AS industry, c.contact_form_url
        FROM outreach_drafts d JOIN companies c ON c.id = d.company_id
       WHERE d.channel = ?
-      ORDER BY CASE d.status WHEN 'READY' THEN 0 ELSE 1 END, d.id LIMIT 40`,
+      ORDER BY CASE d.status WHEN 'READY' THEN 0 WHEN 'NEEDS_APPROVAL' THEN 1 ELSE 2 END, d.id LIMIT 40`,
     [channel],
   );
 
@@ -51,6 +53,7 @@ export async function ChannelView({
       <Kpis>
         <Kpi label="この手段にした会社" value={assigned} unit="社" />
         <Kpi label="使える文面" value={ready} unit="件" />
+        <Kpi label="あなたが手で送る文面" value={handSend} unit="件" hint="中身の検査は全部通っている。送ってよいかだけ、あなたが読んで決める" />
         <Kpi label="止めた文面" value={blocked} unit="件" hint="使い回し・表現・法律の確認で止めたもの" />
         <Kpi label="実際に送った数" value={executed} unit="件" hint="0のままが正常" />
       </Kpis>
@@ -105,6 +108,14 @@ export async function ChannelView({
                   {d.blocked_reason ? <span className="small"> ／ {String(d.blocked_reason)}</span> : null}
                 </p>
                 {d.subject ? <p className="small">件名：{String(d.subject)}</p> : null}
+                {channel === 'FORM' && d.contact_form_url ? (
+                  <p className="small">
+                    送り先のフォーム：
+                    <a href={String(d.contact_form_url)} target="_blank" rel="noreferrer nofollow">
+                      {String(d.contact_form_url)}
+                    </a>
+                  </p>
+                ) : null}
                 <pre className="body">{String(d.body)}</pre>
               </div>
             );
