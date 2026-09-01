@@ -6,3 +6,25 @@ Thumbs.db
 .claude/
 __pycache__/
 *.pyc
+
+# ───────────────────────────────────────────────
+# ★成人向け（R-18）写真集の工房。絶対にコミットしない。
+#   このリポジトリのルートは Vercel へ公開される営業LPサイトである。
+#   ai-influencer/ には成人向け写真集の画像 約1,200枚と、その生成・
+#   モザイク・FANZA提出用パックが入っている。
+#   一度でも push すれば公開サーバーへ載り、履歴からも消せない。
+#   「気をつける」ではなく、ここで機械的に止める。
+# ───────────────────────────────────────────────
+ai-influencer/
+
+# 健全なAIインフルエンサー（あおい等）。
+# 写真・動画・画像エンジンは巨大なのでリポジトリには入れない。
+influencer/output*/
+influencer/post_packs/
+influencer/reels/
+influencer/ComfyUI
+influencer/*.png
+influencer/*.jpg
+
+# あおいLPの比較データ：登録ツールが作る直前バックアップ
+affiliate/data/*.json.bak
