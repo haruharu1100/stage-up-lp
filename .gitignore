@@ -34,3 +34,6 @@ influencer/post_images/
 
 # UGC動画の台本：作り直せる生成物なので入れない
 influencer/ugc_scripts/
+
+# LoRAの学習用画像：作り直せる生成物なので入れない
+influencer/lora_dataset/
