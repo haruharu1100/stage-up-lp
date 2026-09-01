@@ -6,6 +6,16 @@
 <title>あおいの通信費ノート｜スマホ代を条件から比べる</title>
 <meta name="description" content="格安SIM・キャリア8社を、月額・データ容量・通話料・初期費用で比較。各社公式サイトで確認した数字に出典と確認日を付けています。">
 <meta name="robots" content="index,follow">
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-8XKJ81F390"></script>
+<script>
+window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}
+gtag('js',new Date());gtag('config','G-8XKJ81F390');
+</script>
+<script>
+(function(c,l,a,r,i,t,y){c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);})(window,document,"clarity","script","x283fyep35");
+</script>
 <style>
 :root{--bg:#fdfbf7;--ink:#33302c;--sub:#7d7568;--line:#e7e0d4;--accent:#c98a5e;--soft:#fff}
 *{box-sizing:border-box}
@@ -92,5 +102,35 @@ footer a{color:var(--sub);margin-right:14px}
   ※このサイトにはアフィリエイト広告（プロモーション）が含まれます。</p>
 </footer>
 </div>
+<script>
+(function(){
+  // どの投稿から来たかを、サイト内を移動しても覚えておく
+  var 入口 = '(なし)';
+  try{
+    var q = new URLSearchParams(location.search);
+    var c = q.get('utm_content');
+    if(c){ sessionStorage.setItem('aoi_from', c); }
+    入口 = sessionStorage.getItem('aoi_from') || '(なし)';
+  }catch(e){}
+
+  function 送る(名前, 中身){
+    if(typeof gtag === 'function'){ gtag('event', 名前, 中身); }
+    if(typeof clarity === 'function'){ try{ clarity('set', 名前, 中身.company || '1'); }catch(e){} }
+  }
+
+  送る('aoi_view', { from_post: 入口, page: location.pathname });
+
+  document.addEventListener('click', function(e){
+    var a = e.target.closest ? e.target.closest('a.btn') : null;
+    if(!a){ return; }
+    送る('aoi_click_offer', {
+      from_post: 入口,
+      company:  a.getAttribute('data-company') || '',
+      link_kind: a.getAttribute('data-kind') || '',
+      page: location.pathname
+    });
+  }, true);
+})();
+</script>
 </body>
 </html>

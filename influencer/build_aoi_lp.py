@@ -22,6 +22,7 @@ import datetime
 ここ = os.path.dirname(os.path.abspath(__file__))
 リポジトリ = os.path.dirname(ここ)
 データ = os.path.join(リポジトリ, "affiliate", "data", "aoi_sim_compare.json")
+計測設定 = os.path.join(リポジトリ, "affiliate", "data", "tracking_config.json")
 出力先 = os.path.join(リポジトリ, "affiliate", "aoi")
 
 # ★書いてはいけない表現。景表法（優良誤認・有利誤認）と、
@@ -62,6 +63,7 @@ def 表現を検査する(ページ名, 中身):
 <title>{title}</title>
 <meta name="description" content="{desc}">
 <meta name="robots" content="index,follow">
+{measure_head}
 <style>
 :root{{--bg:#fdfbf7;--ink:#33302c;--sub:#7d7568;--line:#e7e0d4;--accent:#c98a5e;--soft:#fff}}
 *{{box-sizing:border-box}}
@@ -119,9 +121,87 @@ footer a{{color:var(--sub);margin-right:14px}}
   ※このサイトにはアフィリエイト広告（プロモーション）が含まれます。</p>
 </footer>
 </div>
+{measure_body}
 </body>
 </html>
 """
+
+# ── 計測 ────────────────────────────────────────────────
+# なぜ入れるか
+#   どの投稿から来た人が、どの会社のボタンを押したかが分からないと、
+#   投稿を増やす／やめるの判断ができない。金額ではなく回数だけを数える。
+#
+# 個人を特定する情報は一切送らない。送るのは
+#   ・どの投稿から来たか（utm_content。例 post_005）
+#   ・どの会社のボタンを押したか
+#   ・そのボタンが広告か公式リンクか
+# の3つだけ。
+
+計測ヘッダ雛形 = """<script async src="https://www.googletagmanager.com/gtag/js?id={ga4}"></script>
+<script>
+window.dataLayer=window.dataLayer||[];function gtag(){{dataLayer.push(arguments);}}
+gtag('js',new Date());gtag('config','{ga4}');
+</script>"""
+
+Clarity雛形 = """<script>
+(function(c,l,a,r,i,t,y){{c[a]=c[a]||function(){{(c[a].q=c[a].q||[]).push(arguments)}};
+t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);}})(window,document,"clarity","script","{clarity}");
+</script>"""
+
+クリック計測 = """<script>
+(function(){
+  // どの投稿から来たかを、サイト内を移動しても覚えておく
+  var 入口 = '(なし)';
+  try{
+    var q = new URLSearchParams(location.search);
+    var c = q.get('utm_content');
+    if(c){ sessionStorage.setItem('aoi_from', c); }
+    入口 = sessionStorage.getItem('aoi_from') || '(なし)';
+  }catch(e){}
+
+  function 送る(名前, 中身){
+    if(typeof gtag === 'function'){ gtag('event', 名前, 中身); }
+    if(typeof clarity === 'function'){ try{ clarity('set', 名前, 中身.company || '1'); }catch(e){} }
+  }
+
+  送る('aoi_view', { from_post: 入口, page: location.pathname });
+
+  document.addEventListener('click', function(e){
+    var a = e.target.closest ? e.target.closest('a.btn') : null;
+    if(!a){ return; }
+    送る('aoi_click_offer', {
+      from_post: 入口,
+      company:  a.getAttribute('data-company') || '',
+      link_kind: a.getAttribute('data-kind') || '',
+      page: location.pathname
+    });
+  }, true);
+})();
+</script>"""
+
+
+def 計測タグを作る():
+    """tracking_config.json にIDが入っていれば埋め込む。空なら何も入れない。
+    ★勝手に仮のIDを作らない（作ると数字が出ていないのに出ている気になる）。"""
+    try:
+        設定 = json.load(open(計測設定, encoding="utf-8"))
+    except Exception:
+        return "", "", []
+
+    ga4 = (設定.get("ga4_measurement_id") or "").strip()
+    clarity = (設定.get("clarity_project_id") or "").strip()
+
+    頭, 入れたもの = [], []
+    if ga4:
+        頭.append(計測ヘッダ雛形.format(ga4=ga4))
+        入れたもの.append("GA4（%s）" % ga4)
+    if clarity:
+        頭.append(Clarity雛形.format(clarity=clarity))
+        入れたもの.append("Clarity（%s）" % clarity)
+
+    体 = クリック計測 if (ga4 or clarity) else ""
+    return "\n".join(頭), 体, 入れたもの
 
 明示ブロック = """<div class="note">
 <strong>はじめにお読みください</strong><br>
@@ -177,12 +257,13 @@ def 比較ページ(データ本体, root):
 
     カード = []
     for o in items:
+        印 = 'data-company="%s" data-kind="%s"' % (逃がす(o["name"]), 逃がす(o["link_type"]))
         if o["link_type"] == "affiliate":
-            ボタン = '<a class="btn" href="%s" target="_blank" rel="nofollow sponsored noopener">%s の公式サイトを見る<span style="font-size:11px;font-weight:400"> （広告）</span></a>' % (逃がす(o["link_url"]), 逃がす(o["name"]))
+            ボタン = '<a class="btn" %s href="%s" target="_blank" rel="nofollow sponsored noopener">%s の公式サイトを見る<span style="font-size:11px;font-weight:400"> （広告）</span></a>' % (印, 逃がす(o["link_url"]), 逃がす(o["name"]))
         elif o["link_type"] == "official":
-            ボタン = '<a class="btn plain" href="%s" target="_blank" rel="noopener">%s の公式サイトを見る</a>' % (逃がす(o["link_url"]), 逃がす(o["name"]))
+            ボタン = '<a class="btn plain" %s href="%s" target="_blank" rel="noopener">%s の公式サイトを見る</a>' % (印, 逃がす(o["link_url"]), 逃がす(o["name"]))
         else:
-            ボタン = '<a class="btn none" href="%s" target="_blank" rel="noopener">%s の公式サイトを見る（当サイトに広告リンクはありません）</a>' % (逃がす(o["link_url"]), 逃がす(o["name"]))
+            ボタン = '<a class="btn none" %s href="%s" target="_blank" rel="noopener">%s の公式サイトを見る（当サイトに広告リンクはありません）</a>' % (印, 逃がす(o["link_url"]), 逃がす(o["name"]))
 
         キャンペーン = ""
         if o.get("campaign"):
@@ -311,8 +392,9 @@ def 広告表示ページ(root):
 """
 
 
-def 書き出す(パス, title, desc, body, root, checked):
-    中身 = 雛形.format(title=逃がす(title), desc=逃がす(desc), body=body, root=root, checked=checked)
+def 書き出す(パス, title, desc, body, root, checked, 計測頭="", 計測体=""):
+    中身 = 雛形.format(title=逃がす(title), desc=逃がす(desc), body=body, root=root,
+                    checked=checked, measure_head=計測頭, measure_body=計測体)
     表現を検査する(パス, 中身)
     os.makedirs(os.path.dirname(パス), exist_ok=True)
     with open(パス, "w", encoding="utf-8") as f:
@@ -328,6 +410,7 @@ def main():
     本体 = json.load(open(データ, encoding="utf-8"))
     checked = 本体["checked_at"]
     root = "/aoi"
+    計測頭, 計測体, 入れた計測 = 計測タグを作る()
 
     ページ群 = [
         (os.path.join(出力先, "index.html"),
@@ -351,13 +434,14 @@ def main():
     if args.検査だけ:
         for パス, t, d, b in ページ群:
             表現を検査する(os.path.basename(os.path.dirname(パス)) or "index",
-                      雛形.format(title=t, desc=d, body=b, root=root, checked=checked))
+                      雛形.format(title=t, desc=d, body=b, root=root, checked=checked,
+                                measure_head=計測頭, measure_body=計測体))
         print("表現の検査: 問題なし（%d ページ）" % len(ページ群))
         return
 
     合計 = 0
     for パス, t, d, b in ページ群:
-        大きさ = 書き出す(パス, t, d, b, root, checked)
+        大きさ = 書き出す(パス, t, d, b, root, checked, 計測頭, 計測体)
         合計 += 大きさ
         print("  %s  (%.1f KB)" % (パス.replace(リポジトリ + "/", ""), 大きさ / 1024))
     print("\nLPを %d ページ作りました（合計 %.1f KB）。" % (len(ページ群), 合計 / 1024))
@@ -366,6 +450,10 @@ def main():
         sum(1 for o in 本体["items"] if o["link_type"] == "official"),
         sum(1 for o in 本体["items"] if o["link_type"] == "none"),
     ))
+    if 入れた計測:
+        print("計測: %s ／ ボタンのクリックを投稿ごとに数えます" % "・".join(入れた計測))
+    else:
+        print("計測: 未設定（affiliate/data/tracking_config.json にIDが無いため入れていません）")
 
 
 if __name__ == "__main__":
