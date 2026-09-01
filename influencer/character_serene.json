@@ -1,0 +1,12 @@
+{
+  "name": "SereneReal",
+  "name_ja": "セレネ実写",
+  "seed": 271828182,
+  "ref_image": "serene_ref.png",
+  "out_prefix": "serene",
+  "out_dir": "output_serene",
+  "base_face": "beautiful 22 year old woman, named Selene, cool elegant beauty, soft oval face, large striking violet purple eyes, long flowing silver platinum hair, fair porcelain skin, delicate refined features, gentle confident expression, light natural makeup, slim figure",
+  "quality": "RAW photo, photorealistic, ultra detailed skin texture, natural skin pores, 85mm portrait lens, soft natural lighting, sharp focus, high resolution, professional photography, depth of field",
+  "negative": "cartoon, anime, illustration, 3d render, cgi, doll, plastic skin, deformed, bad anatomy, extra fingers, mutated hands, blurry, low quality, watermark, text, logo, multiple people, child, oversaturated, revealing clothes, lingerie, cleavage, nudity",
+  "scenes": []
+}

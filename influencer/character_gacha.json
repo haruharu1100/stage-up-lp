@@ -1,0 +1,21 @@
+{
+  "name": "Selene",
+  "name_ja": "セレネ",
+  "seed": 314159265,
+  "out_prefix": "gacha",
+  "out_dir": "output_gacha",
+  "base_tags": "1girl, solo, looking at viewer, long hair, silver hair, grey hair, hair between eyes, purple eyes, fair skin, slender, beautiful detailed eyes, gold jewelry, gold earrings, chain necklace, choker, gold bracelet",
+  "outfit": "black halterneck crop top with gold trim, off-shoulder black and gold jacket, black pants, gold belt, gold chain accessories, midriff",
+  "quality": "masterpiece, best quality, high score, great quality, very aesthetic, absurdres, highres, detailed background, cinematic lighting",
+  "negative": "nsfw, nude, nipples, topless, sex, lowres, bad anatomy, bad hands, missing fingers, extra digits, fewer digits, text, error, watermark, username, signature, jpeg artifacts, worst quality, low quality, low score, bad quality, blurry, deformed, multiple people, child, loli",
+  "cards": [
+    "soft smile, peace sign, golden sparkling background, warm rim light, glamour pose",
+    "confident expression, hand on hip, dark fantasy throne room background, dramatic lighting",
+    "gentle smile, looking back over shoulder, night city neon background, bokeh",
+    "cool serious gaze, arms crossed, glowing magic circle background, blue gold light",
+    "happy smile, waving hand, cherry blossom petals falling, soft pink light",
+    "elegant pose, holding a glowing gem, starry cosmic background, ethereal glow",
+    "playful wink, one eye closed, confetti and gold sparkles, festive background",
+    "calm expression, standing in rain, umbrella, reflective city street at night"
+  ]
+}

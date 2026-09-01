@@ -1,0 +1,22 @@
+{
+  "name": "Mio",
+  "name_ja": "ミオ",
+  "seed": 141421356,
+  "ref_image": "mio_ref.png",
+  "out_prefix": "mio",
+  "out_dir": "output_mio",
+  "base_face": "beautiful 21 year old Japanese woman, native Japanese, East Asian, named Mio, very cute adorable Japanese idol beauty, soft round baby face, natural Japanese facial features, big round sparkling bright eyes, double eyelids, small low nose, small mouth, thin round black-framed glasses, fluffy medium length black hair with soft airy bangs, fair clear glowing skin, sweet gentle charming smile, light cute natural makeup, kawaii idol-like look, looks like a real cute Japanese woman, youthful adult woman, slim",
+  "quality": "RAW photo, photorealistic, ultra detailed skin texture, natural skin pores, 85mm portrait lens, soft natural lighting, sharp focus, high resolution, professional photography, depth of field, photo of a real Japanese woman in Japan",
+  "negative": "caucasian, western face, european, american, latina, indian, foreigner, deep set eyes, high nose bridge, tanned skin, cartoon, anime, illustration, 3d render, cgi, doll, plastic skin, deformed, bad anatomy, extra fingers, mutated hands, blurry, low quality, watermark, text, logo, multiple people, child, kid, teen, schoolgirl, underage, loli, oversaturated, revealing clothes, lingerie, cleavage, nudity",
+  "scenes": [
+    "sweet gentle smile, soft beige knit sweater, cozy cafe interior with warm wooden table, soft afternoon window light",
+    "cheerful happy smile, light blue casual blouse and cardigan, bright park with green trees in background, gentle natural daylight",
+    "calm soft gaze, cream white turtleneck, modern bookstore aisle with tall shelves, warm soft indoor lighting",
+    "soft smile, navy sailor-collar blouse and pleated skirt, clean bright classroom, daylight",
+    "gentle happy smile, pastel pink hoodie, trendy city street with shops, soft daylight",
+    "calm elegant look, white blouse and tailored beige blazer, modern office with large windows, daylight",
+    "warm cheerful smile, light yellow summer one-piece dress, seaside promenade with blue sky, bright sunlight",
+    "relaxed soft smile, light grey oversized cardigan over white tee, cozy living room sofa, warm soft light",
+    "bright happy smile, light denim jacket over white tee, autumn city park with colorful leaves, soft daylight"
+  ]
+}
