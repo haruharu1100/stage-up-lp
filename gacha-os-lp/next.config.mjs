@@ -23,9 +23,21 @@ const csp = [
   // Next.js の起動スクリプト＋GA4／Clarity（未設定なら読み込まれない）
   `script-src 'self' 'unsafe-inline'${dev ? " 'unsafe-eval'" : ""} https://www.googletagmanager.com https://www.google-analytics.com https://www.clarity.ms`,
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob: https://www.google-analytics.com https://www.clarity.ms https://c.bing.com",
+  "img-src 'self' data: blob: https://www.googletagmanager.com https://*.google-analytics.com https://www.clarity.ms https://c.bing.com",
   "font-src 'self' data:",
-  "connect-src 'self' https://www.google-analytics.com https://region1.google-analytics.com https://www.clarity.ms https://c.clarity.ms",
+  /*
+    ★ analytics.google.com を消さないこと（2026-09-01 追加）。
+      GA4 は、計測した内容を www.google-analytics.com だけに送るとは限りません。
+      実測では analytics.google.com へ送っていました。
+      ここに書いていないと、ブラウザが黙って送信を止めます。
+      画面にはエラーが出ず、タグも正しく入っているのに、
+      アナリティクス側だけが「0人」のままになります。実際そうなっていました。
+
+      逆に、広告の追跡先（google.com／google.co.jp／doubleclick）は
+      あえて許可していません。当サイトは Google 広告を使っておらず、
+      止めても人数の計測には影響しないためです。
+  */
+  "connect-src 'self' https://*.google-analytics.com https://analytics.google.com https://*.analytics.google.com https://www.clarity.ms https://c.clarity.ms",
   "media-src 'self'",
   "object-src 'none'",
   "base-uri 'self'",
