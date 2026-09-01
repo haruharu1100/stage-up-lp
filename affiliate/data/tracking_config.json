@@ -7,11 +7,20 @@
   ],
   "ga4_measurement_id": "G-8XKJ81F390",
   "clarity_project_id": "x283fyep35",
+  "_asp_申込先": {
+    "docomo_affiliate": "ahamo を載せるにはここ。https://affiliate.docomo.ne.jp/",
+    "accesstrade": "LINEMO・IIJmio・LIBMO・mineo。https://www.accesstrade.ne.jp/",
+    "valuecommerce": "ワイモバイル・LINEMO・mineo。https://www.valuecommerce.ne.jp/",
+    "rakuten": "楽天モバイル。★提携済み（あおいLPで使用中）",
+    "_povo": "povo 2.0 はアフィリエイト提携先が無いため、報酬なしの公式リンクのままにする"
+  },
   "asp_conversion_tags": {
     "a8net": "",
     "afb": "",
     "felmat": "",
-    "valuecommerce": ""
+    "valuecommerce": "",
+    "accesstrade": "",
+    "docomo_affiliate": ""
   },
   "google_ads_conversion_id": "AW-18213756380",
   "google_ads_conversion_label": "p9RBCNzIt7kcENy7_-xD",

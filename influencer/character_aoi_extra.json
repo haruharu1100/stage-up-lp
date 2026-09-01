@@ -1,0 +1,34 @@
+{
+  "_なぜこのファイルがあるか": [
+    "30日運用には写真が30枚要る。いま15枚しかなく、うち桜・夏の海など",
+    "季節が合わないものを9月〜11月には出せない。そこで秋〜初冬に出せる",
+    "場面だけを18枚ぶん足す。★既存の aoi_01〜15 は上書きしない。",
+    "顔は character.json と同じ seed・同じ base_face を使うので同一人物になる。"
+  ],
+  "_開始番号": 16,
+  "_服装と場面の決まり": [
+    "露出のある服・水着・下着は書かない（健全側のキャラのため）",
+    "ブランド名・実在の店名は書かない",
+    "他人が写り込む場面は書かない"
+  ],
+  "scenes": [
+    "soft smile, oatmeal knit sweater, sitting on the floor by a low table with a mug, autumn afternoon light in a small apartment",
+    "calm expression, dark green corduroy shirt, walking through a quiet residential street with fallen leaves, cloudy soft light",
+    "gentle smile, camel long coat and white scarf, standing at a train station platform, cool autumn morning light",
+    "thoughtful look, charcoal grey turtleneck, sitting at a desk with a notebook and pen, warm desk lamp light at night",
+    "warm smile, mustard cardigan over white blouse, small kitchen preparing tea, steam rising, soft window light",
+    "relaxed expression, cream fleece pullover, sitting on a sofa wrapped in a blanket, evening indoor light",
+    "bright smile, navy trench coat, crossing a pedestrian bridge over a river, clear autumn sky",
+    "quiet smile, beige ribbed knit, browsing shelves in a small secondhand bookshop, warm dim light",
+    "soft gaze, brown wool vest over shirt, sitting at a laundromat waiting, fluorescent light, empty room",
+    "content expression, grey hoodie, carrying a paper grocery bag on a shopping street, late afternoon sun",
+    "gentle laugh, plaid flannel shirt, sitting on a park bench with ginkgo trees turning yellow, golden hour",
+    "focused look, black knit sweater, writing in a household account book at a small dining table, warm ceiling light",
+    "calm smile, ivory turtleneck and long skirt, standing on a balcony at dusk, city lights beginning to glow",
+    "soft expression, olive utility jacket, walking up outdoor apartment stairs, cool overcast light",
+    "warm smile, burgundy knit dress, sitting in a quiet cafe corner with a book, rainy window behind",
+    "peaceful look, light grey pajama set, morning in a bedroom making the bed, pale winter sunlight",
+    "small smile, navy puffer jacket and beanie, waiting at a bus stop, cold early winter morning, breath visible",
+    "gentle expression, white shirt under dark apron, tidying a small desk with a plant, soft indirect light"
+  ]
+}
