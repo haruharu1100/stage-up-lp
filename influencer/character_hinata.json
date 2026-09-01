@@ -1,0 +1,28 @@
+{
+  "name": "Hinata",
+  "name_ja": "ひなた",
+  "seed": 776510342,
+  "ref_image": "hinata_ref.png",
+  "out_prefix": "hinata",
+  "out_dir": "output_hinata",
+  "base_face": "beautiful 21 year old japanese woman, named Hinata, gentle healing beauty, soft rounded face, warm gentle almond eyes, double eyelids, soft eyebrows, small nose, soft full lips, warm calm smile, light natural makeup, medium-length soft wavy dark brown hair, fair warm smooth skin, delicate soft features, slim gentle figure",
+  "quality": "RAW photo, photorealistic, ultra detailed skin texture, natural skin pores, 85mm portrait lens, soft warm natural lighting, sharp focus, high resolution, professional photography, depth of field",
+  "negative": "cartoon, anime, illustration, 3d render, cgi, doll, plastic skin, deformed, bad anatomy, extra fingers, mutated hands, blurry, low quality, watermark, text, logo, multiple people, child, oversaturated, revealing clothes, lingerie, cleavage, nudity, cool sharp face, heavy makeup",
+  "scenes": [
+    "soft gentle smile looking at camera, cream oversized knit sweater, sitting on a cozy sofa at home, warm afternoon light",
+    "warm calm smile, beige cardigan over white tee, holding a mug of tea at a wooden kitchen table, soft morning light",
+    "gentle relaxed expression, soft pastel loungewear, reading a book by a large window, warm diffused daylight",
+    "shy soft smile, light knit sweater, sitting in a quiet cafe by the window, warm bokeh background",
+    "calm warm gaze, oatmeal hoodie, cozy bedroom with fairy lights, soft warm evening light",
+    "gentle smile holding a small plant, white linen shirt, sunlit balcony with greenery, gentle morning sun",
+    "serene soft expression, cream turtleneck, walking slowly on a quiet tree-lined street, soft overcast light",
+    "warm relaxed smile, beige cardigan, wrapped in a blanket on the sofa, cozy warm indoor light",
+    "gentle look at camera, soft pink knit, at a cafe table with a latte, warm afternoon glow",
+    "calm gentle smile, light grey sweater, tidy minimalist desk by a window, soft daylight",
+    "soft warm expression, cream coat and scarf, autumn park with golden leaves, gentle overcast light",
+    "peaceful gentle smile, pastel loungewear, cooking at a bright kitchen counter, warm morning light",
+    "warm cozy smile, oversized beige sweater, sitting on the floor by a low table with tea, soft lamp light",
+    "gentle soft gaze, white knit cardigan, on a balcony at golden hour, warm sunset glow",
+    "relaxed warm smile, soft cream pajamas, cozy morning bed with soft blanket, gentle warm light"
+  ]
+}

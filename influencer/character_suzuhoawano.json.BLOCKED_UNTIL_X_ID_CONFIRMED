@@ -1,0 +1,20 @@
+{
+  "name": "Suzuho Awano",
+  "seed": 20260822,
+  "ref_image": "suzuhoawano_ref.png",
+  "out_prefix": "suzuhoawano",
+  "out_dir": "output_suzuhoawano",
+  "base_face": "beautiful mid-20s (25) japanese woman, named Suzuho Awano, adult woman, long straight black hair, past the shoulder blades, thin see-through fringe, soft dark eyes, dark iris, subtle double eyelid, bright, natural skin texture, visible pores, natural makeup, sheer lip with some color, soft eyeliner, gentle expression, between a small smile and neutral, slim but not skinny",
+  "quality": "RAW photo, photorealistic, DSLR, 85mm, shallow depth of field, natural light, film grain, ultra detailed skin texture, natural skin pores, sharp focus, high resolution",
+  "negative": "cartoon, anime, illustration, 3d render, cgi, doll, plastic skin, deformed, bad anatomy, extra fingers, mutated hands, blurry, low quality, watermark, text, logo, multiple people, oversaturated, heavy makeup, cleavage, revealing clothes, lingerie, nudity, wet clothes, underwear, body emphasis, child, teen, loli",
+  "scenes": [
+    "head and shoulders portrait, looking at camera, front view, neutral background, soft morning light",
+    "bust-up, slight three-quarter angle, wooden corridor of an old house, late afternoon backlight",
+    "bust-up, looking slightly away, quiet shrine approach with trees, soft overcast light",
+    "waist-up, standing on an engawa veranda, japanese garden behind, early morning light",
+    "bust-up, seated at a low table in a tea room, soft raking light from a paper screen",
+    "waist-up, walking in a narrow kyoto alley, gentle evening light",
+    "bust-up, gentle small smile, plain indigo background, natural window light",
+    "waist-up, standing in a japanese garden with moss and stone, soft diffused daylight"
+  ]
+}

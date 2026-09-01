@@ -1,0 +1,25 @@
+{
+  "name": "Luna",
+  "name_ja": "ルナ",
+  "seed": 552204417,
+  "ref_image": "luna_ref.png",
+  "out_prefix": "luna",
+  "out_dir": "output_luna",
+  "base_face": "beautiful 23 year old woman, named Luna, cool elegant beauty, oval face, sharp striking violet eyes, long straight silver platinum hair, fair porcelain skin, refined delicate features, light natural makeup, calm confident expression, slim elegant figure",
+  "quality": "RAW photo, photorealistic, ultra detailed skin texture, natural skin pores, 85mm portrait lens, soft natural lighting, sharp focus, high resolution, professional photography, depth of field",
+  "negative": "cartoon, anime, illustration, 3d render, cgi, doll, plastic skin, deformed, bad anatomy, extra fingers, mutated hands, blurry, low quality, watermark, text, logo, multiple people, child, oversaturated, revealing clothes, lingerie, cleavage, nudity",
+  "scenes": [
+    "calm confident gaze, elegant black dress with subtle gold accents, standing in a luxury hotel lobby, warm ambient light",
+    "soft gentle smile, white silk blouse and tailored black blazer, modern office with large windows, daylight",
+    "serene expression, long black evening gown, grand staircase interior, soft dramatic lighting",
+    "thoughtful look, cream turtleneck and beige coat, autumn city street, overcast soft light",
+    "elegant smile, black turtleneck and gold necklace, rooftop terrace at golden hour, warm sunset glow",
+    "relaxed expression, oversized knit sweater, cozy reading corner by a window, soft afternoon light",
+    "confident gaze, dark navy trench coat, rainy city night with bokeh lights, cinematic mood",
+    "gentle smile, light grey blazer over white tee, minimalist art gallery, bright soft light",
+    "calm look, black satin blouse, elegant cafe interior with marble table, warm light",
+    "soft serene gaze, white wool coat, snowy park background, cool bright daylight",
+    "warm smile, beige cashmere sweater, balcony with city skyline, gentle morning sun",
+    "poised expression, classic black blouse and pearl earrings, library with tall bookshelves, warm indoor light"
+  ]
+}

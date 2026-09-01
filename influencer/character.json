@@ -1,0 +1,25 @@
+{
+  "name": "Aoi",
+  "name_ja": "あおい",
+  "seed": 778899123,
+  "base_face": "beautiful 22 year old japanese woman, named Aoi, oval face, large expressive almond eyes, double eyelids, small straight nose, soft full lips, light natural makeup, long straight dark brown hair with subtle highlights, fair smooth skin, slim figure",
+  "quality": "RAW photo, photorealistic, ultra detailed skin texture, natural skin pores, 85mm portrait lens, soft natural lighting, sharp focus, high resolution, professional photography, depth of field",
+  "negative": "cartoon, anime, illustration, 3d render, cgi, doll, plastic skin, deformed, bad anatomy, extra fingers, mutated hands, blurry, low quality, watermark, text, logo, multiple people, child, oversaturated",
+  "scenes": [
+    "smiling softly, white knit sweater, sitting in a cozy cafe by the window, warm afternoon light",
+    "gentle smile, casual denim jacket over white tee, walking on a city street, soft bokeh background",
+    "calm expression, elegant beige coat, autumn park with golden leaves, overcast soft light",
+    "laughing happily, light blue summer dress, seaside promenade, bright sunny day",
+    "serene look, cream blouse, modern apartment interior, large window natural light",
+    "soft smile, oversized cardigan, holding a coffee cup, minimalist bedroom morning light",
+    "confident gaze, black turtleneck, rooftop at golden hour, warm sunset glow",
+    "cheerful expression, pastel pink hoodie, flower field background, spring daylight",
+    "relaxed smile, white linen shirt, balcony with plants, gentle morning sun",
+    "thoughtful look, grey wool sweater, rainy day by a window, soft diffused light",
+    "bright smile, floral blouse, botanical garden greenhouse, soft natural light",
+    "gentle expression, navy dress, library interior with bookshelves, warm indoor light",
+    "playful smile, yellow raincoat, street after the rain, reflective wet pavement",
+    "soft gaze, beige cardigan, kitchen counter morning, warm cozy light",
+    "warm smile, light grey hoodie, park bench under cherry blossoms, spring afternoon"
+  ]
+}

@@ -6,10 +6,13 @@
     { "source": "/admin", "destination": "/api/auth?slug=admin" },
     { "source": "/:slug(\\d+-[a-z0-9-]+)", "destination": "/api/auth?slug=:slug" },
     { "source": "/:slug(m\\d+-[a-z0-9-]+)", "destination": "/api/auth?slug=:slug" },
-    { "source": "/a/:slug", "destination": "/affiliate/lp/:slug" }
+    { "source": "/a/:slug", "destination": "/affiliate/lp/:slug" },
+    { "source": "/aoi", "destination": "/affiliate/aoi/index.html" },
+    { "source": "/aoi/:path*", "destination": "/affiliate/aoi/:path*" }
   ],
   "redirects": [
-    { "source": "/_proposals/:path*", "destination": "/", "permanent": false }
+    { "source": "/_proposals/:path*", "destination": "/", "permanent": false },
+    { "source": "/influencer/:path*", "destination": "/", "permanent": false }
   ],
   "functions": {
     "api/auth.js": {
