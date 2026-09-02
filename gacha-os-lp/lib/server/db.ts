@@ -1274,6 +1274,33 @@ const M013: string[] = [
   `UPDATE support_tickets SET updated_at = created_at WHERE updated_at IS NULL`,
 ];
 
+/**
+ * 「見るだけ」のセッションを、DBの側で区別できるようにする。
+ *
+ * ═══════════════════════════════════════════════════════
+ * ★なぜ、役職だけで済ませないのか
+ * ═══════════════════════════════════════════════════════
+ *
+ *   見学の方に「閲覧のみ（VIEWER）」を渡せば、
+ *   確かに何も壊せません。ですが、見えるものも減ります。
+ *   不正対策・セキュリティ・監査ログ・設定は開けません。
+ *   つまり「うちの管理画面はここまでできます」を、
+ *   いちばん見せたい相手に見せられなくなります。
+ *
+ *   ★見えることと、動かせることは、別の話です。
+ *     ここを役職1本でやろうとすると、必ずどちらかを諦めます。
+ *
+ *   だから、セッションそのものに印を付けます。
+ *   印の付いたセッションは、役職が何であっても、
+ *   状態が変わる依頼を1つも通しません（lib/server/context.ts）。
+ *
+ * ★既定は 0（ふつうのセッション）にすること。
+ *   既定を1にすると、移行した瞬間に全員が何もできなくなります。
+ */
+const M014: string[] = [
+  `ALTER TABLE sessions ADD COLUMN read_only INTEGER NOT NULL DEFAULT 0`,
+];
+
 const MIGRATIONS: Migration[] = [
   { name: "001_initial", sql: M001 },
   { name: "002_tenant_tables", sql: M002 },
@@ -1288,6 +1315,7 @@ const MIGRATIONS: Migration[] = [
   { name: "011_gacha_publish_backtest", sql: M011 },
   { name: "012_point_adjust_balances", sql: M012 },
   { name: "013_ticket_messages", sql: M013 },
+  { name: "014_read_only_session", sql: M014 },
 ];
 
 /** どの段まで済んだかを覚えておく表 */

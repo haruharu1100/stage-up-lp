@@ -70,6 +70,24 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  /* ── ①' 「見るだけ」のセッションは、ここで断る ──
+       ★この入口だけは、門番（lib/server/context.ts の guard）を
+         通っていません。ポイントが実際に減る唯一の入口なので、
+         見学の方が引けてしまわないよう、ここにも同じ判断を置きます。
+       ★文言と code は門番とそろえてあること。
+         別々の文言にすると、どちらで止まったのかが記録から読めません。 */
+  if (session.readOnly) {
+    return NextResponse.json(
+      {
+        ok: false,
+        code: "READ_ONLY",
+        message: "この画面は見学用です。内容の変更はできません。",
+        requestId,
+      },
+      { status: 403 },
+    );
+  }
+
   /* ── ② 二重実行を防ぐ鍵 ───────────────────── */
   const idempotencyKey = req.headers.get("Idempotency-Key")?.trim();
   if (!idempotencyKey || idempotencyKey.length < 8 || idempotencyKey.length > 200) {

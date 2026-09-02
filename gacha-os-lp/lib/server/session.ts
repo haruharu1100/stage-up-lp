@@ -78,6 +78,15 @@ export type Session = {
   stepUpAt: string | null;
   expiresAt: string;
   absoluteExpiresAt: string;
+  /**
+   * 「見るだけ」のセッションか。
+   *
+   * ★true のときは、役職が何であっても、
+   *   状態が変わる依頼（POST／PUT／PATCH／DELETE）を1つも通しません。
+   *   判断は lib/server/context.ts の門番に1か所だけ置いてあります。
+   *   入口ごとに書き写さないこと。書き写した瞬間、書き忘れが生まれます。
+   */
+  readOnly: boolean;
 };
 
 const hashToken = (token: string) =>
@@ -108,6 +117,8 @@ export async function createSession(input: {
   absoluteHours?: number;
   userAgent?: string;
   replaces?: string;
+  /** 「見るだけ」にするか（見学リンク用）。既定はふつうのセッション */
+  readOnly?: boolean;
 }): Promise<IssuedSession> {
   await migrate();
 
@@ -131,8 +142,8 @@ export async function createSession(input: {
     sql: `INSERT INTO sessions
             (id, tenant_id, subject_kind, subject_id, token_hash, csrf_hash,
              step_up_at, expires_at, absolute_expires_at, rotated_at,
-             last_seen_at, user_agent, created_at)
-          VALUES (?,?,?,?,?,?,NULL,?,?,NULL,?,?,?)`,
+             last_seen_at, user_agent, created_at, read_only)
+          VALUES (?,?,?,?,?,?,NULL,?,?,NULL,?,?,?,?)`,
     args: [
       sessionId,
       input.tenantId,
@@ -145,6 +156,7 @@ export async function createSession(input: {
       new Date(now).toISOString(),
       input.userAgent ?? null,
       new Date(now).toISOString(),
+      input.readOnly ? 1 : 0,
     ],
   });
 
@@ -163,7 +175,7 @@ export async function readSession(token: string | undefined): Promise<Session | 
 
   const res = await db().execute({
     sql: `SELECT id, tenant_id, subject_kind, subject_id, step_up_at,
-                 expires_at, absolute_expires_at
+                 expires_at, absolute_expires_at, read_only
             FROM sessions WHERE token_hash = ?`,
     args: [hashToken(token)],
   });
@@ -187,6 +199,10 @@ export async function readSession(token: string | undefined): Promise<Session | 
     stepUpAt: row.step_up_at == null ? null : String(row.step_up_at),
     expiresAt,
     absoluteExpiresAt: absolute,
+    /* ★列が無い古いDBでも、必ず「ふつうのセッション」に倒すこと。
+         ここを「分からなければ見るだけ」にすると、
+         移行前のDBにつないだ瞬間、全員が何もできなくなります。 */
+    readOnly: Number(row.read_only ?? 0) === 1,
   };
 }
 
@@ -259,6 +275,11 @@ export async function rotateSession(
     subjectKind: s.subjectKind,
     subjectId: s.subjectId,
     replaces: token,
+    /* ★「見るだけ」の印を、必ず引き継ぐこと。
+         ここを落とすと、合言葉を作り直しただけで
+         見学の方が触れるようになります。
+         しかも、その瞬間には何も起きないので、誰も気づきません。 */
+    readOnly: s.readOnly,
   });
 
   /* 追加の本人確認が済んでいたなら、それは引き継ぐ */
