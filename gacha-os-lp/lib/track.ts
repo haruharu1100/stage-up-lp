@@ -10,11 +10,16 @@
  */
 
 import { readLeadSource } from "./lead";
+import { ads, AD_CONVERSION_BY_EVENT, type AdConversion } from "@/config/ads";
 
 declare global {
   interface Window {
     gtag?: (...args: unknown[]) => void;
     clarity?: (...args: unknown[]) => void;
+    /** Meta（Instagram / Facebook）広告 */
+    fbq?: (...args: unknown[]) => void;
+    /** X（旧Twitter）広告 */
+    twq?: (...args: unknown[]) => void;
   }
 }
 
@@ -115,6 +120,67 @@ function commonParams(): Record<string, string> {
 const once = new Set<string>();
 
 /**
+ * 広告側にも「成果が起きた」ことを返す。
+ *
+ * ═══════════════════════════════════════════════════════
+ * ★なぜ、GA4 とは別に送るのか
+ * ═══════════════════════════════════════════════════════
+ *
+ *   GA4 は「あとから人が見る」ための道具です。
+ *   広告の自動調整は、広告側のタグが受け取った成果でしか学習しません。
+ *   GA4 にだけ記録しても、広告は何も学びません。
+ *   同じ出来事を、見る用と、学習用に、2か所へ渡します。
+ *
+ * ★出稿していない媒体には、何も送りません。
+ *   設定が空なら、この関数は静かに終わります。
+ *   「タグが無いのに送ろうとして画面が固まる」を作らないためです。
+ *
+ * ★成果は、必ず1回だけ返すこと。
+ *   フォームの二度押しで2件に数えると、
+ *   広告側の単価がその場で半分に見えます。
+ *   安く見えた広告に予算を寄せて、実際には損をします。
+ */
+const conversionSent = new Set<AdConversion>();
+
+function sendAdConversion(kind: AdConversion) {
+  if (conversionSent.has(kind)) return;
+  conversionSent.add(kind);
+
+  /* ── Google 広告 ── */
+  const label = kind === "contact" ? ads.google.labelContact : ads.google.labelDemo;
+  if (ads.google.id && label) {
+    try {
+      window.gtag?.("event", "conversion", {
+        send_to: `${ads.google.id}/${label}`,
+      });
+    } catch {
+      /* 計測の失敗で画面を壊さない */
+    }
+  }
+
+  /* ── Meta（Instagram / Facebook）──
+       ★標準イベント名を使うこと。独自名にすると、
+         Meta 側の最適化の対象から外れます。 */
+  if (ads.meta.id) {
+    try {
+      window.fbq?.("track", kind === "contact" ? "Lead" : "ViewContent");
+    } catch {
+      /* 同上 */
+    }
+  }
+
+  /* ── X（旧Twitter）── */
+  const xEvent = kind === "contact" ? ads.x.eventContact : ads.x.eventDemo;
+  if (ads.x.id && xEvent) {
+    try {
+      window.twq?.("event", xEvent, {});
+    } catch {
+      /* 同上 */
+    }
+  }
+}
+
+/**
  * イベントを送る。
  * params には個人情報を入れないこと。
  */
@@ -135,6 +201,13 @@ export function track(
   } catch {
     /* 同上 */
   }
+
+  /* ★成果にあたる動きなら、広告側にも返す。
+       ここを呼び出し側（画面）に書かせないこと。
+       画面は35箇所あります。1つ書き忘れても誰も気づきません。
+       どのイベントが成果かは config/ads.ts の対応表1枚だけが決めます。 */
+  const conv = AD_CONVERSION_BY_EVENT[name];
+  if (conv) sendAdConversion(conv);
 }
 
 /** 1回だけ送る（スライダー操作など、何度も起きる動きに使う） */

@@ -1,0 +1,114 @@
+/**
+ * ══════════════════════════════════════════════════════════
+ *  広告の設定（ここだけ直せば、広告の計測が全部つながります）
+ * ══════════════════════════════════════════════════════════
+ *
+ * ═══════════════════════════════════════════════════════
+ * ★なぜ、これが要るのか
+ * ═══════════════════════════════════════════════════════
+ *
+ *   広告は「クリック数」では判断できません。
+ *   1クリック200円で100回押されても、相談が0件なら2万円の損です。
+ *   逆に、1クリック800円でも相談が2件入れば、その広告は当たりです。
+ *
+ *   ★だから「広告費を出す前に、相談が入ったことを広告側へ返す線」を
+ *     先に引きます。ここが繋がっていない広告は、
+ *     いくら出しても「何が効いたのか」が最後まで分かりません。
+ *
+ *   いま入っているのは GA4（アクセス解析）だけです。
+ *   GA4 は「何人来たか」を見る道具で、
+ *   広告の自動調整（このクリックは価値がある、という学習）には
+ *   広告側のタグが別に要ります。
+ *
+ * ═══════════════════════════════════════════════════════
+ * ★入れ方（コードは触りません。Vercel の設定画面だけ）
+ * ═══════════════════════════════════════════════════════
+ *
+ *   Google 広告
+ *     NEXT_PUBLIC_GOOGLE_ADS_ID            AW-1234567890
+ *     NEXT_PUBLIC_GOOGLE_ADS_LABEL_CONTACT AbCdEfGhIjK    ← 相談が入った
+ *     NEXT_PUBLIC_GOOGLE_ADS_LABEL_DEMO    LmNoPqRsTuV    ← デモを触った
+ *
+ *   Meta（Instagram / Facebook）
+ *     NEXT_PUBLIC_META_PIXEL_ID            1234567890
+ *
+ *   X（旧Twitter）
+ *     NEXT_PUBLIC_X_PIXEL_ID               abcde
+ *     NEXT_PUBLIC_X_EVENT_CONTACT          tw-abcde-fghij ← 相談が入った
+ *     NEXT_PUBLIC_X_EVENT_DEMO             tw-abcde-klmno ← デモを触った
+ *
+ *   ★入れていない媒体は、タグを1行も出しません。
+ *     空のタグを置くと、読み込みだけ遅くなって、何も測れません。
+ *
+ * ═══════════════════════════════════════════════════════
+ * ★「相談」だけを数えないこと（少額で回すときの急所）
+ * ═══════════════════════════════════════════════════════
+ *
+ *   この商品は、買う人がとても少ない分野です。
+ *   相談は月に数件しか入りません。
+ *   広告の自動調整は、月30件くらい起きないと学習できません。
+ *
+ *   ★だから「デモを触った」も一緒に返します。
+ *     デモを触る人は、相談する人より20倍くらい多く、
+ *     それでいて「ただ通り過ぎた人」とははっきり違います。
+ *     広告側には、この2つを別々の目標として登録します。
+ *
+ *       ・入札の目標にするのは「デモを触った」
+ *       ・成果として見るのは「相談が入った」
+ *
+ *   ★逆にしないこと。
+ *     件数の少ないほうを目標にすると、広告は学習できないまま
+ *     単価だけが上がります。
+ */
+
+/** 値が入っているときだけ返す（空文字は「未設定」として扱う） */
+const val = (v: string | undefined): string => v?.trim() ?? "";
+
+export const ads = {
+  google: {
+    /** AW-XXXXXXXXX。未設定ならGoogle広告のタグを出さない */
+    id: val(process.env.NEXT_PUBLIC_GOOGLE_ADS_ID),
+    /** 相談が入ったときのラベル */
+    labelContact: val(process.env.NEXT_PUBLIC_GOOGLE_ADS_LABEL_CONTACT),
+    /** デモを触ったときのラベル */
+    labelDemo: val(process.env.NEXT_PUBLIC_GOOGLE_ADS_LABEL_DEMO),
+  },
+  meta: {
+    id: val(process.env.NEXT_PUBLIC_META_PIXEL_ID),
+  },
+  x: {
+    id: val(process.env.NEXT_PUBLIC_X_PIXEL_ID),
+    eventContact: val(process.env.NEXT_PUBLIC_X_EVENT_CONTACT),
+    eventDemo: val(process.env.NEXT_PUBLIC_X_EVENT_DEMO),
+  },
+} as const;
+
+/**
+ * 成果として広告側へ返すもの。
+ *
+ * ★ここに増やすときは、必ず「その動きをした人は、
+ *   していない人よりはっきり見込みが高い」と言えるものだけにすること。
+ *   ページを見ただけ・スクロールしただけを成果にすると、
+ *   広告は「よく読む人」を集めてきます。読む人は、買う人ではありません。
+ */
+export type AdConversion = "contact" | "demo";
+
+/**
+ * サイト内のイベント名 → 広告へ返す成果 の対応表。
+ *
+ * ★イベント名は lib/track.ts の EV と必ずそろえること。
+ *   ここに書き写した文字列がずれると、
+ *   画面は正しく動いたまま、広告側にだけ何も届かなくなります。
+ *   ずれていないことは tests/ads.test.ts が毎回確かめます。
+ */
+export const AD_CONVERSION_BY_EVENT: Record<string, AdConversion> = {
+  /** 相談フォームを送れた ＝ いちばん見たい成果 */
+  contact_submit: "contact",
+  /** デモ画面を開いた ＝ 広告の入札を学習させるための成果 */
+  demo_start: "demo",
+};
+
+/** 広告のタグを1つでも入れているか（入れていなければ何も読み込まない） */
+export function adsEnabled(): boolean {
+  return Boolean(ads.google.id || ads.meta.id || ads.x.id);
+}
