@@ -44,7 +44,6 @@
 import type React from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ConsoleGacha } from "@/lib/console/state";
-import type { DrawRecord } from "@/lib/console/draw";
 import {
   CoverArt,
   GradeChip,
@@ -719,6 +718,36 @@ const LITE_KEY = "gachaos.lite";
  * ★「軽い演出」を覚えておくこと。
  *   毎回オフにし直させるのは、設定を用意していないのと同じです。
  */
+/**
+ * 演出に渡す、1回ぶんの結果。
+ *
+ * ═══════════════════════════════════════════════════════
+ * ★ここを DrawRecord（見本用の型）に固定しないこと
+ * ═══════════════════════════════════════════════════════
+ *
+ *   2026-09-05 まで、この演出は見本用の型でしか受け取れませんでした。
+ *   そのため、本物のお客様の売り場を作るときに
+ *   「同じ演出をもう1つ書く」しか道がありませんでした。
+ *
+ *   演出が2つあると、片方だけ直された日から、
+ *   見本と本番で違う出方をします。どちらが正しいか、誰にも分かりません。
+ *
+ *   ですので、演出が実際に読む項目だけを型にします。
+ *   見本（DrawRecord）も、本番（サーバーの抽選結果）も、
+ *   この形を満たすので、そのまま渡せます。
+ */
+export type TheaterRecord = {
+  id: string;
+  gachaId: string;
+  grade: string;
+  prizeName: string;
+  prizeValue: number;
+  /** 1回の料金（pt） */
+  price: number;
+  /** 引いた後の残高（pt） */
+  balanceAfter: number;
+};
+
 export function DrawTheater({
   records,
   kind,
@@ -727,7 +756,7 @@ export function DrawTheater({
   onClose,
   canAgain,
 }: {
-  records: DrawRecord[];
+  records: TheaterRecord[];
   kind: ArtKind;
   onAgain: () => void;
   onPrizes: () => void;
@@ -765,7 +794,7 @@ export function DrawTheater({
 
   const best = useMemo(
     () =>
-      records.reduce<DrawRecord | null>(
+      records.reduce<TheaterRecord | null>(
         (a, b) => (a === null || (GRADE_RANK[b.grade] ?? 0) > (GRADE_RANK[a.grade] ?? 0) ? b : a),
         null,
       ),

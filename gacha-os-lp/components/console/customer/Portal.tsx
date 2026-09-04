@@ -219,6 +219,11 @@ function StepUp({
  */
 const NAV: { href: string; label: string }[] = [
   { href: "/mypage", label: "ホーム" },
+  /* ★「引く」を、この並びから外さないこと。
+       お客様がこの店で行う唯一の買い物です。
+       ホームにしか置かないと、ポイントを見に来た方が
+       そのまま帰ります。 */
+  { href: "/mypage/shop", label: "引く" },
   { href: "/mypage/prizes", label: "獲得商品" },
   { href: "/mypage/points", label: "ポイント" },
   { href: "/mypage/shipping", label: "発送状況" },
@@ -228,7 +233,7 @@ const NAV: { href: string; label: string }[] = [
 function Nav({ here }: { here: string }) {
   const router = useRouter();
   return (
-    <nav className="mt-10 grid grid-cols-5 gap-1.5">
+    <nav className="mt-10 grid grid-cols-6 gap-1.5">
       {NAV.map((n) => {
         const now = n.href === here;
         return (
@@ -309,7 +314,21 @@ export function PortalHome({ name }: { name: string }) {
         </div>
       )}
 
-      <div className="mt-6 space-y-2.5">
+      {/* ═══ ガチャを引く ═══
+          ★これを、下の行と同じ見た目にしないこと。
+            お客様がこの店で行う唯一の買い物です。
+            「保有ポイント」「獲得商品」と同じ大きさで並べると、
+            残高を見に来ただけの方は、引かずに帰ります。 */}
+      <div className="mt-6">
+        <BigBtn
+          onClick={() => router.push("/mypage/shop")}
+          note="販売中のガチャと、賞の残り本数をご覧いただけます。"
+        >
+          ガチャを引く
+        </BigBtn>
+      </div>
+
+      <div className="mt-2.5 space-y-2.5">
         <TapRow
           label="保有ポイント"
           note="ガチャのご利用・商品交換の履歴も、こちらでご確認いただけます。"

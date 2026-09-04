@@ -88,6 +88,43 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  /* ── ①'' CSRF（他所のページから、勝手に引かせない） ──
+
+       ═══════════════════════════════════════════════════════
+       ★2026-09-05 まで、この確認がここだけ抜けていました
+       ═══════════════════════════════════════════════════════
+
+         状態が変わる入口のほとんどは、門番
+         （lib/server/context.ts の guard）を通っています。
+         門番は、合図（x-gos-csrf）の無い依頼を必ず断ります。
+
+         ところが、この入口だけは門番を通っていません。
+         結果として、ポイントが実際に減る唯一の場所が、
+         合図なしでも通る状態になっていました。
+
+         何が起きうるか。お客様がログインしたまま別のページを開き、
+         そのページが裏でこの入口を叩くと、
+         お客様の意思と関係なくガチャが引かれ、ポイントが減ります。
+         クッキーはブラウザが自動で付けるので、これは成立します。
+
+       ★門番と、同じ文言・同じ code で断ること。
+         別々にすると、どちらで止まったのかが記録から読めません。 */
+  {
+    const { verifyCsrf, CSRF_HEADER } = await import("@/lib/server/session");
+    const sent = req.headers.get(CSRF_HEADER)?.trim();
+    if (!(await verifyCsrf(req.cookies.get(SESSION_COOKIE)?.value, sent))) {
+      return NextResponse.json(
+        {
+          ok: false,
+          code: "CSRF_FAILED",
+          message: "画面を開き直してから、もう一度お試しください。",
+          requestId,
+        },
+        { status: 403 },
+      );
+    }
+  }
+
   /* ── ② 二重実行を防ぐ鍵 ───────────────────── */
   const idempotencyKey = req.headers.get("Idempotency-Key")?.trim();
   if (!idempotencyKey || idempotencyKey.length < 8 || idempotencyKey.length > 200) {
