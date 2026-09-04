@@ -53,6 +53,24 @@ function num(v) {
   return typeof v === "number" && isFinite(v) && v > 0 ? v : null;
 }
 
+// 保守的販売想定価格（conservativeSalePrice）を出す純粋関数。
+// ★第4フェーズKeepa実測に基づく確定仕様：
+//   ・基準は Marketplace New価格（current[1]）。Amazon本体価格（current[0]）は使わない。
+//     （自分が出品する際は他の新品出品者と競争するため、本体価格より新品最安が現実的）
+//   ・一時的な高騰を掴まないよう、30日平均（avg30[1]）があれば低い方を採用する。
+//   ・Marketplace New価格が欠損なら null＝保守価格を出せない＝自動仕入れ対象外とする。
+//     （Amazon本体価格だけを理由に「利益が出る」と判定しない）
+//   marketNewPrice + avg30New 両方有効 → min(marketNewPrice, avg30New)
+//   marketNewPrice のみ有効          → marketNewPrice
+//   marketNewPrice 欠損              → null
+export function computeConservativeSalePrice(marketNewPrice, avg30New) {
+  const m = num(marketNewPrice);
+  if (m == null) return null;
+  const a = num(avg30New);
+  if (a == null) return m;
+  return Math.min(m, a);
+}
+
 // Keepa stats から使える指標を抽出（円建て・欠損は null）
 export function extractKeepaMetrics(product) {
   const stats = product && product.stats ? product.stats : {};
@@ -62,31 +80,46 @@ export function extractKeepaMetrics(product) {
 
   const pick = (arr, i) => num(arr[i]);
 
+  // ★価格の意味は第4フェーズKeepa実測＋公式価格タイプで確定：
+  //   current[0]=Amazon本体, current[1]=Marketplace New, current[18]=New Buy Box(送料込)。
+  // marketNewPrice は「純粋な current[1]」（Buy Box/本体へフォールバックさせない）。
+  //   ＝仕入れ利益判定の主価格。Buy Box(18)は実測で全件-1のため主価格に使わない。
+  const marketNewPrice = pick(cur, IDX.newPrice);
+  // currentNew は従来互換の表示用（新品→BuyBox→本体の順で「何かしらの現在価格」）。
   const currentNew = pick(cur, IDX.newPrice) ?? pick(cur, IDX.buyBox) ?? pick(cur, IDX.amazon);
   const avg30New = pick(avg30, IDX.newPrice) ?? pick(avg30, IDX.buyBox);
   const avg90New = pick(avg90, IDX.newPrice) ?? pick(avg90, IDX.buyBox);
   const buyBox = pick(cur, IDX.buyBox);
   const amazonPrice = pick(cur, IDX.amazon); // Amazon本体（>0なら在庫あり）
+  // 保守的販売想定価格＝利益計算の一次基準（Marketplace New と 30日平均の低い方）。
+  const conservativeSalePrice = computeConservativeSalePrice(marketNewPrice, avg30New);
   const newOfferCount =
     typeof (cur[IDX.newOfferCount]) === "number" && cur[IDX.newOfferCount] >= 0
       ? cur[IDX.newOfferCount]
       : typeof stats.offerCountNew === "number"
         ? stats.offerCountNew
         : null;
-  const monthlySales =
+  // 需要の目安：salesRankDrops30（30日でランキングが下がった回数）。
+  //   ★実売個数そのものではない。意味の正しい名前は salesActivity30。
+  //   monthlySales は旧名（legacy）。DB互換のため残すが実販売数と断定しない。
+  const salesActivity30 =
     typeof stats.salesRankDrops30 === "number" && stats.salesRankDrops30 >= 0
       ? stats.salesRankDrops30
       : null;
+  const monthlySales = salesActivity30; // legacy alias（実売数ではない）
 
   return {
-    currentNew, // 現在新品価格
-    avg30New, // 30日平均
-    avg90New, // 90日平均
-    buyBox, // Buy Box 価格
-    amazonPresent: amazonPrice != null, // Amazon本体の在庫有無
-    amazonPrice,
+    marketNewPrice, // Marketplace New価格（純粋な current[1]）＝利益計算の主価格
+    conservativeSalePrice, // 保守的販売想定価格（利益計算の一次基準）
+    currentNew, // 現在価格（表示用・新品→BuyBox→本体）
+    avg30New, // 30日平均（Marketplace New）
+    avg90New, // 90日平均（Marketplace New）※stats=30でも取得可（第4フェーズ実測で確認）
+    buyBox, // Buy Box 価格（実測では未取得＝-1のことが多い）
+    amazonPresent: amazonPrice != null, // Amazon本体価格をKeepaで検出（=購入可否まで断定しない）
+    amazonPrice, // Amazon本体価格（利益の主価格にはしない・競争リスク要素）
     newOfferCount, // 新品出品者数
-    monthlySales, // 月間販売数（salesRankDrops30）
+    salesActivity30, // 30日でランキングが下がった回数（需要の目安・実売数ではない）
+    monthlySales, // legacy alias（＝salesActivity30）
   };
 }
 

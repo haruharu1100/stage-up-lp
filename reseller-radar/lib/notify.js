@@ -28,7 +28,7 @@ export async function sendNotificationEmail(taskName, items) {
       `■ ${it.product_name}`,
       `　仕入: ${yen(it.buy_price)} → Amazon: ${yen(it.amazon_price)}`,
       `　利益: ${yen(it.profit)}（利益率 ${it.profit_rate}%）`,
-      `　月間販売数(目安): ${it.monthly_sales}`,
+      `　販売動向(30日ランク下落回数): ${it.monthly_sales}`,
       `　商品URL: ${it.product_url || it.source_url || "-"}`,
     ].join("\n");
   });

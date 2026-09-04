@@ -90,6 +90,11 @@ async function init() {
       UNIQUE(task_id, jan, buy_price)
     );
 
+    -- 通知の重複防止：JANが空(名前/型番照合)の商品でも、同じ商品(ASIN)が
+    -- 何度も溜まらないようASINで一意にする。INSERT OR IGNOREがこれで効く。
+    CREATE UNIQUE INDEX IF NOT EXISTS ux_notif_task_asin_buy
+      ON notifications(task_id, asin, buy_price);
+
     CREATE TABLE IF NOT EXISTS findings (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       task_id INTEGER REFERENCES tasks(id),
@@ -147,7 +152,8 @@ async function init() {
   await addColumnIfMissing("findings", "match_type", "TEXT");
   await addColumnIfMissing("notifications", "match_type", "TEXT");
   // 新・照合エンジン（match.mjs）の判定結果。既存列は壊さず追加のみ。
-  //   match_status=JAN_VERIFIED/MODEL_VERIFIED/ATTRIBUTE_VERIFIED/NAME_UNVERIFIED/CONFLICT
+  //   match_status=JAN_VERIFIED/JAN_LOOKUP_UNVERIFIED/MODEL_VERIFIED/MODEL_UNVERIFIED/
+  //                ATTRIBUTE_REVIEW/NAME_UNVERIFIED/CONFLICT/NO_MATCH
   //   attribute_conflicts=矛盾属性のカンマ区切り（例 "capacity,packCount"）
   await addColumnIfMissing("findings", "match_status", "TEXT");
   await addColumnIfMissing("notifications", "match_status", "TEXT");

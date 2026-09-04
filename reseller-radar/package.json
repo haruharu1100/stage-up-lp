@@ -9,7 +9,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "test": "node --test scripts/test-matching.mjs scripts/test-identifiers.mjs scripts/test-price-risk.mjs",
+    "test": "node --test scripts/test-matching.mjs scripts/test-identifiers.mjs scripts/test-price-risk.mjs scripts/test-profit.mjs scripts/test-keepa-fees.mjs",
     "backtest": "node scripts/backtest-findings.mjs"
   },
   "dependencies": {

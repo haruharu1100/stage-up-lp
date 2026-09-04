@@ -12,7 +12,7 @@
 //       を集計する。ラベルが用意され次第、真の精度評価へ拡張する。
 
 import { readFileSync } from "node:fs";
-import { classifyMatch } from "../lib/match.mjs";
+import { classifyMatch, priceRatioSanity } from "../lib/match.mjs";
 
 const path = process.argv[2] || "/Users/yokotaakiraju/Documents/reseller-radar-findings.json";
 const raw = JSON.parse(readFileSync(path, "utf8"));
@@ -27,6 +27,8 @@ const counts = {
   wasAutoNowNot: 0,
   unknown: 0, // amazon_title 欠損で判定不能
   autoEligibleNew: 0,
+  priceReject: 0, // 価格比が異常で reject（名前照合で3倍超）
+  priceDowngrade: 0, // 価格比が異常で downgrade（型番照合で8倍超）
 };
 
 const OLD_AUTO = new Set(["jan", "model"]); // 旧仕様で通知対象だったもの
@@ -52,6 +54,28 @@ for (const f of findings) {
   const wasAuto = OLD_AUTO.has(oldType);
   if (wasAuto && !res.autoEligible) counts.wasAutoNowNot++;
 
+  // 価格比の異常検知（誤マッチ由来の偽利益を弾く新ロジック）を適用する。
+  // 照合の強さ：JAN一致→"jan"、型番検証済→"model"、それ以外→"name"。
+  const verified =
+    f.jan || res.status.startsWith("JAN")
+      ? "jan"
+      : res.status === "MODEL_VERIFIED"
+      ? "model"
+      : "name";
+  const sanity = priceRatioSanity({
+    buyPrice: f.buy_price,
+    salePrice: f.amazon_price,
+    verified,
+  });
+  let priceFlag = "-";
+  if (!sanity.ok && sanity.action === "reject") {
+    counts.priceReject++;
+    priceFlag = `REJECT(${sanity.ratio?.toFixed(1)}x)`;
+  } else if (!sanity.ok && sanity.action === "downgrade") {
+    counts.priceDowngrade++;
+    priceFlag = `DOWN(${sanity.ratio?.toFixed(1)}x)`;
+  }
+
   rows.push({
     id: f.id,
     name: (f.product_name || "").slice(0, 42),
@@ -59,6 +83,7 @@ for (const f of findings) {
     old: oldType,
     new: res.status,
     auto: res.autoEligible ? "○" : "×",
+    price: priceFlag,
     conflicts: res.conflicts.join(",") || "-",
     reason: res.reason,
   });
@@ -76,6 +101,7 @@ console.log(
   pad("旧", 6),
   pad("新status", 18),
   pad("自動", 4),
+  pad("価格比", 12),
   pad("矛盾/理由", 20)
 );
 console.log("-".repeat(96));
@@ -87,6 +113,7 @@ for (const r of rows) {
     pad(r.old, 6),
     pad(r.new, 18),
     pad(r.auto, 4),
+    pad(r.price, 12),
     pad(r.conflicts === "-" ? r.reason : r.conflicts, 20)
   );
 }
@@ -99,6 +126,8 @@ console.log("  新たに CONFLICT で弾いた件数:", counts.nowConflict);
 console.log("  旧・自動対象→新・自動対象外になった件数:", counts.wasAutoNowNot);
 console.log("  判定不能(UNKNOWN: Amazon名欠損)件数:", counts.unknown);
 console.log("  新・自動対象(JAN/MODEL)件数:", counts.autoEligibleNew);
+console.log("  価格比 異常で REJECT（名前照合で3倍超・偽利益）件数:", counts.priceReject);
+console.log("  価格比 異常で DOWNGRADE（型番照合で8倍超・要確認）件数:", counts.priceDowngrade);
 console.log("=".repeat(96));
 console.log(
   "※正解ラベル未付与のため“真のFP/FN”は未算出。ラベルCSV受領後に精度評価へ拡張する。"

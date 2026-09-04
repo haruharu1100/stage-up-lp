@@ -1,6 +1,7 @@
 import { getSetting, getKeepaCache, setKeepaCache } from "./db.js";
-import { classifyMatch } from "./match.mjs";
-import { analyzePrice } from "./price-risk.mjs";
+import { classifyMatch, classifyJanMatch, priceRatioSanity } from "./match.mjs";
+import { analyzePrice, computeConservativeSalePrice } from "./price-risk.mjs";
+import { calculateProfit, keepaFeesFrom } from "./profit.mjs";
 
 async function getKey() {
   // 設定画面のキーを優先。無ければ環境変数(KEEPA_KEY)を使う。
@@ -43,18 +44,31 @@ function parseProduct(product) {
   // Amazon.co.jp（domain=5）では、Keepaは価格を「円」でそのまま返す。
   const pos = (v) => (v != null && v > 0 ? Math.round(v) : null);
 
-  // Keepaの価格種別: 0=Amazon本体, 1=新品最安, 2=中古最安。
-  // 新品価格＝Amazon本体があればそれ、無ければ新品最安。
-  // 中古価格＝中古最安(2)。仕入れ品のコンディションに合わせて使い分ける。
-  const priceNew = pos(current[0]) != null ? pos(current[0]) : pos(current[1]);
+  // ★Keepa価格種別（第4フェーズ実測＋公式で確定）:
+  //   current[0]=Amazon本体, current[1]=Marketplace New, current[2]=中古最安, current[18]=New Buy Box。
+  // 利益計算の主価格は Marketplace New（current[1]）。Amazon本体は主価格に使わない。
+  const marketNewPrice = pos(current[1]); // Marketplace New＝利益計算の主価格
+  const amazonPrice = pos(current[0]); // Amazon本体（利益の主価格にはしない・競争リスク要素）
+  const amazonOfferPresent = amazonPrice != null; // 本体在庫の有無（価格競争リスク）
   const priceUsed = pos(current[2]);
 
-  // 従来互換の price（新品優先、無ければ中古）。個別のコンディション判定は呼び出し側で行う。
-  const price = priceNew != null ? priceNew : priceUsed;
+  // 従来互換の priceNew は Marketplace New に統一（Amazon本体へフォールバックさせない）。
+  const priceNew = marketNewPrice;
+  // 表示用 price（新品→中古→本体）。record自体は残すが利益判定は下の保守価格で行う。
+  const price = marketNewPrice != null ? marketNewPrice : (priceUsed != null ? priceUsed : amazonPrice);
   if (price == null) return null;
 
-  const monthlySales =
+  // ★注意：salesRankDrops30 は「30日間でランキングが下がった回数」であり、
+  //   実売個数そのものではない（需要の“目安”指標）。UI/通知でも実販売数と断定しない。
+  const salesRankDrops30 =
     stats.salesRankDrops30 != null ? stats.salesRankDrops30 : 0;
+  // 既存判定ロジックとの後方互換のため monthlySales という名前も維持（中身は上記の目安値）。
+  const monthlySales = salesRankDrops30;
+
+  // Keepa候補側の識別子一覧（本当のJAN一致を検証するために使う）。
+  // eanList=EAN/JAN、upcList=UPC。Keepaのレスポンスに含まれない場合は空配列。
+  const eanList = Array.isArray(product.eanList) ? product.eanList.map(String) : [];
+  const upcList = Array.isArray(product.upcList) ? product.upcList.map(String) : [];
 
   // Keepaのstats.current[3]はAmazonの売れ筋ランキング（SALESランク）。
   // -1（不明）や0は「順位なし」としてnullにする。判定ルールで「ランキング◯位以内」を扱うために公開する。
@@ -72,6 +86,11 @@ function parseProduct(product) {
 
   const productUrl = asin ? `https://www.amazon.co.jp/dp/${asin}` : null;
 
+  // ★Keepaが返す手数料の推定値（カテゴリ別の販売手数料率／FBA配送代行手数料）。
+  //   これで「一律10%・450円」から「商品ごとの推定」へ精度を上げる。
+  //   ただしKeepaの推定＝確定ではないので、利益判定側では必ず estimated 扱いにする。
+  const kfees = keepaFeesFrom(product);
+
   // 90日相場・値崩れ判定（取得できる範囲で。欠損は null のまま＝でっち上げない）
   let priceRisk = null;
   let priceMetrics = null;
@@ -83,24 +102,46 @@ function parseProduct(product) {
     priceRisk = null;
   }
 
+  const avg30New = priceMetrics ? priceMetrics.avg30New : null;
+  const avg90New = priceMetrics ? priceMetrics.avg90New : null;
+  // 保守的販売想定価格＝利益計算の一次基準（Marketplace New と 30日平均の低い方）。
+  // Marketplace New が欠損なら null＝自動仕入れ対象外（Amazon本体だけで利益判定しない）。
+  const conservativeSalePrice = priceMetrics
+    ? priceMetrics.conservativeSalePrice
+    : computeConservativeSalePrice(marketNewPrice, avg30New);
+
   return {
     asin,
     price,
-    priceNew,
+    priceNew, // = Marketplace New（current[1]）
     priceUsed,
+    // ★利益計算はこの保守価格を使う（欠損なら自動仕入れ対象外）
+    conservativeSalePrice,
+    marketNewPrice, // Marketplace New価格（current[1]）
+    amazonPrice, // Amazon本体価格（current[0]）＝競争リスク要素・主価格にしない
+    amazonOfferPresent, // Amazon本体の出品有無
     monthlySales,
     salesRank,
     imageUrl,
     productUrl,
     title: product.title || "",
     // 相場指標（円建て・欠損はnull）と値崩れリスク（0-100・高いほど危険）
-    avg30: priceMetrics ? priceMetrics.avg30New : null,
-    avg90: priceMetrics ? priceMetrics.avg90New : null,
+    avg30: avg30New,
+    avg90: avg90New,
+    avg30New,
+    avg90New,
     newOfferCount: priceMetrics ? priceMetrics.newOfferCount : null,
     amazonPresent: priceMetrics ? priceMetrics.amazonPresent : null,
     priceRiskScore: priceRisk ? priceRisk.score : null,
     priceRiskLevel: priceRisk ? priceRisk.level : null,
     priceRiskUsable: priceRisk ? priceRisk.usable : null,
+    // JAN実照合用の識別子（本当にJANが一致したか検証するため）
+    eanList,
+    upcList,
+    // ★Keepa由来の手数料推定（円/率）。欠損は null（＝設定の一律値にフォールバック）。
+    keepaReferralRate: kfees.referralRate, // 例 0.104（＝10.4%）
+    keepaReferralPercentage: kfees.referralPercentage, // 例 10.4
+    keepaFbaFee: kfees.fbaFee, // FBA配送代行手数料の推定（円）
   };
 }
 
@@ -378,14 +419,39 @@ export async function fetchImageByAsin(asin) {
 export async function lookupProduct(item) {
   if (item && item.jan) {
     const byJan = await lookupByJan(item.jan);
-    if (byJan)
+    if (byJan) {
+      // ★JAN検索でヒットしただけでは「一致」と断定しない（P1-3で3値化）。さらに
+      //   第4フェーズ実測の発見「同一JANが複数ASINに存在し得る」に対応し、
+      //   JAN一致（商品同一性）と ASIN選択の妥当性を分離して判定する（classifyJanMatch）：
+      //     JAN_VERIFIED            … JAN一致＋タイトルも整合 → 自動対象
+      //     JAN_VERIFIED_ASIN_REVIEW… JAN一致だがASIN選択の裏付け不足 → 自動対象外（要確認）
+      //     JAN_CONFLICT            … 識別子不一致 or JAN一致でも属性矛盾 → reject
+      //     JAN_LOOKUP_UNVERIFIED   … 識別子未取得＝実照合不能 → 自動対象外
+      const codes = [...(byJan.eanList || []), ...(byJan.upcList || [])];
+      const jm = classifyJanMatch({
+        supplierName: item.name,
+        supplierJan: item.jan,
+        supplierModel: item.model || null,
+        candidateTitle: byJan.title,
+        candidateCodes: codes,
+        candidateModel: null, // Keepa側の明示品番は未取得（SP-API未接続のため）
+        // ① JANの出所・信頼度。crawler が付与した janConfidence を優先し、
+        //   未指定なら安全側の "low"（regex/本文由来は自動対象にしない）を既定にする。
+        janConfidence: item.janConfidence || "low",
+      });
+      if (jm.status === "JAN_CONFLICT") {
+        return null; // 別商品/別ASINを掴んでいる強い証拠。候補から外す。
+      }
       return {
         ...byJan,
-        matchedBy: "jan",
-        matchStatus: "JAN_VERIFIED",
-        matchScore: 100,
+        matchedBy: jm.autoEligible ? "jan" : "name", // 自動対象外は通知ゲートに乗せない
+        matchStatus: jm.status,
+        productIdentityVerified: jm.productIdentityVerified,
+        asinSelectionVerified: jm.asinSelectionVerified,
+        matchScore: jm.status === "JAN_VERIFIED" ? 100 : jm.status === "JAN_VERIFIED_ASIN_REVIEW" ? 70 : 50,
         matchConflicts: [],
       };
+    }
   }
   const byName = await searchByName(item && item.name);
   if (byName) {
@@ -409,46 +475,125 @@ export async function lookupProduct(item) {
 
     // matchedBy は通知ゲート（jan/model のみ通知）に使う従来値へマップする。
     //   MODEL_VERIFIED → "model"（自動対象）
-    //   ATTRIBUTE_VERIFIED / NAME_UNVERIFIED → "name"（保存はするが自動通知しない）
-    const matchedBy = cls.status === "MODEL_VERIFIED" ? "model" : "name";
+    //   MODEL_UNVERIFIED / ATTRIBUTE_REVIEW / NAME_UNVERIFIED → "name"（保存のみ・自動通知しない）
+    let matchedBy = cls.status === "MODEL_VERIFIED" ? "model" : "name";
 
-    // ★誤マッチ対策：型番未確認（名前だけ）で Amazon価格が仕入れ値の3倍超は、
-    //   安い汎用品を高いブランド品と取り違えた疑いが濃い。“ありえない高利益”は出さない。
-    if (matchedBy === "name") {
-      const buy = Number(item && item.price) || 0;
-      const amz = byName.priceNew != null ? byName.priceNew : byName.price;
-      if (buy > 0 && amz != null && amz > buy * 3) {
-        return null;
-      }
+    // ★誤マッチ対策（最終ゲート）：JANで同一性が取れていない照合で「ありえない高利益」は
+    //   安い汎用品を高いブランド品/別エディションと取り違えた疑いが濃い。
+    //   利益判定と同じ「保守的販売想定価格」で比率を見る（priceNewより厳しめで安全）。
+    //     name  … reject（そもそも出さない）  model … downgrade（自動通知/自動仕入れ対象から外す）
+    const buy = Number(item && item.price) || 0;
+    const amz =
+      byName.conservativeSalePrice != null
+        ? byName.conservativeSalePrice
+        : byName.priceNew != null
+        ? byName.priceNew
+        : byName.price;
+    const sanity = priceRatioSanity({ buyPrice: buy, salePrice: amz, verified: matchedBy });
+    if (!sanity.ok && sanity.action === "reject") {
+      return null;
+    }
+    let matchStatus = cls.status;
+    const conflicts = [...(cls.conflicts || [])];
+    if (!sanity.ok && sanity.action === "downgrade") {
+      matchedBy = "name"; // 型番一致でも異常な高利益は自動対象から降格＝要手動確認
+      matchStatus = "PRICE_ANOMALY_REVIEW";
+      conflicts.push("priceRatio");
     }
     return {
       ...byName,
       matchedBy,
-      matchStatus: cls.status,
+      matchStatus,
       matchScore: cls.score,
-      matchConflicts: cls.conflicts,
+      matchConflicts: conflicts,
     };
   }
   return null;
 }
 
-export async function estimateFees(amazonPrice, shipMethod) {
-  const referralRate = parseFloat((await getSetting("referral_rate")) || "10") / 100;
-  const fbaFee = parseInt((await getSetting("fba_fee")) || "450", 10);
-  const selfShipFee = parseInt((await getSetting("self_ship_fee")) || "300", 10);
-
-  const referral = Math.round(amazonPrice * referralRate);
-  const shipFee = shipMethod === "FBA" ? fbaFee : selfShipFee;
-  return referral + shipFee;
+// 設定値（推定の元）を1か所で読む。利益計算そのものは lib/profit.mjs に委譲する。
+async function feeSettings() {
+  return {
+    referralRate: parseFloat((await getSetting("referral_rate")) || "10") / 100,
+    fbaFee: parseInt((await getSetting("fba_fee")) || "450", 10),
+    selfShipFee: parseInt((await getSetting("self_ship_fee")) || "300", 10),
+    includeFees: ((await getSetting("include_fees")) || "1") === "1",
+  };
 }
 
-export async function judge(task, buyPrice, amazonPrice, monthlySales) {
-  const includeFees = ((await getSetting("include_fees")) || "1") === "1";
-  const fees = includeFees ? await estimateFees(amazonPrice, task.ship_method) : 0;
+// 販売価格・配送方法から「手数料(=仕入値を除く経費)」の推定額だけを返す。
+// 内部で calculateProfit を使い、計算式を正本に一本化する。
+export async function estimateFees(amazonPrice, shipMethod) {
+  const s = await feeSettings();
+  const input = buildProfitInput({
+    salePrice: amazonPrice,
+    buyPrice: 0,
+    shipMethod,
+    settings: s,
+  });
+  return calculateProfit(input).fees;
+}
 
-  const profit = amazonPrice - fees - buyPrice;
-  const rate = amazonPrice > 0 ? (profit / amazonPrice) * 100 : 0;
-  const rateRounded = Math.round(rate * 10) / 10;
+// 設定値と1件分の値から calculateProfit への入力を組み立てる（共通化）。
+//  keepaFees: { referralRate, fbaFee } … Keepa由来の手数料推定。あればこれを
+//  「推定値」として優先し、無ければ設定の一律値へフォールバックする。
+function buildProfitInput({ salePrice, buyPrice, shipMethod, settings, keepaFees }) {
+  const isFBA = shipMethod === "FBA";
+  if (!settings.includeFees) {
+    // 手数料を含めない設定のときは、経費0で純粋に「売価−仕入値」を見る。
+    return {
+      salePrice,
+      buyPrice,
+      referralFee: 0,
+      referralConfirmed: true,
+      shipMethod,
+      fbaFee: 0,
+      fbaConfirmed: true,
+      supplierShipping: 0,
+      inboundShipping: 0,
+      outboundShipping: 0,
+      otherCost: 0,
+    };
+  }
+  const kf = keepaFees || {};
+  // 販売手数料率：Keepaのカテゴリ別率があればそれを優先（無ければ設定の一律値）。
+  //   いずれも referralConfirmed は付けない＝推定(ESTIMATED)のまま（偽の精度を出さない）。
+  const referralRate = kf.referralRate != null ? kf.referralRate : settings.referralRate;
+  // FBA配送代行手数料：KeepaのpickAndPackFee推定があれば優先（無ければ設定の一律値）。
+  const fbaFeeVal = kf.fbaFee != null ? kf.fbaFee : settings.fbaFee;
+  return {
+    salePrice,
+    buyPrice,
+    // 率は設定/Keepa由来＝SP-API未確定なので推定（referralConfirmed は付けない）。
+    referralRate,
+    shipMethod,
+    // FBA配送代行手数料は設定/Keepa由来＝サイズ/重量が確定でないので推定。
+    fbaFee: isFBA ? { value: fbaFeeVal, estimated: true } : undefined,
+    // 自己発送のお客様配送料は設定値を使用（確定扱い＝ユーザーが入れた実費）。
+    outboundShipping: isFBA ? undefined : settings.selfShipFee,
+    // 仕入送料・納品送料・ポイントはまだ取得経路が無い＝UNKNOWN（0で握りつぶさない）。
+    supplierShipping: undefined,
+    inboundShipping: isFBA ? undefined : 0,
+    otherCost: 0,
+  };
+}
+
+// 巡回・判定で使う総合ジャッジ。既存の戻り値 {ok, profit, rate, fees} は互換維持し、
+// 利益の確からしさ(profitClass 等)を追加で返す。計算は calculateProfit に一本化。
+export async function judge(task, buyPrice, amazonPrice, monthlySales, keepaFees) {
+  const s = await feeSettings();
+  const input = buildProfitInput({
+    salePrice: amazonPrice,
+    buyPrice,
+    shipMethod: task.ship_method,
+    settings: s,
+    keepaFees, // Keepa由来の手数料推定（あれば優先・無ければ設定値）
+  });
+  const p = calculateProfit(input);
+
+  const profit = p.grossProfit;
+  const rate = p.profitRate; // %（小数第1位）
+  const fees = p.fees;
 
   const rateOk = rate >= task.rate_min && rate <= task.rate_max;
   const amountOk = profit >= task.amount_min;
@@ -474,5 +619,18 @@ export async function judge(task, buyPrice, amazonPrice, monthlySales) {
   const salesOk = monthlySales >= (task.monthly_sales_min || 0);
   const ok = condOk && salesOk && profit > 0;
 
-  return { ok, profit, rate: rateRounded, fees };
+  return {
+    ok,
+    profit,
+    rate,
+    fees,
+    // ↓ Phase7で追加（表示・監査用。既存の消費側は無視して差し支えない）
+    profitClass: p.class,
+    profitEstimated: p.estimated,
+    roi: p.roi,
+    breakevenSalePrice: p.breakevenSalePrice,
+    feeStatus: p.feeStatus,
+    riskLevel: p.riskLevel,
+    autoBuyEligible: p.autoBuyEligible,
+  };
 }

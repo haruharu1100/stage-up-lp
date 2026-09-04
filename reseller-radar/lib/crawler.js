@@ -635,24 +635,26 @@ export async function runTask(taskId) {
   const seenAsin = new Set();
 
   const NOTIF_SQL = `INSERT OR IGNORE INTO notifications
-      (task_id, supplier_name, product_name, condition, jan, asin, buy_price, amazon_price,
+      (task_id, supplier_name, product_name, amazon_title, condition, jan, asin, buy_price, amazon_price,
        fees, profit, profit_rate, monthly_sales, source_url, product_url, image_url, match_type,
        match_status, attribute_conflicts, avg_price_90, price_risk_score)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 
   // 巡回結果（利益条件を満たさない商品も含む、Amazonと照合できた全商品）を保存する。
   // いつでも見返して商品ページURLから買えるように、この一覧を残す。
+  // amazon_title＝照合した相手の商品名。誤マッチの後追い検証（バックテスト）に必須。
   const FINDING_SQL = `INSERT INTO findings
-      (task_id, supplier_name, product_name, condition, jan, asin, buy_price, amazon_price,
+      (task_id, supplier_name, product_name, amazon_title, condition, jan, asin, buy_price, amazon_price,
        fees, profit, profit_rate, monthly_sales, source_url, product_url, image_url, match_type,
        match_status, attribute_conflicts, avg_price_90, price_risk_score, is_deal)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 
   // row（オブジェクト）を上記SQLの「?」の順番どおりの配列に並べ替える。
   const rowArgs = (r) => [
     r.task_id,
     r.supplier_name,
     r.product_name,
+    r.amazon_title || null,
     r.condition || "新品",
     r.jan,
     r.asin,
@@ -714,12 +716,17 @@ export async function runTask(taskId) {
 
     // 新品だけを出す方針。中古（または新品と確認できない商品）は除外する。
     if (!it.forceNew && !isNewPurchasable(it.name, task.supplier_name)) continue;
-    const amazonPrice = info.priceNew;
-    if (!amazonPrice) continue;
+    // ★利益判定はAmazon本体価格ではなく「保守的販売想定価格」を使う（第4フェーズ実測で統一）。
+    //   ＝Marketplace New価格と30日平均の低い方。無ければ自動仕入れ対象外としてスキップ。
+    const salePrice = info.conservativeSalePrice;
+    if (!salePrice) continue;
     const condLabel = "新品";
     matched++;
 
-    const verdict = await judge(task, it.price, amazonPrice, info.monthlySales);
+    const verdict = await judge(task, it.price, salePrice, info.monthlySales, {
+      referralRate: info.keepaReferralRate,
+      fbaFee: info.keepaFbaFee,
+    });
 
     // 商品ごとの個別リンクが取れていればそれを使う。
     // 取れていない（＝トップページや一覧URLしか無い）場合は、
@@ -734,11 +741,12 @@ export async function runTask(taskId) {
       task_id: task.id,
       supplier_name: task.supplier_name || "",
       product_name: it.name,
+      amazon_title: info.title || null,
       condition: condLabel,
       jan: it.jan,
       asin: info.asin,
       buy_price: it.price,
-      amazon_price: amazonPrice,
+      amazon_price: salePrice,
       fees: verdict.fees,
       profit: verdict.profit,
       profit_rate: verdict.rate,
@@ -1007,13 +1015,17 @@ export async function stepCrawlJob(jobId) {
 
     // 新品だけを出す方針。中古（または新品と確認できない商品）は除外する。
     if (!it.forceNew && !isNewPurchasable(it.name, task.supplier_name)) continue;
-    // Amazonの新品価格でのみ比較する。新品価格が無ければ出さない。
-    const amazonPrice = infoP.priceNew;
-    if (!amazonPrice) continue;
+    // ★利益判定は「保守的販売想定価格」で比較する（Marketplace Newと30日平均の低い方）。
+    //   Amazon本体価格は主価格にしない。保守価格が無ければ自動仕入れ対象外としてスキップ。
+    const salePrice = infoP.conservativeSalePrice;
+    if (!salePrice) continue;
     const condLabel = "新品";
     matched++;
 
-    const verdict = await judge(task, it.price, amazonPrice, infoP.monthlySales);
+    const verdict = await judge(task, it.price, salePrice, infoP.monthlySales, {
+      referralRate: infoP.keepaReferralRate,
+      fbaFee: infoP.keepaFbaFee,
+    });
     const hasProductLink =
       it.link && it.link !== task.url && it.link !== task.base_url;
     const sourceUrl = hasProductLink
@@ -1029,7 +1041,7 @@ export async function stepCrawlJob(jobId) {
       jan: it.jan,
       asin: infoP.asin,
       buy_price: it.price,
-      amazon_price: amazonPrice,
+      amazon_price: salePrice,
       fees: verdict.fees,
       profit: verdict.profit,
       profit_rate: verdict.rate,
