@@ -218,6 +218,14 @@ td {
   padding: 10px 8px;
   border-bottom: 1px solid var(--border);
   vertical-align: top;
+  /* 長いURLなど区切りの無い文字列でも折り返し、画面からはみ出さないようにする */
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+/* タスク一覧のURLリンクは特に長くなりがちなので、確実に折り返す */
+td a {
+  word-break: break-all;
+  overflow-wrap: anywhere;
 }
 th {
   color: var(--muted);

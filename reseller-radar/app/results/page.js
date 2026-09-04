@@ -74,8 +74,22 @@ export default function ResultsPage() {
           const plus = it.profit >= 0;
           return (
             <div className="deal-card deal" key={it.id}>
-              {it.image_url ? (
-                <img className="thumb" src={it.image_url} alt="" />
+              {it.image_url || it.asin ? (
+                <img
+                  className="thumb"
+                  src={
+                    it.image_url ||
+                    `https://images-na.ssl-images-amazon.com/images/P/${it.asin}.09._SCLZZZZZZZ_.jpg`
+                  }
+                  alt=""
+                  onError={(e) => {
+                    const img = e.currentTarget;
+                    if (it.asin && !img.dataset.fallback) {
+                      img.dataset.fallback = "1";
+                      img.src = `https://images-na.ssl-images-amazon.com/images/P/${it.asin}.09._SCLZZZZZZZ_.jpg`;
+                    }
+                  }}
+                />
               ) : (
                 <div className="thumb empty-thumb">画像なし</div>
               )}
@@ -83,24 +97,92 @@ export default function ResultsPage() {
               <div className="deal-main">
                 <div className="deal-top">
                   <span className="badge blue">利益条件 達成</span>
+                  {it.match_type === "jan" && (
+                    <span
+                      className="badge"
+                      style={{ background: "#e7f7ec", color: "#1a7f37" }}
+                    >
+                      JAN一致・確実
+                    </span>
+                  )}
+                  {it.match_type === "model" && (
+                    <span
+                      className="badge"
+                      style={{ background: "#e8f0fe", color: "#1a56db" }}
+                    >
+                      型番一致・ほぼ確実
+                    </span>
+                  )}
+                  {(it.match_type === "name" || !it.match_type) && (
+                    <span
+                      className="badge"
+                      style={{ background: "#fdecec", color: "#b42318" }}
+                    >
+                      名前のみ一致・要確認
+                    </span>
+                  )}
+                  {it.condition && (
+                    <span
+                      className={"badge" + (it.condition === "中古" ? " gray" : "")}
+                    >
+                      {it.condition === "中古"
+                        ? "中古（Amazon中古価格で比較）"
+                        : "新品"}
+                    </span>
+                  )}
                   <span>{it.supplier_name || "仕入れ先不明"}</span>
                   {it.task_name && <span>／ {it.task_name}</span>}
                 </div>
 
                 <div className="deal-name">{it.product_name}</div>
 
+                {(it.match_type === "name" || !it.match_type) && (
+                  <div
+                    style={{
+                      fontSize: 12,
+                      color: "#b42318",
+                      background: "#fdecec",
+                      border: "1px solid #f5c2c0",
+                      borderRadius: 8,
+                      padding: "6px 10px",
+                      margin: "4px 0 8px",
+                      lineHeight: 1.5,
+                    }}
+                  >
+                    ⚠ これは<b>商品名だけで一致</b>させた候補です。有線／無線・容量・型番違いの
+                    <b>別商品を掴んでいる恐れ</b>があります。<b>仕入れる前に必ずAmazon側のJAN（{it.jan || "商品コード"}）が一致するか確認</b>してください。
+                  </div>
+                )}
+
+                {it.amazon_title && (
+                  <div
+                    style={{
+                      fontSize: 12,
+                      color: "#55617a",
+                      margin: "2px 0 6px",
+                      lineHeight: 1.4,
+                    }}
+                  >
+                    <span style={{ color: "#98a2b3" }}>Amazon商品名：</span>
+                    {it.amazon_title}
+                  </div>
+                )}
+
                 <div className="deal-flow">
                   <span className="from">
                     仕入れ {yen(it.buy_price)}
                   </span>
                   <span className="arrow">→</span>
-                  <span className="to">Amazon {yen(it.amazon_price)}</span>
+                  <span className="to">
+                    Amazon{it.condition ? `（${it.condition}）` : ""}{" "}
+                    {yen(it.amazon_price)}
+                  </span>
                 </div>
 
                 <div className="deal-sub">
                   <span className="mono">JAN: {it.jan || "-"}</span>
                   <span className="mono">ASIN: {it.asin || "-"}</span>
-                  <span className="mono">月販 {it.monthly_sales}</span>
+                  <span className="mono">販売動向(30日) {it.monthly_sales}</span>
                 </div>
 
                 <div className="deal-actions">
@@ -134,7 +216,9 @@ export default function ResultsPage() {
                     <div className="pval">{yen(it.buy_price)}</div>
                   </div>
                   <div className="pcol">
-                    <div className="plabel">Amazon価格</div>
+                    <div className="plabel">
+                      Amazon価格{it.condition ? `（${it.condition}）` : ""}
+                    </div>
                     <div className="pval amazon">{yen(it.amazon_price)}</div>
                   </div>
                 </div>

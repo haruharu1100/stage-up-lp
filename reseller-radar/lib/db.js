@@ -90,6 +90,11 @@ async function init() {
       UNIQUE(task_id, jan, buy_price)
     );
 
+    -- 通知の重複防止：JANが空(名前/型番照合)の商品でも、同じ商品(ASIN)が
+    -- 何度も溜まらないようASINで一意にする。INSERT OR IGNOREがこれで効く。
+    CREATE UNIQUE INDEX IF NOT EXISTS ux_notif_task_asin_buy
+      ON notifications(task_id, asin, buy_price);
+
     CREATE TABLE IF NOT EXISTS findings (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       task_id INTEGER REFERENCES tasks(id),
@@ -114,10 +119,74 @@ async function init() {
       key TEXT PRIMARY KEY,
       value TEXT
     );
+
+    CREATE TABLE IF NOT EXISTS crawl_jobs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      task_id INTEGER REFERENCES tasks(id),
+      items_json TEXT,
+      cursor INTEGER DEFAULT 0,
+      extracted INTEGER DEFAULT 0,
+      matched INTEGER DEFAULT 0,
+      notified INTEGER DEFAULT 0,
+      errors_json TEXT DEFAULT '[]',
+      status TEXT DEFAULT 'running',
+      created_at TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS keepa_cache (
+      cache_key TEXT PRIMARY KEY,
+      result_json TEXT,
+      found_at TEXT DEFAULT (datetime('now'))
+    );
   `);
+
+  // 既存DBに後から列を足す（新規DBは上のCREATEに無いので個別に追加）。
+  // 「そのAmazon商品の正式名」を保存し、結果画面で仕入れ元名と並べて表示するため。
+  await addColumnIfMissing("findings", "amazon_title", "TEXT");
+  await addColumnIfMissing("notifications", "amazon_title", "TEXT");
+  // 仕入れ品のコンディション（新品/中古）。中古は中古価格と比較したことを示す。
+  await addColumnIfMissing("findings", "condition", "TEXT");
+  await addColumnIfMissing("notifications", "condition", "TEXT");
+  // どうやってAmazon商品と一致させたか（jan=確実 / model=型番でほぼ確実 / name=名前だけ要確認）。
+  // 名前だけの一致は“似た別商品”を掴む危険があるため、画面で強く注意表示する。
+  await addColumnIfMissing("findings", "match_type", "TEXT");
+  await addColumnIfMissing("notifications", "match_type", "TEXT");
+  // 新・照合エンジン（match.mjs）の判定結果。既存列は壊さず追加のみ。
+  //   match_status=JAN_VERIFIED/JAN_LOOKUP_UNVERIFIED/MODEL_VERIFIED/MODEL_UNVERIFIED/
+  //                ATTRIBUTE_REVIEW/NAME_UNVERIFIED/CONFLICT/NO_MATCH
+  //   attribute_conflicts=矛盾属性のカンマ区切り（例 "capacity,packCount"）
+  await addColumnIfMissing("findings", "match_status", "TEXT");
+  await addColumnIfMissing("notifications", "match_status", "TEXT");
+  await addColumnIfMissing("findings", "attribute_conflicts", "TEXT");
+  await addColumnIfMissing("notifications", "attribute_conflicts", "TEXT");
+  // Keepa 90日相場・値崩れリスク（取得不可はNULL＝でっち上げない）
+  await addColumnIfMissing("findings", "avg_price_90", "INTEGER");
+  await addColumnIfMissing("notifications", "avg_price_90", "INTEGER");
+  await addColumnIfMissing("findings", "price_risk_score", "INTEGER");
+  await addColumnIfMissing("notifications", "price_risk_score", "INTEGER");
 
   await seedSettings();
   await seedSuppliers();
+  await renameSuppliers();
+  await ensureExtraSuppliers();
+  await removeRetiredSuppliers();
+}
+
+// すでに存在する列を足そうとするとエラーになるので、無いときだけ追加する。
+async function addColumnIfMissing(table, column, type) {
+  const c = rawClient();
+  try {
+    const info = await c.execute(`PRAGMA table_info(${table})`);
+    const has = info.rows.some((r) => {
+      const o = toObj(r, info.columns);
+      return o.name === column;
+    });
+    if (!has) {
+      await c.execute(`ALTER TABLE ${table} ADD COLUMN ${column} ${type}`);
+    }
+  } catch (_) {
+    // 追加できない場合は無視
+  }
 }
 
 async function seedSettings() {
@@ -142,6 +211,47 @@ async function seedSettings() {
   }));
   await c.batch(stmts, "write");
 }
+
+// 汎用（自動検出）で読める、あとから足した仕入れ先。
+// セレクタは空＝自動検出モード。実ページで商品が取れることを確認済み。
+const EXTRA_SUPPLIERS = [
+  {
+    name: "セブンネットショッピング",
+    base_url: "https://7net.omni7.jp/",
+  },
+  {
+    name: "エディオン",
+    base_url: "https://www.edion.com/",
+  },
+  {
+    name: "ケーズデンキ",
+    base_url: "https://www.ksdenki.com/",
+  },
+  {
+    name: "ヤフオク！（新品・未使用のみ）",
+    base_url: "https://auctions.yahoo.co.jp/",
+  },
+  {
+    name: "ラクマ（新品・未使用のみ）",
+    base_url: "https://fril.jp/",
+  },
+  {
+    name: "メルカリ（新品・未使用のみ）",
+    base_url: "https://jp.mercari.com/",
+  },
+];
+
+// 使わなくなった仕入れ先（商品が取れない・中古専門など）。既存DBからも消す。
+const RETIRED_SUPPLIER_NAMES = [
+  "au PAY マーケット",
+  "ハードオフ ネットモール（中古）", // 中古専門のため、新品のみ方針で除外
+];
+
+// 表示名を変更する仕入れ先（旧名 → 新名）。既存DBのタスクを残したままリネームする。
+const SUPPLIER_RENAMES = [
+  ["ヤフオク！（オークション・中古）", "ヤフオク！（新品・未使用のみ）"],
+  ["ラクマ（フリマ・中古）", "ラクマ（新品・未使用のみ）"],
+];
 
 async function seedSuppliers() {
   const c = rawClient();
@@ -241,6 +351,79 @@ async function seedSuppliers() {
   await c.batch(stmts, "write");
 }
 
+// あとから足した仕入れ先を、既存DB（すでに初期データ入り）にも同じ名前が
+// 無ければ追加する。seedSuppliers は空DBのときしか動かないため、
+// これで本番の既存DBにも新しい仕入れ先が反映される。
+async function ensureExtraSuppliers() {
+  const c = rawClient();
+  for (const s of EXTRA_SUPPLIERS) {
+    const exists = await c.execute({
+      sql: "SELECT 1 FROM suppliers WHERE name = ? LIMIT 1",
+      args: [s.name],
+    });
+    if (exists.rows.length) continue;
+    await c.execute({
+      sql: `INSERT INTO suppliers
+        (name, base_url, selector_item, selector_name, selector_price,
+         selector_jan, selector_link, selector_image, is_preset, enabled)
+       VALUES (?, ?, '', '', '', '', '', '', 1, 1)`,
+      args: [s.name, s.base_url],
+    });
+  }
+}
+
+// 仕入れ先の表示名を、旧名から新名にリネームする（タスクはそのまま残す）。
+// 新名がすでに存在する場合は、重複を避けて旧名の方を消す。
+async function renameSuppliers() {
+  const c = rawClient();
+  for (const [oldName, newName] of SUPPLIER_RENAMES) {
+    const oldRs = await c.execute({
+      sql: "SELECT id FROM suppliers WHERE name = ?",
+      args: [oldName],
+    });
+    if (!oldRs.rows.length) continue;
+    const newRs = await c.execute({
+      sql: "SELECT id FROM suppliers WHERE name = ?",
+      args: [newName],
+    });
+    if (newRs.rows.length) {
+      // 新名が既にあるなら旧名は削除（重複防止）。
+      await c.execute({ sql: "DELETE FROM suppliers WHERE name = ?", args: [oldName] });
+    } else {
+      await c.execute({
+        sql: "UPDATE suppliers SET name = ? WHERE name = ?",
+        args: [newName, oldName],
+      });
+    }
+  }
+}
+
+// 使わなくなった仕入れ先を、既存DBから削除する。
+// その仕入れ先で作られたタスクと、その結果（巡回結果・通知・ジョブ）もまとめて片付ける。
+async function removeRetiredSuppliers() {
+  const c = rawClient();
+  for (const name of RETIRED_SUPPLIER_NAMES) {
+    const rs = await c.execute({
+      sql: "SELECT id FROM suppliers WHERE name = ?",
+      args: [name],
+    });
+    if (!rs.rows.length) continue;
+    const supId = rs.rows[0][0];
+    const tasksRs = await c.execute({
+      sql: "SELECT id FROM tasks WHERE supplier_id = ?",
+      args: [supId],
+    });
+    for (const row of tasksRs.rows) {
+      const tid = row[0];
+      await c.execute({ sql: "DELETE FROM findings WHERE task_id = ?", args: [tid] });
+      await c.execute({ sql: "DELETE FROM notifications WHERE task_id = ?", args: [tid] });
+      await c.execute({ sql: "DELETE FROM crawl_jobs WHERE task_id = ?", args: [tid] });
+      await c.execute({ sql: "DELETE FROM tasks WHERE id = ?", args: [tid] });
+    }
+    await c.execute({ sql: "DELETE FROM suppliers WHERE id = ?", args: [supId] });
+  }
+}
+
 // 1行を「列名→値」の素直なオブジェクトに変換する（JSON応答・プロパティ参照用）。
 function toObj(row, columns) {
   const o = {};
@@ -299,4 +482,40 @@ export async function getAllSettings() {
   const out = {};
   for (const r of rows) out[r.key] = r.value;
   return out;
+}
+
+// ---- Keepa照合キャッシュ（トークン節約用） ----
+// 同じJAN・商品名・ASINの照合結果を一定時間ためておき、
+// 何度も巡回しても Keepa を再び呼ばずに済むようにする。
+// 「見つからなかった」結果もためておく（無駄な再照合を防ぐため）。
+const KEEPA_CACHE_TTL_HOURS = 6;
+
+export async function getKeepaCache(cacheKey) {
+  const row = await get(
+    "SELECT result_json, found_at FROM keepa_cache WHERE cache_key = ?",
+    [cacheKey]
+  );
+  if (!row) return undefined; // 未キャッシュ
+  // 期限切れ判定
+  const foundAt = new Date((row.found_at || "").replace(" ", "T") + "Z");
+  const ageMs = Date.now() - foundAt.getTime();
+  if (isFinite(ageMs) && ageMs > KEEPA_CACHE_TTL_HOURS * 3600 * 1000) {
+    return undefined; // 古いので使わない
+  }
+  try {
+    return JSON.parse(row.result_json); // null（見つからず）も有効な値として返る
+  } catch (_) {
+    return undefined;
+  }
+}
+
+export async function setKeepaCache(cacheKey, value) {
+  await run(
+    `INSERT INTO keepa_cache (cache_key, result_json, found_at)
+     VALUES (?, ?, datetime('now'))
+     ON CONFLICT(cache_key) DO UPDATE SET
+       result_json = excluded.result_json,
+       found_at = excluded.found_at`,
+    [cacheKey, JSON.stringify(value == null ? null : value)]
+  );
 }

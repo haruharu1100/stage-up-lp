@@ -94,18 +94,82 @@ export default function NotificationsPage() {
       ) : (
         items.map((it) => (
           <div className="card notif" key={it.id}>
-            {it.image_url ? (
-              <img className="thumb" src={it.image_url} alt="" />
+            {it.image_url || it.asin ? (
+              <img
+                className="thumb"
+                src={
+                  it.image_url ||
+                  `https://images-na.ssl-images-amazon.com/images/P/${it.asin}.09._SCLZZZZZZZ_.jpg`
+                }
+                alt=""
+                onError={(e) => {
+                  const img = e.currentTarget;
+                  if (it.asin && !img.dataset.fallback) {
+                    img.dataset.fallback = "1";
+                    img.src = `https://images-na.ssl-images-amazon.com/images/P/${it.asin}.09._SCLZZZZZZZ_.jpg`;
+                  }
+                }}
+              />
             ) : (
               <div className="thumb" />
             )}
             <div className="body">
               <div className="meta">
                 <span className="badge">利益条件 達成</span>
+                {it.match_type === "jan" && (
+                  <span className="badge" style={{ background: "#e7f7ec", color: "#1a7f37" }}>
+                    JAN一致・確実
+                  </span>
+                )}
+                {it.match_type === "model" && (
+                  <span className="badge" style={{ background: "#e8f0fe", color: "#1a56db" }}>
+                    型番一致・ほぼ確実
+                  </span>
+                )}
+                {(it.match_type === "name" || !it.match_type) && (
+                  <span className="badge" style={{ background: "#fdecec", color: "#b42318" }}>
+                    名前のみ一致・要確認
+                  </span>
+                )}
+                {it.condition && (
+                  <span className={"badge" + (it.condition === "中古" ? " gray" : "")}>
+                    {it.condition === "中古" ? "中古（中古価格で比較）" : "新品"}
+                  </span>
+                )}
                 <span>{it.supplier_name || "仕入れ先不明"}</span>
                 <span>{it.found_at}</span>
               </div>
               <div className="pname">{it.product_name}</div>
+              {(it.match_type === "name" || !it.match_type) && (
+                <div
+                  style={{
+                    fontSize: 12,
+                    color: "#b42318",
+                    background: "#fdecec",
+                    border: "1px solid #f5c2c0",
+                    borderRadius: 8,
+                    padding: "6px 10px",
+                    margin: "4px 0 6px",
+                    lineHeight: 1.5,
+                  }}
+                >
+                  ⚠ 商品名だけで一致した候補です。別商品（有線／無線・容量・型番違い）の恐れがあるため、
+                  <b>仕入れ前に必ずJAN（{it.jan || "商品コード"}）の一致を確認</b>してください。
+                </div>
+              )}
+              {it.amazon_title && (
+                <div
+                  style={{
+                    fontSize: 12,
+                    color: "#55617a",
+                    margin: "2px 0 4px",
+                    lineHeight: 1.4,
+                  }}
+                >
+                  <span style={{ color: "#98a2b3" }}>Amazon商品名：</span>
+                  {it.amazon_title}
+                </div>
+              )}
               <div className="subinfo">
                 <span className="mono">JAN: {it.jan || "-"}</span>
                 <span className="mono">ASIN: {it.asin || "-"}</span>
@@ -122,6 +186,11 @@ export default function NotificationsPage() {
               </div>
             </div>
             <div className="figures">
+              {it.condition && (
+                <div className="small-figures mono" style={{ marginBottom: 2 }}>
+                  Amazon{it.condition}価格
+                </div>
+              )}
               <div className="amazon-price mono">{yen(it.amazon_price)}</div>
               <div className="profit mono">
                 +{yen(it.profit)}（{it.profit_rate}%）
@@ -129,7 +198,7 @@ export default function NotificationsPage() {
               <div className="small-figures mono">
                 仕入 {yen(it.buy_price)} / 手数料 {yen(it.fees)}
                 <br />
-                月販 {it.monthly_sales}
+                販売動向(30日) {it.monthly_sales}
               </div>
               <button
                 className="btn ghost small"

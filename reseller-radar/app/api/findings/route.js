@@ -10,7 +10,7 @@ export async function GET(req) {
     `SELECT f.*, t.name AS task_name
      FROM findings f LEFT JOIN tasks t ON t.id = f.task_id
      ${dealOnly ? "WHERE f.is_deal = 1" : ""}
-     ORDER BY f.is_deal DESC, f.profit DESC, f.id DESC`
+     ORDER BY f.is_deal DESC, f.id DESC`
   );
   return NextResponse.json(rows);
 }

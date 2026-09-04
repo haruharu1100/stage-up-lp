@@ -6,9 +6,17 @@ import { runAllTasks } from "@/lib/crawler";
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
-async function handle() {
+async function handle(req) {
   try {
-    const summary = await runAllTasks();
+    // 既定では有料読み取り（メルカリ等）を除外して巡回する。
+    // 無料枠の温存のため、自動の毎時巡回はメルカリを回さない。
+    // どうしても含めたいときは ?paid=1 を付ける。
+    let skipPaid = true;
+    try {
+      const { searchParams } = new URL(req.url);
+      if (searchParams.get("paid") === "1") skipPaid = false;
+    } catch (_) {}
+    const summary = await runAllTasks({ skipPaid });
     return NextResponse.json({ ok: true, summary });
   } catch (e) {
     return NextResponse.json(
@@ -18,10 +26,10 @@ async function handle() {
   }
 }
 
-export async function GET() {
-  return handle();
+export async function GET(req) {
+  return handle(req);
 }
 
-export async function POST() {
-  return handle();
+export async function POST(req) {
+  return handle(req);
 }
