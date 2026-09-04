@@ -18,12 +18,87 @@
  */
 const dev = process.env.NODE_ENV !== "production";
 
+/**
+ * ══════════════════════════════════════════════════════════
+ *  広告を出している媒体だけ、送信先を開ける
+ * ══════════════════════════════════════════════════════════
+ *
+ * ═══════════════════════════════════════════════════════
+ * ★ここが閉じていると、どうなるか（2026-09-03に実際に起きたこと）
+ * ═══════════════════════════════════════════════════════
+ *
+ *   広告タグは正しく入っている。イベントも正しく送っている。
+ *   なのに、ブラウザが最後の一歩で送信を止めます。
+ *   画面にエラーは出ません。サイトは普通に動きます。
+ *   広告の管理画面に「成果 0件」と出るだけです。
+ *
+ *   本番で実測したところ、次の3つが全部止められていました。
+ *
+ *     www.google.com/ccm/collect            … 成果の受け取り口
+ *     googleads.g.doubleclick.net/pagead/…  … 成果の受け取り口
+ *     www.google.com/rmkt/collect/…         … 再訪問者向けの記録
+ *
+ *   この状態で日1,000円を出していれば、費用だけが出て、
+ *   成果は最後まで1件も立ちませんでした。前回と同じ結末です。
+ *
+ * ★「使っていない媒体の穴は開けない」を守ること。
+ *   だから、環境変数が入っている媒体だけ開けます。
+ *   広告をやめて環境変数を消せば、穴も自動で閉じます。
+ *
+ * ★逆に、環境変数を足したのにここを足し忘れる事故を防ぐため、
+ *   tests/csp.test.ts が「広告IDがあるのに送信先が閉じている」を毎回止めます。
+ */
+const usingGoogleAds = Boolean(process.env.NEXT_PUBLIC_GOOGLE_ADS_ID);
+const usingMeta = Boolean(process.env.NEXT_PUBLIC_META_PIXEL_ID);
+const usingX = Boolean(process.env.NEXT_PUBLIC_X_PIXEL_ID);
+
+/* Google 広告が成果を受け取る先。
+   ★www.google.co.jp も要ります。日本の閲覧者は、
+     国別のドメインへ送られることがあります。 */
+const GOOGLE_ADS_HOSTS = [
+  "https://www.googleadservices.com",
+  "https://googleads.g.doubleclick.net",
+  "https://td.doubleclick.net",
+  "https://www.google.com",
+  "https://www.google.co.jp",
+];
+
+const META_HOSTS = ["https://connect.facebook.net", "https://www.facebook.com"];
+const X_HOSTS = ["https://static.ads-twitter.com", "https://analytics.twitter.com", "https://t.co"];
+
+/** 空を混ぜずに1行にする */
+const dir = (name, ...parts) =>
+  `${name} ${parts.flat().filter(Boolean).join(" ")}`;
+
 const csp = [
   "default-src 'self'",
   // Next.js の起動スクリプト＋GA4／Clarity（未設定なら読み込まれない）
-  `script-src 'self' 'unsafe-inline'${dev ? " 'unsafe-eval'" : ""} https://www.googletagmanager.com https://www.google-analytics.com https://www.clarity.ms`,
+  dir(
+    "script-src",
+    "'self'",
+    "'unsafe-inline'",
+    dev ? "'unsafe-eval'" : "",
+    "https://www.googletagmanager.com",
+    "https://www.google-analytics.com",
+    "https://www.clarity.ms",
+    usingGoogleAds ? GOOGLE_ADS_HOSTS : [],
+    usingMeta ? META_HOSTS : [],
+    usingX ? X_HOSTS : [],
+  ),
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob: https://www.googletagmanager.com https://*.google-analytics.com https://www.clarity.ms https://c.bing.com",
+  dir(
+    "img-src",
+    "'self'",
+    "data:",
+    "blob:",
+    "https://www.googletagmanager.com",
+    "https://*.google-analytics.com",
+    "https://www.clarity.ms",
+    "https://c.bing.com",
+    usingGoogleAds ? GOOGLE_ADS_HOSTS : [],
+    usingMeta ? META_HOSTS : [],
+    usingX ? X_HOSTS : [],
+  ),
   "font-src 'self' data:",
   /*
     ★ analytics.google.com を消さないこと（2026-09-01 追加）。
@@ -33,11 +108,32 @@ const csp = [
       画面にはエラーが出ず、タグも正しく入っているのに、
       アナリティクス側だけが「0人」のままになります。実際そうなっていました。
 
-      逆に、広告の追跡先（google.com／google.co.jp／doubleclick）は
-      あえて許可していません。当サイトは Google 広告を使っておらず、
-      止めても人数の計測には影響しないためです。
+    ★ 広告の追跡先（google.com／google.co.jp／doubleclick）も、
+      2026-09-03 から必要になりました。Google 広告を実際に使うためです。
+      同じ失敗を、今度は「広告費」で繰り返すところでした。
   */
-  "connect-src 'self' https://*.google-analytics.com https://analytics.google.com https://*.analytics.google.com https://www.clarity.ms https://c.clarity.ms",
+  dir(
+    "connect-src",
+    "'self'",
+    "https://*.google-analytics.com",
+    "https://analytics.google.com",
+    "https://*.analytics.google.com",
+    "https://www.clarity.ms",
+    "https://c.clarity.ms",
+    usingGoogleAds ? GOOGLE_ADS_HOSTS : [],
+    usingMeta ? META_HOSTS : [],
+    usingX ? X_HOSTS : [],
+  ),
+  /* ★Google 広告は、成果の一部を「見えない小窓（iframe）」で送ります。
+       ここを書かないと default-src 'self' に落ち、その分だけ静かに欠けます。 */
+  dir(
+    "frame-src",
+    "'self'",
+    usingGoogleAds
+      ? ["https://td.doubleclick.net", "https://bid.g.doubleclick.net", "https://www.googletagmanager.com"]
+      : [],
+    usingMeta ? META_HOSTS : [],
+  ),
   "media-src 'self'",
   "object-src 'none'",
   "base-uri 'self'",
@@ -60,6 +156,9 @@ const securityHeaders = [
     value: "max-age=63072000; includeSubDomains; preload",
   },
 ];
+
+/** 試験から中身を確かめられるように、組み立ての手順そのものを渡す */
+export { csp, securityHeaders };
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {

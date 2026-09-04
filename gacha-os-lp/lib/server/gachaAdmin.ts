@@ -54,12 +54,15 @@ import {
   BACKTEST_ENGINE_VERSION,
   DEFAULT_SEED,
   backtestReport,
+  designedRtp,
+  validateSpec,
   type GachaSpec,
   type Verdict,
 } from "@/lib/backtest";
 import { can, type Role } from "@/lib/permissions";
 import { appendAuditTx } from "./audit";
 import { db, withWriteTx } from "./db";
+import { id as newId } from "./ids";
 import { rtpReport, type RtpReport } from "./rtpMonitor";
 import type { Transaction } from "@libsql/client";
 
@@ -162,7 +165,11 @@ export type GachaAdminCode =
   | "SPEC_CHANGED"
   | "VERDICT_DANGER"
   | "UNUSABLE_SPEC"
-  | "BAD_STATUS";
+  | "BAD_STATUS"
+  /** 名前が空・同じ名前がすでにある・数字が入っていない */
+  | "NO_TITLE"
+  | "DUP_TITLE"
+  | "BAD_SPEC";
 
 export class GachaAdminError extends Error {
   constructor(
@@ -443,6 +450,190 @@ export async function gachaDetail(
     series: rep!.series,
     ledger: rep!.ledger,
   };
+}
+
+/* ══════════════════════════════════════════════
+   新しく作る（下書きとして登録する）
+   ══════════════════════════════════════════════ */
+
+/**
+ * ガチャを1本、下書きとして登録する。
+ *
+ * ═══════════════════════════════════════════════════════
+ * ★2026-09-04 まで、この関数がありませんでした
+ * ═══════════════════════════════════════════════════════
+ *
+ *   AIガチャ作成の画面には「この案を下書きとして登録する」ボタンがあり、
+ *   押すと「下書きに登録しました」と緑色で出ていました。
+ *   ところが、送り先がどこにもありませんでした。
+ *   ブラウザの中の配列に足していただけなので、
+ *   画面を開き直した瞬間に消えていました。
+ *
+ *   ★「押したら保存された、と書く」のは、保存してから書くこと。
+ *     保存していないのに書くと、
+ *     作った本人が「登録済み」と思ったまま次の作業へ進みます。
+ *
+ * ═══════════════════════════════════════════════════════
+ * ★検証結果を、ここで埋めないこと
+ * ═══════════════════════════════════════════════════════
+ *
+ *   作った直後は backtest_verdict を NULL のままにします。
+ *   ここで「作るついでに検証も通しておく」をやると、
+ *   公開前の関門が、作成と同時に自動で開くことになります。
+ *
+ *   作る人と、検証して公開する人は、別の作業として分けます。
+ *   ガチャ管理で「検証を実行」を押して、
+ *   その結果が保存されてはじめて、公開ボタンが通ります。
+ *
+ * ★状態は必ず DRAFT で作ること。
+ *   「作ったらすぐ売る」を既定にすると、
+ *   入力途中のガチャがお客様の画面に出ます。
+ */
+export async function createGachaDraft(args: {
+  tenantId: string;
+  title: string;
+  spec: GachaSpec;
+  by: { adminId: string; name: string; role: string };
+  requestId?: string;
+}): Promise<{ gachaId: string; title: string; designedRtp: number; at: string }> {
+  const title = String(args.title ?? "").trim();
+  if (title.length === 0) {
+    throw new GachaAdminError(
+      "NO_TITLE",
+      "ガチャの名前を入れてください。お客様の画面に出る名前です。",
+    );
+  }
+  if (title.length > 60) {
+    throw new GachaAdminError(
+      "NO_TITLE",
+      "ガチャの名前が長すぎます。60文字までにしてください。",
+    );
+  }
+
+  const spec: GachaSpec = {
+    name: title,
+    price: Math.floor(Number(args.spec?.price ?? 0)),
+    total: Math.floor(Number(args.spec?.total ?? 0)),
+    prizes: Array.isArray(args.spec?.prizes)
+      ? args.spec.prizes.map((p) => ({
+          grade: String(p?.grade ?? "").trim(),
+          name: String(p?.name ?? "").trim(),
+          count: Math.floor(Number(p?.count ?? 0)),
+          value: Math.floor(Number(p?.value ?? 0)),
+        }))
+      : [],
+  };
+
+  /* ★入力の点検を、画面と同じ道具で行うこと。
+       画面（AIガチャ作成）と別の基準をここに書くと、
+       画面では通ったのにサーバーで断られる、が起きます。 */
+  const issues = validateSpec(spec);
+  if (issues.length > 0) {
+    throw new GachaAdminError(
+      "BAD_SPEC",
+      issues[0].message,
+      issues.map((i) => i.code).join(","),
+    );
+  }
+  /* 等級の重複は validateSpec では見ていません。
+     在庫表の鍵が（会社・ガチャ・等級）なので、同じ等級が2行あると入りません */
+  const grades = spec.prizes.map((p) => p.grade);
+  if (grades.some((g) => g.length === 0) || new Set(grades).size !== grades.length) {
+    throw new GachaAdminError(
+      "BAD_SPEC",
+      "賞の記号（S・A・Bなど）が空か、同じものが2つあります。1つずつ別の記号にしてください。",
+    );
+  }
+
+  const at = new Date().toISOString();
+  const gachaId = newId("gac");
+  const rtp = designedRtp(spec);
+
+  return withWriteTx(async (tx) => {
+    /* ★同じ名前を2本作らせないこと。
+         一覧でどちらが本物か分からなくなり、
+         止めるつもりで別のガチャを止めます。
+         大文字小文字と前後の空白は、同じ名前とみなします。 */
+    const dup = await tx.execute({
+      sql: `SELECT id FROM gachas
+             WHERE tenant_id = ? AND LOWER(TRIM(title)) = ?`,
+      args: [args.tenantId, title.toLowerCase()],
+    });
+    if (dup.rows.length > 0) {
+      throw new GachaAdminError(
+        "DUP_TITLE",
+        "同じ名前のガチャがすでにあります。別の名前にしてください。",
+      );
+    }
+
+    await tx.execute({
+      sql: `INSERT INTO gachas
+              (id, tenant_id, title, price, total, left_count, designed_rtp, status,
+               revenue, paid_value, created_at,
+               published_at, paused_at, pause_reason,
+               backtest_verdict, backtest_stress, backtest_at,
+               backtest_engine, backtest_seed, backtest_spec)
+            VALUES (?,?,?,?,?,?,?, 'DRAFT', 0, 0, ?,
+                    NULL, NULL, NULL,
+                    NULL, NULL, NULL,
+                    NULL, NULL, NULL)`,
+      args: [
+        gachaId,
+        args.tenantId,
+        title,
+        spec.price,
+        spec.total,
+        /* 残り口数は、作った時点では総口数と同じ */
+        spec.total,
+        rtp,
+        at,
+      ],
+    });
+
+    /* ★在庫の行を、必ず一緒に作ること。
+         行が無いと「まだ1本も出ていない」と読めてしまい、
+         本数の上限が効かなくなります。 */
+    for (const p of spec.prizes) {
+      await tx.execute({
+        sql: `INSERT INTO gacha_stock
+                (tenant_id, gacha_id, grade, name, value, total, drawn, reserved)
+              VALUES (?,?,?,?,?,?,0,0)`,
+        args: [args.tenantId, gachaId, p.grade, p.name || `${p.grade}賞`, p.value, p.count],
+      });
+    }
+
+    await appendAuditTx(tx, {
+      tenantId: args.tenantId,
+      at,
+      actorKind: "ADMIN",
+      actorId: args.by.adminId,
+      actorName: args.by.name,
+      actorRole: args.by.role,
+      action: "GACHA_CREATE",
+      target: `gacha:${gachaId}`,
+      summary: `${title} を下書きとして登録（設計還元率 ${rtp.toFixed(1)}％・未検証）`,
+      after: "DRAFT",
+      data: {
+        gachaId,
+        title,
+        price: spec.price,
+        total: spec.total,
+        designedRtp: rtp,
+        prizes: spec.prizes.map((p) => ({
+          grade: p.grade,
+          name: p.name,
+          count: p.count,
+          value: p.value,
+        })),
+        /* ★「検証はまだ」を記録にも残す。
+             あとから読む人が、公開までの順番を追えるようにするため */
+        verified: false,
+      },
+      requestId: args.requestId,
+    });
+
+    return { gachaId, title, designedRtp: rtp, at };
+  });
 }
 
 /* ══════════════════════════════════════════════

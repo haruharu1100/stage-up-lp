@@ -15,28 +15,40 @@
  *
  * ★出た案を、そのまま公開できるようにしないこと。
  *   この画面からできるのは「下書きとして登録する」ところまでです。
- *   登録した時点では、検証結果を空のままにします（state.ts の CREATE_GACHA）。
+ *   登録した時点では、検証結果を空のままにします。
  *   ここに表示している判定は、あくまで下書き前の下見です。
  *   ガチャ管理でもう一度「検証を実行」し、その結果を保存してからでないと
  *   公開ボタンは通りません。
  *   人が考えたものでもAIが出したものでも、検証を飛ばさせません。
  *
+ * ═══════════════════════════════════════════════
+ * ★2026-09-04 に直したこと（保存していなかった）
+ * ═══════════════════════════════════════════════
+ *
+ *   この画面の「この案を下書きとして登録する」は、
+ *   押すと緑色で「下書きに登録しました」と出ていましたが、
+ *   サーバーへは何も送っていませんでした。
+ *   ブラウザの中の配列に足していただけなので、
+ *   画面を開き直すと、作ったガチャは消えていました。
+ *   IDも `g_202` のように画面側で組み立てた作り物でした。
+ *
+ *   いまは POST /api/console/gachas へ送り、
+ *   保存できたときにサーバーが返したIDだけを表示します。
+ *   ★保存できたと書くのは、保存できてからにすること。
+ *
  * ★このデモでは、案はブラウザの中の計算で作っています。
  *   外部のAIには接続していません（完全Sandboxのため）。
  *   組み立ての手順と、出てくる数字の性質は本番と同じにしてあります。
+ *   ただし「登録」だけは本物です。押すと本当に保存されます。
  */
 
 "use client";
 
 import { useMemo, useState } from "react";
 import { backtestReport, designedRtp, verdictLabel, type GachaSpec } from "@/lib/backtest";
+import { createGachaDraft } from "@/lib/console/liveGachas";
 import { STRENGTH_LABEL, buildSpec, type Strength } from "@/lib/console/spec";
-import {
-  BACKTEST_SEED,
-  can,
-  type ConsoleAction,
-  type ConsoleState,
-} from "@/lib/console/state";
+import { BACKTEST_SEED, can, type ConsoleState } from "@/lib/console/state";
 import type { MenuKey } from "../menu";
 import { Badge, Btn, Card, DemoNote, Field, KV, RowCard, Rows, Table, Td, WhatIsThis, inputClass } from "../ui";
 
@@ -62,11 +74,9 @@ const PRESETS = [
 
 export default function Builder({
   s,
-  dispatch,
   onNav,
 }: {
   s: ConsoleState;
-  dispatch: React.Dispatch<ConsoleAction>;
   onNav: (k: MenuKey) => void;
 }) {
   const [text, setText] = useState(PRESETS[0]);
@@ -78,8 +88,12 @@ export default function Builder({
   const [log, setLog] = useState<string[]>([]);
   const [title, setTitle] = useState("");
   const [titleTouched, setTitleTouched] = useState(false);
-  /** 登録済みのガチャID。二度押しで同じ案が2本できるのを防ぐ */
+  /** 登録済みのガチャID。★サーバーが返したものだけを入れること */
   const [savedId, setSavedId] = useState<string | null>(null);
+  /** 送っている最中か。連打で2本できるのを防ぐ */
+  const [okurichuu, setOkurichuu] = useState(false);
+  /** 断られた理由。★「登録できませんでした」で終わらせない */
+  const [shippai, setShippai] = useState<string | null>(null);
 
   const mayEdit = s.me ? can(s.me.role, "gacha.edit") : false;
 
@@ -95,6 +109,7 @@ export default function Builder({
     setSpec(buildSpec("AIが組んだ案", p, t, st, nextTarget));
     /* 組み直したら、それは別の案です。登録済みの印を外します */
     setSavedId(null);
+    setShippai(null);
     if (!titleTouched) setTitle(`${p.toLocaleString()}円 ${t.toLocaleString()}口 ガチャ`);
     setLog((prev) => [
       ...prev,
@@ -108,17 +123,37 @@ export default function Builder({
     [spec],
   );
 
-  /** 登録できるか。名前が空・重複・権限なしは、押す前に止める */
-  const nameTaken = s.gachas.some((x) => x.title === title.trim());
-  const canSave = mayEdit && !!spec && title.trim().length > 0 && !nameTaken && !savedId;
+  /**
+   * 登録できるか。名前が空・権限なし・送信中は、押す前に止める。
+   *
+   * ★同じ名前があるかどうかを、この画面で判断しないこと。
+   *   ここで見られるのは、この画面が持っている見本の一覧だけです。
+   *   本当に登録されているガチャは、サーバーにしかありません。
+   *   同じ名前かどうかは、サーバーが断ります（DUP_TITLE）。
+   */
+  const canSave =
+    mayEdit && !!spec && title.trim().length > 0 && !savedId && !okurichuu;
 
-  const save = () => {
+  const save = async () => {
     if (!spec || !canSave) return;
-    const before = s.gachas.length;
-    dispatch({ type: "CREATE_GACHA", title: title.trim(), spec });
-    /* 反映は次の描画なので、IDは reducer と同じ規則で組み立てます */
-    setSavedId(`g_${201 + before}`);
-    setLog((prev) => [...prev, `「${title.trim()}」を下書きとして登録しました（検証はこれから）。`]);
+    const namae = title.trim();
+    setOkurichuu(true);
+    setShippai(null);
+
+    /* ★名前は、いま入力されているものに合わせて送ること。
+         案を作ったときの名前のまま送ると、
+         画面に出ている名前と、保存された名前が違うものになります。 */
+    const r = await createGachaDraft({ title: namae, spec: { ...spec, name: namae } });
+    setOkurichuu(false);
+
+    if (!r.ok) {
+      setShippai(r.message);
+      setLog((prev) => [...prev, `「${namae}」は登録できませんでした：${r.message}`]);
+      return;
+    }
+    /* ★IDは、保存できたサーバーが返したものだけを使うこと */
+    setSavedId(r.gachaId);
+    setLog((prev) => [...prev, `「${namae}」を下書きとして登録しました（検証はこれから）。`]);
   };
 
   return (
@@ -382,8 +417,12 @@ export default function Builder({
                 <Badge tone="ok">下書きに登録しました</Badge>
                 <p className="mt-2 text-note leading-[1.9] text-slate2">
                   「{title.trim()}」を下書きとして登録しました。
+                  この画面を開き直しても残ります。
                   検証結果は<strong className="font-bold text-slate">まだ空</strong>です。
                   次に、ガチャ管理で「検証を実行」を押してください。
+                </p>
+                <p className="mt-2 text-label leading-[1.9] text-slate3">
+                  登録番号：<span className="num">{savedId}</span>
                 </p>
                 <div className="mt-3 flex flex-wrap gap-2">
                   <Btn kind="primary" onClick={() => onNav("gacha")}>
@@ -406,13 +445,13 @@ export default function Builder({
                     }}
                   />
                 </Field>
-                {nameTaken && (
-                  <p className="text-note leading-[1.9] text-warn-ink">
-                    同じ名前のガチャがすでにあります。別の名前にしてください。
+                {shippai && (
+                  <p className="rounded-xl border border-warn/35 bg-warn/10 px-4 py-3 text-note leading-[1.9] text-warn-ink">
+                    {shippai}
                   </p>
                 )}
                 <Btn kind="primary" onClick={save} disabled={!canSave}>
-                  この案を下書きとして登録する
+                  {okurichuu ? "登録しています…" : "この案を下書きとして登録する"}
                 </Btn>
                 <p className="text-note leading-[1.9] text-slate3">
                   ★登録した時点では、検証結果は空のままにしています。
@@ -442,6 +481,9 @@ export default function Builder({
         このデモでは、案をブラウザの中の計算で作っています。外部のAIには接続していません。
         実際にお使いいただく管理画面では、同じ手順でAIが案を出します。
         検証の計算そのものは、本番と同じものを使っています。
+        <br />
+        ★「下書きとして登録する」だけは本物です。押すと本当に保存され、
+        画面を開き直しても残ります。ガチャ管理の一覧にも出ます。
       </DemoNote>
     </>
   );

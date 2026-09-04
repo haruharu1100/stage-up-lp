@@ -28,6 +28,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { postHeaders } from "@/lib/csrf";
 import type { CustomerDetail, CustomerRow } from "@/lib/server/customerAdmin";
 
 export type { CustomerDetail, CustomerRow };
@@ -275,7 +276,10 @@ export async function runCustomerAction(args: {
   try {
     const res = await fetch("/api/console/customers/action", {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      /* ★postHeaders() を必ず通すこと（CSRF の合図が付きます）。
+           付け忘れると、押しても 403 で断られ、
+           画面には「画面を開き直してください」とだけ出ます。 */
+      headers: postHeaders(),
       cache: "no-store",
       body: JSON.stringify({
         action: args.action,

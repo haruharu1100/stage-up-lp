@@ -28,6 +28,8 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import type { GachaSpec } from "@/lib/backtest";
+import { postHeaders } from "@/lib/csrf";
 import type { GachaDetail, GachaRow } from "@/lib/server/gachaAdmin";
 
 export type { GachaDetail, GachaRow };
@@ -225,6 +227,69 @@ export function useGachaDetail(gachaId: string | null): {
 }
 
 /* ══════════════════════════════════════════════
+   下書きとして登録する
+   ══════════════════════════════════════════════ */
+
+export type CreateGachaResult =
+  | { ok: true; gachaId: string; message: string }
+  | { ok: false; message: string; code: string };
+
+/**
+ * 新しいガチャを、下書きとしてサーバーへ登録する。
+ *
+ * ★IDを画面側で組み立てないこと。
+ *   2026-09-04 まで、この画面は `g_${201 + 本数}` という文字列を
+ *   その場で作って「登録しました」と出していました。
+ *   サーバーには何も届いていないので、
+ *   画面を開き直すと、作ったはずのガチャが消えていました。
+ *   IDは、保存できたサーバーだけが知っています。
+ */
+export async function createGachaDraft(args: {
+  title: string;
+  spec: GachaSpec;
+}): Promise<CreateGachaResult> {
+  try {
+    const res = await fetch("/api/console/gachas", {
+      method: "POST",
+      /* ★postHeaders() を必ず通すこと。CSRF の合図が付かないと 403 で断られます */
+      headers: postHeaders(),
+      cache: "no-store",
+      body: JSON.stringify({ title: args.title, spec: args.spec }),
+    });
+    const data = (await res.json()) as {
+      ok?: boolean;
+      gachaId?: string;
+      message?: string;
+      code?: string;
+      detail?: string;
+    };
+
+    if (!res.ok || !data.ok || !data.gachaId) {
+      return {
+        ok: false,
+        message:
+          String(data.message ?? "") || "登録できませんでした。",
+        code: String(data.code ?? `HTTP_${res.status}`),
+      };
+    }
+    return {
+      ok: true,
+      gachaId: data.gachaId,
+      message: String(data.message ?? "下書きとして登録しました。"),
+    };
+  } catch {
+    return {
+      ok: false,
+      /* ★「たぶん保存されました」と書かないこと。
+           送れていないので、保存されていません */
+      message:
+        "通信できませんでした。登録されていません。もう一度お試しください。",
+      code: "NETWORK",
+    };
+  }
+}
+
+/* ══════════════════════════════════════════════
    操作（検証・公開・停止・再開）
    ══════════════════════════════════════════════ */
 
@@ -250,7 +315,12 @@ export async function runGachaAction(args: {
   try {
     const res = await fetch("/api/console/gachas/action", {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      /* ★postHeaders() を必ず通すこと。
+           ここを { "content-type": ... } だけにすると、
+           CSRF の合図が付かず、サーバーに 403 で断られます。
+           画面には「画面を開き直してください」とだけ出て、
+           何度開き直しても直りません（2026-09-04 の実測で発覚）。 */
+      headers: postHeaders(),
       cache: "no-store",
       body: JSON.stringify({
         action: args.action,

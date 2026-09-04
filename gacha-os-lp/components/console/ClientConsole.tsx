@@ -602,11 +602,17 @@ function Screen({
              画面の中の控えを書き換えても、DBは変わりません。 */
         return <GachaList s={s} onNav={onNav} />;
       case "builder":
-        return <Builder s={s} dispatch={dispatch} onNav={onNav} />;
+        /* ★dispatch を渡さないこと。
+             この画面の「下書きとして登録する」は、サーバーへ送ります。
+             画面の中の控えに足しても、開き直した瞬間に消えます。 */
+        return <Builder s={s} onNav={onNav} />;
       case "backtest":
         return <BacktestScreen s={s} dispatch={dispatch} onNav={onNav} />;
       case "preview":
-        return <PreviewScreen s={s} dispatch={dispatch} onNav={onNav} />;
+        /* ★見本データ（s）と dispatch を渡さないこと。
+             ここは「公開前にお客様の目で見る」ための下見です。
+             見本を渡すと、本物と違うものを見て公開を決めることになります。 */
+        return <PreviewScreen onNav={onNav} />;
       case "products":
         return <ProductsScreen />;
       case "rtp":

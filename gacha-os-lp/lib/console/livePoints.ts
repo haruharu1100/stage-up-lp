@@ -41,6 +41,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { postHeaders } from "@/lib/csrf";
 import type {
   LedgerLine,
   PointAdjustment,
@@ -478,8 +479,10 @@ export async function runPointRequest(args: {
   try {
     const res = await fetch("/api/console/points/request", {
       method: "POST",
+      /* ★postHeaders() を必ず通すこと（CSRF の合図が付きます）。
+           付け忘れると、押しても 403 で断られます。 */
       headers: {
-        "content-type": "application/json",
+        ...postHeaders(),
         "Idempotency-Key": args.idempotencyKey,
       },
       cache: "no-store",
@@ -543,7 +546,9 @@ export async function runPointDecide(args: {
   try {
     const res = await fetch("/api/console/points/approve", {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      /* ★postHeaders() を必ず通すこと（CSRF の合図が付きます）。
+           付け忘れると、押しても 403 で断られます。 */
+      headers: postHeaders(),
       cache: "no-store",
       body: JSON.stringify({
         adjustmentId: args.adjustmentId,

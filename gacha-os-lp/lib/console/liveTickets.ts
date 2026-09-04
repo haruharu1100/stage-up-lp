@@ -35,6 +35,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { postHeaders } from "@/lib/csrf";
 import type {
   Assignee,
   TicketCounts,
@@ -306,7 +307,9 @@ async function post(body: Record<string, unknown>): Promise<TicketActionResult> 
   try {
     const res = await fetch("/api/console/tickets/action", {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      /* ★postHeaders() を必ず通すこと（CSRF の合図が付きます）。
+           付け忘れると、押しても 403 で断られます。 */
+      headers: postHeaders(),
       cache: "no-store",
       body: JSON.stringify(body),
     });

@@ -1,0 +1,102 @@
+{
+  "base": "https://gacha-os-6ejechffu-haruharu1100s-projects.vercel.app",
+  "at": "2026-09-04T12:57:54.128Z",
+  "screens": 0,
+  "actions": 106,
+  "bugs": [
+    {
+      "level": "CHU",
+      "screen": "ガチャ管理",
+      "title": "「さがす」を押しても画面が変わらない",
+      "detail": "URL・文字数・見出し・モーダル数のどれも変化なし（APIエラーも無し）",
+      "repro": "https://gacha-os-6ejechffu-haruharu1100s-projects.vercel.app/client-demo/gachas →「さがす」"
+    },
+    {
+      "level": "CHU",
+      "screen": "ガチャ管理",
+      "title": "「条件を消す」を押しても画面が変わらない",
+      "detail": "URL・文字数・見出し・モーダル数のどれも変化なし（APIエラーも無し）",
+      "repro": "https://gacha-os-6ejechffu-haruharu1100s-projects.vercel.app/client-demo/gachas →「条件を消す」"
+    },
+    {
+      "level": "CHU",
+      "screen": "ガチャ作成",
+      "title": "「500円・1000口で、人気…」を押しても画面が変わらない",
+      "detail": "URL・文字数・見出し・モーダル数のどれも変化なし（APIエラーも無し）",
+      "repro": "https://gacha-os-6ejechffu-haruharu1100s-projects.vercel.app/client-demo/ai-builder →「500円・1000口で、人気…」"
+    },
+    {
+      "level": "CHU",
+      "screen": "ガチャ作成",
+      "title": "「1000円・500口で、スニ…」を押しても画面が変わらない",
+      "detail": "URL・文字数・見出し・モーダル数のどれも変化なし（APIエラーも無し）",
+      "repro": "https://gacha-os-6ejechffu-haruharu1100s-projects.vercel.app/client-demo/ai-builder →「1000円・500口で、スニ…」"
+    },
+    {
+      "level": "CHU",
+      "screen": "ガチャ作成",
+      "title": "「300円・2000口で、週末…」を押しても画面が変わらない",
+      "detail": "URL・文字数・見出し・モーダル数のどれも変化なし（APIエラーも無し）",
+      "repro": "https://gacha-os-6ejechffu-haruharu1100s-projects.vercel.app/client-demo/ai-builder →「300円・2000口で、週末…」"
+    },
+    {
+      "level": "CHU",
+      "screen": "会員管理",
+      "title": "「さがす」を押しても画面が変わらない",
+      "detail": "URL・文字数・見出し・モーダル数のどれも変化なし（APIエラーも無し）",
+      "repro": "https://gacha-os-6ejechffu-haruharu1100s-projects.vercel.app/client-demo/customers →「さがす」"
+    },
+    {
+      "level": "CHU",
+      "screen": "会員管理",
+      "title": "「条件を消す」を押しても画面が変わらない",
+      "detail": "URL・文字数・見出し・モーダル数のどれも変化なし（APIエラーも無し）",
+      "repro": "https://gacha-os-6ejechffu-haruharu1100s-projects.vercel.app/client-demo/customers →「条件を消す」"
+    },
+    {
+      "level": "CHU",
+      "screen": "ポイント管理",
+      "title": "「会員ごとのポイント」を押しても画面が変わらない",
+      "detail": "URL・文字数・見出し・モーダル数のどれも変化なし（APIエラーも無し）",
+      "repro": "https://gacha-os-6ejechffu-haruharu1100s-projects.vercel.app/client-demo/points →「会員ごとのポイント」"
+    },
+    {
+      "level": "CHU",
+      "screen": "ポイント管理",
+      "title": "「さがす」を押しても画面が変わらない",
+      "detail": "URL・文字数・見出し・モーダル数のどれも変化なし（APIエラーも無し）",
+      "repro": "https://gacha-os-6ejechffu-haruharu1100s-projects.vercel.app/client-demo/points →「さがす」"
+    },
+    {
+      "level": "CHU",
+      "screen": "ポイント管理",
+      "title": "「条件を消す」を押しても画面が変わらない",
+      "detail": "URL・文字数・見出し・モーダル数のどれも変化なし（APIエラーも無し）",
+      "repro": "https://gacha-os-6ejechffu-haruharu1100s-projects.vercel.app/client-demo/points →「条件を消す」"
+    },
+    {
+      "level": "CHU",
+      "screen": "問い合わせ",
+      "title": "「さがす」を押しても画面が変わらない",
+      "detail": "URL・文字数・見出し・モーダル数のどれも変化なし（APIエラーも無し）",
+      "repro": "https://gacha-os-6ejechffu-haruharu1100s-projects.vercel.app/client-demo/support →「さがす」"
+    },
+    {
+      "level": "CHU",
+      "screen": "問い合わせ",
+      "title": "「条件を消す」を押しても画面が変わらない",
+      "detail": "URL・文字数・見出し・モーダル数のどれも変化なし（APIエラーも無し）",
+      "repro": "https://gacha-os-6ejechffu-haruharu1100s-projects.vercel.app/client-demo/support →「条件を消す」"
+    },
+    {
+      "level": "CHU",
+      "screen": "設定",
+      "title": "「最新にする」を押しても画面が変わらない",
+      "detail": "URL・文字数・見出し・モーダル数のどれも変化なし（APIエラーも無し）",
+      "repro": "https://gacha-os-6ejechffu-haruharu1100s-projects.vercel.app/client-demo/settings →「最新にする」"
+    }
+  ],
+  "notes": [
+    "ダッシュボード／「AI オペレーターに聞く 「今日は何をしたらいい？」で答えます →」は素直に押せず、force で押した（重なり・アニメーションの疑い）"
+  ]
+}

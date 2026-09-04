@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev -p 3210",
-    "build": "node scripts/check-secrets.mjs && node scripts/check-no-direct-balance-write.mjs && node scripts/check-draw-rng.mjs && node scripts/check-cache.mjs && node scripts/check-regression.mjs && node scripts/check-launch.mjs && next build",
+    "build": "node scripts/check-secrets.mjs && node scripts/check-no-direct-balance-write.mjs && node scripts/check-draw-rng.mjs && node scripts/check-cache.mjs && node scripts/check-csrf.mjs && node scripts/check-regression.mjs && node scripts/check-launch.mjs && next build",
     "start": "next start",
     "lint": "next lint",
     "test": "node scripts/run-tests.mjs",
@@ -19,8 +19,10 @@
     "check:ledger": "node scripts/check-no-direct-balance-write.mjs",
     "check:regression": "node scripts/check-regression.mjs",
     "deploy:preview": "node scripts/deploy-preview.mjs",
+    "deploy:prod": "node scripts/deploy-preview.mjs --prod",
     "verify": "npm run check:draw && tsc --noEmit && npm test && npm run check:urls && npm run build",
-    "seed:preview": "tsx scripts/seed-preview.mjs"
+    "seed:preview": "tsx scripts/seed-preview.mjs",
+    "check:csrf": "node scripts/check-csrf.mjs"
   },
   "dependencies": {
     "@libsql/client": "^0.17.4",

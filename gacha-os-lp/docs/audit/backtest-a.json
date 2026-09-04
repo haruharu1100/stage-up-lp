@@ -1,0 +1,198 @@
+{
+  "base": "https://gacha-os-6ejechffu-haruharu1100s-projects.vercel.app",
+  "at": "2026-09-04T12:41:27.884Z",
+  "screens": 36,
+  "actions": 1,
+  "bugs": [
+    {
+      "level": "CHU",
+      "screen": "ダッシュボード",
+      "title": "ブラウザのコンソールにエラー",
+      "detail": "Loading the script 'https://vercel.live/_next-live/feedback/feedback.js' violates the following Content Security Policy directive: \"script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com https://www.clarity.ms\". Note that 'script-src-elem' was not explici",
+      "repro": "https://gacha-os-6ejechffu-haruharu1100s-projects.vercel.app/client-demo/dashboard"
+    },
+    {
+      "level": "CHU",
+      "screen": "AIオペレーター",
+      "title": "ブラウザのコンソールにエラー",
+      "detail": "Loading the script 'https://vercel.live/_next-live/feedback/feedback.js' violates the following Content Security Policy directive: \"script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com https://www.clarity.ms\". Note that 'script-src-elem' was not explici",
+      "repro": "https://gacha-os-6ejechffu-haruharu1100s-projects.vercel.app/client-demo/ai-operator"
+    },
+    {
+      "level": "CHU",
+      "screen": "ガチャ管理",
+      "title": "ブラウザのコンソールにエラー",
+      "detail": "Loading the script 'https://vercel.live/_next-live/feedback/feedback.js' violates the following Content Security Policy directive: \"script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com https://www.clarity.ms\". Note that 'script-src-elem' was not explici",
+      "repro": "https://gacha-os-6ejechffu-haruharu1100s-projects.vercel.app/client-demo/gachas"
+    },
+    {
+      "level": "CHU",
+      "screen": "ガチャ作成",
+      "title": "ブラウザのコンソールにエラー",
+      "detail": "Loading the script 'https://vercel.live/_next-live/feedback/feedback.js' violates the following Content Security Policy directive: \"script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com https://www.clarity.ms\". Note that 'script-src-elem' was not explici",
+      "repro": "https://gacha-os-6ejechffu-haruharu1100s-projects.vercel.app/client-demo/ai-builder"
+    },
+    {
+      "level": "CHU",
+      "screen": "バックテスト",
+      "title": "ブラウザのコンソールにエラー",
+      "detail": "Loading the script 'https://vercel.live/_next-live/feedback/feedback.js' violates the following Content Security Policy directive: \"script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com https://www.clarity.ms\". Note that 'script-src-elem' was not explici",
+      "repro": "https://gacha-os-6ejechffu-haruharu1100s-projects.vercel.app/client-demo/backtest"
+    },
+    {
+      "level": "CHU",
+      "screen": "見え方の確認",
+      "title": "ブラウザのコンソールにエラー",
+      "detail": "Loading the script 'https://vercel.live/_next-live/feedback/feedback.js' violates the following Content Security Policy directive: \"script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com https://www.clarity.ms\". Note that 'script-src-elem' was not explici",
+      "repro": "https://gacha-os-6ejechffu-haruharu1100s-projects.vercel.app/client-demo/preview"
+    },
+    {
+      "level": "CHU",
+      "screen": "景品管理",
+      "title": "ブラウザのコンソールにエラー",
+      "detail": "Loading the script 'https://vercel.live/_next-live/feedback/feedback.js' violates the following Content Security Policy directive: \"script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com https://www.clarity.ms\". Note that 'script-src-elem' was not explici",
+      "repro": "https://gacha-os-6ejechffu-haruharu1100s-projects.vercel.app/client-demo/products"
+    },
+    {
+      "level": "CHU",
+      "screen": "会員管理",
+      "title": "ブラウザのコンソールにエラー",
+      "detail": "Loading the script 'https://vercel.live/_next-live/feedback/feedback.js' violates the following Content Security Policy directive: \"script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com https://www.clarity.ms\". Note that 'script-src-elem' was not explici",
+      "repro": "https://gacha-os-6ejechffu-haruharu1100s-projects.vercel.app/client-demo/customers"
+    },
+    {
+      "level": "CHU",
+      "screen": "分析",
+      "title": "ブラウザのコンソールにエラー",
+      "detail": "Loading the script 'https://vercel.live/_next-live/feedback/feedback.js' violates the following Content Security Policy directive: \"script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com https://www.clarity.ms\". Note that 'script-src-elem' was not explici",
+      "repro": "https://gacha-os-6ejechffu-haruharu1100s-projects.vercel.app/client-demo/analytics"
+    },
+    {
+      "level": "CHU",
+      "screen": "ポイント管理",
+      "title": "ブラウザのコンソールにエラー",
+      "detail": "Loading the script 'https://vercel.live/_next-live/feedback/feedback.js' violates the following Content Security Policy directive: \"script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com https://www.clarity.ms\". Note that 'script-src-elem' was not explici",
+      "repro": "https://gacha-os-6ejechffu-haruharu1100s-projects.vercel.app/client-demo/points"
+    },
+    {
+      "level": "CHU",
+      "screen": "注文管理",
+      "title": "ブラウザのコンソールにエラー",
+      "detail": "Loading the script 'https://vercel.live/_next-live/feedback/feedback.js' violates the following Content Security Policy directive: \"script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com https://www.clarity.ms\". Note that 'script-src-elem' was not explici",
+      "repro": "https://gacha-os-6ejechffu-haruharu1100s-projects.vercel.app/client-demo/orders"
+    },
+    {
+      "level": "CHU",
+      "screen": "発送管理",
+      "title": "ブラウザのコンソールにエラー",
+      "detail": "Loading the script 'https://vercel.live/_next-live/feedback/feedback.js' violates the following Content Security Policy directive: \"script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com https://www.clarity.ms\". Note that 'script-src-elem' was not explici",
+      "repro": "https://gacha-os-6ejechffu-haruharu1100s-projects.vercel.app/client-demo/shipping"
+    },
+    {
+      "level": "CHU",
+      "screen": "問い合わせ",
+      "title": "ブラウザのコンソールにエラー",
+      "detail": "Loading the script 'https://vercel.live/_next-live/feedback/feedback.js' violates the following Content Security Policy directive: \"script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com https://www.clarity.ms\". Note that 'script-src-elem' was not explici",
+      "repro": "https://gacha-os-6ejechffu-haruharu1100s-projects.vercel.app/client-demo/support"
+    },
+    {
+      "level": "CHU",
+      "screen": "実績還元率",
+      "title": "ブラウザのコンソールにエラー",
+      "detail": "Loading the script 'https://vercel.live/_next-live/feedback/feedback.js' violates the following Content Security Policy directive: \"script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com https://www.clarity.ms\". Note that 'script-src-elem' was not explici",
+      "repro": "https://gacha-os-6ejechffu-haruharu1100s-projects.vercel.app/client-demo/rtp"
+    },
+    {
+      "level": "CHU",
+      "screen": "相場",
+      "title": "ブラウザのコンソールにエラー",
+      "detail": "Loading the script 'https://vercel.live/_next-live/feedback/feedback.js' violates the following Content Security Policy directive: \"script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com https://www.clarity.ms\". Note that 'script-src-elem' was not explici",
+      "repro": "https://gacha-os-6ejechffu-haruharu1100s-projects.vercel.app/client-demo/market"
+    },
+    {
+      "level": "CHU",
+      "screen": "不正検知",
+      "title": "ブラウザのコンソールにエラー",
+      "detail": "Loading the script 'https://vercel.live/_next-live/feedback/feedback.js' violates the following Content Security Policy directive: \"script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com https://www.clarity.ms\". Note that 'script-src-elem' was not explici",
+      "repro": "https://gacha-os-6ejechffu-haruharu1100s-projects.vercel.app/client-demo/fraud"
+    },
+    {
+      "level": "CHU",
+      "screen": "セキュリティ",
+      "title": "ブラウザのコンソールにエラー",
+      "detail": "Loading the script 'https://vercel.live/_next-live/feedback/feedback.js' violates the following Content Security Policy directive: \"script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com https://www.clarity.ms\". Note that 'script-src-elem' was not explici",
+      "repro": "https://gacha-os-6ejechffu-haruharu1100s-projects.vercel.app/client-demo/security"
+    },
+    {
+      "level": "CHU",
+      "screen": "監査ログ",
+      "title": "ブラウザのコンソールにエラー",
+      "detail": "Loading the script 'https://vercel.live/_next-live/feedback/feedback.js' violates the following Content Security Policy directive: \"script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com https://www.clarity.ms\". Note that 'script-src-elem' was not explici",
+      "repro": "https://gacha-os-6ejechffu-haruharu1100s-projects.vercel.app/client-demo/audit"
+    },
+    {
+      "level": "CHU",
+      "screen": "サイト編集",
+      "title": "ブラウザのコンソールにエラー",
+      "detail": "Loading the script 'https://vercel.live/_next-live/feedback/feedback.js' violates the following Content Security Policy directive: \"script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com https://www.clarity.ms\". Note that 'script-src-elem' was not explici",
+      "repro": "https://gacha-os-6ejechffu-haruharu1100s-projects.vercel.app/client-demo/site-editor"
+    },
+    {
+      "level": "CHU",
+      "screen": "移行",
+      "title": "ブラウザのコンソールにエラー",
+      "detail": "Loading the script 'https://vercel.live/_next-live/feedback/feedback.js' violates the following Content Security Policy directive: \"script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com https://www.clarity.ms\". Note that 'script-src-elem' was not explici",
+      "repro": "https://gacha-os-6ejechffu-haruharu1100s-projects.vercel.app/client-demo/migration"
+    },
+    {
+      "level": "CHU",
+      "screen": "設定",
+      "title": "ブラウザのコンソールにエラー",
+      "detail": "Loading the script 'https://vercel.live/_next-live/feedback/feedback.js' violates the following Content Security Policy directive: \"script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com https://www.clarity.ms\". Note that 'script-src-elem' was not explici",
+      "repro": "https://gacha-os-6ejechffu-haruharu1100s-projects.vercel.app/client-demo/settings"
+    },
+    {
+      "level": "CHU",
+      "screen": "お客様/マイページ",
+      "title": "コンソールにエラー",
+      "detail": "Loading the script 'https://vercel.live/_next-live/feedback/feedback.js' violates the following Content Security Policy directive: \"script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com https://www.clarity.ms\". Note that 'script-src-elem' was not explici",
+      "repro": "https://gacha-os-6ejechffu-haruharu1100s-projects.vercel.app/mypage"
+    },
+    {
+      "level": "CHU",
+      "screen": "お客様/ポイント",
+      "title": "コンソールにエラー",
+      "detail": "Loading the script 'https://vercel.live/_next-live/feedback/feedback.js' violates the following Content Security Policy directive: \"script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com https://www.clarity.ms\". Note that 'script-src-elem' was not explici",
+      "repro": "https://gacha-os-6ejechffu-haruharu1100s-projects.vercel.app/mypage/points"
+    },
+    {
+      "level": "CHU",
+      "screen": "お客様/獲得商品",
+      "title": "コンソールにエラー",
+      "detail": "Loading the script 'https://vercel.live/_next-live/feedback/feedback.js' violates the following Content Security Policy directive: \"script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com https://www.clarity.ms\". Note that 'script-src-elem' was not explici",
+      "repro": "https://gacha-os-6ejechffu-haruharu1100s-projects.vercel.app/mypage/prizes"
+    },
+    {
+      "level": "CHU",
+      "screen": "お客様/発送依頼",
+      "title": "コンソールにエラー",
+      "detail": "Loading the script 'https://vercel.live/_next-live/feedback/feedback.js' violates the following Content Security Policy directive: \"script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com https://www.clarity.ms\". Note that 'script-src-elem' was not explici",
+      "repro": "https://gacha-os-6ejechffu-haruharu1100s-projects.vercel.app/mypage/shipping"
+    },
+    {
+      "level": "CHU",
+      "screen": "お客様/お届け先",
+      "title": "コンソールにエラー",
+      "detail": "Loading the script 'https://vercel.live/_next-live/feedback/feedback.js' violates the following Content Security Policy directive: \"script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com https://www.clarity.ms\". Note that 'script-src-elem' was not explici",
+      "repro": "https://gacha-os-6ejechffu-haruharu1100s-projects.vercel.app/mypage/address"
+    },
+    {
+      "level": "CHU",
+      "screen": "お客様/問い合わせ",
+      "title": "コンソールにエラー",
+      "detail": "Loading the script 'https://vercel.live/_next-live/feedback/feedback.js' violates the following Content Security Policy directive: \"script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com https://www.clarity.ms\". Note that 'script-src-elem' was not explici",
+      "repro": "https://gacha-os-6ejechffu-haruharu1100s-projects.vercel.app/mypage/support"
+    }
+  ],
+  "notes": []
+}

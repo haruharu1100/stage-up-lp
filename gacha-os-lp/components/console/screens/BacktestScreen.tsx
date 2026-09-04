@@ -23,6 +23,25 @@
  * ★同じ内容なら、いつ実行しても同じ結果になること。
  *   種（seed）を固定しています。押すたびに判定が変わる検証は、
  *   都合のよい結果が出るまで押されます。
+ *
+ * ═══════════════════════════════════════════════
+ * ★この画面は「練習用の見本」です（2026-09-04 の総点検で明確化）
+ * ═══════════════════════════════════════════════
+ *
+ *   ここで選べるガチャは、ブラウザの中だけにある架空の見本です
+ *   （lib/console/state.ts の DEMO_GACHAS）。
+ *   サーバーには問い合わせていません。
+ *
+ *   ★だから「保存する」と書かないこと。
+ *     以前この画面のボタンには
+ *     「検証を実行して結果を保存する」と書いてありました。
+ *     押すと画面の中の判定は変わりますが、
+ *     サーバーには1文字も送られていません。
+ *     画面を開き直せば消えます。
+ *
+ *     保存されたと思ったまま公開の順番へ進む人が必ず出ます。
+ *     本物の検証と公開は「ガチャ管理」にあります。
+ *     そちらは押すとサーバーへ送られ、開き直しても残ります。
  */
 
 "use client";
@@ -81,6 +100,15 @@ export default function BacktestScreen({
 
   return (
     <>
+      {/* ★この注意書きは、いちばん上に出すこと。
+            下に置くと、ボタンを押したあとにしか読まれません。 */}
+      <DemoNote>
+        ここは<strong className="font-bold">練習用の見本</strong>です。
+        選べるガチャ・景品・当たり本数は架空のもので、押しても保存されません
+        （画面を開き直すと元に戻ります）。
+        本物の検証と公開は「ガチャ管理」で行います。
+      </DemoNote>
+
       <WhatIsThis>
         公開する前に、
         <strong className="font-bold text-slate">赤字になる条件を先に試します</strong>
@@ -118,21 +146,23 @@ export default function BacktestScreen({
           </p>
         )}
 
-        {/* ── 結果をこのガチャに保存する ── */}
+        {/* ── 見本として試す ──
+              ★「保存する」と書かないこと。保存されません（この画面の中だけです） */}
         <div className="mt-4 border-t border-edge2 pt-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <p className="text-note font-bold text-slate2">
-                いまの検証結果：
+                この見本の検証結果：
                 {g.backtest === null ? (
-                  <span className="text-warn-ink">未実施</span>
+                  <span className="text-warn-ink">まだ試していません</span>
                 ) : (
                   <span className="num">{g.backtest}</span>
                 )}
               </p>
               <p className="mt-1 text-note leading-[1.85] text-slate3">
-                ★この画面を開いただけでは、検証したことになりません。
-                下のボタンで実行して、結果をガチャに保存してはじめて公開できます。
+                ★ここで押しても、保存はされません。この画面の中だけの結果です。
+                実際のガチャを検証して公開できる状態にするには、
+                「ガチャ管理」でそのガチャを開き、そこで検証してください。
               </p>
             </div>
             <Btn
@@ -140,7 +170,7 @@ export default function BacktestScreen({
               disabled={!mayEdit}
               onClick={() => dispatch({ type: "RUN_BACKTEST", gachaId: g.id })}
             >
-              検証を実行して結果を保存する
+              この見本で検証を試す
             </Btn>
           </div>
           {!mayEdit && (
@@ -148,13 +178,11 @@ export default function BacktestScreen({
               いまの権限では検証を実行できません。運営または管理者に切り替えてお試しください。
             </p>
           )}
-          {g.backtest !== null && g.backtest !== "DANGER" && g.status === "DRAFT" && (
-            <div className="mt-3">
-              <Btn kind="ghost" onClick={() => onNav("gacha")}>
-                ガチャ管理で公開する
-              </Btn>
-            </div>
-          )}
+          <div className="mt-3">
+            <Btn kind="ghost" onClick={() => onNav("gacha")}>
+              ガチャ管理へ（本物の検証・公開はこちら）
+            </Btn>
+          </div>
         </div>
       </Card>
 
@@ -317,7 +345,8 @@ export default function BacktestScreen({
       </Card>
 
       <DemoNote>
-        この画面のガチャ・景品・当たり本数は、すべて架空の見本です。
+        くり返しになりますが、この画面のガチャ・景品・当たり本数は、すべて架空の見本です。
+        押した結果は保存されません。
         実際にお使いいただくときは、登録したガチャの中身をそのまま計算します。
       </DemoNote>
     </>

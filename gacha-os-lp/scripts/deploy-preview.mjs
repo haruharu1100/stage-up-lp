@@ -47,9 +47,22 @@
  * ★使い方
  * ═══════════════════════════════════════════════
  *
- *     npm run deploy:preview
+ *     npm run deploy:preview   … 確認用（本番のURLは変わりません）
+ *     npm run deploy:prod      … 本番（os.morika.work が新しくなります）
  *
- *   最後に Preview のURLが出ます。
+ *   最後に、公開されたURLが出ます。
+ *
+ * ═══════════════════════════════════════════════
+ * ★本番（--prod）について
+ * ═══════════════════════════════════════════════
+ *
+ *   本番は os.morika.work / gacha-os.gorogorogacha.com として
+ *   お客様・広告の出稿先に見えている場所です。
+ *   ここへ出すと、その瞬間から誰でも新しい内容を見ます。
+ *
+ *   ★本番へ出す前に、必ず npm run verify を通すこと。
+ *     verify は「型・テスト・公開前チェック・ビルド」をまとめて確かめます。
+ *     これを飛ばすと、壊れたものが広告の着地先に出ます。
  */
 
 import { execFileSync } from "node:child_process";
@@ -59,6 +72,14 @@ import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
 
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
+
+/**
+ * 本番へ出すのかどうか。
+ *
+ * ★既定は「本番ではない」こと。
+ *   うっかり実行しても、本番のURLは変わらない側に倒しておきます。
+ */
+const HONBAN = process.argv.includes("--prod");
 
 /** gitから見たときの、このフォルダの名前（リポジトリの入れ子の中にある） */
 const SUBDIR = "gacha-os-lp";
@@ -137,8 +158,12 @@ if (!existsSync(LINK)) {
 cpSync(LINK, join(WORK, ".vercel"), { recursive: true });
 
 /* ── ③ 公開する ── */
-console.log("  公開しています。数分かかります。\n");
-run("npx", ["vercel", "deploy", "--archive=tgz", "--yes"], {
+console.log(
+  HONBAN
+    ? "  ★本番へ公開しています（os.morika.work が新しくなります）。数分かかります。\n"
+    : "  確認用として公開しています。数分かかります。\n",
+);
+run("npx", ["vercel", "deploy", "--archive=tgz", "--yes", ...(HONBAN ? ["--prod"] : [])], {
   cwd: WORK,
   stdio: "inherit",
 });
