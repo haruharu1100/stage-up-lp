@@ -63,6 +63,7 @@ import {
   type PrizeState,
 } from "@/lib/console/liveMyPage";
 import { useCustomerOrders, movingCount } from "@/lib/console/liveOrders";
+import { postHeaders } from "@/lib/csrf";
 
 /* ══════════════════════════════════════════════
    共通の小物
@@ -233,26 +234,92 @@ const NAV: { href: string; label: string }[] = [
 function Nav({ here }: { here: string }) {
   const router = useRouter();
   return (
-    <nav className="mt-10 grid grid-cols-6 gap-1.5">
-      {NAV.map((n) => {
-        const now = n.href === here;
-        return (
-          <button
-            key={n.href}
-            type="button"
-            onClick={() => router.push(n.href)}
-            className="min-h-[52px] rounded-xl px-1 text-[0.68rem] font-bold leading-tight transition"
-            style={{
-              background: now ? "rgba(255,255,255,0.09)" : "transparent",
-              border: `1px solid ${now ? SHOP_ACCENT : SHOP_EDGE}`,
-              color: now ? "#FFFFFF" : "rgba(255,255,255,0.55)",
-            }}
-          >
-            {n.label}
-          </button>
-        );
-      })}
-    </nav>
+    <>
+      <nav className="mt-10 grid grid-cols-6 gap-1.5">
+        {NAV.map((n) => {
+          const now = n.href === here;
+          return (
+            <button
+              key={n.href}
+              type="button"
+              onClick={() => router.push(n.href)}
+              className="min-h-[52px] rounded-xl px-1 text-[0.68rem] font-bold leading-tight transition"
+              style={{
+                background: now ? "rgba(255,255,255,0.09)" : "transparent",
+                border: `1px solid ${now ? SHOP_ACCENT : SHOP_EDGE}`,
+                color: now ? "#FFFFFF" : "rgba(255,255,255,0.55)",
+              }}
+            >
+              {n.label}
+            </button>
+          );
+        })}
+      </nav>
+      <LogoutRow />
+    </>
+  );
+}
+
+/**
+ * ログアウトの押し場所。
+ *
+ * ═══════════════════════════════════════════════
+ * ★これが無いと、共有の端末でそのまま事故になります
+ * ═══════════════════════════════════════════════
+ *
+ *   2026-09-05 のブラウザ実測で分かったことです。
+ *   お客様の本物の画面には、ログアウトの押し場所が
+ *   ★1つもありませんでした。
+ *
+ *   見本の画面（デモ）には昔からありました。
+ *   ですがあれは、画面の中の状態を戻すだけのもので、
+ *   本物のログイン（サーバー側に残っている行）は消えません。
+ *   本物の入口 /api/auth/logout を呼ぶ場所は、
+ *   製品じゅうを探して0件でした。
+ *
+ *   店頭のタブレット、家族と共有のパソコン、ネットカフェ。
+ *   出られない作りだと、次に触った人に
+ *   残高も、住所も、当選の履歴も、そのまま見えます。
+ *
+ * ★出たあとは router.push を使わないこと。
+ *   画面の中だけで移動すると、さっきの画面が
+ *   ブラウザの手元（bfcache）に残ります。
+ *   戻るボタンを押すと、消したはずの残高が戻ってきます。
+ *   ですから、読み込みごと入れ替えます（location.replace）。
+ */
+function LogoutRow() {
+  const [deteru, setDeteru] = useState(false);
+
+  const deru = useCallback(async () => {
+    if (deteru) return;
+    setDeteru(true);
+    try {
+      /* ★合図（CSRF）を必ず付けること。
+           付けない作りにすると、外のページを開いただけで
+           勝手にログアウトさせられます。 */
+      await fetch("/api/auth/logout", {
+        method: "POST",
+        headers: postHeaders(),
+        credentials: "same-origin",
+      });
+    } catch {
+      /* 通信に失敗しても、手元からは出します。
+         出られないほうが困るからです。 */
+    }
+    window.location.replace("/login");
+  }, [deteru]);
+
+  return (
+    <div className="mt-5 text-center">
+      <button
+        type="button"
+        onClick={deru}
+        disabled={deteru}
+        className="min-h-[44px] px-4 text-[0.74rem] font-bold text-white/45 underline disabled:opacity-50"
+      >
+        {deteru ? "ログアウトしています…" : "ログアウトする"}
+      </button>
+    </div>
   );
 }
 
