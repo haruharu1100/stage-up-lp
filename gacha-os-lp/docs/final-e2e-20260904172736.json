@@ -1,0 +1,1479 @@
+{
+  "at": "2026-09-04T17:28:01.588Z",
+  "base": "https://gacha-os-xq6pr7htk-haruharu1100s-projects.vercel.app",
+  "dbEnv": "preview",
+  "tenantA": "ten_01M1PQCBTC8KJDMDAEDFWSK6DB",
+  "tenantB": "ten_01M1PQCBWAEERW53DFXR32NRBD",
+  "userA": "cus_01M1PQCBXACCCCY33KPWRSQE44",
+  "gMain": "gac_01M1PQCCQ5W4R3FVGVYCE5J8D6",
+  "drawsTotal": 34,
+  "first": {
+    "key": "draw_20260904172736_first_0001",
+    "before": {
+      "points": 50000,
+      "spent": 0,
+      "ledgerSum": 50000,
+      "ledgerRows": 1,
+      "left": 80,
+      "status": "PUBLISHED",
+      "revenue": 0,
+      "paidValue": 0,
+      "stock": {
+        "A": {
+          "total": 2,
+          "drawn": 0
+        },
+        "B": {
+          "total": 4,
+          "drawn": 0
+        },
+        "C": {
+          "total": 10,
+          "drawn": 0
+        },
+        "D": {
+          "total": 63,
+          "drawn": 0
+        },
+        "S": {
+          "total": 1,
+          "drawn": 0
+        }
+      },
+      "draws": 0,
+      "prizes": 0,
+      "auditSeq": 1,
+      "auditRows": 1
+    },
+    "after": {
+      "points": 50500,
+      "spent": 500,
+      "ledgerSum": 50500,
+      "ledgerRows": 3,
+      "left": 79,
+      "status": "PUBLISHED",
+      "revenue": 500,
+      "paidValue": 1000,
+      "stock": {
+        "A": {
+          "total": 2,
+          "drawn": 0
+        },
+        "B": {
+          "total": 4,
+          "drawn": 0
+        },
+        "C": {
+          "total": 10,
+          "drawn": 1
+        },
+        "D": {
+          "total": 63,
+          "drawn": 0
+        },
+        "S": {
+          "total": 1,
+          "drawn": 0
+        }
+      },
+      "draws": 1,
+      "prizes": 0,
+      "auditSeq": 2,
+      "auditRows": 2
+    },
+    "result": {
+      "drawId": "drw_01M1PQCFADX1SFW1VQZ7BA6ENS",
+      "replayed": false,
+      "gachaId": "gac_01M1PQCCQ5W4R3FVGVYCE5J8D6",
+      "gachaTitle": "最終判定ガチャ",
+      "playCount": 1,
+      "price": 500,
+      "pointBefore": 50000,
+      "pointSpent": 500,
+      "pointReturned": 1000,
+      "pointAfter": 50500,
+      "grade": "C",
+      "prizeId": null,
+      "prizeName": "C賞 相当（デモ景品）",
+      "prizeValue": 1000,
+      "lastOne": false,
+      "needsShipping": false,
+      "remainingBefore": 80,
+      "remainingAfter": 79,
+      "at": "2026-09-04T17:27:40.582Z",
+      "auditSeq": 2
+    }
+  },
+  "results": [
+    {
+      "no": "1-ガチャ一覧",
+      "title": "未ログインで ガチャ一覧 を読めない",
+      "pass": true,
+      "detail": "status=401 code=UNAUTHENTICATED"
+    },
+    {
+      "no": "1-ガチャ詳細",
+      "title": "未ログインで ガチャ詳細 を読めない",
+      "pass": true,
+      "detail": "status=401 code=UNAUTHENTICATED"
+    },
+    {
+      "no": "1-ポイント",
+      "title": "未ログインで ポイント を読めない",
+      "pass": true,
+      "detail": "status=401 code=UNAUTHENTICATED"
+    },
+    {
+      "no": "1-獲得商品",
+      "title": "未ログインで 獲得商品 を読めない",
+      "pass": true,
+      "detail": "status=401 code=UNAUTHENTICATED"
+    },
+    {
+      "no": "1-発送状況",
+      "title": "未ログインで 発送状況 を読めない",
+      "pass": true,
+      "detail": "status=401 code=UNAUTHENTICATED"
+    },
+    {
+      "no": "1-draw",
+      "title": "未ログインでは引けない",
+      "pass": true,
+      "detail": "status=401 code=UNAUTHENTICATED"
+    },
+    {
+      "no": "1-page",
+      "title": "未ログインで /mypage/shop はログイン画面へ送られる",
+      "pass": true,
+      "detail": "status=307 → /login?next=%2Fmypage%2Fshop"
+    },
+    {
+      "no": "2-1",
+      "title": "テスト会員でログインできる",
+      "pass": true,
+      "detail": "status=200 code=-"
+    },
+    {
+      "no": "2-2",
+      "title": "自分が誰かを、サーバーが返す",
+      "pass": true,
+      "detail": "status=200"
+    },
+    {
+      "no": "2-3",
+      "title": "マイページが開く",
+      "pass": true,
+      "detail": "status=200 / 「ガチャを引く」の文字=true"
+    },
+    {
+      "no": "2-4",
+      "title": "ガチャ一覧の画面が開く",
+      "pass": true,
+      "detail": "status=200"
+    },
+    {
+      "no": "2-5",
+      "title": "一覧に、公開中のガチャが出る",
+      "pass": true,
+      "detail": "2件：高額ガチャ（残高不足の確認用） / 最終判定ガチャ"
+    },
+    {
+      "no": "2-6",
+      "title": "下書き・停止中・完売は、一覧に出ない",
+      "pass": true,
+      "detail": "下書き=false 停止=false 完売=false"
+    },
+    {
+      "no": "2-7",
+      "title": "他社のガチャは、一覧に出ない",
+      "pass": true,
+      "detail": "他社=false"
+    },
+    {
+      "no": "2-8",
+      "title": "ガチャ詳細が読める",
+      "pass": true,
+      "detail": "status=200"
+    },
+    {
+      "no": "2-9",
+      "title": "詳細に、売上・払い出し・還元率が入っていない",
+      "pass": true,
+      "detail": "通信の中身を見ても、その店の粗利は分からない"
+    },
+    {
+      "no": "2-10",
+      "title": "賞の内訳（残り本数）が出ている",
+      "pass": true,
+      "detail": "5等級"
+    },
+    {
+      "no": "2-11",
+      "title": "ガチャ詳細の画面が開く",
+      "pass": true,
+      "detail": "status=200"
+    },
+    {
+      "no": "3-1",
+      "title": "1回引ける",
+      "pass": true,
+      "detail": "status=200 code=-"
+    },
+    {
+      "no": "3-2",
+      "title": "保有ポイントが「引いた分だけ」減っている",
+      "pass": true,
+      "detail": "50000 − 500 + 1000 = 50500 ／ 実際 50500"
+    },
+    {
+      "no": "3-3",
+      "title": "サーバーが返した残高と、DBの残高が一致する",
+      "pass": true,
+      "detail": "返り値 50500 ／ DB 50500"
+    },
+    {
+      "no": "3-4",
+      "title": "台帳の合計と、保有ポイントが一致する",
+      "pass": true,
+      "detail": "台帳 50500 ／ 残高 50500"
+    },
+    {
+      "no": "3-5",
+      "title": "台帳に、今回ぶんの行が増えている",
+      "pass": true,
+      "detail": "1 → 3（使った分＋返した分）"
+    },
+    {
+      "no": "3-6",
+      "title": "ガチャの残り口数が、ちょうど1つ減っている",
+      "pass": true,
+      "detail": "80 → 79（返り値 79）"
+    },
+    {
+      "no": "3-7",
+      "title": "当たった等級だけ、残り本数が1本減っている",
+      "pass": true,
+      "detail": "C賞 10本 → 9本"
+    },
+    {
+      "no": "3-8",
+      "title": "抽選の記録が、ちょうど1件だけ増えている",
+      "pass": true,
+      "detail": "0 → 1"
+    },
+    {
+      "no": "3-9",
+      "title": "現物が当たったときだけ、獲得商品が1件増えている",
+      "pass": true,
+      "detail": "0 → 0（現物=false）"
+    },
+    {
+      "no": "3-10",
+      "title": "監査ログの通し番号が、1つだけ進んでいる",
+      "pass": true,
+      "detail": "seq 1 → 2（返り値 2）"
+    },
+    {
+      "no": "3-11",
+      "title": "抽選の記録の中身が、返り値と1つずつ一致する",
+      "pass": true,
+      "detail": "price=500 before=50000 after=50500 grade=C 残り=79"
+    },
+    {
+      "no": "3-12",
+      "title": "乱数の出どころが記録されている（再現できる形で残す）",
+      "pass": true,
+      "detail": "node:crypto/randomInt / nonce=fc88c1f49433…"
+    },
+    {
+      "no": "3-13",
+      "title": "監査ログが、引いた本人・引いたガチャ・使ったポイントを記録している",
+      "pass": true,
+      "detail": "DRAW / 最終 試験子（架空） / 最終判定ガチャ を1回引き、C賞（C賞 相当（デモ景品））が出ました。"
+    },
+    {
+      "no": "3-14",
+      "title": "監査ログに、改ざん検知のための鎖（hash）が付いている",
+      "pass": true,
+      "detail": "hash=1f48fb24b70fdaff…"
+    },
+    {
+      "no": "3-15",
+      "title": "お客様のポイント画面が、DBと同じ残高を返す",
+      "pass": true,
+      "detail": "画面 50500 ／ DB 50500"
+    },
+    {
+      "no": "3-16",
+      "title": "ガチャ詳細の残り口数が、DBと同じ",
+      "pass": true,
+      "detail": "画面 79 ／ DB 79"
+    },
+    {
+      "no": "3-17",
+      "title": "獲得商品の画面が、DBと同じ件数を返す",
+      "pass": true,
+      "detail": "画面 0件 ／ DB 0件"
+    },
+    {
+      "no": "4-1",
+      "title": "同じ鍵で送り直しても、二重には引かれない（前回の結果を返す）",
+      "pass": true,
+      "detail": "replayed=true 抽選 1→1 残高 50500→50500"
+    },
+    {
+      "no": "4-2",
+      "title": "同じ鍵を6本同時に投げても、引かれるのは1回だけ",
+      "pass": true,
+      "detail": "返事：200 200 200 200 200 200 ／ 抽選 1→2 残り 79→78"
+    },
+    {
+      "no": "4-3",
+      "title": "別の鍵（別タブ）は別のご依頼として扱われ、数字は最後まで合う",
+      "pass": true,
+      "detail": "2回ぶん処理／残り 78→76／台帳=残高 49567=49567／監査 3→5"
+    },
+    {
+      "no": "4-3b",
+      "title": "同じ鍵が2つの抽選に使い回されていない",
+      "pass": true,
+      "detail": "draws は (会社, 鍵) で重複できない作りになっている"
+    },
+    {
+      "no": "4-4",
+      "title": "二重実行を防ぐ鍵が無ければ、引けない",
+      "pass": true,
+      "detail": "status=400 code=IDEMPOTENCY_KEY_REQUIRED"
+    },
+    {
+      "no": "4-5",
+      "title": "合図（CSRF）が無ければ、引けない",
+      "pass": true,
+      "detail": "status=403 code=CSRF_FAILED"
+    },
+    {
+      "no": "5-0",
+      "title": "残高ゼロの会員でログインできる",
+      "pass": true,
+      "detail": "status=200"
+    },
+    {
+      "no": "5-1",
+      "title": "ポイントが足りなければ、引けない（減らない）",
+      "pass": true,
+      "detail": "status=402 code=NOT_ENOUGH_POINTS 残高=0"
+    },
+    {
+      "no": "5-完売したガチャ",
+      "title": "完売したガチャは引けない",
+      "pass": true,
+      "detail": "status=409 code=SOLD_OUT"
+    },
+    {
+      "no": "5-完売したガチャ-詳細",
+      "title": "完売したガチャは、URLを直に叩いても開けない",
+      "pass": true,
+      "detail": "status=404 code=NOT_FOUND"
+    },
+    {
+      "no": "5-停止中のガチャ",
+      "title": "停止中のガチャは引けない",
+      "pass": true,
+      "detail": "status=409 code=NOT_PUBLISHED"
+    },
+    {
+      "no": "5-停止中のガチャ-詳細",
+      "title": "停止中のガチャは、URLを直に叩いても開けない",
+      "pass": true,
+      "detail": "status=404 code=NOT_FOUND"
+    },
+    {
+      "no": "5-下書きのガチャ",
+      "title": "下書きのガチャは引けない",
+      "pass": true,
+      "detail": "status=409 code=NOT_PUBLISHED"
+    },
+    {
+      "no": "5-下書きのガチャ-詳細",
+      "title": "下書きのガチャは、URLを直に叩いても開けない",
+      "pass": true,
+      "detail": "status=404 code=NOT_FOUND"
+    },
+    {
+      "no": "5-他社のガチャ",
+      "title": "他社のガチャは引けない",
+      "pass": true,
+      "detail": "status=404 code=NO_GACHA"
+    },
+    {
+      "no": "5-他社のガチャ-詳細",
+      "title": "他社のガチャは、URLを直に叩いても開けない",
+      "pass": true,
+      "detail": "status=404 code=NOT_FOUND"
+    },
+    {
+      "no": "5-ghost",
+      "title": "存在しないガチャIDでは引けない",
+      "pass": true,
+      "detail": "status=404 code=NO_GACHA"
+    },
+    {
+      "no": "5-b0",
+      "title": "他社の会員でログインできる",
+      "pass": true,
+      "detail": "status=200"
+    },
+    {
+      "no": "5-cross",
+      "title": "他社の会員は、こちらのガチャを引けない",
+      "pass": true,
+      "detail": "status=404 code=NO_GACHA"
+    },
+    {
+      "no": "5-cross2",
+      "title": "他社の会員は、こちらのガチャ詳細を読めない",
+      "pass": true,
+      "detail": "status=404"
+    },
+    {
+      "no": "5-mix",
+      "title": "A社の会員は、B社の会社コードではログインできない",
+      "pass": true,
+      "detail": "status=401 code=INVALID"
+    },
+    {
+      "no": "6-1",
+      "title": "現物の景品を2つ、実際の抽選で引き当てた",
+      "pass": true,
+      "detail": "合計 34回引いて、現物 2件（うち追加 30回）"
+    },
+    {
+      "no": "6-2",
+      "title": "34回引いたあとでも、台帳の合計と残高が一致する",
+      "pass": true,
+      "detail": "台帳 43103 ／ 残高 43103"
+    },
+    {
+      "no": "6-3",
+      "title": "引いた回数と、減った口数が一致する",
+      "pass": true,
+      "detail": "減った口数 34 ／ 抽選 34回"
+    },
+    {
+      "no": "6-4",
+      "title": "出した景品の本数と、抽選の回数が合う（はずれを除く）",
+      "pass": true,
+      "detail": "景品 34本 ／ 当たり 34回"
+    },
+    {
+      "no": "7-1",
+      "title": "景品Aをポイントに交換できる",
+      "pass": true,
+      "detail": "status=200 code=-"
+    },
+    {
+      "no": "7-2",
+      "title": "交換したぶん、ポイントがちょうど増えている",
+      "pass": true,
+      "detail": "43103 + 1800 = 44903 ／ 実際 44903"
+    },
+    {
+      "no": "7-3",
+      "title": "交換後も、台帳の合計と残高が一致する",
+      "pass": true,
+      "detail": "台帳 44903 ／ 残高 44903"
+    },
+    {
+      "no": "7-4",
+      "title": "その景品の状態が「交換済み」に変わっている",
+      "pass": true,
+      "detail": "status=EXCHANGED"
+    },
+    {
+      "no": "7-5",
+      "title": "交換が監査ログに残っている",
+      "pass": true,
+      "detail": "seq 36 → 37"
+    },
+    {
+      "no": "7-6",
+      "title": "同じ景品を、二度は交換できない",
+      "pass": true,
+      "detail": "status=409 code=PRIZE_NOT_AVAILABLE 残高 44903→44903"
+    },
+    {
+      "no": "7-7",
+      "title": "お届け先が無ければ、発送依頼はできない",
+      "pass": true,
+      "detail": "status=400 code=NO_ADDRESS"
+    },
+    {
+      "no": "7-8",
+      "title": "お届け先を変えるとき、本人確認（パスワード再入力）を通る",
+      "pass": true,
+      "detail": "status=200 code=-"
+    },
+    {
+      "no": "7-9",
+      "title": "お届け先を登録できる",
+      "pass": true,
+      "detail": "status=200 code=-"
+    },
+    {
+      "no": "7-10",
+      "title": "発送依頼の本人確認の求め方を確認した",
+      "pass": true,
+      "detail": "1回目で通った（code=-）"
+    },
+    {
+      "no": "7-11",
+      "title": "景品Bの発送を依頼できる",
+      "pass": true,
+      "detail": "status=200 code=-"
+    },
+    {
+      "no": "7-12",
+      "title": "その景品の状態が「発送依頼済み」に変わっている",
+      "pass": true,
+      "detail": "status=SHIP_REQUESTED"
+    },
+    {
+      "no": "7-13",
+      "title": "発送依頼では、ポイントは1ptも動かない",
+      "pass": true,
+      "detail": "44903 → 44903"
+    },
+    {
+      "no": "7-14",
+      "title": "発送依頼が監査ログに残っている",
+      "pass": true,
+      "detail": "seq 39 → 40"
+    },
+    {
+      "no": "7-15",
+      "title": "注文が1件だけ立っている",
+      "pass": true,
+      "detail": "1件"
+    },
+    {
+      "no": "7-16",
+      "title": "同じ景品を、二度は発送依頼できない",
+      "pass": true,
+      "detail": "status=409 code=PRIZE_NOT_AVAILABLE 注文 1件"
+    },
+    {
+      "no": "7-17",
+      "title": "発送依頼した景品は、ポイント交換もできない",
+      "pass": true,
+      "detail": "status=409 code=PRIZE_NOT_AVAILABLE"
+    },
+    {
+      "no": "7-18",
+      "title": "お客様の発送状況の画面に、その注文が出る",
+      "pass": true,
+      "detail": "1件"
+    },
+    {
+      "no": "8-0",
+      "title": "同じ会社の別の会員でログインできる",
+      "pass": true,
+      "detail": "status=200"
+    },
+    {
+      "no": "8-1",
+      "title": "他人の景品を、ポイントに交換できない",
+      "pass": true,
+      "detail": "status=404 code=NO_PRIZE"
+    },
+    {
+      "no": "8-1b",
+      "title": "他人の景品を試す人にも、お届け先を登録できた（断る理由をはっきりさせるため）",
+      "pass": true,
+      "detail": "status=200 code=-"
+    },
+    {
+      "no": "8-2",
+      "title": "他人の景品の発送を依頼できない（お届け先があっても断られる）",
+      "pass": true,
+      "detail": "status=404 code=NO_PRIZE"
+    },
+    {
+      "no": "8-3",
+      "title": "別の会員の画面には、他人の景品が1件も出ない",
+      "pass": true,
+      "detail": "0件"
+    },
+    {
+      "no": "8-4",
+      "title": "他社の会員は、こちらの景品に触れない",
+      "pass": true,
+      "detail": "status=404 code=NO_PRIZE"
+    },
+    {
+      "no": "8-5",
+      "title": "他人の景品を触ろうとしても、自分のポイントは1ptも動かない",
+      "pass": true,
+      "detail": "5000pt"
+    },
+    {
+      "no": "9-0",
+      "title": "管理者でログインできる",
+      "pass": true,
+      "detail": "status=200 code=-"
+    },
+    {
+      "no": "9-1",
+      "title": "管理画面の会員一覧に、テスト会員が出る",
+      "pass": true,
+      "detail": "最終 試験子（架空）"
+    },
+    {
+      "no": "9-2",
+      "title": "管理画面の残高が、お客様側と同じ",
+      "pass": true,
+      "detail": "管理 44903 ／ DB 44903"
+    },
+    {
+      "no": "9-3",
+      "title": "管理画面のガチャ残り口数が、お客様側と同じ",
+      "pass": true,
+      "detail": "管理 46 ／ DB 46"
+    },
+    {
+      "no": "9-4",
+      "title": "管理画面の注文一覧に、お客様の発送依頼が出る",
+      "pass": true,
+      "detail": "1件"
+    },
+    {
+      "no": "9-5",
+      "title": "管理画面の監査ログに、抽選の記録が出る",
+      "pass": true,
+      "detail": "44件"
+    },
+    {
+      "no": "9-6",
+      "title": "監査ログの鎖が、途中で切れていない（改ざんされていない）",
+      "pass": true,
+      "detail": "status=200 broken=-"
+    },
+    {
+      "no": "9-7",
+      "title": "管理画面の還元率が読める（お客様側には出さない数字）",
+      "pass": true,
+      "detail": "status=200"
+    },
+    {
+      "no": "E-1",
+      "title": "サーバー側の異常（5xx）が0件である",
+      "pass": true,
+      "detail": "0件"
+    },
+    {
+      "no": "E-2",
+      "title": "5秒を超えた通信が0件である",
+      "pass": true,
+      "detail": "0件（最長 1116ms）"
+    },
+    {
+      "no": "E-3",
+      "title": "1回引くのに1.5秒以上かからない",
+      "pass": true,
+      "detail": "中央値 216ms ／ 10連なら単純計算で 2.2秒"
+    }
+  ],
+  "calls": [
+    {
+      "who": "未ログイン",
+      "method": "GET",
+      "path": "/api/customer/gachas",
+      "status": 401,
+      "ms": 130,
+      "code": "UNAUTHENTICATED"
+    },
+    {
+      "who": "未ログイン",
+      "method": "GET",
+      "path": "/api/customer/gachas/gac_01M1PQCCQ5W4R3FVGVYCE5J8D6",
+      "status": 401,
+      "ms": 95,
+      "code": "UNAUTHENTICATED"
+    },
+    {
+      "who": "未ログイン",
+      "method": "GET",
+      "path": "/api/customer/points",
+      "status": 401,
+      "ms": 74,
+      "code": "UNAUTHENTICATED"
+    },
+    {
+      "who": "未ログイン",
+      "method": "GET",
+      "path": "/api/customer/prizes",
+      "status": 401,
+      "ms": 67,
+      "code": "UNAUTHENTICATED"
+    },
+    {
+      "who": "未ログイン",
+      "method": "GET",
+      "path": "/api/customer/orders",
+      "status": 401,
+      "ms": 77,
+      "code": "UNAUTHENTICATED"
+    },
+    {
+      "who": "未ログイン",
+      "method": "POST",
+      "path": "/api/console/draw",
+      "status": 401,
+      "ms": 74,
+      "code": "UNAUTHENTICATED"
+    },
+    {
+      "who": "未ログイン",
+      "method": "GET",
+      "path": "/mypage/shop",
+      "status": 307,
+      "ms": 86,
+      "code": null
+    },
+    {
+      "who": "会員A",
+      "method": "POST",
+      "path": "/api/auth/login",
+      "status": 200,
+      "ms": 290,
+      "code": null
+    },
+    {
+      "who": "会員A",
+      "method": "GET",
+      "path": "/api/auth/me",
+      "status": 200,
+      "ms": 110,
+      "code": null
+    },
+    {
+      "who": "会員A",
+      "method": "GET",
+      "path": "/mypage",
+      "status": 200,
+      "ms": 88,
+      "code": null
+    },
+    {
+      "who": "会員A",
+      "method": "GET",
+      "path": "/mypage/shop",
+      "status": 200,
+      "ms": 66,
+      "code": null
+    },
+    {
+      "who": "会員A",
+      "method": "GET",
+      "path": "/api/customer/gachas",
+      "status": 200,
+      "ms": 121,
+      "code": null
+    },
+    {
+      "who": "会員A",
+      "method": "GET",
+      "path": "/api/customer/gachas/gac_01M1PQCCQ5W4R3FVGVYCE5J8D6",
+      "status": 200,
+      "ms": 113,
+      "code": null
+    },
+    {
+      "who": "会員A",
+      "method": "GET",
+      "path": "/mypage/shop/gac_01M1PQCCQ5W4R3FVGVYCE5J8D6",
+      "status": 200,
+      "ms": 70,
+      "code": null
+    },
+    {
+      "who": "会員A",
+      "method": "POST",
+      "path": "/api/console/draw",
+      "status": 200,
+      "ms": 212,
+      "code": null
+    },
+    {
+      "who": "会員A",
+      "method": "GET",
+      "path": "/api/customer/points",
+      "status": 200,
+      "ms": 120,
+      "code": null
+    },
+    {
+      "who": "会員A",
+      "method": "GET",
+      "path": "/api/customer/gachas/gac_01M1PQCCQ5W4R3FVGVYCE5J8D6",
+      "status": 200,
+      "ms": 148,
+      "code": null
+    },
+    {
+      "who": "会員A",
+      "method": "GET",
+      "path": "/api/customer/prizes",
+      "status": 200,
+      "ms": 118,
+      "code": null
+    },
+    {
+      "who": "会員A",
+      "method": "POST",
+      "path": "/api/console/draw",
+      "status": 200,
+      "ms": 112,
+      "code": null
+    },
+    {
+      "who": "会員A",
+      "method": "POST",
+      "path": "/api/console/draw",
+      "status": 200,
+      "ms": 524,
+      "code": null
+    },
+    {
+      "who": "会員A",
+      "method": "POST",
+      "path": "/api/console/draw",
+      "status": 200,
+      "ms": 524,
+      "code": null
+    },
+    {
+      "who": "会員A",
+      "method": "POST",
+      "path": "/api/console/draw",
+      "status": 200,
+      "ms": 560,
+      "code": null
+    },
+    {
+      "who": "会員A",
+      "method": "POST",
+      "path": "/api/console/draw",
+      "status": 200,
+      "ms": 1050,
+      "code": null
+    },
+    {
+      "who": "会員A",
+      "method": "POST",
+      "path": "/api/console/draw",
+      "status": 200,
+      "ms": 1058,
+      "code": null
+    },
+    {
+      "who": "会員A",
+      "method": "POST",
+      "path": "/api/console/draw",
+      "status": 200,
+      "ms": 1116,
+      "code": null
+    },
+    {
+      "who": "会員A",
+      "method": "POST",
+      "path": "/api/console/draw",
+      "status": 200,
+      "ms": 419,
+      "code": null
+    },
+    {
+      "who": "会員A",
+      "method": "POST",
+      "path": "/api/console/draw",
+      "status": 200,
+      "ms": 582,
+      "code": null
+    },
+    {
+      "who": "会員A",
+      "method": "POST",
+      "path": "/api/console/draw",
+      "status": 400,
+      "ms": 94,
+      "code": "IDEMPOTENCY_KEY_REQUIRED"
+    },
+    {
+      "who": "会員A",
+      "method": "POST",
+      "path": "/api/console/draw(合図なし)",
+      "status": 403,
+      "ms": 0,
+      "code": "CSRF_FAILED"
+    },
+    {
+      "who": "残高ゼロ",
+      "method": "POST",
+      "path": "/api/auth/login",
+      "status": 200,
+      "ms": 316,
+      "code": null
+    },
+    {
+      "who": "残高ゼロ",
+      "method": "POST",
+      "path": "/api/console/draw",
+      "status": 402,
+      "ms": 130,
+      "code": "NOT_ENOUGH_POINTS"
+    },
+    {
+      "who": "会員A",
+      "method": "POST",
+      "path": "/api/console/draw",
+      "status": 409,
+      "ms": 310,
+      "code": "SOLD_OUT"
+    },
+    {
+      "who": "会員A",
+      "method": "GET",
+      "path": "/api/customer/gachas/gac_01M1PQCD546JQPB6WCPH6FJTFV",
+      "status": 404,
+      "ms": 164,
+      "code": "NOT_FOUND"
+    },
+    {
+      "who": "会員A",
+      "method": "POST",
+      "path": "/api/console/draw",
+      "status": 409,
+      "ms": 264,
+      "code": "NOT_PUBLISHED"
+    },
+    {
+      "who": "会員A",
+      "method": "GET",
+      "path": "/api/customer/gachas/gac_01M1PQCCZAVCPB8J8P5HKB2P1W",
+      "status": 404,
+      "ms": 152,
+      "code": "NOT_FOUND"
+    },
+    {
+      "who": "会員A",
+      "method": "POST",
+      "path": "/api/console/draw",
+      "status": 409,
+      "ms": 133,
+      "code": "NOT_PUBLISHED"
+    },
+    {
+      "who": "会員A",
+      "method": "GET",
+      "path": "/api/customer/gachas/gac_01M1PQCCVKPKHT26QXYTSQDP57",
+      "status": 404,
+      "ms": 113,
+      "code": "NOT_FOUND"
+    },
+    {
+      "who": "会員A",
+      "method": "POST",
+      "path": "/api/console/draw",
+      "status": 404,
+      "ms": 110,
+      "code": "NO_GACHA"
+    },
+    {
+      "who": "会員A",
+      "method": "GET",
+      "path": "/api/customer/gachas/gac_01M1PQCDDE60VX2Z95AAKS0PF2",
+      "status": 404,
+      "ms": 101,
+      "code": "NOT_FOUND"
+    },
+    {
+      "who": "会員A",
+      "method": "POST",
+      "path": "/api/console/draw",
+      "status": 404,
+      "ms": 98,
+      "code": "NO_GACHA"
+    },
+    {
+      "who": "他社会員",
+      "method": "POST",
+      "path": "/api/auth/login",
+      "status": 200,
+      "ms": 291,
+      "code": null
+    },
+    {
+      "who": "他社会員",
+      "method": "POST",
+      "path": "/api/console/draw",
+      "status": 404,
+      "ms": 106,
+      "code": "NO_GACHA"
+    },
+    {
+      "who": "他社会員",
+      "method": "GET",
+      "path": "/api/customer/gachas/gac_01M1PQCCQ5W4R3FVGVYCE5J8D6",
+      "status": 404,
+      "ms": 116,
+      "code": "NOT_FOUND"
+    },
+    {
+      "who": "なりすまし",
+      "method": "POST",
+      "path": "/api/auth/login",
+      "status": 401,
+      "ms": 187,
+      "code": "INVALID"
+    },
+    {
+      "who": "会員A",
+      "method": "POST",
+      "path": "/api/console/draw",
+      "status": 200,
+      "ms": 210,
+      "code": null
+    },
+    {
+      "who": "会員A",
+      "method": "POST",
+      "path": "/api/console/draw",
+      "status": 200,
+      "ms": 202,
+      "code": null
+    },
+    {
+      "who": "会員A",
+      "method": "POST",
+      "path": "/api/console/draw",
+      "status": 200,
+      "ms": 172,
+      "code": null
+    },
+    {
+      "who": "会員A",
+      "method": "POST",
+      "path": "/api/console/draw",
+      "status": 200,
+      "ms": 207,
+      "code": null
+    },
+    {
+      "who": "会員A",
+      "method": "POST",
+      "path": "/api/console/draw",
+      "status": 200,
+      "ms": 188,
+      "code": null
+    },
+    {
+      "who": "会員A",
+      "method": "POST",
+      "path": "/api/console/draw",
+      "status": 200,
+      "ms": 217,
+      "code": null
+    },
+    {
+      "who": "会員A",
+      "method": "POST",
+      "path": "/api/console/draw",
+      "status": 200,
+      "ms": 251,
+      "code": null
+    },
+    {
+      "who": "会員A",
+      "method": "POST",
+      "path": "/api/console/draw",
+      "status": 200,
+      "ms": 192,
+      "code": null
+    },
+    {
+      "who": "会員A",
+      "method": "POST",
+      "path": "/api/console/draw",
+      "status": 200,
+      "ms": 209,
+      "code": null
+    },
+    {
+      "who": "会員A",
+      "method": "POST",
+      "path": "/api/console/draw",
+      "status": 200,
+      "ms": 229,
+      "code": null
+    },
+    {
+      "who": "会員A",
+      "method": "POST",
+      "path": "/api/console/draw",
+      "status": 200,
+      "ms": 215,
+      "code": null
+    },
+    {
+      "who": "会員A",
+      "method": "POST",
+      "path": "/api/console/draw",
+      "status": 200,
+      "ms": 208,
+      "code": null
+    },
+    {
+      "who": "会員A",
+      "method": "POST",
+      "path": "/api/console/draw",
+      "status": 200,
+      "ms": 216,
+      "code": null
+    },
+    {
+      "who": "会員A",
+      "method": "POST",
+      "path": "/api/console/draw",
+      "status": 200,
+      "ms": 174,
+      "code": null
+    },
+    {
+      "who": "会員A",
+      "method": "POST",
+      "path": "/api/console/draw",
+      "status": 200,
+      "ms": 188,
+      "code": null
+    },
+    {
+      "who": "会員A",
+      "method": "POST",
+      "path": "/api/console/draw",
+      "status": 200,
+      "ms": 197,
+      "code": null
+    },
+    {
+      "who": "会員A",
+      "method": "POST",
+      "path": "/api/console/draw",
+      "status": 200,
+      "ms": 190,
+      "code": null
+    },
+    {
+      "who": "会員A",
+      "method": "POST",
+      "path": "/api/console/draw",
+      "status": 200,
+      "ms": 523,
+      "code": null
+    },
+    {
+      "who": "会員A",
+      "method": "POST",
+      "path": "/api/console/draw",
+      "status": 200,
+      "ms": 208,
+      "code": null
+    },
+    {
+      "who": "会員A",
+      "method": "POST",
+      "path": "/api/console/draw",
+      "status": 200,
+      "ms": 352,
+      "code": null
+    },
+    {
+      "who": "会員A",
+      "method": "POST",
+      "path": "/api/console/draw",
+      "status": 200,
+      "ms": 662,
+      "code": null
+    },
+    {
+      "who": "会員A",
+      "method": "POST",
+      "path": "/api/console/draw",
+      "status": 200,
+      "ms": 312,
+      "code": null
+    },
+    {
+      "who": "会員A",
+      "method": "POST",
+      "path": "/api/console/draw",
+      "status": 200,
+      "ms": 197,
+      "code": null
+    },
+    {
+      "who": "会員A",
+      "method": "POST",
+      "path": "/api/console/draw",
+      "status": 200,
+      "ms": 228,
+      "code": null
+    },
+    {
+      "who": "会員A",
+      "method": "POST",
+      "path": "/api/console/draw",
+      "status": 200,
+      "ms": 259,
+      "code": null
+    },
+    {
+      "who": "会員A",
+      "method": "POST",
+      "path": "/api/console/draw",
+      "status": 200,
+      "ms": 214,
+      "code": null
+    },
+    {
+      "who": "会員A",
+      "method": "POST",
+      "path": "/api/console/draw",
+      "status": 200,
+      "ms": 190,
+      "code": null
+    },
+    {
+      "who": "会員A",
+      "method": "POST",
+      "path": "/api/console/draw",
+      "status": 200,
+      "ms": 288,
+      "code": null
+    },
+    {
+      "who": "会員A",
+      "method": "POST",
+      "path": "/api/console/draw",
+      "status": 200,
+      "ms": 375,
+      "code": null
+    },
+    {
+      "who": "会員A",
+      "method": "POST",
+      "path": "/api/console/draw",
+      "status": 200,
+      "ms": 171,
+      "code": null
+    },
+    {
+      "who": "会員A",
+      "method": "POST",
+      "path": "/api/customer/prizes/exchange",
+      "status": 200,
+      "ms": 222,
+      "code": null
+    },
+    {
+      "who": "会員A",
+      "method": "POST",
+      "path": "/api/customer/prizes/exchange",
+      "status": 409,
+      "ms": 127,
+      "code": "PRIZE_NOT_AVAILABLE"
+    },
+    {
+      "who": "会員A",
+      "method": "POST",
+      "path": "/api/customer/orders",
+      "status": 400,
+      "ms": 133,
+      "code": "NO_ADDRESS"
+    },
+    {
+      "who": "会員A",
+      "method": "GET",
+      "path": "/api/customer/address",
+      "status": 200,
+      "ms": 147,
+      "code": null
+    },
+    {
+      "who": "会員A",
+      "method": "POST",
+      "path": "/api/customer/step-up",
+      "status": 200,
+      "ms": 272,
+      "code": null
+    },
+    {
+      "who": "会員A",
+      "method": "PUT",
+      "path": "/api/customer/address",
+      "status": 200,
+      "ms": 283,
+      "code": null
+    },
+    {
+      "who": "会員A",
+      "method": "POST",
+      "path": "/api/customer/orders",
+      "status": 200,
+      "ms": 631,
+      "code": null
+    },
+    {
+      "who": "会員A",
+      "method": "POST",
+      "path": "/api/customer/orders",
+      "status": 409,
+      "ms": 158,
+      "code": "PRIZE_NOT_AVAILABLE"
+    },
+    {
+      "who": "会員A",
+      "method": "POST",
+      "path": "/api/customer/prizes/exchange",
+      "status": 409,
+      "ms": 136,
+      "code": "PRIZE_NOT_AVAILABLE"
+    },
+    {
+      "who": "会員A",
+      "method": "GET",
+      "path": "/api/customer/orders",
+      "status": 200,
+      "ms": 141,
+      "code": null
+    },
+    {
+      "who": "会員A2",
+      "method": "POST",
+      "path": "/api/auth/login",
+      "status": 200,
+      "ms": 277,
+      "code": null
+    },
+    {
+      "who": "会員A2",
+      "method": "POST",
+      "path": "/api/customer/prizes/exchange",
+      "status": 404,
+      "ms": 154,
+      "code": "NO_PRIZE"
+    },
+    {
+      "who": "会員A2",
+      "method": "GET",
+      "path": "/api/customer/address",
+      "status": 200,
+      "ms": 163,
+      "code": null
+    },
+    {
+      "who": "会員A2",
+      "method": "POST",
+      "path": "/api/customer/step-up",
+      "status": 200,
+      "ms": 471,
+      "code": null
+    },
+    {
+      "who": "会員A2",
+      "method": "PUT",
+      "path": "/api/customer/address",
+      "status": 200,
+      "ms": 160,
+      "code": null
+    },
+    {
+      "who": "会員A2",
+      "method": "POST",
+      "path": "/api/customer/orders",
+      "status": 404,
+      "ms": 143,
+      "code": "NO_PRIZE"
+    },
+    {
+      "who": "会員A2",
+      "method": "GET",
+      "path": "/api/customer/prizes",
+      "status": 200,
+      "ms": 108,
+      "code": null
+    },
+    {
+      "who": "他社会員",
+      "method": "POST",
+      "path": "/api/customer/prizes/exchange",
+      "status": 404,
+      "ms": 122,
+      "code": "NO_PRIZE"
+    },
+    {
+      "who": "管理者",
+      "method": "POST",
+      "path": "/api/auth/login",
+      "status": 200,
+      "ms": 272,
+      "code": null
+    },
+    {
+      "who": "管理者",
+      "method": "GET",
+      "path": "/api/console/customers",
+      "status": 200,
+      "ms": 182,
+      "code": null
+    },
+    {
+      "who": "管理者",
+      "method": "GET",
+      "path": "/api/console/gachas",
+      "status": 200,
+      "ms": 597,
+      "code": null
+    },
+    {
+      "who": "管理者",
+      "method": "GET",
+      "path": "/api/console/orders",
+      "status": 200,
+      "ms": 193,
+      "code": null
+    },
+    {
+      "who": "管理者",
+      "method": "GET",
+      "path": "/api/console/audit",
+      "status": 200,
+      "ms": 138,
+      "code": null
+    },
+    {
+      "who": "管理者",
+      "method": "GET",
+      "path": "/api/console/audit/verify",
+      "status": 200,
+      "ms": 134,
+      "code": null
+    },
+    {
+      "who": "管理者",
+      "method": "GET",
+      "path": "/api/console/rtp",
+      "status": 200,
+      "ms": 217,
+      "code": null
+    }
+  ]
+}

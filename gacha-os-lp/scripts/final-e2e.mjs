@@ -677,8 +677,34 @@ H("⑧ 他人の景品・他社の景品に、手が届かないこと");
   const ex = await a2.call("/api/customer/prizes/exchange", "POST", { prizeIds: [target] });
   T("8-1", "他人の景品を、ポイントに交換できない", ex.status >= 400, `status=${ex.status} code=${ex.json?.code}`);
 
-  const od = await a2.call("/api/customer/orders", "POST", { prizeIds: [target] });
-  T("8-2", "他人の景品の発送を依頼できない", od.status >= 400, `status=${od.status} code=${od.json?.code}`);
+  /* ★この人にも、先にお届け先を入れておくこと。
+       住所が無いまま試すと「お届け先が無い」で断られてしまい、
+       断った理由が「他人のものだから」なのか
+       「住所が無いから」なのか、区別がつきません。
+       住所を入れて、それでも断られることを確かめます。 */
+  {
+    const g = await a2.call("/api/customer/address");
+    if (g.json?.stepUp?.need === true) {
+      await a2.call("/api/customer/step-up", "POST", { password: PASSWORD });
+    }
+    const put = await a2.call("/api/customer/address", "PUT", {
+      name: "最終 別人（架空）",
+      zip: "100-0002",
+      addr: "東京都千代田区千代田1-2（架空の住所）",
+      tel: "03-0000-0001",
+    });
+    T("8-1b", "他人の景品を試す人にも、お届け先を登録できた（断る理由をはっきりさせるため）",
+      put.status === 200, `status=${put.status} code=${put.json?.code ?? "-"}`);
+  }
+
+  let od = await a2.call("/api/customer/orders", "POST", { prizeIds: [target] });
+  if (od.status === 403 && od.json?.code === "STEP_UP_REQUIRED") {
+    await a2.call("/api/customer/step-up", "POST", { password: PASSWORD });
+    od = await a2.call("/api/customer/orders", "POST", { prizeIds: [target] });
+  }
+  T("8-2", "他人の景品の発送を依頼できない（お届け先があっても断られる）",
+    od.status >= 400 && od.json?.code === "NO_PRIZE",
+    `status=${od.status} code=${od.json?.code}`);
 
   const mine = await a2.call("/api/customer/prizes");
   T("8-3", "別の会員の画面には、他人の景品が1件も出ない",
