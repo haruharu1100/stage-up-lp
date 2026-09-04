@@ -45,6 +45,7 @@ export const runtime = "nodejs";
 const STATUS: Record<string, number> = {
   NO_CUSTOMER: 404,
   CUSTOMER_SUSPENDED: 403,
+  EMAIL_NOT_VERIFIED: 403,
   NO_GACHA: 404,
   NOT_PUBLISHED: 409,
   SOLD_OUT: 409,

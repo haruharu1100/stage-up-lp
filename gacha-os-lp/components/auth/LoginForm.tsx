@@ -376,6 +376,36 @@ export default function LoginForm({
               </div>
             )}
           </form>
+
+          {/* ── 新規のお客様の入口 ──────────────────────
+                ═══════════════════════════════════════════
+                ★ここを、小さな文字のリンクにしないこと
+                ═══════════════════════════════════════════
+
+                  はじめての方は、必ずこの画面に来ます。
+                  ここに登録の入口が無いと、
+                  「入れない」でそのまま帰られます。
+                  帰られた方は、二度と戻ってきません。
+
+                  ですから、ログインと同じ大きさで並べます。
+                  順番はログインが先です（既存のお客様のほうが多いため）。
+
+                ★6桁を入れている途中では出さないこと。
+                  いま必要なのは、その6桁だけです。 */}
+          {step === "PASSWORD" && (
+            <div className="mt-6 border-t border-edge2 pt-5">
+              <p className="text-center text-note leading-[1.8] text-slate3">
+                はじめてご利用の方
+              </p>
+              <a
+                href="/signup"
+                data-testid="go-signup"
+                className="nb mt-3 block w-full rounded-xl border border-blue-ink bg-white px-5 py-3.5 text-center text-note font-bold text-blue-ink transition-colors hover:bg-blue-pale"
+              >
+                新規会員登録（無料）
+              </a>
+            </div>
+          )}
         </div>
 
         {/* ★戻り先を、必ず本人に見せること。

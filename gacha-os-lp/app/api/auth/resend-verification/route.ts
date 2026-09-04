@@ -1,0 +1,71 @@
+/**
+ * 確認メールの再送（POST /api/auth/resend-verification）。
+ *
+ * ═══════════════════════════════════════════════════════
+ * ★ログイン済みの方だけが叩けます
+ * ═══════════════════════════════════════════════════════
+ *
+ *   「メールアドレスを書けば再送される」形にすると、
+ *   他人の受信箱へ、いくらでもメールを送りつけられます。
+ *   （迷惑行為の踏み台になります）
+ *
+ *   ですから、ログインしていただいてから、
+ *   ご自分の登録済みアドレスへだけ送ります。
+ *   宛先は body から受け取りません。受け取れません。
+ *
+ * ═══════════════════════════════════════════════════════
+ * ★firstRun: true が、ここでは正しい
+ * ═══════════════════════════════════════════════════════
+ *
+ *   門番は、メール確認が済んでいないお客様の
+ *   「状態が変わる依頼」を、すべて止めます。
+ *   この入口も、そのままでは止まります。
+ *
+ *   ですが、この入口は、止めている原因そのものを
+ *   解消するための入口です。ここを止めると、
+ *   確認メールが届かなかった方は、二度と先へ進めません。
+ */
+
+import { NextResponse, type NextRequest } from "next/server";
+import { guard, passed } from "@/lib/server/context";
+import { resendVerification } from "@/lib/server/signup";
+import { db } from "@/lib/server/db";
+
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+
+export async function POST(req: NextRequest) {
+  const gate = await guard(req, { kind: "CUSTOMER", firstRun: true });
+  if (!passed(gate)) return gate;
+
+  const t = await db().execute({
+    sql: `SELECT name FROM tenants WHERE id = ? LIMIT 1`,
+    args: [gate.session.tenantId],
+  });
+  const tenantName = String(
+    (t.rows[0] as Record<string, unknown> | undefined)?.name ?? "",
+  );
+
+  try {
+    await resendVerification({
+      tenantId: gate.session.tenantId,
+      tenantName,
+      customerId: gate.session.subjectId,
+      ip: req.headers.get("x-forwarded-for") ?? undefined,
+    });
+  } catch (e) {
+    /* ★失敗しても、外へは同じ返事にすること。 */
+    console.error("[resend-verification] failed", gate.requestId, e);
+  }
+
+  return NextResponse.json(
+    {
+      ok: true,
+      requestId: gate.requestId,
+      message:
+        "確認のご案内を、ご登録のメールアドレスへお送りしました。" +
+        "前回のリンクは使えなくなります。",
+    },
+    { status: 200 },
+  );
+}

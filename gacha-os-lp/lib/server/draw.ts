@@ -46,6 +46,7 @@ import { nonce, pickBelow } from "./rng";
 export type DrawErrorCode =
   | "NO_CUSTOMER"
   | "CUSTOMER_SUSPENDED"
+  | "EMAIL_NOT_VERIFIED"
   | "NO_GACHA"
   | "NOT_PUBLISHED"
   | "SOLD_OUT"
@@ -136,7 +137,7 @@ export async function drawOnceServer(args: {
 
     /* ── ② お客様 ─────────────────────────────── */
     const cu = await tx.execute({
-      sql: `SELECT id, name, points, status FROM customers
+      sql: `SELECT id, name, points, status, email_verified_at FROM customers
              WHERE tenant_id = ? AND id = ?`,
       args: [args.tenantId, args.userId],
     });
@@ -148,6 +149,31 @@ export async function drawOnceServer(args: {
       throw new DrawError(
         "CUSTOMER_SUSPENDED",
         "このアカウントは現在ご利用いただけません。",
+      );
+    }
+
+    /* ★メール確認は、ここでも見ること。
+         ═══════════════════════════════════════════════
+         門番（lib/server/context.ts）でも同じ確認をしています。
+         二重に書くのは、ふだんは良くないことです。
+         ただし、この入口だけは別です。
+
+         /api/console/draw は、門番を通っていません。
+         入口の中で、自分で確認を書き写しています。
+         ですから、門番にだけ書くと、この入口は素通りします。
+
+         そして、この入口は「ポイントが実際に減る」唯一の場所です。
+         素通りさせると、メール確認をしていない人が、
+         画面を開かずに直接叩くだけでガチャを引けます。
+
+         ★片方だけ直さないこと。
+           context.ts の EMAIL_NOT_VERIFIED を変えるときは、
+           必ずここも一緒に見ること。 */
+    if (user.email_verified_at == null) {
+      throw new DrawError(
+        "EMAIL_NOT_VERIFIED",
+        "先に、メールアドレスのご確認をお願いします。" +
+          "ご登録時にお送りしたメールのリンクを開いてください。",
       );
     }
 

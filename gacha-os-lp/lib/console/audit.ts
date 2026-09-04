@@ -152,6 +152,22 @@ export type AuditAction =
    */
   | "CUSTOMER_LOGIN"
   | "CUSTOMER_STEP_UP"
+
+  /**
+   * お客様がご自分で会員登録した記録と、メール確認を終えた記録。
+   *
+   * ★この2つを、必ず分けて残すこと。
+   *   登録だけして確認しない方は、いつも一定数います。
+   *   1種類にまとめると、その方たちが数えられなくなります。
+   *   「登録は多いのに売上が立たない」ときに、
+   *   確認メールが届いていないのか、届いても押されていないのかを、
+   *   ここの差で見分けます。
+   *
+   * ★登録は、お店が作った会員（ADMIN）と分けて残ること。
+   *   customers.signup_source が 'SELF' か 'ADMIN' かで分かれます。
+   */
+  | "CUSTOMER_SIGNUP"
+  | "CUSTOMER_EMAIL_VERIFIED"
   | "ADDRESS_UPDATE"
   | "SET_CUSTOMER_AUTH"
 
@@ -182,7 +198,6 @@ export type AuditAction =
    */
   | "LOGOUT"
   | "CUSTOMER_LOGOUT"
-  | "CUSTOMER_SIGNUP"
   | "ACCOUNT_LOCKED"
   | "MFA_ENABLED"
   | "MFA_DISABLED"

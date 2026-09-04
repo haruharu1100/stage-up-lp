@@ -103,13 +103,21 @@ const ACTION_LABEL: Record<AuditAction, string> = {
   CUSTOMER_LOGIN: "お客様のログイン",
   CUSTOMER_STEP_UP: "お客様の追加本人確認",
 
+  /* 会員登録まわり。
+     ★「登録した」と「確認まで終えた」を、別の行として残すこと。
+       1つにまとめると、
+       「登録はしたが、確認メールを開かなかった方が何人いるか」
+       を、あとから数えられなくなります。
+       この数が多いときは、メールが届いていない疑いがあります。 */
+  CUSTOMER_SIGNUP: "お客様の会員登録",
+  CUSTOMER_EMAIL_VERIFIED: "お客様のメール確認完了",
+
   /* 出ていった記録と、鍵まわり。
      ★ログアウトも残すこと。入った記録だけだと、
        事故が起きた時刻に誰が中にいたのかを言えません。
      ★締め出しは、攻撃を受けた証拠そのものです */
   LOGOUT: "ログアウト",
   CUSTOMER_LOGOUT: "お客様のログアウト",
-  CUSTOMER_SIGNUP: "お客様の新規登録",
   ACCOUNT_LOCKED: "連続失敗による締め出し",
   MFA_ENABLED: "2段階認証を有効化",
   MFA_DISABLED: "2段階認証を解除",

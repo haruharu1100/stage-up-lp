@@ -27,5 +27,10 @@ export const metadata: Metadata = {
 
 export default async function Page() {
   const auth = await requireCustomer("/mypage");
-  return <PortalHome name={auth.customer.name} />;
+  return (
+    <PortalHome
+      name={auth.customer.name}
+      emailVerified={auth.customer.emailVerified}
+    />
+  );
 }

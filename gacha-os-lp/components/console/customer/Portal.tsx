@@ -323,11 +323,112 @@ function LogoutRow() {
   );
 }
 
+/**
+ * メールアドレスのご確認が、まだのときのお知らせ。
+ *
+ * ═══════════════════════════════════════════════
+ * ★なぜ、いちばん上に出すのか
+ * ═══════════════════════════════════════════════
+ *
+ *   この状態のお客様は、ガチャを引けません。ポイントも買えません。
+ *   引こうとした瞬間に、はじめて断られます。
+ *
+ *   断られた方は、たいてい「壊れている」と受け取ります。
+ *   問い合わせもせず、そのまま帰られます。
+ *
+ *   ですから、引く前に、いちばん上でお伝えします。
+ *   そして、その場で解決できる手（再送）を、同じ場所に置きます。
+ *
+ * ★宛先を、この画面から送らないこと。
+ *   送り先はサーバーが、ログイン中の方の登録済みアドレスから決めます。
+ *   画面から宛先を渡せる作りにすると、
+ *   他人の受信箱へメールを送りつける道具になります。
+ */
+function MikakuninBanner() {
+  const [busy, setBusy] = useState(false);
+  const [done, setDone] = useState<string | null>(null);
+
+  const okuru = useCallback(async () => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      const res = await fetch("/api/auth/resend-verification", {
+        method: "POST",
+        headers: postHeaders(),
+        credentials: "same-origin",
+        cache: "no-store",
+      });
+      const data = (await res.json()) as { ok?: boolean; message?: string };
+      setDone(
+        data.message ??
+          (res.ok
+            ? "確認のご案内をお送りしました。"
+            : "ただいまお送りできません。少し時間をおいてからお試しください。"),
+      );
+    } catch {
+      setDone("通信に失敗しました。少し時間をおいてから、もう一度お試しください。");
+    } finally {
+      setBusy(false);
+    }
+  }, [busy]);
+
+  return (
+    <div
+      data-testid="email-unverified"
+      className="mt-5 rounded-2xl px-4 py-4"
+      style={{ background: TONE.warn.bg, border: `1px solid ${TONE.warn.line}` }}
+    >
+      <p className="text-[0.88rem] font-bold" style={{ color: TONE.warn.fg }}>
+        メールアドレスのご確認が、まだ済んでいません
+      </p>
+      <p className="mt-1.5 text-[0.79rem] leading-[1.9] text-white/65">
+        ご登録時にお送りしたメールのリンクを開いてください。
+        ご確認が済むまで、ポイントの購入とガチャのご利用はできません。
+      </p>
+
+      {done ? (
+        <p
+          className="mt-3 text-[0.79rem] leading-[1.9]"
+          style={{ color: TONE.info.fg }}
+        >
+          {done}
+        </p>
+      ) : (
+        <button
+          type="button"
+          data-testid="resend-verification"
+          onClick={okuru}
+          disabled={busy}
+          className="nb mt-3 min-h-[44px] w-full rounded-xl px-4 text-[0.84rem] font-bold disabled:opacity-60"
+          style={{
+            background: "rgba(255,255,255,0.08)",
+            border: `1px solid ${TONE.warn.line}`,
+            color: TONE.warn.fg,
+          }}
+        >
+          {busy ? "お送りしています…" : "確認メールを、もう一度送る"}
+        </button>
+      )}
+    </div>
+  );
+}
+
 /* ══════════════════════════════════════════════
    ① 入口（/mypage）
    ══════════════════════════════════════════════ */
 
-export function PortalHome({ name }: { name: string }) {
+export function PortalHome({
+  name,
+  emailVerified,
+}: {
+  name: string;
+  /**
+   * ★既定を true にしないこと。
+   *   渡し忘れた画面で、お知らせが黙って消えます。
+   *   消えても画面は正しく見えるので、誰も気づきません。
+   */
+  emailVerified: boolean;
+}) {
   const router = useRouter();
   const prizes = useCustomerPrizes();
   const points = useCustomerPoints();
@@ -345,6 +446,8 @@ export function PortalHome({ name }: { name: string }) {
     <Shell>
       <h1 className="text-[1.15rem] font-bold text-white">マイページ</h1>
       <p className="mt-1 text-[0.8rem] text-white/45">{name} 様</p>
+
+      {!emailVerified && <MikakuninBanner />}
 
       {/* ═══ お知らせ ═══
           ★発送のお知らせを、いちばん上に出すこと。

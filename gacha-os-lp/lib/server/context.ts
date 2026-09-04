@@ -446,6 +446,77 @@ async function guardHonbun(
     }
   }
 
+  /* ── ⑤' お客様の側も、毎回DBを見ること ─────────
+
+       ═══════════════════════════════════════════════════════
+       ★2026-09-05、会員登録を作っている途中で見つかりました
+       ═══════════════════════════════════════════════════════
+
+         ここまで、DBを見ていたのは管理者だけでした。
+         お客様は、セッションが生きてさえいれば、そのまま通っていました。
+
+         つまり、こうなっていました。
+
+             運営が「この会員を停止」を押す
+               → 会員一覧では停止と表示される
+               → ★でも、その方の開きっぱなしの画面は、まだ引ける
+
+         止めるのは、たいてい「今すぐ止めたい」ときです。
+         不正が疑われた、支払いが取り消された、といった場面です。
+         次にログインし直すまで有効、では、止めたことになりません。
+
+         ★だから、お客様も毎回見ます。管理者と同じ厳しさにします。
+
+       ═══════════════════════════════════════════════════════
+       ★メール確認は、ここ1か所で止めること
+       ═══════════════════════════════════════════════════════
+
+         入口ごとに「確認が済んでいるか」を書き写すと、
+         入口は40本以上あるので、41本目で必ず忘れます。
+         忘れても画面は正しく見えるので、誰も気づきません。
+
+         見るだけの依頼（GET）は通します。
+         止めるのは、状態が変わる依頼だけです。
+         確認前の方にも、どんなガチャがあるかは見ていただきます。
+         見えないと、確認しようという気持ちが起きません。
+
+       ★firstRun: true の入口だけが例外です。
+         ログアウト、自分の情報、確認メールの再送。
+         止めている原因そのものを解消する入口です。 */
+  if (session.subjectKind === "CUSTOMER") {
+    const { db } = await import("./db");
+    const res = await db().execute({
+      sql: `SELECT status, email_verified_at
+              FROM customers WHERE id = ? AND tenant_id = ? LIMIT 1`,
+      args: [session.subjectId, session.tenantId],
+    });
+    const me = res.rows[0] as Record<string, unknown> | undefined;
+
+    /* ★分からないときは、通さない（消された・別会社・DBが答えない） */
+    if (!me) {
+      return deny(requestId, "UNAUTHENTICATED", "ログインが必要です。", 401);
+    }
+
+    if (String(me.status ?? "ACTIVE") !== "ACTIVE") {
+      return deny(
+        requestId,
+        "ACCOUNT_SUSPENDED",
+        "このアカウントは、現在ご利用いただけません。",
+        403,
+      );
+    }
+
+    if (changes && !need.firstRun && me.email_verified_at == null) {
+      return deny(
+        requestId,
+        "EMAIL_NOT_VERIFIED",
+        "先に、メールアドレスのご確認をお願いします。" +
+          "ご登録時にお送りしたメールのリンクを開いてください。",
+        403,
+      );
+    }
+  }
+
   if (need.roles && need.roles.length > 0) {
     if (role === null || !need.roles.includes(role)) {
       return deny(requestId, "FORBIDDEN", "この操作は行えません。", 403);

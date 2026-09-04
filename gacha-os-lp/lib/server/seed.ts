@@ -74,9 +74,22 @@ export async function createCustomer(input: {
        batch は1回の呼び出しで、中身はまとめて確定します。 */
   const shori = [
     {
+      /* ★お店が作った会員は、メール確認済みとして入れること。
+           ═══════════════════════════════════════════════
+           確認メールをお送りするのは、ご自分で登録された方
+           （signup_source='SELF'）だけです。
+           お店が名簿から作った会員には、送っていません。
+
+           ここを未確認のまま入れると、その方は1回も引けません。
+           しかも確認メールが届いていないので、
+           ご自分では、どうやっても解除できません。
+
+           ★M015 の最後にある「既存の会員を確認済みにする」行と、
+             同じ考え方です。片方だけ直さないこと。 */
       sql: `INSERT INTO customers
-              (id, tenant_id, display_id, email, name, points, spent, status, created_at)
-            VALUES (?,?,?,?,?,?,0,'ACTIVE',?)`,
+              (id, tenant_id, display_id, email, name, points, spent, status, created_at,
+               email_verified_at, signup_source)
+            VALUES (?,?,?,?,?,?,0,'ACTIVE',?,?,'ADMIN')`,
       args: [
         customerId,
         input.tenantId,
@@ -84,6 +97,7 @@ export async function createCustomer(input: {
         input.email ?? null,
         input.name,
         input.points,
+        now,
         now,
       ],
     },

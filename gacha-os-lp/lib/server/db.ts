@@ -1301,6 +1301,92 @@ const M014: string[] = [
   `ALTER TABLE sessions ADD COLUMN read_only INTEGER NOT NULL DEFAULT 0`,
 ];
 
+/**
+ * お客様が、ご自分で会員登録できるようにする。
+ *
+ * ═══════════════════════════════════════════════════════
+ * ★これまで、お客様を作れるのは開発者だけでした
+ * ═══════════════════════════════════════════════════════
+ *
+ *   顧客側にも管理側にも、会員を作る画面が1つもありませんでした。
+ *   種まき（seed.ts）と試験用の道具からしか作れません。
+ *   つまり、お店を開いても、お客様が1人も増えません。
+ *
+ * ═══════════════════════════════════════════════════════
+ * ★メールアドレスの重複を、DBの側で止めること
+ * ═══════════════════════════════════════════════════════
+ *
+ *   「登録の入口で、同じメールが無いか調べてから入れる」だけでは、
+ *   同時に2通送られたときに、2件とも「無い」と答えてしまいます。
+ *   調べてから入れるまでの間に、もう1件が入るからです。
+ *
+ *   ですから、DBに index を張って、DBに断らせます。
+ *   大文字小文字は同じものとして扱います（Taro@ と taro@ は同じ人）。
+ *
+ *   ★NULL は重複と見なされません（SQLiteの決まり）。
+ *     メールを持たない古い会員（種まきで作った方）が
+ *     何人いても、この index は張れます。
+ *
+ * ═══════════════════════════════════════════════════════
+ * ★合言葉（確認用のリンク）は、そのまま保存しないこと
+ * ═══════════════════════════════════════════════════════
+ *
+ *   password_resets と同じ形にします。
+ *   DBを覗かれても、そこから確認リンクを組み立てられません。
+ */
+const M015: string[] = [
+  /* メール確認が済んだ時刻。null のうちは「まだ確認していない」 */
+  `ALTER TABLE customers ADD COLUMN email_verified_at TEXT`,
+
+  /* ★同意した時刻を、必ず残すこと。
+       「同意しました」の1文字（1/0）だけでは、
+       規約を改定した日より前の同意なのか後なのかが分かりません。 */
+  `ALTER TABLE customers ADD COLUMN terms_agreed_at TEXT`,
+  `ALTER TABLE customers ADD COLUMN privacy_agreed_at TEXT`,
+
+  /* ご自分で登録された方か、お店が作った方か */
+  `ALTER TABLE customers ADD COLUMN signup_source TEXT`,
+  `ALTER TABLE customers ADD COLUMN signup_ip TEXT`,
+
+  /* ★同じ会社の中で、同じメールアドレスは1人だけ。
+       会社が違えば同じメールでかまいません（別のお店の会員です）。 */
+  `CREATE UNIQUE INDEX IF NOT EXISTS ux_customers_tenant_email
+     ON customers (tenant_id, lower(email))
+   WHERE email IS NOT NULL`,
+
+  /* メール確認の合言葉。中身は入れず、照合できる形だけを入れる */
+  `CREATE TABLE IF NOT EXISTS email_verifications (
+     id          TEXT PRIMARY KEY,
+     tenant_id   TEXT NOT NULL,
+     customer_id TEXT NOT NULL,
+     /* 送った先。あとで変えられても、送った時点の宛先が残る */
+     email       TEXT NOT NULL,
+     token_hash  TEXT NOT NULL UNIQUE,
+     expires_at  TEXT NOT NULL,
+     used_at     TEXT,
+     created_at  TEXT NOT NULL,
+     created_ip  TEXT
+   )`,
+
+  `CREATE INDEX IF NOT EXISTS ix_email_verifications_customer
+     ON email_verifications (tenant_id, customer_id, created_at)`,
+
+  /*
+   * ★いま登録されている方を、全員「確認済み」にしておくこと。
+   *
+   *   ここを空のままにすると、移行した瞬間に、
+   *   既存の会員が全員「メール未確認」になり、
+   *   引くことも交換することもできなくなります。
+   *
+   *   メール確認は、これから登録される方のための関門です。
+   *   すでにお店が作った方は、お店が確認済みと見なします。
+   */
+  `UPDATE customers
+      SET email_verified_at = created_at,
+          signup_source     = 'ADMIN'
+    WHERE email_verified_at IS NULL`,
+];
+
 const MIGRATIONS: Migration[] = [
   { name: "001_initial", sql: M001 },
   { name: "002_tenant_tables", sql: M002 },
@@ -1316,6 +1402,7 @@ const MIGRATIONS: Migration[] = [
   { name: "012_point_adjust_balances", sql: M012 },
   { name: "013_ticket_messages", sql: M013 },
   { name: "014_read_only_session", sql: M014 },
+  { name: "015_customer_signup", sql: M015 },
 ];
 
 /** どの段まで済んだかを覚えておく表 */

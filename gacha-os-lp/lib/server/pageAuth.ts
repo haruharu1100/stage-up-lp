@@ -73,7 +73,24 @@ export type PageAuth = {
  */
 export type CustomerAuth = {
   session: Session;
-  customer: { displayId: string; name: string; email: string; tenantCode: string };
+  customer: {
+    displayId: string;
+    name: string;
+    email: string;
+    tenantCode: string;
+    /**
+     * メールアドレスのご確認が済んでいるか。
+     *
+     * ★これを「入れる・入れない」の判断に使わないこと。
+     *   済んでいなくても、画面は見ていただきます。
+     *   見えないと、確認しようという気持ちが起きません。
+     *
+     *   実際に止めているのはサーバー側です
+     *   （lib/server/context.ts の guard と lib/server/draw.ts）。
+     *   ここは、お知らせを出すためだけに使います。
+     */
+    emailVerified: boolean;
+  };
 };
 
 export async function currentCustomer(): Promise<CustomerAuth | null> {
@@ -88,7 +105,7 @@ export async function currentCustomer(): Promise<CustomerAuth | null> {
   const { db } = await import("./db");
 
   const res = await db().execute({
-    sql: `SELECT display_id, name, email FROM customers
+    sql: `SELECT display_id, name, email, email_verified_at FROM customers
            WHERE id = ? AND tenant_id = ? LIMIT 1`,
     args: [session.subjectId, session.tenantId],
   });
@@ -108,6 +125,7 @@ export async function currentCustomer(): Promise<CustomerAuth | null> {
       displayId: String(row.display_id ?? ""),
       name: String(row.name ?? ""),
       email: String(row.email ?? ""),
+      emailVerified: row.email_verified_at != null,
       tenantCode: String(
         (t.rows[0] as Record<string, unknown> | undefined)?.code ?? "",
       ),
