@@ -839,7 +839,7 @@ const JOB_FINDING_SQL = `INSERT INTO findings
     (task_id, supplier_name, product_name, amazon_title, condition, jan, asin, buy_price, amazon_price,
      fees, profit, profit_rate, monthly_sales, source_url, product_url, image_url, match_type,
      match_status, attribute_conflicts, avg_price_90, price_risk_score, is_deal)
-   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 const jobRowArgs = (r) => [
   r.task_id,
   r.supplier_name,
