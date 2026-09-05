@@ -460,6 +460,7 @@ export async function startPasswordReset(input: {
     });
 
     await deliver({
+      kind: "PASSWORD_RESET",
       to: String(row.email ?? ""),
       subject: "パスワードの再設定",
       body:

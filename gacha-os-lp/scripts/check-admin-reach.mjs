@@ -96,60 +96,77 @@ const SIZES = [
   { w: 1024, h: 768, name: "1024×768" },
 ];
 
-/**
- * 管理者としてログインし、2段階認証まで通す。
+/*
+ * 管理画面へ入る手順は、scripts/lib/console-enter.mjs にまとめてあります。
  *
- * ★押したのに反応しない、を織り込むこと。
- *   画面の絵が出るのと、押せるようになるのは別の瞬間です。
- *   絵が出た直後に押すと、その1回は空振りします。
- *   人は反応が無ければもう一度押すので、機械にも同じことをさせます。
- *   ここを待ち時間の決め打ちにすると、遅い日にまた落ちます。
+ * ★ここで入り方をもう一度書かないこと。
+ *   以前はこの道具が自分でログインの手順を持っていました。
+ *   その結果、入り方が「デモの入口だけ」から
+ *   「本物のログインも要る」に変わったとき、
+ *   この道具だけが古いままになり、
+ *   ★中身をひとつも確かめないまま落ちる状態になりました（2026-09-05）。
+ *
+ *   まとめてあるほうを使えば、入り方が変わっても
+ *   直すのは1か所だけで済みます。
+ *
+ *   本物のログインが要る先を見るときは、呼ぶ側で合言葉を渡します。
+ *
+ *       UX_TENANT_CODE / UX_ADMIN_EMAIL / UX_ADMIN_PASSWORD
+ *
+ *   ★合言葉をこのファイルに書かないこと。そのままGitに残ります。
  */
-async function press(page, selector, until) {
-  for (let i = 0; i < 8; i += 1) {
-    await page.locator(selector).first().click({ timeout: 5000 }).catch(() => {});
-    try {
-      await page.waitForSelector(until, { timeout: 2000 });
-      return;
-    } catch {
-      /* 空振り。もう一度押す */
-    }
-  }
-  throw new Error(`${selector} を押しても ${until} が出ない`);
+const { enterConsole } = await import(`${ROOT}/scripts/lib/console-enter.mjs`);
+
+/*
+ * 入るための担当者を、この道具が自分で1人だけ作ります。
+ *
+ * ★手で用意させないこと。
+ *   「先に管理者を作ってから実行してください」にすると、
+ *   用意が面倒な日にこの道具は実行されなくなります。
+ *   実行されない見張りは、無いのと同じです。
+ *
+ * ★合言葉は、毎回その場で作ること。
+ *   決まった文字をここに書くと、そのままGitに残り、
+ *   あとから消しても履歴には残り続けます。
+ */
+const DB_ENV = (process.env.DATABASE_ENV ?? "development").trim().toLowerCase();
+if (DB_ENV === "production") {
+  console.error("\nDATABASE_ENV が production です。この道具は本番へは向けられません。\n");
+  process.exit(1);
 }
 
-/**
- * ★ログイン画面から担当者の一覧を外しました。
- *
- *   以前は「管理者（全権）」という担当者ボタンを押していました。
- *   本番の管理サイトのログイン画面に社員名簿は並ばないので、
- *   ID／パスワードの入力欄に作り替え、デモの入口だけを
- *   「デモ管理者としてログイン」の1つに寄せています。
- *
- * ★ここで実在しそうなIDやパスワードを打たせないこと。
- *   デモの入口は入力が要りません。入力欄に何か入れて通そうとすると、
- *   その値がスクリプトに残り、いつか本物に置き換わります。
- */
-async function enter(page) {
-  /* ★はじめての方への案内を、先に「見たこと」にしておくこと。
-     案内は画面の手前に出るので、出たままだと左メニューが押せません。
-     ここで消しているのは案内だけです。画面の中身には触れていません。 */
-  await page.addInitScript(() => {
-    try {
-      window.localStorage.setItem("gachaos.admin.tour.v1", "done");
-    } catch {
-      /* 保存が使えない環境。そのときは案内も出ません */
-    }
-  });
-  await page.goto(URL, { waitUntil: "domcontentloaded" });
-  await press(
-    page,
-    'button:has-text("デモ管理者としてログイン")',
-    'input[placeholder="000000"]',
-  );
-  await page.locator('input[placeholder="000000"]').fill("204815");
-  await press(page, 'button:has-text("管理画面に入る")', 'nav[aria-label="管理メニュー"]');
-}
+const STAMP = new Date().toISOString().replace(/[-:T.Z]/g, "").slice(0, 14);
+const CREDS = {
+  tenantCode: `REACH${STAMP}`,
+  email: `reach-${STAMP}@check.example`,
+  password: `reach-${STAMP}-Todoku!`,
+};
+
+const seed = await import(`${ROOT}/lib/server/seed.ts`);
+const { setPassword } = await import(`${ROOT}/lib/server/auth.ts`);
+
+const tenantId = await seed.createTenant({
+  code: CREDS.tenantCode,
+  name: "届くか確かめる社（架空）",
+});
+const adminId = await seed.createAdmin({
+  tenantId,
+  no: 1,
+  email: CREDS.email,
+  name: "到達 点検（架空）",
+  /* ★弱い役割にしないこと。
+       開けない画面は左メニューで灰色になります。
+       灰色の項目は押せないので、確かめたい項目がそのぶん減ります。 */
+  role: "SUPER_ADMIN",
+});
+await setPassword({
+  tenantId,
+  subjectKind: "ADMIN",
+  subjectId: adminId,
+  password: CREDS.password,
+});
+
+const enter = (page) => enterConsole(page, URL, CREDS);
 
 const browser = await chromium.launch();
 const bad = [];
@@ -207,34 +224,56 @@ for (const size of SIZES) {
 
   /* ── ④ 全部の項目を、スクロールして押して、その画面が出るか ── */
   /**
-   * ★1行に2つボタンがあることを忘れないこと。
+   * ★1行に2つ、押せるものが並んでいることを忘れないこと。
    *
-   *   行には「その画面へ行く」ボタンと「★よく使うに入れる」ボタンが
-   *   並んでいます。両方を数えると42個になり、
-   *   名前を取れたものだけ残す＝番号がずれます。
-   *   ずれたまま押すと、隣の画面を押しておいて
+   *   行には「その画面へ行く」ものと「★よく使うに入れる」ボタンが
+   *   並んでいます。両方を数えると44個になり、番号がずれます。
+   *   ずれたまま押すと、隣を押しておいて
    *   「行けない」と報告することになります。
    *
-   *   行の1つめのボタンだけを見ます。名前も、そのボタンから取ります。
+   * ★a と button の両方を見ること。
+   *   画面へ行くほうは、途中で button から本物のリンク（a）へ変わりました。
+   *   別のタブで開ける・URLをコピーできるようにするためです。
+   *
+   *   ここを button だけで探していたために、この道具は
+   *   ★22項目すべてで「★よく使うに入れる」ボタンのほうを押し続け、
+   *     「どこへも行けない」と報告していました（2026-09-05）。
+   *     道具のほうが嘘をついていた形です。同じ探し方は
+   *     scripts/lib/console-enter.mjs の navTo にも書いてあります。
    */
+  /*
+   * ★「行の中で、いちばん最初にあるもの」だけを取ること。
+   *
+   *   a と button をまとめて拾うと、★のボタンまで一緒に付いてきます。
+   *   そして★を押すと「よく使う」に入り、
+   *   ★その項目がメニューの先頭へ動きます＝以降の並びが全部ずれます。
+   *   ずれた番号で押し続けるので、後半はほとんど別の画面を押します。
+   *   実際にこれで、届いているのに「届かない」と出ました（2026-09-05）。
+   *
+   *   行の中で先に置いてあるのは、必ず「その画面へ行く」ほうです。
+   *   種類（a か button か）ではなく、並び順で決めます。
+   */
+  /* ★「何番目の行か」も一緒に控えておくこと。
+       名前だけを並べて番号を振り直すと、
+       名前の無い行が1つ混ざった瞬間に、
+       名前の並びと行の並びが1つずれます。
+       ずれた番号で押し続けるので、後半は全部となりを押します。 */
   const items = await page.evaluate(() => {
-    const n = document.querySelector('nav[aria-label="管理メニュー"]');
-    /* ★名前は aria-label から取ること。
-         見た目（説明文を出す・出さない、1行・2行）は今後も変わります。
-         そのたびに名前の取り方が壊れると、
-         直したつもりで確認が動いていない、が起きます。 */
-    return [...n.querySelectorAll("li > button:nth-of-type(1)")].map(
-      (b) =>
-        b.getAttribute("aria-label") ||
-        b.querySelector("span > span > span")?.textContent?.trim() ||
-        "",
-    );
+    const nav = document.querySelector('nav[aria-label="管理メニュー"]');
+    return [...nav.querySelectorAll("li")]
+      /* ★名前は aria-label から取ること。
+           見た目（説明文を出す・出さない、1行・2行）は今後も変わります。
+           そのたびに名前の取り方が壊れると、
+           直したつもりで確認が動いていない、が起きます。 */
+      .map((li, i) => ({ i, el: li.querySelector("a[aria-label], button[aria-label]") }))
+      .filter((x) => x.el)
+      .map((x) => ({ row: x.i, label: x.el.getAttribute("aria-label") || "" }));
   });
 
   if (items.length < 20) {
     bad.push(`${size.name}：左メニューの項目が ${items.length} 個しか取れない`);
   }
-  if (items.some((x) => !x)) {
+  if (items.some((x) => !x.label)) {
     bad.push(`${size.name}：名前の無いメニュー項目がある`);
   }
 
@@ -249,23 +288,50 @@ for (const size of SIZES) {
    *   なので、上から何番目かで押します。
    *   見出しの確認も、含むかどうかではなく、完全に同じかで見ます。
    */
-  const rows = nav.locator("li > button:nth-of-type(1)");
+  const lis = nav.locator("li");
 
   for (let n = 0; n < items.length; n += 1) {
-    const label = items[n];
-    const btn = rows.nth(n);
-    try {
-      await btn.scrollIntoViewIfNeeded({ timeout: 3000 });
-      await btn.click({ timeout: 3000 });
+    const { row, label } = items[n];
+    /* ★行の中の「先にあるほう」を押すこと。
+         ここで button だけを指すと★（よく使うに入れる）を押してしまい、
+         その項目が先頭へ動いて以降の並びが全部ずれます。 */
+    const btn = lis.nth(row).locator("a[aria-label], button[aria-label]").first();
 
-      /* 押したあと、その画面の見出しが本当に出たか（完全一致） */
-      await page.waitForFunction(
-        (want) => document.querySelector("main h1")?.textContent?.trim() === want,
-        label,
-        { timeout: 4000 },
-      );
+    /*
+     * ★1回押して出なかっただけで「届かない」と決めないこと。
+     *
+     *   ここは本物のリンクなので、押すと画面ごと入れ替わります。
+     *   開発中のサーバーはその画面を初めて開くときに組み立てるので、
+     *   数秒かかることがあります。待ち時間が短いと、
+     *   ★届いているのに「届かない」と報告します。
+     *   実際にそうなりました（2026-09-05／10件が偽の不合格）。
+     *   出た見出しがすべて「ひとつ前の項目」だったのが目印です。
+     *
+     *   ですので、待ち時間を長めに取り、それでも出なければ
+     *   もう一度だけ押してみます。2回とも出なければ本当の不合格です。
+     */
+    let reached = false;
+    let lastErr = null;
+    for (let kai = 0; kai < 2 && !reached; kai += 1) {
+      try {
+        await btn.scrollIntoViewIfNeeded({ timeout: 5000 });
+        await btn.click({ timeout: 5000 });
+
+        /* 押したあと、その画面の見出しが本当に出たか（完全一致） */
+        await page.waitForFunction(
+          (want) => document.querySelector("main h1")?.textContent?.trim() === want,
+          label,
+          { timeout: 15000 },
+        );
+        reached = true;
+      } catch (e) {
+        lastErr = e;
+      }
+    }
+
+    if (reached) {
       checked += 1;
-    } catch (e) {
+    } else {
       const got = await page
         .locator("main h1")
         .first()
@@ -274,7 +340,7 @@ for (const size of SIZES) {
       bad.push(
         `${size.name}：「${label}」に到達できない（出た見出し：${
           got ? got.trim() : "なし"
-        }）`,
+        }／理由：${lastErr ? String(lastErr.message).split("\n")[0] : "不明"}）`,
       );
     }
   }

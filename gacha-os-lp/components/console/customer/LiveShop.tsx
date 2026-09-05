@@ -43,13 +43,10 @@
 
 import { useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
-import {
-  CoverArt,
-  GradeChip,
-  ProductArt,
-  artKindOf,
-  gradeArt,
-} from "./art";
+/* ★ここで Sample で始まる部品を読まないこと。
+     Sample は「描いた絵」です。本物の売り場は、
+     お店が登録した写真だけを出します（scripts/check-real-art.mjs が見張ります）。 */
+import { GradeChip, PrizeThumb, ShopPhoto } from "./art";
 import {
   DrawTheater,
   Pill,
@@ -192,7 +189,6 @@ function Tile({
   balance: number | null;
   onOpen: () => void;
 }) {
-  const kind = artKindOf(g.title);
   const soldOut = g.left <= 0;
   const short = !soldOut && balance !== null && balance < g.price;
 
@@ -204,7 +200,11 @@ function Tile({
       style={{ background: SHOP_SURFACE, border: `1px solid ${SHOP_EDGE}` }}
     >
       <span className="relative block aspect-[4/3] w-full overflow-hidden">
-        <CoverArt id={g.id} kind={kind} className="h-full w-full" />
+        <ShopPhoto
+          imageId={g.coverImageId}
+          alt={g.title}
+          className="h-full w-full object-cover"
+        />
 
         {/* 目玉の賞。★売り切れた賞をここに出さないこと（有利誤認になります） */}
         {g.top && (
@@ -307,7 +307,6 @@ export function ShopDetailScreen({ gachaId }: { gachaId: string }) {
     );
   }
 
-  const kind = artKindOf(g.title);
   const soldOut = g.left <= 0;
   const tarinai = balance !== null && balance < g.price;
   const hikenai = soldOut || tarinai || okuruChu;
@@ -324,6 +323,11 @@ export function ShopDetailScreen({ gachaId }: { gachaId: string }) {
           prizeValue: kekka.prizeValue,
           price: kekka.price,
           balanceAfter: kekka.pointAfter,
+          /* 当たった賞の写真。★無ければ null のまま渡すこと。
+             ここで表紙の写真で代用すると、当たっていない物が
+             「当たった物」として大きく出ます */
+          imageId: kekka.imageId,
+          coverImageId: g.coverImageId,
         },
       ]
     : [];
@@ -337,7 +341,11 @@ export function ShopDetailScreen({ gachaId }: { gachaId: string }) {
         style={{ background: SHOP_SURFACE, border: `1px solid ${SHOP_EDGE}` }}
       >
         <div className="relative aspect-[16/9] w-full">
-          <CoverArt id={g.id} kind={kind} className="h-full w-full" />
+          <ShopPhoto
+            imageId={g.coverImageId}
+            alt={g.title}
+            className="h-full w-full object-cover"
+          />
         </div>
         <div className="px-4 pb-4 pt-3">
           <h1 className="text-[1.05rem] font-bold leading-[1.6] text-white">{g.title}</h1>
@@ -363,15 +371,14 @@ export function ShopDetailScreen({ gachaId }: { gachaId: string }) {
         <Panel>
           <div className="space-y-2.5">
             {g.prizes.map((p) => {
-              const a = gradeArt(p.grade);
               return (
                 <div key={p.grade} className="flex items-center gap-3">
-                  <div
-                    className="h-11 w-11 shrink-0 overflow-hidden rounded-lg"
-                    style={{ border: `1px solid ${a.line}` }}
-                  >
-                    <ProductArt grade={p.grade} kind={kind} className="h-full w-full" />
-                  </div>
+                  <PrizeThumb
+                    imageId={p.imageId}
+                    grade={p.grade}
+                    alt={p.name}
+                    className="h-11 w-11 shrink-0"
+                  />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1.5">
                       <GradeChip grade={p.grade} onDark />
@@ -403,13 +410,46 @@ export function ShopDetailScreen({ gachaId }: { gachaId: string }) {
         {soldOut && <Note tone="warn">このガチャは完売いたしました。</Note>}
 
         {!soldOut && tarinai && (
-          <Note tone="warn">
-            保有ポイントが不足しています（1回 {g.price.toLocaleString()}pt ／ 保有{" "}
-            {balance === null ? "—" : balance.toLocaleString()}pt）。
-          </Note>
+          <>
+            <Note tone="warn">
+              保有ポイントが不足しています（1回 {g.price.toLocaleString()}pt ／ 保有{" "}
+              {balance === null ? "—" : balance.toLocaleString()}pt）。
+            </Note>
+
+            {/* ═══════════════════════════════════════════
+                ★足りないと伝えるだけで、終わらせないこと
+                ═══════════════════════════════════════════
+
+                  「足りません」だけを出す画面は、
+                  お客様をその場に立たせたまま帰らせます。
+                  足す道を、同じ場所に置きます。
+
+                ★戻り先（from）を必ず渡すこと。
+                  渡さないと、購入が終わったお客様は
+                  マイページの入口に放り出されます。
+                  もう一度このガチャを探し直すことになり、
+                  たいていは、そこで終わります。
+
+                ★ここで組み立てた住所を、そのまま移動先に使わないこと。
+                  この値はサーバーへ渡すだけです。
+                  サーバー（safeReturnTo）が /mypage の中だと
+                  認めたものだけが、戻り先として返ってきます。 */}
+            <BigBtn
+              testId="go-buy-points"
+              tone="second"
+              onClick={() =>
+                router.push(
+                  `/mypage/points/buy?from=${encodeURIComponent(`/mypage/shop/${g.id}`)}`,
+                )
+              }
+              note="ご購入後、このガチャへお戻りいただけます。"
+            >
+              ポイントを購入する
+            </BigBtn>
+          </>
         )}
 
-        <BigBtn onClick={() => setKakunin(true)} disabled={hikenai}>
+        <BigBtn testId="draw-open" onClick={() => setKakunin(true)} disabled={hikenai}>
           {okuruChu ? "引いています…" : `${g.price.toLocaleString()}pt で 1回引く`}
         </BigBtn>
 
@@ -456,7 +496,7 @@ export function ShopDetailScreen({ gachaId }: { gachaId: string }) {
             </dl>
 
             <div className="mt-5 space-y-2.5">
-              <BigBtn onClick={hiku} disabled={okuruChu}>
+              <BigBtn testId="draw-go" onClick={hiku} disabled={okuruChu}>
                 {okuruChu ? "引いています…" : "引く"}
               </BigBtn>
               <button
@@ -472,11 +512,11 @@ export function ShopDetailScreen({ gachaId }: { gachaId: string }) {
         </div>
       )}
 
-      {/* ── 結果（演出は、確定した結果を再生するだけ） ── */}
+      {/* ── 結果（演出は、確定した結果を再生するだけ） ──
+          ★sampleKind を渡さないこと。渡すと、描いた絵が結果画面に出ます */}
       {kekka && (
         <DrawTheater
           records={engi}
-          kind={kind}
           canAgain={!hikenai}
           onAgain={() => {
             setKekka(null);

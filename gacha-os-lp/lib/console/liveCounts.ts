@@ -132,6 +132,13 @@ export function useLiveCounts(on = true): LiveCountsState {
             pointMismatch: kazu(data.pointMismatch),
             pointPending: kazu(data.pointPending),
 
+            /* カード会社などによる強制取消。
+               ★件数と被害額を、別々のまま運ぶこと。
+                 1つにまとめると「1件だけれど30万円」に気づけません。 */
+            reversalCount: kazu(data.reversalCount),
+            reversalUnrecovered: kazu(data.reversalUnrecovered),
+            reversalReviewPending: kazu(data.reversalReviewPending),
+
             /* 危ないもの */
             fraudHighRisk: kazu(data.fraudHighRisk),
             rtpDangerCount: kazu(data.rtpDangerCount),
@@ -323,6 +330,25 @@ export function liveTodos(state: LiveCountsState): LiveTodo[] {
       label: "承認待ちのポイント調整",
       count: c.pointPending,
       to: "points",
+    });
+  }
+
+  /**
+   * カード会社などが、あとからお金を引き戻した会員（強制取消）。
+   *
+   * ★必ず MUST にすること。
+   *   放っておくと、同じ人が同じことを繰り返せます。
+   *   1件ずつは小さくても、繰り返された分だけ、そのまま損になります。
+   *
+   * ★ここで会員を止めないこと。判断するのは人です。
+   *   カードを盗まれた側（＝被害者）ということも、ふつうにあります。
+   */
+  if (c.reversalReviewPending !== null && c.reversalReviewPending > 0) {
+    out.push({
+      urgency: "MUST",
+      label: "決済取消のあった会員の確認",
+      count: c.reversalReviewPending,
+      to: "customers",
     });
   }
 

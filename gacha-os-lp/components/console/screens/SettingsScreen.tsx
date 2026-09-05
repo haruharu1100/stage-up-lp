@@ -40,6 +40,7 @@ import {
 import { Badge, Card, DemoNote, Field, KV, RowCard, Rows, Table, Td, WhatIsThis, inputClass } from "../ui";
 import TempPasswordPanel from "../TempPasswordPanel";
 import AdminsPanel from "../AdminsPanel";
+import PointPolicyPanel from "../PointPolicyPanel";
 
 /** 実装状況の3区分 */
 type Ready = "AVAILABLE" | "OPTION" | "PLANNED";
@@ -192,6 +193,19 @@ export default function SettingsScreen({
           この一覧は「誰がまだ認証アプリを登録していないか」の表でもあります。
       */}
       {mayEdit && <TempPasswordPanel />}
+
+      {/*
+        ── ポイントの有効期限 ──
+
+        ★ここは、こちらが決めてよいことではありません。
+          有効期限は法律（資金決済法・前払式支払手段）に関わります。
+          既定値をこちらで置かず、お店に選んでいただきます。
+
+        ★見るのは point.view、変えるのは settings.edit。
+          パネルの中で権限を見て、変えられない方には
+          読むだけの形で出します。
+      */}
+      {can(me.role, "point.view") && <PointPolicyPanel />}
 
       {/* ── 二人承認の金額 ── */}
       <Card title="別の管理者の承認が必要になる金額" note="これ以上のポイント操作は、1人では実行できません。">

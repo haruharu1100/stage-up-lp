@@ -63,3 +63,34 @@ export function postHeaders(): Record<string, string> {
     [CSRF_HEADER]: readCsrf(),
   };
 }
+
+/**
+ * ファイル（写真）を送るときの見出し。
+ *
+ * ═══════════════════════════════════════════════════════
+ * ★なぜ content-type を書かないのか
+ * ═══════════════════════════════════════════════════════
+ *
+ *   ファイルを送るときの content-type は、こう書かれます。
+ *
+ *       multipart/form-data; boundary=----WebKitFormBoundaryAbc123...
+ *
+ *   後ろの boundary は「ここからが次のファイル」を示す区切り文字で、
+ *   毎回ブラウザが自分で決めます。
+ *   こちらが content-type を手で書くと、この区切り文字が消えます。
+ *   すると、受け取った側は本文をどこで切ればよいか分からず、
+ *   「ファイルが1つも入っていない」と読み取ります。
+ *
+ *   ★だから、ここでは content-type をわざと書きません。
+ *     書かないことが正しい、数少ない場所です。
+ *     FormData を fetch に渡せば、ブラウザが正しく付けてくれます。
+ *
+ * ★名前に postHeaders を含めてあるのは、わざとです。
+ *   scripts/check-csrf.mjs は、状態が変わる送信のそばに
+ *   postHeaders という文字があるかどうかで見張っています。
+ *   別の名前にすると、この送信だけ見張りの外に出ます。
+ *   見張りの外に置いた入口は、いつか合図を付け忘れます。
+ */
+export function postHeadersForUpload(): Record<string, string> {
+  return { [CSRF_HEADER]: readCsrf() };
+}

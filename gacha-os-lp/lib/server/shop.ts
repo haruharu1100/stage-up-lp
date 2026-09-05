@@ -69,6 +69,25 @@ export type ShopItem = {
   top: { grade: string; name: string; value: number } | null;
   /** S賞の残り本数（0 なら出しません） */
   sLeft: number;
+
+  /**
+   * 表紙の写真のID。お店がまだ入れていなければ null。
+   *
+   * ═══════════════════════════════════════════════════════
+   * ★null のときに、それらしい絵を描かないこと
+   * ═══════════════════════════════════════════════════════
+   *
+   *   2026-09-05 まで、ここは題名の文字から絵を描いていました。
+   *   題名に「カード」とあればカードの形、「時計」とあれば時計の形。
+   *   権利の心配がなく、運用も要らない、よくできた仕組みでした。
+   *
+   *   ですが、お客様がお金を払って引くのは実物です。
+   *   実物と違う絵を並べて売るのは、優良誤認になりかねません。
+   *
+   *   だから、写真が無いときは「画像未登録」と、そう書きます。
+   *   空欄は、それらしい嘘よりずっと安全です。
+   */
+  coverImageId: string | null;
 };
 
 /** 1本ぶんの詳しい中身 */
@@ -79,6 +98,8 @@ export type ShopDetail = ShopItem & {
     value: number;
     total: number;
     left: number;
+    /** この賞の写真。無ければ null（描かずに「画像未登録」と出す） */
+    imageId: string | null;
   }[];
 };
 
@@ -114,7 +135,7 @@ function medama(prizes: ShopDetail["prizes"]): {
  */
 export async function listShopGachas(tenantId: string): Promise<ShopItem[]> {
   const g = await db().execute({
-    sql: `SELECT id, title, price, total, left_count, published_at
+    sql: `SELECT id, title, price, total, left_count, published_at, cover_image_id
             FROM gachas
            WHERE tenant_id = ? AND status = 'PUBLISHED'
            ORDER BY published_at DESC, id DESC`,
@@ -129,7 +150,7 @@ export async function listShopGachas(tenantId: string): Promise<ShopItem[]> {
   const ids = rows.map((r) => str(r.id));
   const anaume = ids.map(() => "?").join(",");
   const s = await db().execute({
-    sql: `SELECT gacha_id, grade, name, value, total, drawn
+    sql: `SELECT gacha_id, grade, name, value, total, drawn, image_id
             FROM gacha_stock
            WHERE tenant_id = ? AND gacha_id IN (${anaume})
            ORDER BY grade ASC`,
@@ -146,6 +167,7 @@ export async function listShopGachas(tenantId: string): Promise<ShopItem[]> {
       value: num(x.value),
       total: num(x.total),
       left: num(x.total) - num(x.drawn),
+      imageId: strOrNull(x.image_id),
     });
     betsu.set(key, list);
   }
@@ -162,6 +184,7 @@ export async function listShopGachas(tenantId: string): Promise<ShopItem[]> {
       publishedAt: strOrNull(r.published_at),
       top,
       sLeft,
+      coverImageId: strOrNull(r.cover_image_id),
     };
   });
 }
@@ -181,7 +204,7 @@ export async function shopGachaDetail(
   gachaId: string,
 ): Promise<ShopDetail | null> {
   const g = await db().execute({
-    sql: `SELECT id, title, price, total, left_count, published_at
+    sql: `SELECT id, title, price, total, left_count, published_at, cover_image_id
             FROM gachas
            WHERE tenant_id = ? AND id = ? AND status = 'PUBLISHED'`,
     args: [tenantId, gachaId],
@@ -190,7 +213,7 @@ export async function shopGachaDetail(
   if (!row) return null;
 
   const s = await db().execute({
-    sql: `SELECT grade, name, value, total, drawn
+    sql: `SELECT grade, name, value, total, drawn, image_id
             FROM gacha_stock
            WHERE tenant_id = ? AND gacha_id = ?
            ORDER BY grade ASC`,
@@ -203,6 +226,7 @@ export async function shopGachaDetail(
     value: num(x.value),
     total: num(x.total),
     left: num(x.total) - num(x.drawn),
+    imageId: strOrNull(x.image_id),
   }));
 
   const { top, sLeft } = medama(prizes);
@@ -216,6 +240,7 @@ export async function shopGachaDetail(
     publishedAt: strOrNull(row.published_at),
     top,
     sLeft,
+    coverImageId: strOrNull(row.cover_image_id),
     prizes,
   };
 }

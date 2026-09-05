@@ -124,7 +124,12 @@ export async function POST(req: NextRequest) {
   const gate = await guard(req, { kind: "ADMIN", permission: "gacha.edit" });
   if (!passed(gate)) return gate;
 
-  let body: { title?: unknown; spec?: unknown };
+  let body: {
+    title?: unknown;
+    spec?: unknown;
+    coverImageId?: unknown;
+    prizeImages?: unknown;
+  };
   try {
     body = (await req.json()) as typeof body;
   } catch {
@@ -133,6 +138,25 @@ export async function POST(req: NextRequest) {
 
   const title = typeof body.title === "string" ? body.title : "";
   const spec = body.spec as GachaSpec | undefined;
+
+  /* 写真のID。
+     ★ここで「無いなら適当な既定値」を入れないこと。
+       入れた写真は、そのまま商品の顔としてお客様に出ます。
+       未指定は null のままにして、画面が「画像未登録」と出します。 */
+  const coverImageId =
+    typeof body.coverImageId === "string" && body.coverImageId.length > 0
+      ? body.coverImageId
+      : null;
+
+  const prizeImages: Record<string, string> = {};
+  if (body.prizeImages && typeof body.prizeImages === "object") {
+    for (const [grade, v] of Object.entries(
+      body.prizeImages as Record<string, unknown>,
+    )) {
+      if (typeof v === "string" && v.length > 0) prizeImages[grade] = v;
+    }
+  }
+
   if (!spec || typeof spec !== "object" || !Array.isArray(spec.prizes)) {
     return NextResponse.json(
       {
@@ -157,6 +181,8 @@ export async function POST(req: NextRequest) {
       tenantId: gate.session.tenantId,
       title,
       spec,
+      coverImageId,
+      prizeImages,
       by: {
         adminId: gate.session.subjectId,
         name: String(me?.name ?? ""),

@@ -45,9 +45,10 @@ import type React from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ConsoleGacha } from "@/lib/console/state";
 import {
-  CoverArt,
+  SampleCoverArt,
   GradeChip,
-  ProductArt,
+  SampleProductArt,
+  ShopPhoto,
   artKindOf,
   gradeArt,
   type ArtKind,
@@ -167,7 +168,7 @@ export function GachaCard({
       style={{ background: SHOP_SURFACE, border: `1px solid ${SHOP_EDGE}` }}
     >
       <span className="relative block aspect-[4/3] w-full overflow-hidden">
-        <CoverArt id={c.g.id} kind={c.kind} className="h-full w-full" />
+        <SampleCoverArt id={c.g.id} kind={c.kind} className="h-full w-full" />
 
         {/* 目玉の賞。ここが空のカードは「何が当たるか分からないカード」になる */}
         {c.top && (
@@ -273,7 +274,7 @@ export function Shop({
                 style={{ border: `1px solid ${SHOP_EDGE}`, background: SHOP_SURFACE }}
               >
                 <span className="relative block aspect-[16/9] w-full">
-                  <CoverArt id={card.g.id} kind={card.kind} className="h-full w-full" />
+                  <SampleCoverArt id={card.g.id} kind={card.kind} className="h-full w-full" />
                   <span
                     className="absolute inset-x-0 bottom-0 block px-3 pb-2.5 pt-8"
                     style={{ background: "linear-gradient(to top, rgba(5,9,18,0.92), rgba(5,9,18,0))" }}
@@ -394,7 +395,7 @@ export function GachaDetail({
       {/* ── 表紙 ── */}
       <div className="overflow-hidden rounded-2xl" style={{ border: `1px solid ${SHOP_EDGE}` }}>
         <div className="relative aspect-[16/10] w-full">
-          <CoverArt id={g.id} kind={kind} className="h-full w-full" />
+          <SampleCoverArt id={g.id} kind={kind} className="h-full w-full" />
           <div
             className="absolute inset-x-0 bottom-0 px-4 pb-3 pt-10"
             style={{ background: "linear-gradient(to top, rgba(4,8,16,0.94), rgba(4,8,16,0))" }}
@@ -453,7 +454,7 @@ export function GachaDetail({
                   className="block h-16 w-16 shrink-0 overflow-hidden rounded-xl"
                   style={{ border: `1px solid ${a.line}66` }}
                 >
-                  <ProductArt grade={t.grade} kind={kind} className="h-full w-full" />
+                  <SampleProductArt grade={t.grade} kind={kind} className="h-full w-full" />
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="flex flex-wrap items-center gap-1.5">
@@ -494,7 +495,7 @@ export function GachaDetail({
               className="block h-14 w-14 shrink-0 overflow-hidden rounded-xl"
               style={{ border: `1px solid ${SHOP_GOLD}77` }}
             >
-              <ProductArt grade={lastOne.grade} kind={kind} className="h-full w-full" />
+              <SampleProductArt grade={lastOne.grade} kind={kind} className="h-full w-full" />
             </span>
             <span className="min-w-0 flex-1">
               <span className="nb block text-[0.85rem] font-bold" style={{ color: SHOP_GOLD }}>
@@ -746,18 +747,40 @@ export type TheaterRecord = {
   price: number;
   /** 引いた後の残高（pt） */
   balanceAfter: number;
+  /**
+   * 当たった商品の写真。お店が登録していなければ null。
+   *
+   * ★ここに「それらしい絵」を入れて渡さないこと。
+   *   結果の画面は、お客様が一番よく見る画面です。
+   *   ここに実物でない絵が出れば、届いた物との違いが
+   *   そのまま苦情になります。無いなら「画像未登録」で構いません。
+   */
+  imageId?: string | null;
+  /** 演出中に振れる箱に使う、ガチャの表紙写真 */
+  coverImageId?: string | null;
 };
 
+/**
+ * @param sampleKind
+ *   ★営業用の見本（/client-demo）だけが渡します。
+ *
+ *   渡すと、写真の代わりに「題名から起こした絵」を出します。
+ *   見本の店は架空なので、それで正しいのです。
+ *
+ *   ★本物の売り場からは、絶対に渡さないこと。
+ *     渡した瞬間に、実物ではない絵が結果画面に出ます。
+ *     渡していないことは scripts/check-real-art.mjs が見張ります。
+ */
 export function DrawTheater({
   records,
-  kind,
+  sampleKind,
   onAgain,
   onPrizes,
   onClose,
   canAgain,
 }: {
   records: TheaterRecord[];
-  kind: ArtKind;
+  sampleKind?: ArtKind;
   onAgain: () => void;
   onPrizes: () => void;
   onClose: () => void;
@@ -853,7 +876,19 @@ export function DrawTheater({
                 className="h-28 w-28 overflow-hidden rounded-2xl"
                 style={{ border: `2px solid ${SHOP_GOLD}`, boxShadow: `0 0 40px ${SHOP_ACCENT}66` }}
               >
-                <CoverArt id={records[0].gachaId} kind={kind} className="h-full w-full" />
+                {sampleKind ? (
+                  <SampleCoverArt
+                    id={records[0].gachaId}
+                    kind={sampleKind}
+                    className="h-full w-full"
+                  />
+                ) : (
+                  <ShopPhoto
+                    imageId={records[0].coverImageId}
+                    alt=""
+                    className="h-full w-full object-cover"
+                  />
+                )}
               </div>
             </div>
           </div>
@@ -904,7 +939,19 @@ export function DrawTheater({
                 style={{ border: `2px solid ${gradeArt(best.grade).line}`, background: SHOP_SURFACE }}
               >
                 <div className="aspect-[16/10] w-full">
-                  <ProductArt grade={best.grade} kind={kind} className="h-full w-full" />
+                  {sampleKind ? (
+                    <SampleProductArt
+                      grade={best.grade}
+                      kind={sampleKind}
+                      className="h-full w-full"
+                    />
+                  ) : (
+                    <ShopPhoto
+                      imageId={best.imageId}
+                      alt={best.prizeName}
+                      className="h-full w-full object-cover"
+                    />
+                  )}
                 </div>
                 <div className="px-4 py-3.5">
                   <div className="flex items-center gap-2">
@@ -938,7 +985,19 @@ export function DrawTheater({
                       style={{ border: `1px solid ${a.line}66` }}
                     >
                       <div className="aspect-square w-full">
-                        <ProductArt grade={r.grade} kind={kind} className="h-full w-full" />
+                        {sampleKind ? (
+                          <SampleProductArt
+                            grade={r.grade}
+                            kind={sampleKind}
+                            className="h-full w-full"
+                          />
+                        ) : (
+                          <ShopPhoto
+                            imageId={r.imageId}
+                            alt={r.prizeName}
+                            className="h-full w-full object-cover"
+                          />
+                        )}
                       </div>
                       <p
                         className="nb py-0.5 text-center text-[0.62rem] font-bold"

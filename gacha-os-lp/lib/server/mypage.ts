@@ -50,6 +50,14 @@ export const POINT_KIND_LABEL: Record<string, string> = {
   DRAW_RETURN: "返還",
   PRIZE_EXCHANGE: "商品交換",
   ADMIN_ADJUST: "調整",
+  /* ポイント購入。
+     ★おまけ（ボーナス）を、買った分と同じ行にまとめないこと。
+       「1,000円で1,200pt」のとき、まとめてしまうと、
+       1,200pt ぜんぶに1,000円を払ったように見えます。
+       払った分とおまけの分は、別の行として残します */
+  PURCHASE: "ポイント購入",
+  PURCHASE_BONUS: "ポイント購入のおまけ",
+  PURCHASE_REFUND: "ポイント購入の返金",
 };
 
 export type PointEntryView = {

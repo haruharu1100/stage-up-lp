@@ -1387,6 +1387,354 @@ const M015: string[] = [
     WHERE email_verified_at IS NULL`,
 ];
 
+/**
+ * ═══════════════════════════════════════════════════════
+ * M016 商品の写真を、お店が自分でアップロードできるようにする
+ * ═══════════════════════════════════════════════════════
+ *
+ * ★なぜ入れ替えるのか
+ *
+ *   これまで、ガチャの絵は「題名の文字」から機械が描いていました。
+ *   「カード」と書いてあればカードの形、「時計」と書いてあれば時計の形。
+ *
+ *   ですが、お客様がお金を払って引くのは「実物」です。
+ *   実物と違う絵をお見せするのは、優良誤認になりかねません。
+ *   だから、お店が撮った実物の写真だけを出すように変えます。
+ *
+ * ★なぜ、写真を「DBの中」に入れるのか
+ *
+ *   置き場所（S3 など）を借りていないためです。
+ *   借りていない置き場所を前提に書くと、本番で必ず落ちます。
+ *   まずは確実に動く形（DBの中）にします。
+ *   あとで外の置き場所に移せるよう、参照は image_id ひとつだけにします。
+ *
+ * ★写真の在り処を、なぜ2か所だけにするのか
+ *
+ *   gachas.cover_image_id … ガチャの表紙
+ *   gacha_stock.image_id  … 賞（当たる中身）ごとの写真
+ *
+ *   当選結果も、マイページの獲得商品も、この gacha_stock を見ます。
+ *   写真を prizes（当たった記録）へ写し取らないこと。
+ *   写し取ると、あとで差し替えたときに古い写真が残り、
+ *   「一覧では新しい写真／履歴では古い写真」とズレます。
+ */
+const M016: string[] = [
+  /* 写真そのもの。data に中身（バイト列）が入る。
+     ★sha256 は「同じ写真を二重に持たない」ためではなく、
+       差し替えたときに本当に別物かを確かめるために持ちます。 */
+  `CREATE TABLE IF NOT EXISTS images (
+     id          TEXT PRIMARY KEY,
+     tenant_id   TEXT NOT NULL,
+     /* "GACHA_COVER" か "PRIZE" */
+     kind        TEXT NOT NULL,
+     /* image/jpeg image/png image/webp のどれか。中身を見て決めたもの */
+     mime        TEXT NOT NULL,
+     bytes       INTEGER NOT NULL,
+     sha256      TEXT NOT NULL,
+     data        BLOB NOT NULL,
+     created_at  TEXT NOT NULL,
+     created_by  TEXT
+   )`,
+
+  `CREATE INDEX IF NOT EXISTS ix_images_tenant
+     ON images (tenant_id, created_at)`,
+
+  /* ガチャの表紙 */
+  `ALTER TABLE gachas ADD COLUMN cover_image_id TEXT`,
+
+  /* 賞ごとの写真 */
+  `ALTER TABLE gacha_stock ADD COLUMN image_id TEXT`,
+];
+
+/**
+ * ═══════════════════════════════════════════════════════
+ * M017 ポイントを、お客様が自分で買えるようにする
+ * ═══════════════════════════════════════════════════════
+ *
+ * ★いちばん大事なこと
+ *
+ *   「決済が成功しました」という画面を見たことを理由に、
+ *   ポイントを足さないでください。
+ *
+ *   あの画面は、お客様のブラウザが表示しているだけです。
+ *   URL を覚えて何度も開けば、その回数だけ足りてしまいます。
+ *   足すのは、決済会社のサーバーから届く「確定通知」だけです。
+ *
+ * ★なぜ、注文に金額とポイントを写し取るのか
+ *
+ *   point_products（商品の設定）は、お店がいつでも変えられます。
+ *   もし注文が商品を参照するだけだったら、
+ *
+ *       1,000円で 1,000pt の商品を、お客様が買う
+ *         ↓
+ *       お店が「1,000円で 500pt」に変更する
+ *         ↓
+ *       確定通知が届く
+ *         ↓
+ *       500pt しか付かない
+ *
+ *   となります。お客様は 1,000pt のつもりで払っています。
+ *   だから、注文を作った瞬間の金額とポイントを
+ *   point_orders の中へ写して固定します。
+ *   あとから商品を変えても、この注文は動きません。
+ *
+ * ★二重に足さないための備えを、4つ重ねる
+ *
+ *   ① point_orders.status が 'PENDING' のときだけ 'PAID' へ動かす
+ *      （条件付きの更新。2回目は0行しか動かないので、そこで止まる）
+ *   ② payment_events に決済会社のイベント番号を一意で入れる
+ *      （同じ通知が100回来ても、2回目は主キーで弾かれる）
+ *   ③ point_ledger の ref に注文番号を入れ、注文ごとに一意にする
+ *   ④ 「注文1つにつき加算1回」をテストで毎回確かめる
+ *
+ *   1つでも十分に見えますが、1つだと、その1つを外した日に静かに壊れます。
+ */
+const M017: string[] = [
+  /* お店が売る「ポイント商品」。
+     ★金額をコードに書かないこと。ここが唯一の正本です。 */
+  `CREATE TABLE IF NOT EXISTS point_products (
+     id           TEXT PRIMARY KEY,
+     tenant_id    TEXT NOT NULL,
+     name         TEXT NOT NULL,
+     /* お客様が払う金額（円）。1円未満は扱いません */
+     price_yen    INTEGER NOT NULL,
+     /* 払った分として付くポイント */
+     points       INTEGER NOT NULL,
+     /* おまけ。0 でかまいません */
+     bonus_points INTEGER NOT NULL DEFAULT 0,
+     /* "ACTIVE" か "DISABLED"。消さずに止めること。
+        消すと、過去の注文が何を買ったのか分からなくなります */
+     status       TEXT NOT NULL DEFAULT 'ACTIVE',
+     /* 画面に並べる順。小さいほど上 */
+     sort_order   INTEGER NOT NULL DEFAULT 0,
+     created_at   TEXT NOT NULL,
+     updated_at   TEXT NOT NULL,
+     created_by   TEXT
+   )`,
+
+  `CREATE INDEX IF NOT EXISTS ix_point_products_tenant
+     ON point_products (tenant_id, status, sort_order)`,
+
+  /* 注文。
+     ★price_yen / points / bonus_points は
+       「注文したその瞬間の商品の中身を写したもの」です。
+       商品の設定を後から変えても、ここは絶対に書き換えないこと。 */
+  `CREATE TABLE IF NOT EXISTS point_orders (
+     id            TEXT PRIMARY KEY,
+     tenant_id     TEXT NOT NULL,
+     user_id       TEXT NOT NULL,
+     product_id    TEXT NOT NULL,
+     /* ↓ ここから3つが写し取り（snapshot） */
+     product_name  TEXT NOT NULL,
+     price_yen     INTEGER NOT NULL,
+     points        INTEGER NOT NULL,
+     bonus_points  INTEGER NOT NULL,
+     /* "PENDING" → "PAID" / "CANCELED" */
+     status        TEXT NOT NULL DEFAULT 'PENDING',
+     /* "mock" / "stripe" / "gmo" */
+     provider      TEXT NOT NULL,
+     /* 決済会社側の番号。無い場合もある */
+     provider_ref  TEXT,
+     /* 実際に支払われた額。確定通知で分かる。照合に使う */
+     paid_yen      INTEGER,
+     /* 加算した台帳の行。PAID になったときだけ入る */
+     ledger_id     TEXT,
+     /* 買ったあと、どこへ戻すか。
+        ★外のURLを入れさせないこと。入れるのは自サイトの中の道だけ */
+     return_to     TEXT,
+     created_at    TEXT NOT NULL,
+     paid_at       TEXT,
+     canceled_at   TEXT
+   )`,
+
+  `CREATE INDEX IF NOT EXISTS ix_point_orders_user
+     ON point_orders (tenant_id, user_id, created_at)`,
+  `CREATE INDEX IF NOT EXISTS ix_point_orders_status
+     ON point_orders (tenant_id, status, created_at)`,
+
+  /* 決済会社から届いた通知の控え。
+     ★同じ通知が何度来ても、ここの主キーで2回目以降が弾かれます。
+       弾かれたことも「受け取った」と記録します（黙って捨てないこと）。 */
+  `CREATE TABLE IF NOT EXISTS payment_events (
+     tenant_id   TEXT NOT NULL,
+     provider    TEXT NOT NULL,
+     /* 決済会社が付けた、その通知1回ぶんの番号 */
+     event_id    TEXT NOT NULL,
+     order_id    TEXT,
+     /* "APPLIED"（この通知で加算した）
+        "DUPLICATE"（すでに済んでいた）
+        "MISMATCH"（金額が合わない。加算していない）
+        "REJECTED"（受け付けられない） */
+     result      TEXT NOT NULL,
+     amount_yen  INTEGER,
+     note        TEXT,
+     created_at  TEXT NOT NULL,
+     PRIMARY KEY (tenant_id, provider, event_id)
+   )`,
+
+  `CREATE INDEX IF NOT EXISTS ix_payment_events_order
+     ON payment_events (tenant_id, order_id, created_at)`,
+
+  /* ★注文1つにつき、加算の台帳行は1つだけ。
+       ③の備え。ここが最後の砦です。 */
+  `CREATE UNIQUE INDEX IF NOT EXISTS ux_ledger_purchase_ref
+     ON point_ledger (tenant_id, ref)
+     WHERE kind = 'PURCHASE'`,
+];
+
+/**
+ * ═══════════════════════════════════════════════════════
+ * M018 公開したあとで写真を直せるようにする／お金の取消に備える
+ * ═══════════════════════════════════════════════════════
+ *
+ * ★①当選した瞬間の写真を、当たった記録へ写し取る
+ *
+ *   M016 では、わざと写し取りませんでした。理由はこうでした。
+ *
+ *     「写真を差し替えるのは、たいてい写ってはいけないものが
+ *       写っていたと気づいたときだ。焼き付けると、お店がいくら
+ *       差し替えても過去の履歴には古い写真が残り続けてしまう」
+ *
+ *   これは今でも正しい心配です。ですが、比べたときに
+ *   もう一方の危険のほうが大きいと判断しました。
+ *
+ *     お客様が「S賞のカード」を当てた。
+ *       ↓
+ *     お店が S賞の写真を、別のカードの写真に差し替えた。
+ *       ↓
+ *     お客様の獲得商品の履歴も、勝手に別のカードに変わる。
+ *
+ *   これでは「私が当てたのはこれではない」と言われたときに、
+ *   こちらには何も残っていません。お店の側も証明できません。
+ *   お金を受け取っている以上、当選の記録は動いてはいけません。
+ *
+ *   ★では、写ってはいけないものが写っていたときはどうするか。
+ *     「差し替え」とは別に、「完全に削除する」を用意します。
+ *     完全削除は、過去の履歴からも消えます。そのかわり
+ *     ★誰が・いつ・なぜ消したかが監査に残ります。
+ *     静かに消えるのと、記録を残して消すのは、別のことです。
+ *
+ *   ★prizes.image_id が空の古い行があること。
+ *     この移行より前に当たった記録には、写し取りがありません。
+ *     読むときは「あれば snapshot、無ければ在庫表」の順で見ます。
+ *     空を「写真なし」と決めつけないこと。
+ *
+ * ★②差し替えの履歴を残す
+ *
+ *   お客様がお金を払う判断の材料は、写真です。
+ *   「どの写真が、いつからいつまで商品の顔だったか」が
+ *   残っていないと、あとから何も確かめられません。
+ *
+ * ★③ポイントの有効期限は、お店が決める
+ *
+ *   ★こちらで初期値を決めないこと。
+ *     有効期限の付け方は、資金決済法の前払式支払手段の
+ *     扱いに直結します。「6か月以内なら届出が要らない」等の
+ *     判断をこちらでしてはいけません。専門家の確認事項です。
+ *     ですので既定は "UNSET"（まだ決めていない）にします。
+ *     未設定のあいだは、期限で消える処理は一切走りません。
+ *
+ * ★④決済会社からの強制取消（チャージバック）に備える
+ *
+ *   お客様都合の任意返金は受け付けません。
+ *   ですが、カード会社が「この支払いは無効」と決めることは、
+ *   こちらの意思と関係なく起きます。そのときに
+ *   ★過去の台帳を書き換えて帳尻を合わせないこと。
+ *     書き換えた台帳は、もう証拠になりません。
+ *     必ず「新しい逆仕訳の行」を足す形にします。
+ *
+ *   引けなかったぶん（すでに使われていたポイント）は
+ *   0にせず、UNRECOVERED として残します。
+ *   ★取りはぐれを「無かったこと」にしないこと。
+ */
+const M018: string[] = [
+  /* ①当選した瞬間の写真。空なら在庫表から引く（古い行のため） */
+  `ALTER TABLE prizes ADD COLUMN image_id TEXT`,
+
+  /* ②差し替えの履歴。
+     slot は "COVER"（表紙）か、賞の記号（"S" "A" など）。 */
+  `CREATE TABLE IF NOT EXISTS image_replacements (
+     id             TEXT PRIMARY KEY,
+     tenant_id      TEXT NOT NULL,
+     gacha_id       TEXT NOT NULL,
+     slot           TEXT NOT NULL,
+     old_image_id   TEXT,
+     new_image_id   TEXT,
+     /* "REPLACE"（差し替え）／"REMOVE"（写真を外した）
+        ／"PURGE"（古い写真を履歴からも完全に消した） */
+     kind           TEXT NOT NULL DEFAULT 'REPLACE',
+     reason         TEXT,
+     replaced_at    TEXT NOT NULL,
+     replaced_by    TEXT,
+     replaced_name  TEXT
+   )`,
+
+  `CREATE INDEX IF NOT EXISTS ix_image_replacements_gacha
+     ON image_replacements (tenant_id, gacha_id, replaced_at)`,
+
+  /* ③ポイントの決まりごと（お店ごとに1行）。
+     ★expiry_mode の既定を "NONE" にしないこと。
+       「期限なし」も立派な決定です。決めていないことと違います。 */
+  `CREATE TABLE IF NOT EXISTS tenant_point_policy (
+     tenant_id    TEXT PRIMARY KEY,
+     /* "UNSET"（まだ決めていない）／"NONE"（期限なし）
+        ／"DAYS"（購入から○日）／"MONTHS"（購入から○か月） */
+     expiry_mode  TEXT NOT NULL DEFAULT 'UNSET',
+     expiry_value INTEGER,
+     /* 決めた人が「専門家に確認した」と記録した日。
+        ★こちらで自動的に入れないこと */
+     confirmed_at TEXT,
+     updated_at   TEXT NOT NULL,
+     updated_by   TEXT
+   )`,
+
+  /* ④強制取消の記録。
+     ★points_reversed と unrecovered_points を必ず分けて持つこと。
+       合計だけを持つと、いくら取りはぐれたのかが消えます。 */
+  `CREATE TABLE IF NOT EXISTS payment_reversals (
+     id                 TEXT PRIMARY KEY,
+     tenant_id          TEXT NOT NULL,
+     order_id           TEXT NOT NULL,
+     user_id            TEXT NOT NULL,
+     provider           TEXT NOT NULL,
+     /* 決済会社が付けた、その通知1回ぶんの番号 */
+     event_id           TEXT NOT NULL,
+     /* "CHARGEBACK"（カード会社による取消）
+        ／"FORCED_REFUND"（決済会社側の強制返金） */
+     reason             TEXT NOT NULL,
+     /* 取り消された金額（円） */
+     amount_yen         INTEGER NOT NULL,
+     /* 本来引くべきだったポイント（付与した全部） */
+     points_to_reverse  INTEGER NOT NULL,
+     /* 実際に引けたポイント（残高が足りたぶん） */
+     points_reversed    INTEGER NOT NULL,
+     /* 引けなかったポイント。★0で埋めないこと */
+     unrecovered_points INTEGER NOT NULL DEFAULT 0,
+     /* 引けなかったぶんの相当額（円）。回収不能額 */
+     unrecovered_amount INTEGER NOT NULL DEFAULT 0,
+     /* 逆仕訳として足した台帳の行 */
+     ledger_id          TEXT,
+     created_at         TEXT NOT NULL
+   )`,
+
+  /* ★同じ取消通知が2回来ても、2回引かないこと。
+       ここが最後の砦です。 */
+  `CREATE UNIQUE INDEX IF NOT EXISTS ux_reversal_event
+     ON payment_reversals (tenant_id, provider, event_id)`,
+
+  `CREATE INDEX IF NOT EXISTS ix_reversal_user
+     ON payment_reversals (tenant_id, user_id, created_at)`,
+
+  /* 会員を「要確認」にする印。
+     ★勝手に利用停止にしないこと。
+       カード会社の取消は、本人の落ち度とは限りません
+       （カードの盗難、家族の利用、決済会社側の誤り）。
+       止めるかどうかは、人が中身を見て決めます。 */
+  `ALTER TABLE customers ADD COLUMN review_flag TEXT`,
+  `ALTER TABLE customers ADD COLUMN review_note TEXT`,
+  `ALTER TABLE customers ADD COLUMN review_at TEXT`,
+];
+
 const MIGRATIONS: Migration[] = [
   { name: "001_initial", sql: M001 },
   { name: "002_tenant_tables", sql: M002 },
@@ -1403,6 +1751,9 @@ const MIGRATIONS: Migration[] = [
   { name: "013_ticket_messages", sql: M013 },
   { name: "014_read_only_session", sql: M014 },
   { name: "015_customer_signup", sql: M015 },
+  { name: "016_product_images", sql: M016 },
+  { name: "017_point_purchase", sql: M017 },
+  { name: "018_image_replace_reversal", sql: M018 },
 ];
 
 /** どの段まで済んだかを覚えておく表 */

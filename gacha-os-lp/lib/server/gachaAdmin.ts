@@ -63,6 +63,7 @@ import { can, type Role } from "@/lib/permissions";
 import { appendAuditTx } from "./audit";
 import { db, withWriteTx } from "./db";
 import { id as newId } from "./ids";
+import { imageBelongsToTx } from "./images";
 import { rtpReport, type RtpReport } from "./rtpMonitor";
 import type { Transaction } from "@libsql/client";
 
@@ -493,6 +494,28 @@ export async function createGachaDraft(args: {
   tenantId: string;
   title: string;
   spec: GachaSpec;
+  /**
+   * 商品の写真。
+   *
+   * ═══════════════════════════════════════════════════════
+   * ★写真を GachaSpec の中に入れないこと
+   * ═══════════════════════════════════════════════════════
+   *
+   *   GachaSpec は、公開前検証（バックテスト）の材料です。
+   *   その指紋（specFingerprint）が変わると、
+   *   「検証したあとに構成が変わった」とみなされ、
+   *   検証をやり直すまで公開できなくなります。
+   *
+   *   写真の差し替えは、お金の計算を1円も変えません。
+   *   ここに混ぜると、写真を1枚きれいにしただけで
+   *   販売中のガチャが「未検証」に戻ります。
+   *   やがて誰も写真を直さなくなります。
+   *
+   *   だから、写真は最初から別の引数として渡します。
+   */
+  coverImageId?: string | null;
+  /** 等級（S・A・B…）ごとの写真。鍵は spec.prizes の grade と揃えること */
+  prizeImages?: Record<string, string>;
   by: { adminId: string; name: string; role: string };
   requestId?: string;
 }): Promise<{ gachaId: string; title: string; designedRtp: number; at: string }> {
@@ -566,17 +589,43 @@ export async function createGachaDraft(args: {
       );
     }
 
+    /* ★預けた写真が、本当にこの会社のものかを確かめること。
+         確かめないと、他社の写真IDを1つ書くだけで、
+         自分の売り場に他社の未公開の写真を並べられます。 */
+    const cover = String(args.coverImageId ?? "").trim() || null;
+    if (cover && !(await imageBelongsToTx(tx, args.tenantId, cover))) {
+      throw new GachaAdminError(
+        "BAD_SPEC",
+        "選ばれた画像が見つかりませんでした。もう一度アップロードしてください。",
+      );
+    }
+
+    const prizeImages: Record<string, string> = {};
+    for (const p of spec.prizes) {
+      const imgId = String(args.prizeImages?.[p.grade] ?? "").trim();
+      if (!imgId) continue;
+      if (!(await imageBelongsToTx(tx, args.tenantId, imgId))) {
+        throw new GachaAdminError(
+          "BAD_SPEC",
+          `${p.grade}賞の画像が見つかりませんでした。もう一度アップロードしてください。`,
+        );
+      }
+      prizeImages[p.grade] = imgId;
+    }
+
     await tx.execute({
       sql: `INSERT INTO gachas
               (id, tenant_id, title, price, total, left_count, designed_rtp, status,
                revenue, paid_value, created_at,
                published_at, paused_at, pause_reason,
                backtest_verdict, backtest_stress, backtest_at,
-               backtest_engine, backtest_seed, backtest_spec)
+               backtest_engine, backtest_seed, backtest_spec,
+               cover_image_id)
             VALUES (?,?,?,?,?,?,?, 'DRAFT', 0, 0, ?,
                     NULL, NULL, NULL,
                     NULL, NULL, NULL,
-                    NULL, NULL, NULL)`,
+                    NULL, NULL, NULL,
+                    ?)`,
       args: [
         gachaId,
         args.tenantId,
@@ -587,6 +636,7 @@ export async function createGachaDraft(args: {
         spec.total,
         rtp,
         at,
+        cover,
       ],
     });
 
@@ -596,9 +646,18 @@ export async function createGachaDraft(args: {
     for (const p of spec.prizes) {
       await tx.execute({
         sql: `INSERT INTO gacha_stock
-                (tenant_id, gacha_id, grade, name, value, total, drawn, reserved)
-              VALUES (?,?,?,?,?,?,0,0)`,
-        args: [args.tenantId, gachaId, p.grade, p.name || `${p.grade}賞`, p.value, p.count],
+                (tenant_id, gacha_id, grade, name, value, total, drawn, reserved,
+                 image_id)
+              VALUES (?,?,?,?,?,?,0,0,?)`,
+        args: [
+          args.tenantId,
+          gachaId,
+          p.grade,
+          p.name || `${p.grade}賞`,
+          p.value,
+          p.count,
+          prizeImages[p.grade] ?? null,
+        ],
       });
     }
 
@@ -631,6 +690,27 @@ export async function createGachaDraft(args: {
       },
       requestId: args.requestId,
     });
+
+    /* ★写真を付けたことを、別の行として残すこと。
+         お客様がお金を払う判断の材料になっているのは写真です。
+         「どの写真が、いつから商品の顔になったか」が残っていないと、
+         あとで「見ていたものと違う」と言われたときに確かめられません。 */
+    const attached = (cover ? 1 : 0) + Object.keys(prizeImages).length;
+    if (attached > 0) {
+      await appendAuditTx(tx, {
+        tenantId: args.tenantId,
+        at,
+        actorKind: "ADMIN",
+        actorId: args.by.adminId,
+        actorName: args.by.name,
+        actorRole: args.by.role,
+        action: "IMAGE_ATTACH",
+        target: `gacha:${gachaId}`,
+        summary: `${title} に商品写真を設定（表紙${cover ? "あり" : "なし"}・賞の写真 ${Object.keys(prizeImages).length} 枚）`,
+        data: { gachaId, coverImageId: cover, prizeImages },
+        requestId: args.requestId,
+      });
+    }
 
     return { gachaId, title, designedRtp: rtp, at };
   });

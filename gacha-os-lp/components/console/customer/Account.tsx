@@ -49,7 +49,6 @@ import {
   H,
   Note,
   Panel,
-  PrizeArt,
   Row,
   StatusChip,
   TapRow,
@@ -58,7 +57,45 @@ import {
   SHOP_EDGE,
   SHOP_SURFACE,
 } from "./ui";
+import { SampleProductArt, SampleProductThumb, artKindOf } from "./art";
 import { NOTICE_LABEL, type Notice } from "./notices";
+
+/* ══════════════════════════════════════════════
+   見本の絵
+   ══════════════════════════════════════════════ */
+
+/**
+ * 獲得商品の絵（★営業用の見本だけ）。
+ *
+ * ═══════════════════════════════════════════════════════
+ * ★これを本物の売り場へ持ち込まないこと
+ * ═══════════════════════════════════════════════════════
+ *
+ *   ここが描くのは、ガチャの題名から機械が起こした形です。
+ *   実物ではありません。見本の店は架空なので、それで正しい。
+ *
+ *   本物の店で当たった商品は、お店が登録した写真を出します。
+ *   art.tsx の PrizePhoto / PrizeThumb を使ってください。
+ *
+ *   ★以前は、この部品が共通の ui.tsx に置いてありました。
+ *     ui.tsx は見本と本物の両方から読まれるファイルです。
+ *     そこに描いた絵を置くと、本物の売り場がいつでも
+ *     1行で持ち込めてしまいます。だから、見本の側へ移しました。
+ */
+export function SamplePrizeArt({
+  p,
+  size = "lg",
+}: {
+  p: { grade: string; gachaTitle: string };
+  size?: "lg" | "sm";
+}) {
+  const kind = artKindOf(p.gachaTitle);
+  return size === "lg" ? (
+    <SampleProductArt grade={p.grade} kind={kind} className="h-28 w-28 shrink-0" />
+  ) : (
+    <SampleProductThumb grade={p.grade} kind={kind} className="h-16 w-16 shrink-0" />
+  );
+}
 
 /* ══════════════════════════════════════════════
    画面の行き先
@@ -436,7 +473,7 @@ export function PrizeList({
           <ul className="divide-y" style={{ borderColor: SHOP_EDGE }}>
             {pickedPrizes.map((p) => (
               <li key={p.id} className="flex items-center gap-3 px-3 py-2.5">
-                <PrizeArt p={p} size="sm" />
+                <SamplePrizeArt p={p} size="sm" />
                 <p className="min-w-0 flex-1 truncate text-[0.85rem] font-bold text-white">
                   {p.name}
                 </p>
@@ -590,7 +627,7 @@ export function PrizeList({
                     onClick={() => go({ name: "prize", id: p.id })}
                     className="flex min-w-0 flex-1 items-center gap-3 py-1 text-left"
                   >
-                    <PrizeArt p={p} size="sm" />
+                    <SamplePrizeArt p={p} size="sm" />
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-[0.89rem] font-bold text-white">
                         {p.name}
@@ -684,7 +721,7 @@ export function PrizeDetail({
 
       <Panel>
         <div className="flex items-start gap-4">
-          <PrizeArt p={p} />
+          <SamplePrizeArt p={p} />
           <div className="min-w-0 flex-1">
             <h2 className="text-[1.02rem] font-bold leading-snug text-white">{p.name}</h2>
             <dl className="mt-3 space-y-1.5 text-[0.79rem]">
@@ -952,7 +989,7 @@ export function ShipConfirm({
 
       <Panel>
         <div className="flex items-center gap-3">
-          <PrizeArt p={p} size="sm" />
+          <SamplePrizeArt p={p} size="sm" />
           <p className="min-w-0 flex-1 text-[0.9rem] font-bold text-white">{p.name}</p>
         </div>
         <div className="mt-4 border-t pt-3" style={{ borderColor: SHOP_EDGE }}>
@@ -1022,7 +1059,7 @@ export function ExchangeConfirm({
 
       <Panel>
         <div className="flex items-center gap-3">
-          <PrizeArt p={p} size="sm" />
+          <SamplePrizeArt p={p} size="sm" />
           <p className="min-w-0 flex-1 text-[0.9rem] font-bold text-white">{p.name}</p>
         </div>
 

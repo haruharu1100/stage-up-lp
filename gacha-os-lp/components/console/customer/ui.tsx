@@ -33,7 +33,6 @@
 
 import type { Prize } from "@/lib/console/state";
 import { PRIZE_STATUS_LABEL } from "@/lib/console/state";
-import { ProductThumb, ProductArt, artKindOf } from "./art";
 import { SHOP_ACCENT, SHOP_EDGE, SHOP_GOLD, SHOP_SURFACE } from "./Storefront";
 
 /* ══════════════════════════════════════════════
@@ -163,12 +162,21 @@ export function BigBtn({
   tone = "primary",
   note,
   disabled,
+  testId,
 }: {
   children: React.ReactNode;
   onClick: () => void;
   tone?: "primary" | "second" | "quiet" | "danger";
   note?: string;
   disabled?: boolean;
+  /**
+   * 自動テストが、この押し場所を名指しで見つけるための印。
+   *
+   * ★文言で探す形にしないこと。
+   *   「ポイントを購入する」を「ポイントを買う」に直しただけで、
+   *   テストが落ちます。落ちたテストは、たいてい消されます。
+   */
+  testId?: string;
 }) {
   const style: React.CSSProperties =
     tone === "primary"
@@ -184,6 +192,7 @@ export function BigBtn({
       type="button"
       onClick={onClick}
       disabled={disabled}
+      data-testid={testId}
       style={style}
       className="w-full rounded-2xl px-5 py-4 text-[0.98rem] font-bold transition active:scale-[0.995] disabled:cursor-not-allowed disabled:opacity-40"
     >
@@ -198,30 +207,15 @@ export function BigBtn({
    ══════════════════════════════════════════════ */
 
 /**
- * 獲得商品の絵。
+ * ★獲得商品の絵は、ここには置きません。
  *
- * ★「S」の1文字だけを四角に入れたものを、商品の絵と呼ばないこと。
- *   お客様が受け取ったのは文字ではありません。
- *   何が当たったのかが一目で分かる絵にします（art.tsx）。
+ *   このファイルは、見本（/client-demo）と本物の売り場の
+ *   両方から読まれます。ここに「描いた絵」を1つでも置くと、
+ *   本物の売り場がそれを持ち込めてしまいます。
  *
- * ★絵は、当たったガチャの種類から決めること。
- *   カードのガチャならカード、時計のガチャなら時計です。
- *   全部同じ箱の絵にすると、一覧が見分けられなくなります。
+ *   ・見本用（描いた絵）  → Account.tsx の SamplePrizeArt
+ *   ・本物用（実物の写真）→ art.tsx の PrizePhoto / PrizeThumb
  */
-export function PrizeArt({
-  p,
-  size = "lg",
-}: {
-  p: Pick<Prize, "grade" | "gachaTitle">;
-  size?: "lg" | "sm";
-}) {
-  const kind = artKindOf(p.gachaTitle);
-  return size === "lg" ? (
-    <ProductArt grade={p.grade} kind={kind} className="h-28 w-28 shrink-0" />
-  ) : (
-    <ProductThumb grade={p.grade} kind={kind} className="h-16 w-16 shrink-0" />
-  );
-}
 
 const STATUS_TONE: Record<Prize["status"], ToneKey> = {
   UNCHOSEN: "warn",

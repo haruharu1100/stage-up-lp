@@ -57,6 +57,7 @@ import {
   pointPendingCount,
 } from "@/lib/server/pointAdmin";
 import { ticketCounts } from "@/lib/server/ticketAdmin";
+import { reversalSummary } from "@/lib/server/paymentReversal";
 
 /* ══════════════════════════════════════════════
    返すもの
@@ -123,6 +124,24 @@ export type AdminSummary = {
   pointMismatch: number | null;
   /** 承認待ちのポイント調整の数 */
   pointPending: number | null;
+
+  /**
+   * カード会社などから、あとでお金を引き戻された件数（強制取消）。
+   *
+   * ★件数だけを見て安心しないこと。
+   *   下の reversalUnrecovered を必ず並べて出します。
+   *   「1件だけれど30万円取りはぐれた」に気づけなくなります。
+   */
+  reversalCount: number | null;
+  /**
+   * 強制取消のうち、ポイントを引き戻せなかった額の合計（円）。
+   *
+   * ★これが、そのまま被害額です。
+   *   0 にまるめないこと。0 と null を混ぜないこと。
+   */
+  reversalUnrecovered: number | null;
+  /** 強制取消のあと、まだ人が確認していない会員の数 */
+  reversalReviewPending: number | null;
 
   /** 危ないもの */
   fraudHighRisk: number | null;
@@ -201,6 +220,7 @@ export async function adminSummary(
     dangers,
     pointMismatch,
     pointPending,
+    reversals,
   ] = await Promise.all([
     countUnshipped(tenantId),
     countUnassignedItems(tenantId),
@@ -347,6 +367,18 @@ export async function adminSummary(
     */
     mieru.point ? pointMismatchCount(tenantId) : null,
     mieru.point ? pointPendingCount(tenantId) : null,
+
+    /*
+      カード会社などによる強制取消（チャージバック）。
+
+      ★数え方を、ここに書き写さないこと。
+        lib/server/paymentReversal.ts の reversalSummary() を必ず通します。
+
+      ★point.view で守るのは、これがお金の話だからです。
+        「誰にいくら取りはぐれたか」は、
+        ポイント台帳を見てよい人にだけ見せます。
+    */
+    mieru.point ? reversalSummary(tenantId) : null,
   ]);
 
   const o = (orders.rows[0] ?? {}) as Record<string, unknown>;
@@ -387,6 +419,10 @@ export async function adminSummary(
     /* ★null（見せられない）と 0（全員合っている）を、ここで潰さないこと */
     pointMismatch: pointMismatch,
     pointPending: pointPending,
+
+    reversalCount: reversals ? reversals.count : null,
+    reversalUnrecovered: reversals ? reversals.unrecoveredAmount : null,
+    reversalReviewPending: reversals ? reversals.reviewPending : null,
 
     fraudHighRisk: fraud ? n(f.high) : null,
     rtpDangerCount: dangers

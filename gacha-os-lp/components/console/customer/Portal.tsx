@@ -50,6 +50,8 @@ import { useRouter } from "next/navigation";
 import { OrderList } from "./Account";
 import { SHOP_BG, SHOP_EDGE, SHOP_ACCENT, SHOP_SURFACE } from "./Storefront";
 import { Back, H, Note, Empty, BigBtn, Panel, Fld, TapRow, TONE } from "./ui";
+/* ★Sample で始まる部品を、ここで読まないこと（描いた絵です） */
+import { PrizeThumb } from "./art";
 import {
   useCustomerPrizes,
   useCustomerPoints,
@@ -908,6 +910,14 @@ function PrizeRow({
         </span>
       )}
 
+      {/* 当たった品の写真。★無ければ「画像未登録」。絵は描きません */}
+      <PrizeThumb
+        imageId={p.imageId}
+        grade={p.grade}
+        alt={p.name}
+        className="h-14 w-14 shrink-0"
+      />
+
       <span className="min-w-0 flex-1">
         <span className="block text-[0.88rem] font-bold text-white">{p.name}</span>
         <span className="mt-0.5 block text-[0.73rem] text-white/40">
@@ -962,6 +972,16 @@ export function PortalPoints() {
               <span className="ml-1 text-[0.9rem] text-white/45">pt</span>
             </p>
           </Panel>
+
+          {/* ★この押し場所を消さないこと。
+                残高を見に来た方が、その場で足せる唯一の道です。
+                「引く」画面の中だけに置くと、
+                残高が足りないと気づいた方が、そのまま帰ります。 */}
+          <div className="mt-3">
+            <BigBtn onClick={() => router.push("/mypage/points/buy")}>
+              ポイントを購入する
+            </BigBtn>
+          </div>
 
           {/* ★合っていないときに、黙って表示だけ揃えないこと。
                表示だけ揃えると、ずれた原因ごと見えなくなります。 */}

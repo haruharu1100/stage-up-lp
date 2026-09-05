@@ -104,6 +104,7 @@ import PreviewScreen from "./screens/PreviewScreen";
 import RtpScreen from "./screens/RtpScreen";
 import FraudCenter from "./screens/FraudCenter";
 import PointScreen from "./screens/PointScreen";
+import { PointSaleScreen } from "./screens/PointSaleScreen";
 import OrdersScreen from "./screens/OrdersScreen";
 import ShipmentsScreen from "./screens/ShipmentsScreen";
 import SupportScreen from "./screens/SupportScreen";
@@ -630,6 +631,12 @@ function Screen({
              ポイントの正本は台帳（point_ledger）です。
              画面が自分でサーバーから読み、残高と台帳を毎回照合します。 */
         return <PointScreen />;
+      case "pointSale":
+        /* ★ポイント管理（PointScreen）と1つにまとめないこと。
+             あちらは「すでに持っている残高を直す」画面で、承認が要ります。
+             こちらは「これから売る商品の値段を決める」画面です。
+             まとめると、値段を直すつもりで残高が動きます。 */
+        return <PointSaleScreen />;
       case "customers":
         /* ★見本データ（s）を渡さないこと。
              この画面は、サーバーの会員そのものを見ています。

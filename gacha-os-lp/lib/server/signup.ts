@@ -229,6 +229,7 @@ export async function signupCustomer(
     /* ★本人にだけ分かる形で知らせます。
          「すでに登録されています」は、画面には出しません。 */
     await deliver({
+      kind: "SIGNUP_DUPLICATE",
       to: str(already.email),
       subject: `【${input.tenantName}】会員登録のお申し込みについて`,
       body:
@@ -392,6 +393,7 @@ async function sendVerificationMail(input: {
   token: string;
 }): Promise<void> {
   await deliver({
+    kind: "SIGNUP_VERIFY",
     to: input.to,
     subject: `【${input.tenantName}】メールアドレスのご確認`,
     body:

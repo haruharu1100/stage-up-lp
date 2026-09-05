@@ -39,6 +39,13 @@ export type ShopItem = {
   publishedAt: string | null;
   top: { grade: string; name: string; value: number } | null;
   sLeft: number;
+  /**
+   * 表紙の写真のID。お店がまだ入れていなければ null。
+   *
+   * ★null のときに、画面側で絵を描かないこと。
+   *   「画像未登録」と出します（components/console/customer/art.tsx）。
+   */
+  coverImageId: string | null;
 };
 
 export type ShopPrize = {
@@ -47,6 +54,8 @@ export type ShopPrize = {
   value: number;
   total: number;
   left: number;
+  /** この賞の写真。無ければ null */
+  imageId: string | null;
 };
 
 export type ShopDetail = ShopItem & { prizes: ShopPrize[] };
@@ -68,6 +77,8 @@ export type DrawOutcome = {
   needsShipping: boolean;
   remainingAfter: number;
   at: string;
+  /** 当たった賞の写真。無ければ null（結果画面は「画像未登録」と出します） */
+  imageId: string | null;
 };
 
 export type Live<T> =

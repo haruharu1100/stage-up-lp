@@ -673,7 +673,8 @@ export default function MyPage({
       {draw !== null && gachaOnScreen && (
         <DrawTheater
           records={drawRecords}
-          kind={artKindOf(gachaOnScreen.title)}
+          /* ★見本の店なので、描いた絵で正しい（本物の売り場は渡しません） */
+          sampleKind={artKindOf(gachaOnScreen.title)}
           canAgain={maxDraws(gachaOnScreen.price, me.points, gachaOnScreen.left) >= draw.n}
           onAgain={() => {
             /* ★「もう一度」は、別の購入です。

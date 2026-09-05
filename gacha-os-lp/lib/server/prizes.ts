@@ -98,6 +98,46 @@ export type PrizeView = {
   shipmentNumber: string | null;
   carrier: string | null;
   trackingNumber: string | null;
+
+  /**
+   * この商品の写真。お店が入れていなければ null。
+   *
+   * ═══════════════════════════════════════════════════════
+   * ★当たった時点の写真を出すこと（018で変更）
+   * ═══════════════════════════════════════════════════════
+   *
+   *   以前は、写真をいつも在庫表（gacha_stock）から引いていました。
+   *   「差し替えが1回で全部に効く」からです。
+   *   ですが、それは次のことも意味していました。
+   *
+   *       お客様が「S賞のカード」を当てた
+   *         ↓
+   *       お店が S賞の写真を、別のカードの写真に差し替えた
+   *         ↓
+   *       お客様の獲得商品の履歴も、勝手に別のカードに変わる
+   *
+   *   お金を受け取っている以上、当選の記録は動いてはいけません。
+   *   ですので、当たった瞬間の写真を prizes.image_id へ
+   *   写し取り、履歴はそちらを見ます。
+   *
+   *   ★写ってはいけないものが写っていたときは、
+   *     「差し替え」ではなく「完全削除」で消します。
+   *     完全削除は履歴からも消え、誰が・いつ・なぜ消したかが
+   *     監査に残ります。静かに変わるのとは別のことです。
+   *
+   *   ★018より前に当たった記録には、写し取りがありません。
+   *     そのときだけ在庫表から引きます（空＝写真なし、ではない）。
+   */
+  imageId: string | null;
+
+  /**
+   * この写真が「当たった時点のもの」かどうか。
+   *
+   * ★false のときに、あたかも当時の写真であるかのように
+   *   見せないこと。018より前の記録は、当時の写真が
+   *   残っていません。分からないものは、分からないと出します。
+   */
+  imageIsSnapshot: boolean;
 };
 
 /**
@@ -139,10 +179,22 @@ export async function listCustomerPrizes(
                  s.shipment_number AS shipment_number,
                  s.shipment_status AS shipment_status,
                  s.carrier         AS carrier,
-                 s.tracking_number AS tracking_number
+                 s.tracking_number AS tracking_number,
+                 /* ★当たった時点の写し取りを、先に見ること（018）。
+                      無いのは 018 より前に当たった記録だけなので、
+                      そのときだけ在庫表の今の写真で代わりにします。 */
+                 p.image_id        AS snap_image_id,
+                 gs.image_id       AS stock_image_id
             FROM prizes p
             LEFT JOIN gachas g
                    ON g.id = p.gacha_id AND g.tenant_id = p.tenant_id
+            /* 在庫表は「018より前に当たった記録」の代わり用です。
+               ★これを先に見ないこと。先に見ると、写真を差し替えた
+                 とたんに、過去の当選履歴まで別の物に変わります。 */
+            LEFT JOIN gacha_stock gs
+                   ON gs.gacha_id = p.gacha_id
+                  AND gs.grade    = p.grade
+                  AND gs.tenant_id = p.tenant_id
             LEFT JOIN order_items oi
                    ON oi.prize_id = p.id AND oi.tenant_id = p.tenant_id
             LEFT JOIN orders o
@@ -163,6 +215,11 @@ export async function listCustomerPrizes(
 
   return (r.rows as Row[]).map((p) => {
     const state = stateOf(str(p.status), nul(p.shipment_status));
+
+    /* ★当たった時点の写し取りを、必ず先に見ること。
+         在庫表を先に見ると、差し替えたとたんに過去の履歴が変わります。 */
+    const snap = nul(p.snap_image_id);
+
     return {
       id: str(p.id),
       gachaId: str(p.gacha_id),
@@ -183,6 +240,8 @@ export async function listCustomerPrizes(
       shipmentNumber: nul(p.shipment_number),
       carrier: nul(p.carrier),
       trackingNumber: nul(p.tracking_number),
+      imageId: snap ?? nul(p.stock_image_id),
+      imageIsSnapshot: snap != null,
     };
   });
 }

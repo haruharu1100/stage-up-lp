@@ -53,6 +53,14 @@ import {
   type GachaFilter,
   type GachaRow,
 } from "@/lib/console/liveGachas";
+import {
+  COVER_SLOT,
+  loadGachaImages,
+  saveGachaImages,
+  type ImagesView,
+  type SlotView,
+} from "@/lib/console/liveGachaImages";
+import { uploadImage } from "@/lib/console/liveImages";
 import type { MenuKey } from "../menu";
 import {
   Badge,
@@ -600,7 +608,7 @@ export default function GachaList({
           />
         )}
         {detail.state.phase === "ok" && (
-          <GachaBody g={detail.state.gacha} onNav={onNav} />
+          <GachaBody g={detail.state.gacha} onNav={onNav} mayEdit={mayEdit} />
         )}
       </Drawer>
     </>
@@ -614,9 +622,11 @@ export default function GachaList({
 function GachaBody({
   g,
   onNav,
+  mayEdit,
 }: {
   g: import("@/lib/console/liveGachas").GachaDetail;
   onNav: (k: MenuKey) => void;
+  mayEdit: boolean;
 }) {
   return (
     <>
@@ -734,12 +744,328 @@ function GachaBody({
         )}
       </div>
 
+      {/* ── 写真の差し替え ──
+            ★販売中でも触れます。止めてから替える運用にすると、
+              写真1枚のために毎回売り場が落ちます。 */}
+      <ImagePanel gachaId={g.id} mayEdit={mayEdit} />
+
       <div className="flex flex-wrap gap-2">
         <Btn onClick={() => onNav("rtp")}>実績還元率を見る</Btn>
         <Btn onClick={() => onNav("market")}>相場を見る</Btn>
         <Btn onClick={() => onNav("preview")}>お客様の画面で見る</Btn>
       </div>
     </>
+  );
+}
+
+/* ══════════════════════════════════════════════
+   写真の差し替え
+   ══════════════════════════════════════════════ */
+
+/**
+ * 表紙と、賞ごとの写真を差し替える。
+ *
+ * ═══════════════════════════════════════════════════════
+ * ★「保存」を押すまで、売り場は変わらないこと
+ * ═══════════════════════════════════════════════════════
+ *
+ *   選んだ瞬間に反映すると、間違えた1枚がそのまま
+ *   お客様に見えます。取り消しもできません。
+ *   ですので、選んだ写真は画面の中だけに置き、
+ *   保存を押したときにまとめて送ります。
+ *
+ * ★変えたところだけを送ること。
+ *   全部を毎回送ると、読み込みが1回こけただけで
+ *   「全部を空で上書き」になります。写真が全消えします。
+ *
+ * ★すでに引かれている賞には、必ず注意書きを出すこと。
+ *   出さないと「当てた人の履歴も差し替わった」と誤解されます。
+ *   実際には当選時点の写真のまま変わりません（018）。
+ */
+function ImagePanel({ gachaId, mayEdit }: { gachaId: string; mayEdit: boolean }) {
+  const [view, setView] = useState<ImagesView | null>(null);
+  const [yomi, setYomi] = useState<"yet" | "loading" | "ok" | "ng">("yet");
+  const [yomiNg, setYomiNg] = useState("");
+
+  /* 選んだだけで、まだ送っていない写真。ここが「保存前プレビュー」 */
+  const [draft, setDraft] = useState<Record<string, string | null>>({});
+  const [reason, setReason] = useState("");
+  const [okuri, setOkuri] = useState(false);
+  const [shirase, setShirase] = useState<{ ok: boolean; text: string } | null>(null);
+
+  const yomu = useCallback(async () => {
+    setYomi("loading");
+    const r = await loadGachaImages(gachaId);
+    if (!r.ok) {
+      setYomi("ng");
+      setYomiNg(r.message);
+      return;
+    }
+    setView(r.view);
+    setDraft({});
+    setYomi("ok");
+  }, [gachaId]);
+
+  const kawatta = Object.keys(draft).length;
+
+  const hozon = async () => {
+    setOkuri(true);
+    setShirase(null);
+    const r = await saveGachaImages({ gachaId, slots: draft, reason });
+    setOkuri(false);
+    if (!r.ok) {
+      setShirase({ ok: false, text: r.message });
+      return;
+    }
+    setShirase({ ok: true, text: `${r.changed.length}か所を差し替えました。${r.note}` });
+    setReason("");
+    await yomu();
+  };
+
+  if (yomi === "yet") {
+    return (
+      <div>
+        <h3 className="text-note font-bold text-slate2">商品の写真</h3>
+        <p className="mt-1 text-note leading-[1.9] text-slate3">
+          販売中でも差し替えられます。すでに当選している方の履歴の写真は、
+          当選した時点のまま変わりません。
+        </p>
+        <div className="mt-2">
+          <Btn onClick={() => void yomu()}>いまの写真を見る</Btn>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <h3 className="text-note font-bold text-slate2">商品の写真</h3>
+
+      {yomi === "loading" && (
+        <div className="mt-2">
+          <Skeleton rows={3} label="写真を読み込んでいます" />
+        </div>
+      )}
+
+      {yomi === "ng" && (
+        <div className="mt-2">
+          <ErrorBox what={yomiNg} onRetry={() => void yomu()} />
+        </div>
+      )}
+
+      {yomi === "ok" && view && (
+        <>
+          <div className="mt-2 space-y-2">
+            {view.slots.map((s) => {
+              /* 選び直していれば、そちらを出す（保存前プレビュー） */
+              const erabu = s.slot in draft ? draft[s.slot] : s.imageId;
+              const kaeta = s.slot in draft;
+              return (
+                <PhotoSlot
+                  key={s.slot}
+                  slot={s}
+                  imageId={erabu}
+                  changed={kaeta}
+                  mayEdit={mayEdit}
+                  onPick={(id) =>
+                    setDraft((d) => {
+                      /* 元に戻したなら、送る対象から外す */
+                      if (id === s.imageId) {
+                        const n = { ...d };
+                        delete n[s.slot];
+                        return n;
+                      }
+                      return { ...d, [s.slot]: id };
+                    })
+                  }
+                />
+              );
+            })}
+          </div>
+
+          {mayEdit && (
+            <div className="mt-3 space-y-3 rounded-xl border border-edge bg-paper2 px-4 py-3">
+              <p className="text-note leading-[1.9] text-slate3">
+                {kawatta === 0
+                  ? "まだ何も変えていません。写真を選ぶと、ここに保存ボタンが出ます。"
+                  : `${kawatta}か所を変えようとしています。保存を押すまで、売り場は変わりません。`}
+              </p>
+
+              {kawatta > 0 && (
+                <>
+                  <Field
+                    label="差し替える理由"
+                    required
+                    note="4文字以上。監査ログにそのまま残ります。"
+                  >
+                    <textarea
+                      className={inputClass}
+                      rows={2}
+                      value={reason}
+                      placeholder="例：現物の写真に撮り直したため／背景に値札が写っていたため"
+                      onChange={(e) => setReason(e.target.value)}
+                    />
+                  </Field>
+
+                  <div className="flex flex-wrap gap-2">
+                    <Btn
+                      kind="primary"
+                      disabled={okuri || reason.trim().length < 4}
+                      onClick={() => void hozon()}
+                    >
+                      {okuri ? "保存しています…" : "この内容で保存する"}
+                    </Btn>
+                    <Btn kind="ghost" disabled={okuri} onClick={() => setDraft({})}>
+                      選び直しをやめる
+                    </Btn>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
+          {!mayEdit && (
+            <p className="mt-2 text-note leading-[1.9] text-slate3">
+              いまの担当には、写真を差し替える権限がありません。中身は見られます。
+            </p>
+          )}
+
+          {shirase && (
+            <p
+              className={`mt-2 rounded-xl border px-4 py-3 text-note leading-[1.9] ${
+                shirase.ok
+                  ? "border-ok/30 bg-ok/8 text-ok-ink"
+                  : "border-warn/35 bg-warn/10 text-warn-ink"
+              }`}
+            >
+              {shirase.text}
+            </p>
+          )}
+
+          {view.history.length > 0 && (
+            <details className="mt-3">
+              <summary className="cursor-pointer text-note font-bold text-slate2">
+                差し替えの履歴（{view.history.length}件）
+              </summary>
+              <ul className="mt-2 space-y-1">
+                {view.history.map((h) => (
+                  <li key={h.id} className="text-label leading-[1.85] text-slate3">
+                    <span className="num">{nichiji(h.at)}</span>
+                    {h.slot === COVER_SLOT ? "表紙" : `${h.slot}賞`}
+                    {h.kind === "REMOVE" ? "写真を外した" : "差し替え"}
+                    {h.byName ?? "担当者不明"}
+                    {h.reason ? `　理由：${h.reason}` : ""}
+                  </li>
+                ))}
+              </ul>
+            </details>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+/** 1か所ぶんの枠。写真の預け入れは Builder と同じ入口を使う */
+function PhotoSlot({
+  slot,
+  imageId,
+  changed,
+  mayEdit,
+  onPick,
+}: {
+  slot: SlotView;
+  imageId: string | null;
+  changed: boolean;
+  mayEdit: boolean;
+  onPick: (id: string | null) => void;
+}) {
+  const [okurichuu, setOkurichuu] = useState(false);
+  const [kotowari, setKotowari] = useState<string | null>(null);
+
+  const erabu = async (f: File | null) => {
+    if (!f) return;
+    setOkurichuu(true);
+    setKotowari(null);
+    const r = await uploadImage(f, slot.slot === COVER_SLOT ? "GACHA_COVER" : "PRIZE");
+    setOkurichuu(false);
+    /* ★弾かれたときに、いま選んでいる写真を消さないこと */
+    if (!r.ok) {
+      setKotowari(r.message);
+      return;
+    }
+    onPick(r.imageId);
+  };
+
+  return (
+    <div
+      className={`rounded-xl border px-4 py-3 ${
+        changed ? "border-blue-400 bg-blue-50/60" : "border-edge2 bg-paper2"
+      }`}
+    >
+      <div className="flex flex-wrap items-center gap-3">
+        {imageId ? (
+          /* eslint-disable-next-line @next/next/no-img-element */
+          <img
+            src={`/api/images/${imageId}`}
+            alt={slot.label}
+            className="h-16 w-16 shrink-0 rounded-lg border border-edge object-cover"
+          />
+        ) : (
+          <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg border border-dashed border-edge bg-slate-100 text-center text-[0.65rem] font-medium text-slate-500">
+            画像未登録
+          </span>
+        )}
+
+        <div className="min-w-0 flex-1">
+          <p className="text-note font-bold text-slate">
+            {slot.label}
+            {changed && (
+              <span className="ml-2 text-label font-medium text-blue-700">
+                （保存前・まだ売り場は変わっていません）
+              </span>
+            )}
+          </p>
+
+          {/* ★すでに引かれた賞は、必ずここで断っておくこと */}
+          {slot.drawn > 0 && (
+            <p className="mt-0.5 text-label leading-[1.8] text-slate3">
+              この賞は、すでに {slot.drawn.toLocaleString()} 本出ています。
+              差し替えても、当てた方の履歴の写真は当選した時点のまま変わりません。
+            </p>
+          )}
+
+          {mayEdit && (
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <label className="inline-flex cursor-pointer items-center rounded-lg border border-edge bg-white px-3 py-1.5 text-label font-medium text-slate2 hover:bg-paper2">
+                {okurichuu ? "送っています…" : imageId ? "写真を差し替える" : "写真を選ぶ"}
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  disabled={okurichuu}
+                  onChange={(e) => {
+                    void erabu(e.target.files?.[0] ?? null);
+                    e.target.value = "";
+                  }}
+                />
+              </label>
+              {imageId && (
+                <Btn kind="ghost" onClick={() => onPick(null)}>
+                  写真を外す
+                </Btn>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {kotowari && (
+        <p className="mt-2 rounded-lg border border-warn/35 bg-warn/10 px-3 py-2 text-label leading-[1.85] text-warn-ink">
+          {kotowari}
+        </p>
+      )}
+    </div>
   );
 }
 

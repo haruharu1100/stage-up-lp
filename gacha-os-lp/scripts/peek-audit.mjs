@@ -8,12 +8,20 @@
  *   あとから確かめようがありません。
  *   起きたかどうかを、当事者の記憶で決めることになります。
  *
+ * ★本番へは向けません。
+ *   監査ログの「要約」や「前・後」には、
+ *   誰が誰に何をしたかが、名前つきで残っています。
+ *   本番で開けば、それがそのまま画面に出ます。
+ *
  * 使い方：
  *   DATABASE_URL="file:.data/dev.db" npx tsx scripts/peek-audit.mjs
  */
 
 import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { honbanNiMukenai } from "./lib/db-env-guard.mjs";
+
+honbanNiMukenai("注文と発送の監査ログを、そのまま並べて見る");
 
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 const { db } = await import(`${ROOT}/lib/server/db.ts`);

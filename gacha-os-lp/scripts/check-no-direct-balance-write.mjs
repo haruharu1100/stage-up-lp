@@ -52,6 +52,14 @@
  *   lib/server/prizes.ts        景品のポイント交換。同じく台帳と1取引
  *   lib/server/draw.ts          ガチャ。使った分と戻り分を同じ取引で台帳へ入れる
  *   lib/server/seed.ts          会員を作る。開始時の残高も台帳へ入れる
+ *   lib/server/pointPurchase.ts お客様のポイント購入。決済会社からの
+ *                               確定通知1件につき、台帳・残高・監査ログを
+ *                               同じ1取引で書く（画面からは1ptも動かない）
+ *   lib/server/paymentReversal.ts 決済会社の側でお金が引き戻されたとき
+ *                               （チャージバック等）の逆仕訳。過去の行は
+ *                               書き換えず、新しい行を1つ足してから
+ *                               残高を動かす。台帳・残高・監査ログを
+ *                               同じ1取引で書く
  *   scripts/lib/ledger-write.mjs   道具のための、台帳経由の入口
  *   scripts/lib/fixtures-danger.mjs 手元の使い捨てDBでしか動かない出口
  *
@@ -74,6 +82,8 @@ const YURUSU = new Set([
   "lib/server/prizes.ts",
   "lib/server/draw.ts",
   "lib/server/seed.ts",
+  "lib/server/pointPurchase.ts",
+  "lib/server/paymentReversal.ts",
   "scripts/lib/ledger-write.mjs",
   "scripts/lib/fixtures-danger.mjs",
   /* この点検そのもの。禁止する文字列を本文に書いているため */

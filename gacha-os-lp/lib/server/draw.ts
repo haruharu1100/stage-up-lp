@@ -80,6 +80,13 @@ export type DrawResult = {
   prizeId: string | null;
   prizeName: string;
   prizeValue: number;
+  /**
+   * 当たった賞の写真。お店が登録していなければ null。
+   *
+   * ★null のときに、ここで代わりの画像を入れないこと。
+   *   結果画面は「画像未登録」と出します。それが事実です。
+   */
+  imageId: string | null;
   lastOne: boolean;
   needsShipping: boolean;
   remainingBefore: number;
@@ -215,12 +222,18 @@ export async function drawOnceServer(args: {
 
     /* ── ④ 箱の中身（等級ごとに、もう何本出たか） ───────── */
     const st = await tx.execute({
-      sql: `SELECT grade, total, drawn FROM gacha_stock
+      sql: `SELECT grade, total, drawn, image_id FROM gacha_stock
              WHERE tenant_id = ? AND gacha_id = ?`,
       args: [args.tenantId, args.gachaId],
     });
     const drawn: Record<string, number> = {};
-    for (const r of st.rows as Row[]) drawn[str(r.grade)] = num(r.drawn);
+    /* 賞ごとの写真。★ここで「無いから表紙で代用」をしないこと。
+       当たっていない物を当選画面に大きく出すことになります。 */
+    const shashin: Record<string, string | null> = {};
+    for (const r of st.rows as Row[]) {
+      drawn[str(r.grade)] = num(r.drawn);
+      shashin[str(r.grade)] = r.image_id == null ? null : String(r.image_id);
+    }
 
     /* ── ⑤ 抽選 ───────────────────────────────
        ★乱数はここでしか作らない。材料は node:crypto だけ。
@@ -357,10 +370,24 @@ export async function drawOnceServer(args: {
 
     if (prizeId) {
       await tx.execute({
+        /*
+         * ★当たった瞬間の写真を、ここへ写し取ること（018）。
+         *
+         *   写し取らないと、お店があとで写真を差し替えたときに、
+         *   お客様の獲得商品の履歴まで、別の物の写真に変わります。
+         *   「私が当てたのは、これではない」と言われたとき、
+         *   こちらにもお店にも、確かめる手立てが残りません。
+         *   お金を受け取っている以上、当選の記録は動いてはいけません。
+         *
+         *   ★写ってはいけないものが写っていた場合の逃げ道は、
+         *     別に用意してあります（写真の「完全削除」）。
+         *     そちらは履歴からも消え、★消したことが監査に残ります。
+         *     静かに変わるのと、記録を残して消すのは別のことです。
+         */
         sql: `INSERT INTO prizes
                 (id, tenant_id, user_id, gacha_id, draw_id, grade, name, value,
-                 exchange_pt, status, won_at)
-              VALUES (?,?,?,?,?,?,?,?,?, 'UNCHOSEN', ?)`,
+                 exchange_pt, status, won_at, image_id)
+              VALUES (?,?,?,?,?,?,?,?,?, 'UNCHOSEN', ?, ?)`,
         args: [
           prizeId,
           args.tenantId,
@@ -372,6 +399,7 @@ export async function drawOnceServer(args: {
           out.value,
           out.value,
           at,
+          shashin[out.grade] ?? null,
         ],
       });
     }
@@ -464,6 +492,7 @@ export async function drawOnceServer(args: {
       prizeId,
       prizeName: out.name,
       prizeValue: out.value,
+      imageId: shashin[out.grade] ?? null,
       lastOne: Boolean(out.lastOne),
       needsShipping,
       remainingBefore: leftBefore,

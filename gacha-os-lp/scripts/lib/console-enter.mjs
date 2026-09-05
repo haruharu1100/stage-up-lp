@@ -33,6 +33,11 @@
  *       UX_ADMIN_PASSWORD  … 管理者のパスワード
  *       UX_ADMIN_EMAIL     … 管理者のメールアドレス
  *       UX_TENANT_CODE     … 会社コード
+ *
+ *   使い捨ての会社を自分で作る道具（E2E）は、環境変数ではなく
+ *   enterConsole の第3引数で、その場の合言葉を渡します。
+ *   ★その場合も、合言葉を「呼ぶ側で作る」こと。
+ *     ここに既定値として書くと、結局Gitに残ります。
  */
 
 /**
@@ -69,8 +74,15 @@ export async function press(page, selector, until, tries = 8) {
  * ★①だけを見る作りに戻さないこと。
  *   戻すと、本物のログインが要る場所では必ず落ち、
  *   確かめたかったことを一度も確かめられないまま終わります。
+ *
+ * @param creds 使い捨ての会社で作った担当者で入りたいとき用。
+ *              { tenantCode, email, password } を渡します。
+ *              ★渡したときは、練習用の入口を使いません。
+ *                練習用で入ると「デモ会社の担当者」になり、
+ *                自分で作った会社のデータが1件も見えないまま
+ *                「0件でした」と report されます。
  */
-export async function enterConsole(page, url) {
+export async function enterConsole(page, url, creds = null) {
   /* はじめての方への案内は、先に「見たこと」にしておく。
      案内は画面の手前に出るので、出たままだと何も押せません */
   await page.addInitScript(() => {
@@ -85,7 +97,7 @@ export async function enterConsole(page, url) {
   await page.waitForTimeout(600);
 
   const demoButton = page.locator('button:has-text("デモ管理者としてログイン")');
-  if ((await demoButton.count()) > 0) {
+  if (!creds && (await demoButton.count()) > 0) {
     await press(
       page,
       'button:has-text("デモ管理者としてログイン")',
@@ -109,15 +121,17 @@ export async function enterConsole(page, url) {
      1社しか入らない設定では、この欄そのものが出ません */
   const tenant = page.locator('input[placeholder="例：DEMO"]');
   if ((await tenant.count()) > 0) {
-    await tenant.fill(process.env.UX_TENANT_CODE || "DEMO");
+    await tenant.fill(
+      creds?.tenantCode || process.env.UX_TENANT_CODE || "DEMO",
+    );
   }
 
   await page
     .locator('input[type="email"]')
-    .fill(process.env.UX_ADMIN_EMAIL || "boss@demo.example");
+    .fill(creds?.email || process.env.UX_ADMIN_EMAIL || "boss@demo.example");
   await page
     .locator('input[type="password"]')
-    .fill(process.env.UX_ADMIN_PASSWORD || "");
+    .fill(creds?.password || process.env.UX_ADMIN_PASSWORD || "");
 
   await page.locator('button[type="submit"]').first().click();
   await page.waitForSelector('nav[aria-label="管理メニュー"]', { timeout: 20000 });

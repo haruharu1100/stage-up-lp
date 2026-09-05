@@ -44,6 +44,12 @@ import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 import { existsSync } from "node:fs";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { honbanNiMukenai } from "./lib/db-env-guard.mjs";
+
+/* ★この点検は、残高を実際に動かして確かめます（下で setPointsViaLedger を呼びます）。
+     本番へ向ければ、お客様の残高が本当に変わります。
+     ですので、URLを見るより先に、保存先を見て止めます。 */
+honbanNiMukenai("ブラウザ点検のために、会員の残高を動かす");
 
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 const BASE = (process.argv[2] ?? "").replace(/\/$/, "");

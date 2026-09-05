@@ -207,6 +207,14 @@ export type LivePrize = {
   shipmentNumber: string | null;
   carrier: string | null;
   trackingNumber: string | null;
+  /**
+   * 当たった商品の写真。お店が登録していなければ null。
+   *
+   * ★null のときに、画面側で絵を描かないこと。
+   *   ここに出るのは、お客様が「もう自分のもの」と思っている品です。
+   *   実物でない絵を出すと、届いた物との違いがそのまま苦情になります。
+   */
+  imageId: string | null;
   /** ★この2つは、必ずサーバーの答えを使うこと */
   canShip: boolean;
   canExchange: boolean;
@@ -268,6 +276,96 @@ const pickPoints = (raw: Record<string, unknown>): PointsData | null =>
 
 export function useCustomerPoints(on = true) {
   return useLive<PointsData>("/api/customer/points", pickPoints, on);
+}
+
+/* ══════════════════════════════════════════════
+   ポイント購入
+   ══════════════════════════════════════════════
+
+   ★ここに「買えたことにする」処理を書かないこと。
+
+     画面が知ってよいのは、次の2つだけです。
+
+       ① どんな商品が売られているか（値段と付与pt）
+       ② いま出した注文が、どの状態か
+
+     ポイントが増えるのは、サーバーが決済会社からの
+     確定通知を受け取ったときだけです。
+     画面は、その結果を見に行くだけにします。
+
+     ここに「支払い画面から戻ってきたら残高を足す」を
+     書き足すと、戻るボタンを押した回数だけ足ります。 */
+
+export type LivePointProduct = {
+  id: string;
+  name: string;
+  priceYen: number;
+  points: number;
+  bonusPoints: number;
+  totalPoints: number;
+  status: "ACTIVE" | "DISABLED";
+  sortOrder: number;
+};
+
+export type PointProductsData = {
+  products: LivePointProduct[];
+  provider: string | null;
+  /**
+   * 決済会社が使えない理由。null 以外のときは、必ず画面に出すこと。
+   *
+   * ★出さないと「押しても何も起きない画面」になります。
+   */
+  providerError: string | null;
+  /** 「支払ったことにする」を出してよいのは、これが true のときだけ */
+  mock: boolean;
+};
+
+const pickPointProducts = (
+  raw: Record<string, unknown>,
+): PointProductsData | null =>
+  Array.isArray(raw.products)
+    ? {
+        products: raw.products as LivePointProduct[],
+        provider: typeof raw.provider === "string" ? raw.provider : null,
+        providerError:
+          typeof raw.providerError === "string" ? raw.providerError : null,
+        mock: raw.mock === true,
+      }
+    : null;
+
+export function useCustomerPointProducts(on = true) {
+  return useLive<PointProductsData>(
+    "/api/customer/point-products",
+    pickPointProducts,
+    on,
+  );
+}
+
+export type LivePointOrder = {
+  id: string;
+  productName: string;
+  priceYen: number;
+  points: number;
+  bonusPoints: number;
+  totalPoints: number;
+  status: "PENDING" | "PAID" | "CANCELED";
+  provider: string;
+  createdAt: string;
+  paidAt: string | null;
+  returnTo: string | null;
+};
+
+const pickPointOrders = (
+  raw: Record<string, unknown>,
+): LivePointOrder[] | null =>
+  Array.isArray(raw.orders) ? (raw.orders as LivePointOrder[]) : null;
+
+export function useCustomerPointOrders(on = true) {
+  return useLive<LivePointOrder[]>(
+    "/api/customer/point-orders",
+    pickPointOrders,
+    on,
+  );
 }
 
 /* ══════════════════════════════════════════════

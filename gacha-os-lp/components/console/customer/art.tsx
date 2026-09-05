@@ -1,43 +1,61 @@
 /**
- * お客様側の「絵」を、コードで描く。
+ * お客様側の絵と、商品の写真。
  *
  * ═══════════════════════════════════════════════════════
- * ★なぜ写真を貼らず、わざわざ描いているのか
+ * ★2026-09-05：本物の売り場から「描いた絵」を外しました
  * ═══════════════════════════════════════════════════════
  *
- *   ①よその画像を借りると、権利の話が必ず後から来ます。
- *     デモの画面は、そのままスクリーンショットで出回ります。
- *     出回ったあとで「その写真は使えません」となっても、もう戻せません。
+ *   それまで、ガチャの絵は題名の文字から機械が描いていました。
+ *   題名に「カード」とあればカードの形、「時計」とあれば時計の形です。
  *
- *   ②実在の商品写真を貼ると、その商品が当たると読めてしまいます。
- *     架空のデモに実在のブランドを持ち込むと、それだけで景表法の話になります。
+ *   よくできた仕組みでした。権利の心配が無く、画像ファイルも要らず、
+ *   新しいガチャが増えた瞬間から、ちゃんと絵が付きました。
  *
- *   ③商品ごとに画像ファイルを用意する運用は、必ず破綻します。
- *     ガチャは毎週増えます。画像が間に合わない週は、
- *     「文字だけのカード」が棚に並びます。それは売り場ではありません。
+ *   ★ですが、お客様がお金を払って引くのは「実物」です。
  *
- *   だからここでは、ガチャIDと等級から、その場で絵を組み立てます。
- *   画像ファイルは1枚も要らず、どんな解像度でも滲まず、
- *   新しいガチャが増えた瞬間から、ちゃんと絵が付きます。
+ *   題名から描いた絵は、実物ではありません。似せた形にすぎません。
+ *   それを商品の顔として並べて売れば、優良誤認になりかねません。
+ *   「カードだと思って引いたのに、絵とは違うものが届いた」は、
+ *   こちらに悪気が無くても、お客様にはそう見えます。
+ *
+ *   だから、本物の売り場に出すのは、お店が撮った写真だけにします。
  *
  * ═══════════════════════════════════════════════════════
- * ★守ること
+ * ★このファイルには、2種類のものが入っています
  * ═══════════════════════════════════════════════════════
  *
- *   ・同じIDなら、いつ何度描いても同じ絵になること。
- *     開くたびに絵が変わる棚は、お客様から見て別の商品に見えます。
+ *   【本物の売り場に使うもの】
+ *     ShopPhoto / PrizePhoto / PrizeThumb
+ *     お店が登録した写真を出します。
+ *     写真が無いときは、それらしい絵を描かず「画像未登録」と書きます。
  *
- *   ・絵文字を使わないこと。端末ごとに絵が違い、
- *     こちらが見ている画面と、お客様が見ている画面が別物になります。
+ *   【営業用の見本（/client-demo）だけに使うもの】
+ *     SampleCoverArt / SampleProductArt / SampleProductThumb
+ *     名前が Sample で始まるものは、すべて「描いた絵」です。
  *
- *   ・実在のブランドの形を写さないこと。
- *     ここにあるのは「靴」「時計」「札」といった一般的な形だけです。
+ *   ★Sample で始まるものを、本物の売り場へ持ち込まないこと。
+ *     持ち込むと、この日に外したものが、そのまま戻ります。
+ *     戻ったことは、画面を見ても分かりません。絵はきれいに出るからです。
+ *     だから、人の目ではなく機械で止めます
+ *     （scripts/check-real-art.mjs）。
+ *
+ * ═══════════════════════════════════════════════════════
+ * ★描いた絵を、なぜ消さずに残すのか
+ * ═══════════════════════════════════════════════════════
+ *
+ *   営業用の見本には、まだ必要だからです。
+ *   見本は、これからお店を始める方にお見せするものです。
+ *   そこに実在の商品写真を貼れば「その商品が当たる」と読めてしまい、
+ *   それこそ景表法の話になります。
+ *
+ *   見本は架空の店なので、架空の絵で正しいのです。
+ *   本物の店は、実物の写真で正しい。用途が違うだけです。
  */
 
 "use client";
 
 import type React from "react";
-import { useId } from "react";
+import { useId, useState } from "react";
 
 /* ══════════════════════════════════════════════
    何の絵を描くか
@@ -116,6 +134,139 @@ export const GRADE_ART: Record<
 /** 「S」「A」…以外の文字が来ても落ちないようにする */
 export function gradeArt(grade: string) {
   return GRADE_ART[(grade as GradeKey) in GRADE_ART ? (grade as GradeKey) : "-"];
+}
+
+/* ══════════════════════════════════════════════
+   ★本物の売り場に出すもの（お店が登録した写真）
+   ══════════════════════════════════════════════ */
+
+/**
+ * 写真が無いときに出す板。
+ *
+ * ═══════════════════════════════════════════════════════
+ * ★ここで「それらしい絵」を描かないこと
+ * ═══════════════════════════════════════════════════════
+ *
+ *   空欄はかっこ悪いので、つい何かを描きたくなります。
+ *   ですが、描いた瞬間に、それは実物ではない絵になります。
+ *   お客様は「これが当たる」と読みます。優良誤認です。
+ *
+ *   だから、ここは何も描きません。
+ *   「画像未登録」と、事実だけを書きます。
+ *   かっこ悪いのは、お店が写真を入れれば直ります。
+ *   嘘は、入れても直りません。
+ */
+function NoPhoto({ className = "" }: { className?: string }) {
+  return (
+    <span
+      className={`flex items-center justify-center bg-slate-100 text-center text-[0.7rem] font-medium text-slate-500 ${className}`}
+    >
+      画像未登録
+    </span>
+  );
+}
+
+/**
+ * 写真を1枚出す。土台。
+ *
+ * ★読み込みに失敗したときも「画像未登録」に戻すこと。
+ *   壊れた画像のアイコンが出ると、お店の不備なのか
+ *   通信の不調なのか、お客様には区別が付きません。
+ *   どちらにせよ「今はお見せできる写真がない」が事実です。
+ */
+function Photo({
+  imageId,
+  alt,
+  className = "",
+}: {
+  imageId: string | null | undefined;
+  alt: string;
+  className?: string;
+}) {
+  const [failed, setFailed] = useState(false);
+
+  if (!imageId || failed) return <NoPhoto className={className} />;
+
+  return (
+    /* eslint-disable-next-line @next/next/no-img-element */
+    <img
+      src={`/api/images/${imageId}`}
+      alt={alt}
+      className={className}
+      loading="lazy"
+      decoding="async"
+      onError={() => setFailed(true)}
+    />
+  );
+}
+
+/**
+ * ガチャの表紙の写真。
+ *
+ * ★alt を空にしないこと。
+ *   目で見られない方には、この文字だけが商品の説明になります。
+ */
+export function ShopPhoto({
+  imageId,
+  alt,
+  className = "",
+}: {
+  imageId: string | null | undefined;
+  alt: string;
+  className?: string;
+}) {
+  return <Photo imageId={imageId} alt={alt} className={className} />;
+}
+
+/**
+ * 賞品の写真。
+ *
+ * ★等級の色は、写真の外側の枠にだけ使うこと。
+ *   写真の上に色を重ねると、実物の色が変わって見えます。
+ *   「届いたものが写真と色が違う」は、一番言われたくない苦情です。
+ */
+export function PrizePhoto({
+  imageId,
+  grade,
+  alt,
+  className = "",
+}: {
+  imageId: string | null | undefined;
+  grade: string;
+  alt: string;
+  className?: string;
+}) {
+  const a = gradeArt(grade);
+  return (
+    <span
+      className={`relative block overflow-hidden ${className}`}
+      style={{ border: `1px solid ${a.line}` }}
+    >
+      <Photo imageId={imageId} alt={alt} className="h-full w-full object-cover" />
+    </span>
+  );
+}
+
+/** 一覧の行に置く、小さな写真。 */
+export function PrizeThumb({
+  imageId,
+  grade,
+  alt,
+  className = "",
+}: {
+  imageId: string | null | undefined;
+  grade: string;
+  alt: string;
+  className?: string;
+}) {
+  return (
+    <PrizePhoto
+      imageId={imageId}
+      grade={grade}
+      alt={alt}
+      className={`rounded-xl ${className}`}
+    />
+  );
 }
 
 /* ══════════════════════════════════════════════
@@ -225,7 +376,7 @@ function Silhouette({ kind }: { kind: ArtKind }) {
  *   絵の中に題名を焼き込むと、題名を変えたときに絵が嘘になります。
  *   題名は、絵の外にHTMLとして置きます。読み上げにも乗ります。
  */
-export function CoverArt({
+export function SampleCoverArt({
   id,
   kind,
   className = "",
@@ -295,7 +446,7 @@ export function CoverArt({
  *   お客様が見たいのは「何が当たるのか」であって、
  *   アルファベットではありません。
  */
-export function ProductArt({
+export function SampleProductArt({
   grade,
   kind,
   className = "",
@@ -341,7 +492,7 @@ export function ProductArt({
  * 大きい絵と同じ形を使います。等級の色だけで見分けられるようにして、
  * 小さくても「これはさっき見たS賞だ」と分かるようにしています。
  */
-export function ProductThumb({
+export function SampleProductThumb({
   grade,
   kind,
   className = "",
@@ -356,7 +507,7 @@ export function ProductThumb({
       className={`relative block overflow-hidden rounded-xl ${className}`}
       style={{ border: `1px solid ${a.line}` }}
     >
-      <ProductArt grade={grade} kind={kind} className="h-full w-full" />
+      <SampleProductArt grade={grade} kind={kind} className="h-full w-full" />
     </span>
   );
 }

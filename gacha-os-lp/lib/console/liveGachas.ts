@@ -247,6 +247,16 @@ export type CreateGachaResult =
 export async function createGachaDraft(args: {
   title: string;
   spec: GachaSpec;
+  /**
+   * 表紙の写真のID（先に /api/console/images へ上げて受け取ったもの）。
+   *
+   * ★spec の中に入れないこと。
+   *   spec の指紋が変わると、写真を直しただけで
+   *   販売中のガチャが「未検証」に戻ります。
+   */
+  coverImageId?: string | null;
+  /** 等級ごとの写真のID */
+  prizeImages?: Record<string, string>;
 }): Promise<CreateGachaResult> {
   try {
     const res = await fetch("/api/console/gachas", {
@@ -254,7 +264,12 @@ export async function createGachaDraft(args: {
       /* ★postHeaders() を必ず通すこと。CSRF の合図が付かないと 403 で断られます */
       headers: postHeaders(),
       cache: "no-store",
-      body: JSON.stringify({ title: args.title, spec: args.spec }),
+      body: JSON.stringify({
+        title: args.title,
+        spec: args.spec,
+        coverImageId: args.coverImageId ?? null,
+        prizeImages: args.prizeImages ?? {},
+      }),
     });
     const data = (await res.json()) as {
       ok?: boolean;

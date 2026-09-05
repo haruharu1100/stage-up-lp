@@ -2,7 +2,11 @@
  * 確認用データベースの中身を、数だけ覗く道具。
  *
  * ★読むだけです。1行も書きません。
- *   本番へ向けても壊れませんが、向けないでください。
+ *
+ *   ですが「読むだけだから本番でもよい」とは考えません。
+ *   本番へ向ければ、お客様の氏名とメールが、そのまま画面に出ます。
+ *   （下のほうで、注文といっしょに name と email を出しています）
+ *   出した画面は報告文に貼られ、報告文は残ります。
  *
  * 使い方：
  *   DATABASE_URL="file:./.data/dev.db" node scripts/peek-db.mjs
@@ -10,6 +14,9 @@
 
 import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { honbanNiMukenai } from "./lib/db-env-guard.mjs";
+
+honbanNiMukenai("保存先の中身（件数・直近の注文・景品の状態）を覗く");
 
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 const { db } = await import(`${ROOT}/lib/server/db.ts`);

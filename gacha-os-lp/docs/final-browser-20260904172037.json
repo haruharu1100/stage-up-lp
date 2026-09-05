@@ -1,0 +1,421 @@
+{
+  "at": "2026-09-04T17:21:47.017Z",
+  "base": "https://gacha-os-xq6pr7htk-haruharu1100s-projects.vercel.app",
+  "dbEnv": "preview",
+  "tenantCode": "E2EW20260904172037",
+  "email": "e2e-w-20260904172037@final.example",
+  "gachaId": "gac_01M1PPZM230SH6Z8BNAV2YNZSG",
+  "saigo": {
+    "points": 49567,
+    "ledgerSum": 49567,
+    "left": 74,
+    "draws": 6,
+    "drawn": 6,
+    "auditSeq": 8
+  },
+  "results": [
+    {
+      "no": "B-1",
+      "title": "会社コード・メール・パスワードを打ってログインできる",
+      "pass": true,
+      "detail": "いまのURL: https://gacha-os-xq6pr7htk-haruharu1100s-projects.vercel.app/mypage"
+    },
+    {
+      "no": "B-2",
+      "title": "マイページに「ガチャを引く」の入口がある",
+      "pass": true
+    },
+    {
+      "no": "B-3",
+      "title": "押すとガチャ一覧に着く",
+      "pass": true,
+      "detail": "いまのURL: https://gacha-os-xq6pr7htk-haruharu1100s-projects.vercel.app/mypage/shop"
+    },
+    {
+      "no": "B-4",
+      "title": "一覧に、公開中のガチャが並んでいる",
+      "pass": true
+    },
+    {
+      "no": "B-5",
+      "title": "押すとガチャの詳細に着く",
+      "pass": true,
+      "detail": "いまのURL: https://gacha-os-xq6pr7htk-haruharu1100s-projects.vercel.app/mypage/shop/gac_01M1PPZM230SH6Z8BNAV2YNZSG"
+    },
+    {
+      "no": "B-6",
+      "title": "確認の画面（本当に引きますか）が出る",
+      "pass": true
+    },
+    {
+      "no": "B-7",
+      "title": "8回連打しても、引かれたのは1回だけ",
+      "pass": true,
+      "detail": "抽選 0 → 1 件（増えたのは 1 件）"
+    },
+    {
+      "no": "B-8",
+      "title": "8回連打しても、動いたポイントは1回分だけ（使った額と返り額が記録と一致）",
+      "pass": true,
+      "detail": "50,000pt −500pt ＋返り0pt（B賞）＝ 49,500pt"
+    },
+    {
+      "no": "B-9",
+      "title": "8回連打しても、残り口数は1つしか減らない",
+      "pass": true,
+      "detail": "残り 80 → 79 口"
+    },
+    {
+      "no": "B-10",
+      "title": "連打のあとも、台帳の合計と残高が一致している",
+      "pass": true,
+      "detail": "台帳合計 49,500 ／ 残高 49,500"
+    },
+    {
+      "no": "B-11",
+      "title": "連打のあとも、監査ログは1件しか増えていない",
+      "pass": true,
+      "detail": "seq 1 → 2"
+    },
+    {
+      "no": "B-12",
+      "title": "ダブルクリックでも、引かれたのは1回だけ",
+      "pass": true,
+      "detail": "抽選 1 → 2 件"
+    },
+    {
+      "no": "B-13",
+      "title": "ダブルクリックでも、動いたポイントは1回分だけ",
+      "pass": true,
+      "detail": "49,500pt −500pt ＋返り1000pt（C賞）＝ 50,000pt"
+    },
+    {
+      "no": "B-14",
+      "title": "ダブルクリックでも、残り口数は1つだけ減る",
+      "pass": true,
+      "detail": "残り 79 → 78 口"
+    },
+    {
+      "no": "B-15",
+      "title": "通信の途中で更新しても、引かれたのは多くて1回",
+      "pass": true,
+      "detail": "抽選 2 → 3 件（増えたのは 1 件）"
+    },
+    {
+      "no": "B-16",
+      "title": "通信の途中で更新しても、動いたポイントが抽選の記録と一致する",
+      "pass": true,
+      "detail": "50,000pt −500pt ＋返り1000pt（C賞）＝ 50,500pt"
+    },
+    {
+      "no": "B-17",
+      "title": "ポイントの画面を開けば、いまの残高がそのまま出ている",
+      "pass": true,
+      "detail": "途中で更新した詳細画面に見えた数字 [500, 500]（ここは値段の表示です）／ ポイント画面 [50500, 1000, 50500, 500, 49500, 1000, 50000, 500, 49000, 500, 49500, 50000, 50000] ／ DB 50,500pt"
+    },
+    {
+      "no": "B-18",
+      "title": "更新のあとも、台帳の合計と残高が一致している",
+      "pass": true,
+      "detail": "台帳 50,500 ／ 残高 50,500"
+    },
+    {
+      "no": "B-19",
+      "title": "2つのタブで押した回数と、引かれた回数が同じ（勝手に増えない）",
+      "pass": true,
+      "detail": "2回押して 2 回引かれた（押した数だけ引かれるのが正しい動きです）"
+    },
+    {
+      "no": "B-20",
+      "title": "2タブ同時でも、残り口数と抽選件数がずれない",
+      "pass": true,
+      "detail": "残り 77 → 75 口 ／ 引いた本数 3 → 5"
+    },
+    {
+      "no": "B-21",
+      "title": "2タブ同時でも、台帳の合計と残高が一致している",
+      "pass": true,
+      "detail": "台帳 49,878 ／ 残高 49,878"
+    },
+    {
+      "no": "B-22",
+      "title": "2タブ同時でも、監査ログの本数が抽選の回数と合う",
+      "pass": true,
+      "detail": "seq 4 → 6"
+    },
+    {
+      "no": "B-23",
+      "title": "普通に1回押したら、1回だけ引かれる",
+      "pass": true,
+      "detail": "抽選 5 → 6 件"
+    },
+    {
+      "no": "B-24",
+      "title": "戻る→進む→更新をしても、引き直されない",
+      "pass": true,
+      "detail": "抽選 6 → 6 件 ／ 残高 49,567 → 49,567pt"
+    },
+    {
+      "no": "B-25",
+      "title": "戻ったあとの画面に、古い残高が残っていない",
+      "pass": true,
+      "detail": "DBの残高 49,567pt が画面にある"
+    },
+    {
+      "no": "B-26",
+      "title": "マイページに「ログアウトする」の押し場所がある",
+      "pass": true
+    },
+    {
+      "no": "B-27",
+      "title": "ログアウトしたあと戻っても、残高が見えない",
+      "pass": true,
+      "detail": "いまのURL: https://gacha-os-xq6pr7htk-haruharu1100s-projects.vercel.app/login?next=%2Fmypage%2Fpoints"
+    },
+    {
+      "no": "B-28",
+      "title": "サーバー側のエラー（5xx）が0件",
+      "pass": true,
+      "detail": "0件"
+    },
+    {
+      "no": "B-29",
+      "title": "React の hydration 警告が0件",
+      "pass": true,
+      "detail": "0件"
+    },
+    {
+      "no": "B-30",
+      "title": "この製品が出した console error が0件",
+      "pass": true,
+      "detail": "0件（別に、Vercel確認用URLの感想フォームを止めた記録が 16件あります）"
+    },
+    {
+      "no": "B-31",
+      "title": "この製品の通信で、途中で切れたものが0件",
+      "pass": true,
+      "detail": "0件（別に、先読みを途中でやめた記録が 4件、Vercelの感想フォームが 16件）"
+    }
+  ],
+  "consoleLog": [
+    {
+      "who": "本人",
+      "type": "error",
+      "text": "Loading the script 'https://vercel.live/_next-live/feedback/feedback.js' violates the following Content Security Policy directive: \"script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com https://www.clarity.ms\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked.",
+      "url": "https://gacha-os-xq6pr7htk-haruharu1100s-projects.vercel.app/login"
+    },
+    {
+      "who": "本人",
+      "type": "error",
+      "text": "Loading the script 'https://vercel.live/_next-live/feedback/feedback.js' violates the following Content Security Policy directive: \"script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com https://www.clarity.ms\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked.",
+      "url": "https://gacha-os-xq6pr7htk-haruharu1100s-projects.vercel.app/mypage"
+    },
+    {
+      "who": "本人",
+      "type": "error",
+      "text": "Loading the script 'https://vercel.live/_next-live/feedback/feedback.js' violates the following Content Security Policy directive: \"script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com https://www.clarity.ms\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked.",
+      "url": "https://gacha-os-xq6pr7htk-haruharu1100s-projects.vercel.app/mypage/shop/gac_01M1PPZM230SH6Z8BNAV2YNZSG"
+    },
+    {
+      "who": "本人",
+      "type": "error",
+      "text": "Loading the script 'https://vercel.live/_next-live/feedback/feedback.js' violates the following Content Security Policy directive: \"script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com https://www.clarity.ms\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked.",
+      "url": "https://gacha-os-xq6pr7htk-haruharu1100s-projects.vercel.app/mypage/shop/gac_01M1PPZM230SH6Z8BNAV2YNZSG"
+    },
+    {
+      "who": "本人",
+      "type": "error",
+      "text": "Loading the script 'https://vercel.live/_next-live/feedback/feedback.js' violates the following Content Security Policy directive: \"script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com https://www.clarity.ms\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked.",
+      "url": "https://gacha-os-xq6pr7htk-haruharu1100s-projects.vercel.app/mypage/shop/gac_01M1PPZM230SH6Z8BNAV2YNZSG"
+    },
+    {
+      "who": "本人",
+      "type": "error",
+      "text": "Loading the script 'https://vercel.live/_next-live/feedback/feedback.js' violates the following Content Security Policy directive: \"script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com https://www.clarity.ms\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked.",
+      "url": "https://gacha-os-xq6pr7htk-haruharu1100s-projects.vercel.app/mypage/points"
+    },
+    {
+      "who": "本人",
+      "type": "error",
+      "text": "Loading the script 'https://vercel.live/_next-live/feedback/feedback.js' violates the following Content Security Policy directive: \"script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com https://www.clarity.ms\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked.",
+      "url": "https://gacha-os-xq6pr7htk-haruharu1100s-projects.vercel.app/mypage/shop/gac_01M1PPZM230SH6Z8BNAV2YNZSG"
+    },
+    {
+      "who": "2つ目のタブ",
+      "type": "error",
+      "text": "Loading the script 'https://vercel.live/_next-live/feedback/feedback.js' violates the following Content Security Policy directive: \"script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com https://www.clarity.ms\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked.",
+      "url": "https://gacha-os-xq6pr7htk-haruharu1100s-projects.vercel.app/mypage/shop/gac_01M1PPZM230SH6Z8BNAV2YNZSG"
+    },
+    {
+      "who": "本人",
+      "type": "error",
+      "text": "Loading the script 'https://vercel.live/_next-live/feedback/feedback.js' violates the following Content Security Policy directive: \"script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com https://www.clarity.ms\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked.",
+      "url": "https://gacha-os-xq6pr7htk-haruharu1100s-projects.vercel.app/mypage/shop/gac_01M1PPZM230SH6Z8BNAV2YNZSG"
+    },
+    {
+      "who": "本人",
+      "type": "error",
+      "text": "Loading the script 'https://vercel.live/_next-live/feedback/feedback.js' violates the following Content Security Policy directive: \"script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com https://www.clarity.ms\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked.",
+      "url": "https://gacha-os-xq6pr7htk-haruharu1100s-projects.vercel.app/mypage/points"
+    },
+    {
+      "who": "本人",
+      "type": "error",
+      "text": "Loading the script 'https://vercel.live/_next-live/feedback/feedback.js' violates the following Content Security Policy directive: \"script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com https://www.clarity.ms\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked.",
+      "url": "https://gacha-os-xq6pr7htk-haruharu1100s-projects.vercel.app/mypage/shop/gac_01M1PPZM230SH6Z8BNAV2YNZSG"
+    },
+    {
+      "who": "本人",
+      "type": "error",
+      "text": "Loading the script 'https://vercel.live/_next-live/feedback/feedback.js' violates the following Content Security Policy directive: \"script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com https://www.clarity.ms\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked.",
+      "url": "https://gacha-os-xq6pr7htk-haruharu1100s-projects.vercel.app/mypage/shop/gac_01M1PPZM230SH6Z8BNAV2YNZSG"
+    },
+    {
+      "who": "本人",
+      "type": "error",
+      "text": "Loading the script 'https://vercel.live/_next-live/feedback/feedback.js' violates the following Content Security Policy directive: \"script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com https://www.clarity.ms\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked.",
+      "url": "https://gacha-os-xq6pr7htk-haruharu1100s-projects.vercel.app/mypage/points"
+    },
+    {
+      "who": "本人",
+      "type": "error",
+      "text": "Loading the script 'https://vercel.live/_next-live/feedback/feedback.js' violates the following Content Security Policy directive: \"script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com https://www.clarity.ms\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked.",
+      "url": "https://gacha-os-xq6pr7htk-haruharu1100s-projects.vercel.app/mypage"
+    },
+    {
+      "who": "本人",
+      "type": "error",
+      "text": "Loading the script 'https://vercel.live/_next-live/feedback/feedback.js' violates the following Content Security Policy directive: \"script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com https://www.clarity.ms\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked.",
+      "url": "https://gacha-os-xq6pr7htk-haruharu1100s-projects.vercel.app/login"
+    },
+    {
+      "who": "本人",
+      "type": "error",
+      "text": "Loading the script 'https://vercel.live/_next-live/feedback/feedback.js' violates the following Content Security Policy directive: \"script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com https://www.clarity.ms\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked.",
+      "url": "https://gacha-os-xq6pr7htk-haruharu1100s-projects.vercel.app/login?next=%2Fmypage%2Fpoints"
+    }
+  ],
+  "badHttp": [],
+  "pageErr": [
+    {
+      "who": "本人",
+      "kind": "requestfailed",
+      "text": "GET https://vercel.live/_next-live/feedback/feedback.js : csp",
+      "url": "https://gacha-os-xq6pr7htk-haruharu1100s-projects.vercel.app/login"
+    },
+    {
+      "who": "本人",
+      "kind": "requestfailed",
+      "text": "GET https://gacha-os-xq6pr7htk-haruharu1100s-projects.vercel.app/mypage?_rsc=urzlp : net::ERR_ABORTED",
+      "url": "https://gacha-os-xq6pr7htk-haruharu1100s-projects.vercel.app/login"
+    },
+    {
+      "who": "本人",
+      "kind": "requestfailed",
+      "text": "GET https://gacha-os-xq6pr7htk-haruharu1100s-projects.vercel.app/mypage?_rsc=1hocp : net::ERR_ABORTED",
+      "url": "https://gacha-os-xq6pr7htk-haruharu1100s-projects.vercel.app/login"
+    },
+    {
+      "who": "本人",
+      "kind": "requestfailed",
+      "text": "GET https://vercel.live/_next-live/feedback/feedback.js : csp",
+      "url": "https://gacha-os-xq6pr7htk-haruharu1100s-projects.vercel.app/mypage"
+    },
+    {
+      "who": "本人",
+      "kind": "requestfailed",
+      "text": "GET https://gacha-os-xq6pr7htk-haruharu1100s-projects.vercel.app/mypage/shop?_rsc=1e0zz : net::ERR_ABORTED",
+      "url": "https://gacha-os-xq6pr7htk-haruharu1100s-projects.vercel.app/mypage"
+    },
+    {
+      "who": "本人",
+      "kind": "requestfailed",
+      "text": "GET https://gacha-os-xq6pr7htk-haruharu1100s-projects.vercel.app/mypage/shop/gac_01M1PPZM230SH6Z8BNAV2YNZSG?_rsc=18nig : net::ERR_ABORTED",
+      "url": "https://gacha-os-xq6pr7htk-haruharu1100s-projects.vercel.app/mypage/shop"
+    },
+    {
+      "who": "本人",
+      "kind": "requestfailed",
+      "text": "GET https://vercel.live/_next-live/feedback/feedback.js : csp",
+      "url": "https://gacha-os-xq6pr7htk-haruharu1100s-projects.vercel.app/mypage/shop/gac_01M1PPZM230SH6Z8BNAV2YNZSG"
+    },
+    {
+      "who": "本人",
+      "kind": "requestfailed",
+      "text": "GET https://vercel.live/_next-live/feedback/feedback.js : csp",
+      "url": "https://gacha-os-xq6pr7htk-haruharu1100s-projects.vercel.app/mypage/shop/gac_01M1PPZM230SH6Z8BNAV2YNZSG"
+    },
+    {
+      "who": "本人",
+      "kind": "requestfailed",
+      "text": "GET https://vercel.live/_next-live/feedback/feedback.js : csp",
+      "url": "https://gacha-os-xq6pr7htk-haruharu1100s-projects.vercel.app/mypage/shop/gac_01M1PPZM230SH6Z8BNAV2YNZSG"
+    },
+    {
+      "who": "本人",
+      "kind": "requestfailed",
+      "text": "GET https://vercel.live/_next-live/feedback/feedback.js : csp",
+      "url": "https://gacha-os-xq6pr7htk-haruharu1100s-projects.vercel.app/mypage/points"
+    },
+    {
+      "who": "本人",
+      "kind": "requestfailed",
+      "text": "GET https://vercel.live/_next-live/feedback/feedback.js : csp",
+      "url": "https://gacha-os-xq6pr7htk-haruharu1100s-projects.vercel.app/mypage/shop/gac_01M1PPZM230SH6Z8BNAV2YNZSG"
+    },
+    {
+      "who": "2つ目のタブ",
+      "kind": "requestfailed",
+      "text": "GET https://vercel.live/_next-live/feedback/feedback.js : csp",
+      "url": "https://gacha-os-xq6pr7htk-haruharu1100s-projects.vercel.app/mypage/shop/gac_01M1PPZM230SH6Z8BNAV2YNZSG"
+    },
+    {
+      "who": "本人",
+      "kind": "requestfailed",
+      "text": "GET https://vercel.live/_next-live/feedback/feedback.js : csp",
+      "url": "https://gacha-os-xq6pr7htk-haruharu1100s-projects.vercel.app/mypage/shop/gac_01M1PPZM230SH6Z8BNAV2YNZSG"
+    },
+    {
+      "who": "本人",
+      "kind": "requestfailed",
+      "text": "GET https://vercel.live/_next-live/feedback/feedback.js : csp",
+      "url": "https://gacha-os-xq6pr7htk-haruharu1100s-projects.vercel.app/mypage/points"
+    },
+    {
+      "who": "本人",
+      "kind": "requestfailed",
+      "text": "GET https://vercel.live/_next-live/feedback/feedback.js : csp",
+      "url": "https://gacha-os-xq6pr7htk-haruharu1100s-projects.vercel.app/mypage/shop/gac_01M1PPZM230SH6Z8BNAV2YNZSG"
+    },
+    {
+      "who": "本人",
+      "kind": "requestfailed",
+      "text": "GET https://vercel.live/_next-live/feedback/feedback.js : csp",
+      "url": "https://gacha-os-xq6pr7htk-haruharu1100s-projects.vercel.app/mypage/shop/gac_01M1PPZM230SH6Z8BNAV2YNZSG"
+    },
+    {
+      "who": "本人",
+      "kind": "requestfailed",
+      "text": "GET https://vercel.live/_next-live/feedback/feedback.js : csp",
+      "url": "https://gacha-os-xq6pr7htk-haruharu1100s-projects.vercel.app/mypage/points"
+    },
+    {
+      "who": "本人",
+      "kind": "requestfailed",
+      "text": "GET https://vercel.live/_next-live/feedback/feedback.js : csp",
+      "url": "https://gacha-os-xq6pr7htk-haruharu1100s-projects.vercel.app/mypage"
+    },
+    {
+      "who": "本人",
+      "kind": "requestfailed",
+      "text": "GET https://vercel.live/_next-live/feedback/feedback.js : csp",
+      "url": "https://gacha-os-xq6pr7htk-haruharu1100s-projects.vercel.app/login"
+    },
+    {
+      "who": "本人",
+      "kind": "requestfailed",
+      "text": "GET https://vercel.live/_next-live/feedback/feedback.js : csp",
+      "url": "https://gacha-os-xq6pr7htk-haruharu1100s-projects.vercel.app/login?next=%2Fmypage%2Fpoints"
+    }
+  ]
+}

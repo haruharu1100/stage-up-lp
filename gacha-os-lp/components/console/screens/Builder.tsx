@@ -40,6 +40,19 @@
  *   外部のAIには接続していません（完全Sandboxのため）。
  *   組み立ての手順と、出てくる数字の性質は本番と同じにしてあります。
  *   ただし「登録」だけは本物です。押すと本当に保存されます。
+ *
+ * ═══════════════════════════════════════════════
+ * ★商品の写真について
+ * ═══════════════════════════════════════════════
+ *
+ *   お客様の売り場に出るのは、ここで預けた写真だけです。
+ *   タイトルから絵を描いて商品の顔にすることはしません。
+ *   お客様が払っているのは、絵ではなく現物に対してだからです。
+ *   預けていない賞は、売り場で「画像未登録」と出ます。
+ *
+ *   ★写真は spec の中に入れません。
+ *     spec の指紋が変わると、写真を差し替えただけで
+ *     販売中のガチャが「未検証」に戻ります。
  */
 
 "use client";
@@ -47,10 +60,104 @@
 import { useMemo, useState } from "react";
 import { backtestReport, designedRtp, verdictLabel, type GachaSpec } from "@/lib/backtest";
 import { createGachaDraft } from "@/lib/console/liveGachas";
+import { uploadImage, type ImageKind } from "@/lib/console/liveImages";
 import { STRENGTH_LABEL, buildSpec, type Strength } from "@/lib/console/spec";
 import { BACKTEST_SEED, can, type ConsoleState } from "@/lib/console/state";
 import type { MenuKey } from "../menu";
 import { Badge, Btn, Card, DemoNote, Field, KV, RowCard, Rows, Table, Td, WhatIsThis, inputClass } from "../ui";
+
+/**
+ * 写真を1枚あずける枠。
+ *
+ * ★断られたときに、前の写真を消さないこと。
+ *   差し替えようとして1枚弾かれただけで、
+ *   さっき上げた写真まで消えると、最初からやり直しになります。
+ *
+ * ★断られた理由を、そのまま出すこと。
+ *   「失敗しました」だけだと、同じ写真を何度も送り直します。
+ */
+function PhotoPicker({
+  label,
+  note,
+  kind,
+  imageId,
+  onPicked,
+}: {
+  label: string;
+  note?: string;
+  kind: ImageKind;
+  imageId: string | null;
+  onPicked: (id: string | null) => void;
+}) {
+  const [okurichuu, setOkurichuu] = useState(false);
+  const [kotowari, setKotowari] = useState<string | null>(null);
+
+  const erabu = async (f: File | null) => {
+    if (!f) return;
+    setOkurichuu(true);
+    setKotowari(null);
+    const r = await uploadImage(f, kind);
+    setOkurichuu(false);
+    if (!r.ok) {
+      setKotowari(r.message);
+      return;
+    }
+    onPicked(r.imageId);
+  };
+
+  return (
+    <div className="rounded-xl border border-edge2 bg-paper2 px-4 py-3">
+      <div className="flex flex-wrap items-center gap-3">
+        {/* いま預かっている写真。★預かっていないときに絵を描かないこと */}
+        {imageId ? (
+          /* eslint-disable-next-line @next/next/no-img-element */
+          <img
+            src={`/api/images/${imageId}`}
+            alt={label}
+            className="h-16 w-16 shrink-0 rounded-lg border border-edge object-cover"
+          />
+        ) : (
+          <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg border border-dashed border-edge bg-slate-100 text-center text-[0.65rem] font-medium text-slate-500">
+            画像未登録
+          </span>
+        )}
+
+        <div className="min-w-0 flex-1">
+          <p className="text-note font-bold text-slate">{label}</p>
+          {note && <p className="mt-0.5 text-label leading-[1.8] text-slate3">{note}</p>}
+
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <label className="inline-flex cursor-pointer items-center rounded-lg border border-edge bg-white px-3 py-1.5 text-label font-medium text-slate2 hover:bg-paper2">
+              {okurichuu ? "送っています…" : imageId ? "写真を差し替える" : "写真を選ぶ"}
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                disabled={okurichuu}
+                onChange={(e) => {
+                  void erabu(e.target.files?.[0] ?? null);
+                  /* 同じファイルをもう一度選べるようにしておく */
+                  e.target.value = "";
+                }}
+              />
+            </label>
+            {imageId && (
+              <Btn kind="ghost" onClick={() => onPicked(null)}>
+                取り消す
+              </Btn>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {kotowari && (
+        <p className="mt-2 rounded-lg border border-warn/35 bg-warn/10 px-3 py-2 text-label leading-[1.85] text-warn-ink">
+          {kotowari}
+        </p>
+      )}
+    </div>
+  );
+}
 
 /** 「500円・1000口で」のような文から、数字を拾う */
 function readPrompt(text: string): { price?: number; total?: number; strength?: Strength } {
@@ -95,6 +202,16 @@ export default function Builder({
   /** 断られた理由。★「登録できませんでした」で終わらせない */
   const [shippai, setShippai] = useState<string | null>(null);
 
+  /**
+   * 表紙の写真のID。
+   * ★先に /api/console/images へ預けて、受け取ったIDだけを入れること。
+   *   ここでファイルそのものを持ったまま登録すると、
+   *   写真が1枚弾かれただけでガチャの登録ごとやり直しになります。
+   */
+  const [coverImageId, setCoverImageId] = useState<string | null>(null);
+  /** 等級ごとの写真のID（S / A / B …） */
+  const [prizeImages, setPrizeImages] = useState<Record<string, string>>({});
+
   const mayEdit = s.me ? can(s.me.role, "gacha.edit") : false;
 
   const generate = (nextStrength = strength, nextTarget = target, note?: string) => {
@@ -106,7 +223,22 @@ export default function Builder({
     setTotal(t);
     setStrength(st);
     setTarget(nextTarget);
-    setSpec(buildSpec("AIが組んだ案", p, t, st, nextTarget));
+    const atarashii = buildSpec("AIが組んだ案", p, t, st, nextTarget);
+    setSpec(atarashii);
+
+    /* 組み直しても、預けた写真はそのまま残します。
+       ★ただし、無くなった等級ぶんは外すこと。
+         S賞が消えたのに S賞の写真だけ残ると、
+         どこにも出ない写真をサーバーへ送ることになります。 */
+    const nokoru = new Set(atarashii.prizes.map((pr) => pr.grade));
+    setPrizeImages((prev) => {
+      const next: Record<string, string> = {};
+      for (const [grade, id] of Object.entries(prev)) {
+        if (nokoru.has(grade)) next[grade] = id;
+      }
+      return next;
+    });
+
     /* 組み直したら、それは別の案です。登録済みの印を外します */
     setSavedId(null);
     setShippai(null);
@@ -134,6 +266,18 @@ export default function Builder({
   const canSave =
     mayEdit && !!spec && title.trim().length > 0 && !savedId && !okurichuu;
 
+  /**
+   * 写真がまだ無い賞の数。
+   *
+   * ★これで登録を止めないこと。
+   *   写真が揃うのは、たいてい商品が届いたあとです。
+   *   ここで止めると、先に組んでおくことができなくなります。
+   *   出るのは注意書きだけにして、判断は運営に残します。
+   */
+  const mikitouroku = spec
+    ? spec.prizes.filter((p) => !prizeImages[p.grade]).length
+    : 0;
+
   const save = async () => {
     if (!spec || !canSave) return;
     const namae = title.trim();
@@ -143,7 +287,15 @@ export default function Builder({
     /* ★名前は、いま入力されているものに合わせて送ること。
          案を作ったときの名前のまま送ると、
          画面に出ている名前と、保存された名前が違うものになります。 */
-    const r = await createGachaDraft({ title: namae, spec: { ...spec, name: namae } });
+    const r = await createGachaDraft({
+      title: namae,
+      spec: { ...spec, name: namae },
+      /* ★写真は spec の外へ渡すこと。
+           spec に混ぜると指紋が変わり、写真を差し替えただけで
+           販売中のガチャが「未検証」に戻ります。 */
+      coverImageId,
+      prizeImages,
+    });
     setOkurichuu(false);
 
     if (!r.ok) {
@@ -401,6 +553,61 @@ export default function Builder({
               <br />
               ★AIが出した案でも、検証を飛ばして公開することはできません。
             </p>
+          </Card>
+
+          {/* ── 商品の写真 ── */}
+          <Card
+            title="商品の写真"
+            note="お客様の売り場に出るのは、ここで預けた写真だけです。"
+          >
+            {!mayEdit ? (
+              <p className="text-note leading-[1.9] text-warn-ink">
+                いまの権限では写真を預けられません。
+              </p>
+            ) : (
+              <div className="space-y-3">
+                <p className="text-note leading-[1.9] text-slate3">
+                  タイトルから絵を描いて商品の顔にすることはしません。
+                  お客様が払っているのは、絵ではなく現物に対してだからです。
+                  預けていない賞は、売り場で
+                  <strong className="font-bold text-slate">「画像未登録」</strong>
+                  と出ます。あとから足すこともできます。
+                </p>
+
+                <PhotoPicker
+                  label="表紙の写真"
+                  note="一覧と詳細で、このガチャの顔になります。"
+                  kind="GACHA_COVER"
+                  imageId={coverImageId}
+                  onPicked={setCoverImageId}
+                />
+
+                {spec.prizes.map((p) => (
+                  <PhotoPicker
+                    key={p.grade}
+                    label={`${p.grade}賞の写真`}
+                    note={`${p.count.toLocaleString()}本 ／ 1本あたり ${p.value.toLocaleString()}円`}
+                    kind="PRIZE"
+                    imageId={prizeImages[p.grade] ?? null}
+                    onPicked={(id) =>
+                      setPrizeImages((prev) => {
+                        const next = { ...prev };
+                        if (id) next[p.grade] = id;
+                        else delete next[p.grade];
+                        return next;
+                      })
+                    }
+                  />
+                ))}
+
+                {mikitouroku > 0 && (
+                  <p className="rounded-xl border border-edge2 bg-paper2 px-4 py-3 text-note leading-[1.9] text-slate2">
+                    写真がまだ無い賞が<span className="num font-bold">{mikitouroku}</span>件あります。
+                    このまま登録もできます。その賞は売り場で「画像未登録」と出ます。
+                  </p>
+                )}
+              </div>
+            )}
           </Card>
 
           {/* ── 下書きとして登録する ── */}

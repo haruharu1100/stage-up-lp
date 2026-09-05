@@ -8,12 +8,22 @@
  *   「中身も分けました」は、表の設計を見ないと言えません。
  *   ここで出るのは、実際に動いているデータベースの設計そのものです。
  *
+ * ★本番へは向けません。
+ *   ここで出るのは設計だけで、お客様の中身は出ません。
+ *   それでも止めます。理由は2つです。
+ *     ・設計を見る道具は、明日には中身を見る道具になります
+ *       （SELECT を1つ足すだけで、そうなります）
+ *     ・「この道具は例外」を1つ作ると、次からは理由なく増えます
+ *
  * 使い方：
  *   DATABASE_URL="file:.data/dev.db" npx tsx scripts/peek-schema.mjs
  */
 
 import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { honbanNiMukenai } from "./lib/db-env-guard.mjs";
+
+honbanNiMukenai("注文と発送の表の設計（スキーマ）を書き出す");
 
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 const { db } = await import(`${ROOT}/lib/server/db.ts`);

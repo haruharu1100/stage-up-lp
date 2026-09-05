@@ -51,6 +51,7 @@ export type MenuKey =
   | "customers"
   | "analytics"
   | "points"
+  | "pointSale"
   | "orders"
   | "shipping"
   | "support"
@@ -75,6 +76,7 @@ export type IconKey =
   | "people"
   | "chart"
   | "coin"
+  | "card"
   | "inbox"
   | "truck"
   | "chat"
@@ -226,6 +228,28 @@ export const MENU: MenuItem[] = [
     need: "point.view",
   },
   {
+    key: "pointSale",
+    /*
+     * ★「ポイント管理」と紛らわしい名前にしないこと。
+     *   この2つは、扱っているものが違います。
+     *
+     *       ポイント管理 … すでに持っている残高を直す（承認が要る）
+     *       ポイント販売 … これから売る商品の値段を決める
+     *
+     *   取り違えると、値段を直すつもりで残高を直します。
+     *   だから label も note も、はっきり別のことを書きます。
+     */
+    label: "ポイント販売",
+    note: "売る金額と付与ポイントを決める",
+    group: "顧客・運営",
+    icon: "card",
+    keywords: [
+      "ポイント販売", "購入", "こうにゅう", "課金", "決済", "payment",
+      "チャージ", "入金", "値段", "料金", "price", "商品", "webhook",
+    ],
+    need: "point.view",
+  },
+  {
     key: "orders",
     label: "発送依頼",
     note: "お客様からの依頼一覧",
@@ -334,7 +358,7 @@ export const MENU: MenuItem[] = [
    画面ごとのURL
    ══════════════════════════════════════════════
 
-   ★21画面すべてに、それぞれのURLを持たせること。
+   ★22画面すべてに、それぞれのURLを持たせること。
 
      1本のURLで中身だけ差し替えると、次のことが全部できません。
 
@@ -363,6 +387,7 @@ export const SLUG: Record<MenuKey, string> = {
   customers: "customers",
   analytics: "analytics",
   points: "points",
+  pointSale: "point-sale",
   orders: "orders",
   shipping: "shipping",
   support: "support",

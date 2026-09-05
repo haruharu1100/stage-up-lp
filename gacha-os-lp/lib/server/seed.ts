@@ -218,7 +218,14 @@ export async function createAdmin(input: {
       displayNo("AD", input.no),
       input.email,
       input.name,
-      input.role ?? "ADMIN",
+      /* ★ここの既定値に "ADMIN" と書かないこと。
+           役割の一覧に "ADMIN" はありません（VIEWER／SUPPORT／OPERATOR／
+           FINANCE／SECURITY／SUPER_ADMIN の6つです）。
+           一覧に無い名前を入れると、ログインはできるのに
+           画面のデータだけが 403 で出てこない、という直しにくい形で止まります。
+           実際にこれで止まりました（2026-09-05）。
+           分からないときは、いちばん権限の小さい VIEWER にします。 */
+      input.role ?? "VIEWER",
       input.passwordHash ?? null,
       new Date().toISOString(),
     ],

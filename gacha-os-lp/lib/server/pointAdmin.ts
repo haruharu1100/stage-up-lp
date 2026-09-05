@@ -213,6 +213,13 @@ const KIND_LABEL: Record<string, string> = {
   ADMIN_ADJUST: "運営による調整",
   CAMPAIGN: "キャンペーン付与",
   REFUND: "返金",
+  /* ★お客様が自分で買った分は、運営が配った分と必ず区別すること。
+       同じ「入金」にまとめると、
+       「実際にお金が入った分」と「販促で配った分」が
+       1つの数字になります。売上が水増しされて見えます */
+  PURCHASE: "お客様のポイント購入",
+  PURCHASE_BONUS: "ポイント購入のおまけ",
+  PURCHASE_REFUND: "ポイント購入の返金",
 };
 
 export function kindLabelOf(kind: string): string {
@@ -227,6 +234,9 @@ function linkOf(kind: string, ref: string | null): LedgerLine["link"] {
   if (kind === "PRIZE_EXCHANGE") return { kind: "PRIZE", id: ref, label: null };
   if (kind === "ADMIN_ADJUST")
     return { kind: "ADJUSTMENT", id: ref, label: null };
+  /* ポイント購入の ref は、注文番号（point_orders.id）です。
+     ★注文の行き先はまだ作っていないので OTHER のままにします。
+       「決済にとぶ」ように見せて実は何も無い、を作らないためです */
   return { kind: "OTHER", id: ref, label: null };
 }
 
