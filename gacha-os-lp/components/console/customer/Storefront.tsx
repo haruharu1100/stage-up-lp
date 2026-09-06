@@ -777,6 +777,7 @@ export function DrawTheater({
   onAgain,
   onPrizes,
   onClose,
+  onBuyPoints,
   canAgain,
 }: {
   records: TheaterRecord[];
@@ -784,6 +785,16 @@ export function DrawTheater({
   onAgain: () => void;
   onPrizes: () => void;
   onClose: () => void;
+  /**
+   * 残高が足りなくて、もう一度引けないときの行き先。
+   *
+   * ★渡さなくても動きます（そのときは、ただ押せないだけ）。
+   *   ただし本物の売り場では、必ず渡してください。
+   *   結果を見た直後は、いちばんポイントが要る場面です。
+   *   ここで買い足す場所が無いと、
+   *   お客様はヘッダーを探しに行き、たいてい途中でやめます。
+   */
+  onBuyPoints?: () => void;
   canAgain: boolean;
 }) {
   const [lite, setLite] = useState(false);
@@ -1025,34 +1036,75 @@ export function DrawTheater({
             />
           </dl>
 
+          {/* ═══ ここから先の操作 ═══
+              ★大きいボタンは、いつも1つだけにすること。
+                同じ大きさ・同じ色のボタンを2つ並べると、
+                お客様は、どちらが本筋なのかを考えます。
+                考えている間に、閉じられます。
+
+              ★1番目は「もう一度引く」。ただし残高が足りないときは、
+                そこを「ポイントを購入する」に入れ替えます。
+                足りないのに「もう一度引く」を大きく出して
+                押させると、押してから断ることになります。
+                断られた回数だけ、お店の信用が減ります。
+
+              ★煽らないこと。
+                「今だけ」「あと○人」のような、
+                急がせる言葉をここに置かないこと。 */}
           <div className="mt-5 space-y-2">
-            <button
-              type="button"
-              onClick={onPrizes}
-              className="w-full rounded-2xl px-4 py-4 text-[0.98rem] font-bold"
-              style={{ background: SHOP_ACCENT, color: "#06101F" }}
-            >
-              獲得商品を見る（発送 / ポイント交換）
-            </button>
-            <div className="grid grid-cols-2 gap-2">
+            {canAgain ? (
               <button
                 type="button"
                 onClick={onAgain}
-                disabled={!canAgain}
-                className="rounded-2xl px-4 py-3.5 text-[0.9rem] font-bold text-white disabled:opacity-35"
+                className="w-full rounded-2xl px-4 py-4 text-[0.98rem] font-bold"
+                style={{ background: SHOP_ACCENT, color: "#06101F" }}
+              >
+                もう一度引く
+              </button>
+            ) : onBuyPoints ? (
+              <>
+                <button
+                  type="button"
+                  onClick={onBuyPoints}
+                  className="w-full rounded-2xl px-4 py-4 text-[0.98rem] font-bold"
+                  style={{ background: SHOP_ACCENT, color: "#06101F" }}
+                >
+                  ポイントを購入して、もう一度引く
+                </button>
+                {/* ★なぜ引けないのかを、必ず書くこと。
+                      理由が無いまま購入だけ勧めると、売り込みに見えます */}
+                <p className="text-center text-[0.74rem] leading-[1.9] text-white/40">
+                  いまの残高では、このガチャをもう一度引けません。
+                </p>
+              </>
+            ) : (
+              <button
+                type="button"
+                disabled
+                className="w-full rounded-2xl px-4 py-4 text-[0.98rem] font-bold text-white opacity-35"
                 style={{ background: "rgba(255,255,255,0.07)", border: `1px solid ${SHOP_EDGE}` }}
               >
                 もう一度引く
               </button>
-              <button
-                type="button"
-                onClick={onClose}
-                className="rounded-2xl px-4 py-3.5 text-[0.9rem] font-bold text-white/75"
-                style={{ background: "rgba(255,255,255,0.07)", border: `1px solid ${SHOP_EDGE}` }}
-              >
-                閉じる
-              </button>
-            </div>
+            )}
+
+            <button
+              type="button"
+              onClick={onPrizes}
+              className="w-full rounded-2xl px-4 py-3.5 text-[0.9rem] font-bold text-white"
+              style={{ background: "rgba(255,255,255,0.07)", border: `1px solid ${SHOP_EDGE}` }}
+            >
+              獲得商品を見る（発送 / ポイント交換）
+            </button>
+
+            <button
+              type="button"
+              onClick={onClose}
+              className="w-full rounded-2xl px-4 py-3 text-[0.86rem] font-bold text-white/60"
+              style={{ border: `1px solid ${SHOP_EDGE}` }}
+            >
+              閉じる
+            </button>
           </div>
 
           <label className="mt-5 flex items-center justify-center gap-2 text-[0.78rem] font-bold text-white/55">
@@ -1065,11 +1117,27 @@ export function DrawTheater({
             次からは、演出なしですぐ結果を出す
           </label>
 
-          <p className="mt-4 text-center text-[0.7rem] leading-[1.9] text-white/30">
-            これはデモです。DEMO DATA（架空のデータ）で動いています。
-            <br />
-            実際の決済・発送・メール送信は行いません。
-          </p>
+          {/* ═══════════════════════════════════════════
+              ★この断り書きを、本物の売り場に出さないこと
+              ═══════════════════════════════════════════
+
+              以前ここは、どこから開いても必ず出る作りでした。
+              つまり、本当にお金を払って引いたお客様の結果画面にも
+              「これはデモです」と出ていました。
+              自分が払った分が無かったことになる、と読めます。
+
+              見本の店だけが sampleKind を渡します
+              （渡していないことは scripts/check-real-art.mjs が見張ります）。
+              ですので、その有無で出し分けます。
+              ★ここに別の合図（環境変数など）を持ち込まないこと。
+                本物の売り場に出るかどうかが、また分からなくなります。 */}
+          {sampleKind && (
+            <p className="mt-4 text-center text-[0.7rem] leading-[1.9] text-white/30">
+              これはデモです。DEMO DATA（架空のデータ）で動いています。
+              <br />
+              実際の決済・発送・メール送信は行いません。
+            </p>
+          )}
         </div>
       )}
     </div>

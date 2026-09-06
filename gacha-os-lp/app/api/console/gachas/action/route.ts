@@ -55,7 +55,14 @@ function statusOf(code: GachaAdminCode): number {
     code === "BAD_STATUS" ||
     code === "NOT_VERIFIED" ||
     code === "SPEC_CHANGED" ||
-    code === "VERDICT_DANGER"
+    code === "VERDICT_DANGER" ||
+    /* お店の設定がそろっていない／このガチャに景品の写真が無い。
+       ★これも「入力の間違い」ではありません。
+         直す場所が別の画面にある、という食い違いです。
+         400 で返すと、画面は「入力し直してください」と出してしまい、
+         お店はガチャの設定を延々と見直すことになります。 */
+    code === "NOT_READY" ||
+    code === "NO_ART"
   ) {
     return 409;
   }

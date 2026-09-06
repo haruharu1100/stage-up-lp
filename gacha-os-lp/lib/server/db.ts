@@ -1735,6 +1735,136 @@ const M018: string[] = [
   `ALTER TABLE customers ADD COLUMN review_at TEXT`,
 ];
 
+/**
+ * M019 — お店ごとの「看板」と「法定ページ」、そしてガチャの棚（カテゴリ）。
+ *
+ * ═══════════════════════════════════════════════════════
+ * ★なぜ、この段が要るのか
+ * ═══════════════════════════════════════════════════════
+ *
+ *   いまのシステムは「こちらが毎回設定してあげる受託システム」です。
+ *   会社名も、特商法の表記も、規約も、コードの中にありません。
+ *   ですから、2社目に売った瞬間に、こちらの手が必要になります。
+ *
+ *   ★ここで絶対にやってはいけないのは、
+ *     「AI GACHA OS 運営会社の情報」を既定値として埋めることです。
+ *
+ *     埋めると、導入店舗が設定を忘れたまま公開できてしまいます。
+ *     そのとき、そのお店の特商法ページには、
+ *     ★お店ではなく、こちらの会社名と住所が出ます。
+ *     お客様は、こちらへ返品を求めてきます。
+ *
+ *   ですので、この段の列は **すべて NULL 可・既定値なし** です。
+ *   埋まっていないものは「未設定」と表示し、
+ *   埋まっていなければ公開させない（第7の関門）という形にします。
+ *
+ * ═══════════════════════════════════════════════════════
+ * ★カテゴリを「表」にした理由（コードに名前を書かない）
+ * ═══════════════════════════════════════════════════════
+ *
+ *   「ポケモン／ワンピース／スニーカー／ブランド／その他」を
+ *   コードの配列で持つと、6つ目を足すのに、こちらの作業が要ります。
+ *   それでは、また受託システムに戻ります。
+ *
+ *   ★1つのガチャに複数のカテゴリを付けられる形（連結表）にしました。
+ *
+ *     理由は、あとから戻せないからです。
+ *     「1ガチャ＝1カテゴリ」で作ってしまうと、
+ *     「ポケモン」かつ「高額」に置きたくなった日に、段を足す話になります。
+ *     逆に、複数を持てる形で作っておけば、
+ *     お店が1つしか付けなければ、それは1カテゴリの運用そのものです。
+ *
+ *     つまり **複数可のほうが、狭い運用も含んでいます。**
+ *     画面の側は当面「1つ選ぶ」で作っても構いません。
+ */
+const M019: string[] = [
+  /* ①お店の看板と、法定ページの中身。お店ごとに1行。
+       ★どの列にも DEFAULT を付けないこと。
+         「空欄」と「決めた結果の空欄」を、見分けられなくなります。 */
+  `CREATE TABLE IF NOT EXISTS tenant_settings (
+     tenant_id          TEXT PRIMARY KEY,
+
+     /* ── 看板（見た目） ── */
+     shop_name          TEXT,
+     logo_image_id      TEXT,
+     brand_color        TEXT,
+
+     /* ── 運営法人（特商法の「販売業者」欄でもある） ── */
+     legal_name         TEXT,
+     legal_kana         TEXT,
+     representative     TEXT,
+     postal_code        TEXT,
+     address            TEXT,
+     phone              TEXT,
+     contact_email      TEXT,
+     contact_hours      TEXT,
+     contact_note       TEXT,
+     /* 古物商許可番号。中古品を扱わないお店もあるので、必須にしない */
+     antique_license    TEXT,
+
+     /* ── 特定商取引法に基づく表記（項目ごとに持つ） ──
+        ★1つの大きな文章欄にしないこと。
+          文章1つにすると、どの項目が抜けているかを機械で数えられません。
+          数えられないものは、公開前に止められません。 */
+     price_note         TEXT,
+     extra_fee_note     TEXT,
+     payment_method     TEXT,
+     payment_timing     TEXT,
+     delivery_time      TEXT,
+     returns_note       TEXT,
+
+     /* ── 長い文章のページ ── */
+     terms_text         TEXT,
+     privacy_text       TEXT,
+
+     updated_at         TEXT,
+     updated_by         TEXT
+   )`,
+
+  /* ②よくある質問。行で持ちます（お店が自由に足せるように） */
+  `CREATE TABLE IF NOT EXISTS tenant_faqs (
+     id         TEXT PRIMARY KEY,
+     tenant_id  TEXT NOT NULL,
+     sort_order INTEGER NOT NULL DEFAULT 0,
+     question   TEXT NOT NULL,
+     answer     TEXT NOT NULL,
+     updated_at TEXT NOT NULL
+   )`,
+
+  `CREATE INDEX IF NOT EXISTS ix_tenant_faqs
+     ON tenant_faqs (tenant_id, sort_order)`,
+
+  /* ③ガチャの棚（カテゴリ）。名前はお店が決めます */
+  `CREATE TABLE IF NOT EXISTS gacha_categories (
+     id         TEXT PRIMARY KEY,
+     tenant_id  TEXT NOT NULL,
+     name       TEXT NOT NULL,
+     sort_order INTEGER NOT NULL DEFAULT 0,
+     created_at TEXT NOT NULL
+   )`,
+
+  /* ★同じ名前の棚を2つ作れないようにする。
+       「ポケモン」と「ポケモン」が並ぶと、お客様は
+       どちらを見ればよいのか分かりません。 */
+  `CREATE UNIQUE INDEX IF NOT EXISTS ux_gacha_category_name
+     ON gacha_categories (tenant_id, name)`,
+
+  `CREATE INDEX IF NOT EXISTS ix_gacha_categories
+     ON gacha_categories (tenant_id, sort_order)`,
+
+  /* ④ガチャと棚のつなぎ。1つのガチャが複数の棚に入れます */
+  `CREATE TABLE IF NOT EXISTS gacha_category_links (
+     tenant_id   TEXT NOT NULL,
+     gacha_id    TEXT NOT NULL,
+     category_id TEXT NOT NULL,
+     created_at  TEXT NOT NULL,
+     PRIMARY KEY (gacha_id, category_id)
+   )`,
+
+  `CREATE INDEX IF NOT EXISTS ix_gacha_category_by_cat
+     ON gacha_category_links (tenant_id, category_id)`,
+];
+
 const MIGRATIONS: Migration[] = [
   { name: "001_initial", sql: M001 },
   { name: "002_tenant_tables", sql: M002 },
@@ -1754,6 +1884,7 @@ const MIGRATIONS: Migration[] = [
   { name: "016_product_images", sql: M016 },
   { name: "017_point_purchase", sql: M017 },
   { name: "018_image_replace_reversal", sql: M018 },
+  { name: "019_tenant_settings_categories", sql: M019 },
 ];
 
 /** どの段まで済んだかを覚えておく表 */

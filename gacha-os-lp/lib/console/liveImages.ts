@@ -32,8 +32,8 @@
 
 import { postHeadersForUpload } from "@/lib/csrf";
 
-/** この写真を、どこに使うか */
-export type ImageKind = "GACHA_COVER" | "PRIZE";
+/** この写真を、どこに使うか。★サーバー側 lib/server/images.ts と揃えること */
+export type ImageKind = "GACHA_COVER" | "PRIZE" | "SHOP_LOGO";
 
 export type UploadResult =
   | { ok: true; imageId: string; url: string; bytes: number }

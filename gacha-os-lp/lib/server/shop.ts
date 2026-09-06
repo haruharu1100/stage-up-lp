@@ -42,6 +42,7 @@
  */
 
 import { db } from "./db";
+import { getCategoriesForGachas } from "./gachaCategories";
 
 type Row = Record<string, unknown>;
 
@@ -88,7 +89,30 @@ export type ShopItem = {
    *   空欄は、それらしい嘘よりずっと安全です。
    */
   coverImageId: string | null;
+
+  /**
+   * この1本が入っている棚（カテゴリ）のID。
+   *
+   * ═══════════════════════════════════════════════════════
+   * ★棚の名前を、こちらのコードに書かないこと
+   * ═══════════════════════════════════════════════════════
+   *
+   *   「ポケモン／ワンピース／スニーカー」を書いた瞬間、
+   *   時計を売るお店が来たときに、こちらへ連絡が来ます。
+   *   そのたびに直して出し直すのなら、それは商品ではなく受託です。
+   *
+   *   棚は必ずDB（gacha_categories）にあります。
+   *   ここが返すのはIDだけで、名前は categories の側にあります。
+   *
+   * ★棚に入っていないガチャがあってよいこと。
+   *   「必ずどれかに入れる」にすると、棚を作っていないお店は
+   *   1本も並べられなくなります。空配列でそのまま並びます。
+   */
+  categoryIds: string[];
 };
+
+/** 売り場の絞り込みに出す棚。★名前はDBの値をそのまま使います */
+export type ShopCategory = { id: string; name: string; count: number };
 
 /** 1本ぶんの詳しい中身 */
 export type ShopDetail = ShopItem & {
@@ -172,6 +196,9 @@ export async function listShopGachas(tenantId: string): Promise<ShopItem[]> {
     betsu.set(key, list);
   }
 
+  /* 棚も1回でまとめて読む。★1本ずつ読みに行かないこと */
+  const tana = await getCategoriesForGachas(tenantId, ids);
+
   return rows.map((r) => {
     const id = str(r.id);
     const { top, sLeft } = medama(betsu.get(id) ?? []);
@@ -185,8 +212,49 @@ export async function listShopGachas(tenantId: string): Promise<ShopItem[]> {
       top,
       sLeft,
       coverImageId: strOrNull(r.cover_image_id),
+      categoryIds: tana.get(id) ?? [],
     };
   });
+}
+
+/**
+ * 売り場の絞り込みに出す棚。
+ *
+ * ═══════════════════════════════════════════════════════
+ * ★中身が1本も無い棚を、お客様に出さないこと
+ * ═══════════════════════════════════════════════════════
+ *
+ *   お店は先に棚だけ作ります（「スニーカー」「時計」…）。
+ *   その棚をそのまま並べると、押した先が毎回「0件」になります。
+ *   お客様には、品切ればかりの店に見えます。
+ *
+ *   ですので、公開中のガチャが1本以上入っている棚だけを返します。
+ *   ★数えるのは PUBLISHED だけ。下書きや停止中を数に入れると、
+ *     「3本」と書いてある棚を開いて1本しか無い、が起きます。
+ */
+export async function listShopCategories(
+  tenantId: string,
+): Promise<ShopCategory[]> {
+  const res = await db().execute({
+    sql: `SELECT c.id, c.name, COUNT(g.id) AS n
+            FROM gacha_categories c
+            JOIN gacha_category_links l
+              ON l.tenant_id = c.tenant_id AND l.category_id = c.id
+            JOIN gachas g
+              ON g.tenant_id = c.tenant_id AND g.id = l.gacha_id
+             AND g.status = 'PUBLISHED'
+           WHERE c.tenant_id = ?
+           GROUP BY c.id, c.name, c.sort_order, c.created_at
+           HAVING COUNT(g.id) > 0
+           ORDER BY c.sort_order ASC, c.created_at ASC`,
+    args: [tenantId],
+  });
+
+  return (res.rows as Row[]).map((r) => ({
+    id: str(r.id),
+    name: str(r.name),
+    count: num(r.n),
+  }));
 }
 
 /**
@@ -230,6 +298,7 @@ export async function shopGachaDetail(
   }));
 
   const { top, sLeft } = medama(prizes);
+  const tana = await getCategoriesForGachas(tenantId, [gachaId]);
 
   return {
     id: str(row.id),
@@ -241,6 +310,7 @@ export async function shopGachaDetail(
     top,
     sLeft,
     coverImageId: strOrNull(row.cover_image_id),
+    categoryIds: tana.get(gachaId) ?? [],
     prizes,
   };
 }

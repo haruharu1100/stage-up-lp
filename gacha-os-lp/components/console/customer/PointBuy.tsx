@@ -47,7 +47,10 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { SHOP_BG, SHOP_EDGE, SHOP_ACCENT, SHOP_SURFACE } from "./Storefront";
+import { SHOP_EDGE, SHOP_ACCENT, SHOP_SURFACE } from "./Storefront";
+/* 頭（ヘッダー）と足（フッター）は Chrome.tsx の1か所だけ。
+   ★この画面で作り直さないこと。理由は下の Shell に書いてあります。 */
+import { CustomerShell } from "./Chrome";
 import { Back, H, Note, Empty, BigBtn, Panel } from "./ui";
 import {
   useCustomerPointProducts,
@@ -71,12 +74,15 @@ function nichiji(v: string | null): string {
   return `${d.getFullYear()}/${p(d.getMonth() + 1)}/${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
 }
 
+/**
+ * 外枠。
+ *
+ * ★ここで独自の外枠を組み立て直さないこと（2026-09-06）。
+ *   ヘッダーとフッターは Chrome.tsx の1か所にまとめてあります。
+ *   画面ごとに作ると、出る画面と出ない画面が混ざります。
+ */
 function Shell({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="min-h-[100dvh]" style={{ background: SHOP_BG }}>
-      <div className="mx-auto w-full max-w-[560px] px-4 pb-16 pt-6">{children}</div>
-    </div>
-  );
+  return <CustomerShell>{children}</CustomerShell>;
 }
 
 function Unreadable<T>({ state }: { state: Live<T> }) {

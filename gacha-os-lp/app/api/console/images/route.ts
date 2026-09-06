@@ -40,7 +40,7 @@ import {
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-const KINDS: ImageKind[] = ["GACHA_COVER", "PRIZE"];
+const KINDS: ImageKind[] = ["GACHA_COVER", "PRIZE", "SHOP_LOGO"];
 
 export async function POST(req: NextRequest) {
   /* ★「ガチャを直す権限」で守ること。

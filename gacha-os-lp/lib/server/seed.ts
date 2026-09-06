@@ -28,6 +28,116 @@ export async function createTenant(input: {
 }
 
 /**
+ * 試験用の会社を「販売開始できる状態」にする。
+ *
+ * ═══════════════════════════════════════════════
+ * ★これは試験と見本のためだけの道具です
+ * ═══════════════════════════════════════════════
+ *
+ *   本物のお店の設定を、こちらが勝手に埋めることは絶対にしません。
+ *   埋めてしまうと、そのお店の特定商取引法のページに、
+ *   ★お店ではない会社の名前と住所が出ます。
+ *   お客様は、そこへ返品を求めます。
+ *
+ *   ですので、ここで入れる値は、ひと目で偽物と分かる文字にします。
+ *   （「試験用」で始めます。本物の住所や電話番号を書きません。）
+ *
+ *   ★この関数を、お店が使う画面や本番の処理から呼ばないこと。
+ *     呼んだ瞬間、未設定のまま公開できてしまいます。
+ *     設定を止めているのは lib/server/launchReadiness.ts です。
+ *     そちらをゆるめて試験を通すのは、いちばんやってはいけないことです。
+ */
+export async function makeTenantLaunchReady(tenantId: string): Promise<void> {
+  await migrate();
+  const now = new Date().toISOString();
+
+  /* ① 会社情報・特商法・規約・プライバシー・問い合わせ先。
+        ★列名は lib/server/tenantSettings.ts の並びと合わせること。 */
+  await db().execute({
+    sql: `INSERT INTO tenant_settings (
+            tenant_id, shop_name, legal_name, representative,
+            postal_code, address, phone, contact_email,
+            price_note, extra_fee_note, payment_method, payment_timing,
+            delivery_time, returns_note, terms_text, privacy_text,
+            updated_at, updated_by
+          ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+          ON CONFLICT(tenant_id) DO NOTHING`,
+    args: [
+      tenantId,
+      "試験用ショップ",
+      "試験用ダミー株式会社",
+      "試験 太郎",
+      "000-0000",
+      "試験用のため実在しない住所です",
+      "000-0000-0000",
+      "test@example.invalid",
+      "各ガチャの画面に表示された金額です（試験用）",
+      "送料は当社負担です（試験用）",
+      "クレジットカード（試験用）",
+      "お申し込み時にお支払いいただきます（試験用）",
+      "ご依頼から7日以内に発送します（試験用）",
+      "商品の性質上、返品はお受けできません（試験用）",
+      "これは試験用の利用規約です。実際の規約ではありません。",
+      "これは試験用のプライバシーポリシーです。実際の方針ではありません。",
+      now,
+      "seed",
+    ],
+  });
+
+  /* ② ポイント商品を1つ。無いと、お客様はポイントを買えません。 */
+  const hasProduct = await db().execute({
+    sql: `SELECT COUNT(*) AS n FROM point_products
+           WHERE tenant_id = ? AND status = 'ACTIVE'`,
+    args: [tenantId],
+  });
+  if (Number((hasProduct.rows[0] as Record<string, unknown>)?.n ?? 0) === 0) {
+    await db().execute({
+      sql: `INSERT INTO point_products (
+              id, tenant_id, name, price_yen, points, bonus_points,
+              status, sort_order, created_at, updated_at, created_by
+            ) VALUES (?,?,?,?,?,?,'ACTIVE',0,?,?,?)`,
+      args: [
+        id("pp"),
+        tenantId,
+        "試験用 1,000pt",
+        1000,
+        1000,
+        0,
+        now,
+        now,
+        "seed",
+      ],
+    });
+  }
+
+  /* ③ ポイントの有効期限。
+        ★本番では、確認した日をこちらが自動で入れてはいけません。
+          ここは試験用なので、確認済みとして扱います。 */
+  await db().execute({
+    sql: `INSERT INTO tenant_point_policy (
+            tenant_id, expiry_mode, expiry_value, confirmed_at,
+            updated_at, updated_by
+          ) VALUES (?, 'NONE', NULL, ?, ?, ?)
+          ON CONFLICT(tenant_id) DO UPDATE SET
+            expiry_mode  = 'NONE',
+            expiry_value = NULL,
+            confirmed_at = excluded.confirmed_at,
+            updated_at   = excluded.updated_at`,
+    args: [tenantId, now, now, "seed"],
+  });
+
+  /* ④ 景品の写真。
+        写真が1枚も無いガチャは公開できません（お客様が中身を判断できないため）。
+        ★試験では、本物の画像ファイルは要りません。印だけ入れます。 */
+  await db().execute({
+    sql: `UPDATE gacha_stock
+             SET image_id = 'img_seed_test'
+           WHERE tenant_id = ? AND image_id IS NULL`,
+    args: [tenantId],
+  });
+}
+
+/**
  * 会員を1人作る。
  *
  * ═══════════════════════════════════════════════

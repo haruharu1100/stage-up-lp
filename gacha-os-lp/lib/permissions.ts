@@ -67,7 +67,22 @@ export type Permission =
   | "shipping.view" | "shipping.act"
   | "support.view" | "support.reply"
   | "security.view" | "audit.view"
-  | "user.suspend" | "settings.edit";
+  | "user.suspend"
+  /**
+   * お店の設定と「公開準備」の状況を見る。
+   *
+   * ★これを settings.edit と1つにまとめないこと。
+   *   ガチャを公開するのは運営（OPERATOR）です。
+   *   その運営が「お店の設定がそろっていないので公開できません」と断られたとき、
+   *   何が足りないのかを見られないと、運営はガチャの設定を延々と見直します。
+   *   直す場所は、別の画面にあります。
+   *
+   *   見えても危なくありません。ここに入る文章は、
+   *   もともとお客様に見せるための文章（特商法・規約）です。
+   *   危ないのは「書き換えられること」なので、そちらだけ settings.edit で守ります。
+   */
+  | "settings.view"
+  | "settings.edit";
 
 /**
  * 役割ごとにできること。
@@ -122,10 +137,15 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     "gacha.view", "gacha.edit", "gacha.publish", "revenue.view",
     "point.view", "shipping.view", "shipping.act",
     "support.view", "support.reply", "fraud.view",
+    /* ★公開できない理由を読むために要ります。
+         書き換えは settings.edit なので、運営にはできません。 */
+    "settings.view",
   ],
   FINANCE: [
     "gacha.view", "revenue.view", "point.view", "point.request",
     "shipping.view", "audit.view",
+    /* 特商法の支払方法・支払時期は、経理が確認する項目です */
+    "settings.view",
   ],
   /**
    * セキュリティに revenue.view は付けません。
@@ -148,7 +168,7 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     "shipping.view", "shipping.act",
     "support.view", "support.reply",
     "security.view", "audit.view",
-    "user.suspend", "settings.edit",
+    "user.suspend", "settings.view", "settings.edit",
   ],
 };
 
@@ -185,7 +205,8 @@ export const PERMISSION_LABEL: Record<Permission, string> = {
   "security.view": "セキュリティを見る",
   "audit.view": "監査ログを見る",
   "user.suspend": "会員を停止する",
-  "settings.edit": "設定を変える",
+  "settings.view": "お店の設定と公開準備を見る",
+  "settings.edit": "お店の設定を変える（特商法・規約・法人情報）",
 };
 
 /**
@@ -202,7 +223,7 @@ export const PERMISSION_GROUPS: { title: string; items: Permission[] }[] = [
   { title: "発送", items: ["shipping.view", "shipping.act"] },
   { title: "問い合わせ", items: ["support.view", "support.reply"] },
   { title: "不正・セキュリティ", items: ["fraud.view", "fraud.act", "security.view", "audit.view", "user.suspend"] },
-  { title: "設定", items: ["settings.edit"] },
+  { title: "設定", items: ["settings.view", "settings.edit"] },
 ];
 
 /** 権限表に出す役割の順番（弱い順。強くなっていく様子が見えるように） */

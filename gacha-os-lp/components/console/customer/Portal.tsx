@@ -48,7 +48,10 @@
 import { useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
 import { OrderList } from "./Account";
-import { SHOP_BG, SHOP_EDGE, SHOP_ACCENT, SHOP_SURFACE } from "./Storefront";
+import { SHOP_EDGE, SHOP_ACCENT, SHOP_SURFACE } from "./Storefront";
+/* 頭（ヘッダー）と足（フッター）は Chrome.tsx の1か所だけ。
+   ★この画面で作り直さないこと。理由は下の Shell に書いてあります。 */
+import { CustomerShell } from "./Chrome";
 import { Back, H, Note, Empty, BigBtn, Panel, Fld, TapRow, TONE } from "./ui";
 /* ★Sample で始まる部品を、ここで読まないこと（描いた絵です） */
 import { PrizeThumb } from "./art";
@@ -81,16 +84,25 @@ function nichiji(v: string | null): string {
   return `${d.getFullYear()}/${p(d.getMonth() + 1)}/${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
 }
 
-/** 外枠。お客様側は暗い売り場です */
+/**
+ * 外枠。お客様側は暗い売り場です。
+ *
+ * ★ここで独自の外枠を組み立て直さないこと（2026-09-06）。
+ *   以前は画面ごとに外枠を持っていました。そのため、
+ *   ヘッダーの出る画面と出ない画面が混ざり、
+ *   お客様は画面ごとに「次にどこを押すか」を探していました。
+ *
+ *   いまは Chrome.tsx の1か所にまとまっています。
+ *   ヘッダー（残高・ポイント購入・行き先）と、
+ *   フッター（特商法・規約・プライバシー・問い合わせ）が
+ *   どの画面にも同じ場所に出ます。
+ *
+ *   ★背景を白のままにしないこと。
+ *     外枠だけ白いと、下までスクロールしたときに白が出てきて、
+ *     読み込みに失敗した画面に見えます（CustomerShell が塗ります）。
+ */
 function Shell({ children }: { children: React.ReactNode }) {
-  /* ★背景を白のままにしないこと。
-       外枠だけ白いと、下までスクロールしたときに白が出てきて、
-       読み込みに失敗した画面に見えます */
-  return (
-    <div className="min-h-[100dvh]" style={{ background: SHOP_BG }}>
-      <div className="mx-auto w-full max-w-[560px] px-4 pb-16 pt-6">{children}</div>
-    </div>
-  );
+  return <CustomerShell>{children}</CustomerShell>;
 }
 
 /**
@@ -872,6 +884,21 @@ export function PortalPrizes() {
  * ★選べない商品を、消さずに出すこと。
  *   一覧から消すと、お客様は「商品が無くなった」と受け取ります。
  *   出したうえで、いまどうなっているのかを書きます。
+ *
+ * ═══════════════════════════════════════════════
+ * ★「もう操作できない」を、色の薄さだけで伝えないこと
+ * ═══════════════════════════════════════════════
+ *
+ *   発送済み・交換済みの商品は、押しても何も起きません。
+ *   薄くしてあるだけだと、お客様は「押せたはずだ」と思って
+ *   何度も押し、そのあと問い合わせをされます。
+ *
+ *   ですので、1件ごとに、いまどうなっているのかを
+ *   文字で書きます（発送済み・交換済み…）。
+ *   ★その呼び名を、この画面で作らないこと。
+ *     サーバーが1件ずつ付けてきた p.stateLabel を、そのまま出します。
+ *     ここに書き写すと、上の見出しと、商品の札とで
+ *     違う言葉が並ぶ日が来ます。
  */
 function PrizeRow({
   p,
@@ -883,12 +910,18 @@ function PrizeRow({
   onToggle: () => void;
 }) {
   const erabu = p.canShip || p.canExchange;
+  const t = TONE[STATE_TONE[p.state]];
 
   return (
     <button
       type="button"
       onClick={erabu ? onToggle : undefined}
       disabled={!erabu}
+      /* ★読み上げにも「選べない」と伝えること。
+           目で見て分かるだけでは、片方の方に届きません。 */
+      aria-label={
+        erabu ? undefined : `${p.name}（${p.stateLabel}・お手続き済みのため選べません）`
+      }
       className="flex w-full items-start gap-3 rounded-2xl px-4 py-3.5 text-left transition disabled:cursor-default"
       style={{
         background: chosen ? "rgba(91,140,255,0.12)" : SHOP_SURFACE,
@@ -896,19 +929,25 @@ function PrizeRow({
         opacity: erabu ? 1 : 0.72,
       }}
     >
-      {erabu && (
-        <span
-          className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-[0.7rem] font-bold"
-          style={{
-            background: chosen ? SHOP_ACCENT : "transparent",
-            border: `1px solid ${chosen ? SHOP_ACCENT : SHOP_EDGE}`,
-            color: "#06101F",
-          }}
-          aria-hidden
-        >
-          {chosen ? "✓" : ""}
-        </span>
-      )}
+      {/* ★選べる商品にだけ、四角（チェック欄）を出すこと。
+             選べない商品にも出すと、押せば入ると思われます。
+             代わりに、同じ場所に「—」を置いて、
+             列がずれないようにします。 */}
+      <span
+        className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-[0.7rem] font-bold"
+        style={
+          erabu
+            ? {
+                background: chosen ? SHOP_ACCENT : "transparent",
+                border: `1px solid ${chosen ? SHOP_ACCENT : SHOP_EDGE}`,
+                color: "#06101F",
+              }
+            : { color: "rgba(255,255,255,0.28)" }
+        }
+        aria-hidden
+      >
+        {erabu ? (chosen ? "✓" : "") : "—"}
+      </span>
 
       {/* 当たった品の写真。★無ければ「画像未登録」。絵は描きません */}
       <PrizeThumb
@@ -922,6 +961,21 @@ function PrizeRow({
         <span className="block text-[0.88rem] font-bold text-white">{p.name}</span>
         <span className="mt-0.5 block text-[0.73rem] text-white/40">
           {p.gachaTitle} ／ {nichiji(p.wonAt)}
+        </span>
+
+        {/* いまどうなっているのか。★言葉はサーバーのものです */}
+        <span className="mt-1.5 flex flex-wrap items-center gap-1.5">
+          <span
+            className="nb inline-block rounded-full px-2 py-0.5 text-[0.7rem] font-bold"
+            style={{ background: t.bg, border: `1px solid ${t.line}`, color: t.fg }}
+          >
+            {p.stateLabel}
+          </span>
+          {!erabu && (
+            <span className="text-[0.7rem] text-white/40">
+              お手続きが済んでいるため、お選びいただけません。
+            </span>
+          )}
         </span>
 
         {/* 追跡できるものは、ここに出します */}

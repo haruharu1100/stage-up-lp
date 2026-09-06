@@ -40,7 +40,11 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { db, resetDbForTests, migrate } from "../lib/server/db";
-import { createTenant, createGacha } from "../lib/server/seed";
+import {
+  createTenant,
+  createGacha,
+  makeTenantLaunchReady,
+} from "../lib/server/seed";
 import {
   GachaAdminError,
   gachaDetail,
@@ -89,6 +93,11 @@ test("★検証していないガチャは、公開できない", async () => {
     designedRtp: 90, status: "DRAFT",
   });
 
+  /* このお店を「販売開始できる状態」にする。
+     ★ここで止めたいのは、このガチャの問題（未検証・構成変更・状態）です。
+       お店の設定が空なことで止まってしまうと、何を試したのか分からなくなります。 */
+  await makeTenantLaunchReady(t);
+
   const code = await codeOf(() =>
     publishGacha({ tenantId: t, gachaId: g, reason: "売りたいから", by: BY }),
   );
@@ -114,6 +123,11 @@ test("★検証してから公開すると、通る", async () => {
     tenantId: t, title: "検証済みガチャ", price: 500, total: 300,
     designedRtp: 90, status: "DRAFT",
   });
+
+  /* このお店を「販売開始できる状態」にする。
+     ★ここで止めたいのは、このガチャの問題（未検証・構成変更・状態）です。
+       お店の設定が空なことで止まってしまうと、何を試したのか分からなくなります。 */
+  await makeTenantLaunchReady(t);
 
   const v = await verifyGacha({ tenantId: t, gachaId: g, by: BY });
   assert.ok(
@@ -155,6 +169,11 @@ test("★検証したあとに賞の構成を変えると、その判定は使�
     tenantId: t, title: "構成を変えるガチャ", price: 500, total: 300,
     designedRtp: 90, status: "DRAFT",
   });
+
+  /* このお店を「販売開始できる状態」にする。
+     ★ここで止めたいのは、このガチャの問題（未検証・構成変更・状態）です。
+       お店の設定が空なことで止まってしまうと、何を試したのか分からなくなります。 */
+  await makeTenantLaunchReady(t);
 
   await verifyGacha({ tenantId: t, gachaId: g, by: BY });
 
@@ -271,6 +290,11 @@ test("★止めて再開しても、はじめて公開した日時が上書き�
     tenantId: t, title: "止めて戻すガチャ", price: 500, total: 300,
     designedRtp: 90, status: "DRAFT",
   });
+
+  /* このお店を「販売開始できる状態」にする。
+     ★ここで止めたいのは、このガチャの問題（未検証・構成変更・状態）です。
+       お店の設定が空なことで止まってしまうと、何を試したのか分からなくなります。 */
+  await makeTenantLaunchReady(t);
 
   const v = await verifyGacha({ tenantId: t, gachaId: g, by: BY });
   if (v.verdict === "DANGER") return; /* この構成では公開できない。それが正しい */
@@ -400,6 +424,11 @@ test("★検証・公開・停止・再開が、すべて理由つきで監査�
     designedRtp: 90, status: "DRAFT",
   });
 
+  /* このお店を「販売開始できる状態」にする。
+     ★ここで止めたいのは、このガチャの問題（未検証・構成変更・状態）です。
+       お店の設定が空なことで止まってしまうと、何を試したのか分からなくなります。 */
+  await makeTenantLaunchReady(t);
+
   const v = await verifyGacha({ tenantId: t, gachaId: g, by: BY });
   assert.equal(await auditCount(t, "BACKTEST_RUN"), 1, "検証が記録に残っていません");
   if (v.verdict === "DANGER") return;
@@ -499,6 +528,11 @@ test("★販売していないガチャは止められない／完売したガ�
     tenantId: t, title: "完売ガチャ", price: 500, total: 300,
     designedRtp: 90, status: "SOLD_OUT",
   });
+
+  /* このお店を「販売開始できる状態」にする。
+     ★ここで止めたいのは、このガチャの問題（未検証・構成変更・状態）です。
+       お店の設定が空なことで止まってしまうと、何を試したのか分からなくなります。 */
+  await makeTenantLaunchReady(t);
 
   assert.equal(
     await codeOf(() => pauseGacha({ tenantId: t, gachaId: shita, reason: "止めたいから", by: BY })),

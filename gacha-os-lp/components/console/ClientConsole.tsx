@@ -112,6 +112,7 @@ import SecurityCenter from "./screens/SecurityCenter";
 import AuditScreen from "./screens/AuditScreen";
 import OperatorScreen from "./screens/OperatorScreen";
 import SettingsScreen from "./screens/SettingsScreen";
+import StoreSetupScreen from "./screens/StoreSetupScreen";
 import CustomersScreen from "./screens/CustomersScreen";
 import ProductsScreen from "./screens/ProductsScreen";
 import MarketScreen from "./screens/MarketScreen";
@@ -661,6 +662,13 @@ function Screen({
         return <AuditScreen s={s} />;
       case "operator":
         return <OperatorScreen s={s} onNav={onNav} />;
+      case "storeSetup":
+        /* ★見本データ（s）を渡さないこと。
+             ここで決めるのは、そのお店の会社名・特商法・規約です。
+             見本を混ぜると、こちらが用意した文が
+             そのお店の法的表示として出ます。
+             サーバー（tenant_settings）だけを見ます。 */
+        return <StoreSetupScreen />;
       case "settings":
         return <SettingsScreen s={s} dispatch={dispatch} />;
       default:

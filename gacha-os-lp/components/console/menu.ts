@@ -61,6 +61,7 @@ export type MenuKey =
   | "security"
   | "audit"
   | "siteEditor"
+  | "storeSetup"
   | "migration"
   | "settings";
 
@@ -87,6 +88,7 @@ export type IconKey =
   | "list"
   | "brush"
   | "swap"
+  | "store"
   | "gear";
 
 export type MenuGroup =
@@ -308,6 +310,31 @@ export const MENU: MenuItem[] = [
 
   /* ── システム ─────────────────────────────── */
   {
+    /*
+     * ★この項目を、いちばん上から動かさないこと。
+     *   契約した初日に、お店が最初に開く画面です。
+     *   ここが済んでいないと、ガチャは公開できません
+     *   （断っているのは lib/server/launchReadiness.ts です）。
+     *
+     * ★label を「設定」にしないこと。
+     *   すぐ下に「設定」（認証・権限）があります。
+     *   同じ名前が2つ並ぶと、法定表示を直したい人が
+     *   権限の画面を開いて迷います。
+     */
+    key: "storeSetup",
+    label: "開店準備",
+    note: "会社情報・特商法・規約。ここが済むと公開できます",
+    group: "システム",
+    icon: "store",
+    keywords: [
+      "開店", "かいてん", "準備", "初期設定", "setup", "ウィザード",
+      "会社情報", "特商法", "特定商取引法", "利用規約", "規約",
+      "プライバシー", "個人情報", "問い合わせ先", "ロゴ", "カテゴリ",
+      "公開準備", "販売開始", "faq", "よくある質問",
+    ],
+    need: "settings.edit",
+  },
+  {
     key: "analytics",
     label: "売上・分析",
     note: "数字の推移",
@@ -397,6 +424,10 @@ export const SLUG: Record<MenuKey, string> = {
   security: "security",
   audit: "audit",
   siteEditor: "site-editor",
+  /* ★このURLを変えないこと。
+       「未設定です」の案内から、この文字列で飛んできます
+       （lib/server/launchReadiness.ts の SETTINGS_HREF）。 */
+  storeSetup: "store-setup",
   migration: "migration",
   settings: "settings",
 };

@@ -196,6 +196,15 @@ const PATHS: Record<IconKey, React.ReactNode> = {
       <path d="M10 2.6v2M10 15.4v2M17.4 10h-2M4.6 10h-2M15.2 4.8l-1.4 1.4M6.2 13.8l-1.4 1.4M15.2 15.2l-1.4-1.4M6.2 6.2 4.8 4.8" />
     </>
   ),
+  /* 開店準備：お店の日よけ */
+  store: (
+    <>
+      <path d="M3 7h14l-1 2.2a2.2 2.2 0 0 1-4 0 2.2 2.2 0 0 1-4 0 2.2 2.2 0 0 1-4 0Z" />
+      <path d="M4.2 3.2h11.6L17 7H3Z" />
+      <path d="M4.5 11v6h11v-6" />
+      <path d="M8.5 17v-3.5h3V17" />
+    </>
+  ),
 };
 
 export default function Icon({

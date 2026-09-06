@@ -84,8 +84,17 @@ export type ImageMime = (typeof ALLOWED_MIME)[number];
 /** 受け付ける拡張子 */
 const ALLOWED_EXT = [".jpg", ".jpeg", ".png", ".webp"];
 
-/** 写真の使いみち */
-export type ImageKind = "GACHA_COVER" | "PRIZE";
+/**
+ * 写真の使いみち。
+ *
+ * ★SHOP_LOGO を足したときの注意（2026-09-06）
+ *   ロゴは、ガチャにも賞にも結び付きません。
+ *   ですので、下の purgeUnusedImageTx から見ると
+ *   「どこからも使われていない写真」に見えます。
+ *   そこで tenant_settings.logo_image_id も一緒に数えています。
+ *   ★その数えを消さないこと。消すと、ロゴが黙って消えます。
+ */
+export type ImageKind = "GACHA_COVER" | "PRIZE" | "SHOP_LOGO";
 
 /* ═══════════════════════════════════════════════
    断り方
@@ -408,11 +417,24 @@ export async function purgeUnusedImageTx(
             /* ★これを外さないこと。外すと、差し替えた瞬間に
                  過去に当てた方の履歴の写真が消えます（018） */
             (SELECT COUNT(*) FROM prizes
-              WHERE tenant_id = ? AND image_id = ?) AS c`,
-    args: [tenantId, imageId, tenantId, imageId, tenantId, imageId],
+              WHERE tenant_id = ? AND image_id = ?) AS c,
+            /* ★お店のロゴ。これも外さないこと（2026-09-06）。
+                 ロゴはガチャにも賞にも結び付かないので、
+                 ここで数えないと「使われていない写真」になり、
+                 別の写真を消したついでに、静かに消えます。 */
+            (SELECT COUNT(*) FROM tenant_settings
+              WHERE tenant_id = ? AND logo_image_id = ?) AS d`,
+    args: [
+      tenantId, imageId,
+      tenantId, imageId,
+      tenantId, imageId,
+      tenantId, imageId,
+    ],
   });
-  const row = used.rows[0] as unknown as { a: number; b: number; c: number };
-  if (Number(row.a) + Number(row.b) + Number(row.c) > 0) return;
+  const row = used.rows[0] as unknown as {
+    a: number; b: number; c: number; d: number;
+  };
+  if (Number(row.a) + Number(row.b) + Number(row.c) + Number(row.d) > 0) return;
 
   await tx.execute({
     sql: `DELETE FROM images WHERE tenant_id = ? AND id = ?`,

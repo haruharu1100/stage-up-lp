@@ -36,6 +36,24 @@
  *       ④ 公開・停止・再開には理由が要る
  *       ⑤ 全部、監査ログに残る
  *       ⑥ 他社のガチャは、そもそも見つからない
+ *       ⑦ お店の設定（特商法・規約・問い合わせ先・決済・メール）が
+ *         そろっていないうちは、1本も公開できない
+ *
+ * ═══════════════════════════════════════════════════════
+ * ★⑦を「警告」にしないこと
+ * ═══════════════════════════════════════════════════════
+ *
+ *   ⑦だけは、ガチャそのものの問題ではありません。
+ *   ですので「別の画面の話だから、ここでは通しておく」と
+ *   したくなります。
+ *
+ *   ★それをすると、特商法が空欄のまま、お金を受け取れます。
+ *     画面はきれいに出ます。エラーも出ません。
+ *     気づくのは、お客様に言われたときで、そのときには
+ *     もうお金を受け取ったあとです。
+ *
+ *   判定そのものは lib/server/launchReadiness.ts に置いてあります。
+ *   ★判定を2か所に書かないこと。書いた日から、必ずずれます。
  *
  * ═══════════════════════════════════════════════════════
  * ★「まだ検証していない」を「安全」と読ませないこと
@@ -65,6 +83,7 @@ import { db, withWriteTx } from "./db";
 import { id as newId } from "./ids";
 import { imageBelongsToTx } from "./images";
 import { rtpReport, type RtpReport } from "./rtpMonitor";
+import { getLaunchReadiness, readinessBlockMessage } from "./launchReadiness";
 import type { Transaction } from "@libsql/client";
 
 type Row = Record<string, unknown>;
@@ -167,6 +186,22 @@ export type GachaAdminCode =
   | "VERDICT_DANGER"
   | "UNUSABLE_SPEC"
   | "BAD_STATUS"
+  /**
+   * お店の設定（特商法・規約・問い合わせ先・決済・メール）が
+   * そろっていないので、まだ1本も公開できない。
+   *
+   * ★これをガチャ側の失敗と混ぜないこと。
+   *   ガチャの作り方は正しくて、直す場所が別の画面にあります。
+   *   同じ扱いにすると、お店はガチャの設定を延々と見直します。
+   */
+  | "NOT_READY"
+  /**
+   * このガチャに景品の写真が1枚も無いので公開できない。
+   *
+   * ★これは「お店の設定」ではなく「このガチャ」の問題です。
+   *   直す場所は、ガチャの詳細画面です。
+   */
+  | "NO_ART"
   /** 名前が空・同じ名前がすでにある・数字が入っていない */
   | "NO_TITLE"
   | "DUP_TITLE"
@@ -860,6 +895,30 @@ async function ensurePublishable(
     );
   }
 
+  /**
+   * ★写真が1枚も付いていないガチャを、公開させないこと。
+   *
+   *   お客様がお金を払って引くとき、判断の材料にしているのは
+   *   金額でも説明文でもなく、写真です。
+   *   写真の無い箱は、売り場に置かれていないのと同じです。
+   *
+   *   ★これは、お店ぜんぶを止める話ではありません。
+   *     この1本を止めるだけです。ほかのガチャは、そのまま売れます。
+   */
+  const art = await tx.execute({
+    sql: `SELECT COUNT(*) AS n FROM gacha_stock
+           WHERE tenant_id = ? AND gacha_id = ? AND image_id IS NOT NULL`,
+    args: [tenantId, gachaId],
+  });
+  if (Number((art.rows[0] as Row)?.n ?? 0) === 0) {
+    throw new GachaAdminError(
+      "NO_ART",
+      "このガチャには、景品の写真が1枚も登録されていません。" +
+        "お客様は中身を判断できないため、このままでは公開できません。" +
+        "ガチャの詳細画面から、景品の写真を登録してください。",
+    );
+  }
+
   if (state.verdict === "DANGER") {
     /* ★ここを「警告を出して、それでも押せる」にしないこと。
          押せるボタンは、忙しい日に必ず押されます。
@@ -882,6 +941,22 @@ export async function publishGacha(args: {
 }): Promise<{ title: string; before: string; after: string; verdict: Verdict; at: string }> {
   const reason = checkReason(args.reason);
   const at = new Date().toISOString();
+
+  /**
+   * ★お店の設定がそろっているかを、書き込みを始める前に見ます。
+   *
+   *   書き込みの中で見ない理由は2つあります。
+   *     ・読むだけの処理を、書き込みの列に並ばせたくない
+   *     ・ここで断るときは、まだ何も変えていない状態でありたい
+   *
+   *   ★ここを飛ばせる抜け道を作らないこと。
+   *     「今回だけ」で通した1本が、特商法の空欄のまま売れます。
+   */
+  const readiness = await getLaunchReadiness(args.tenantId);
+  const block = readinessBlockMessage(readiness);
+  if (block !== null) {
+    throw new GachaAdminError("NOT_READY", block);
+  }
 
   return withWriteTx(async (tx) => {
     const g = await tx.execute({

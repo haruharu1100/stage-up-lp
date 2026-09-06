@@ -53,6 +53,7 @@ import {
   type GachaFilter,
   type GachaRow,
 } from "@/lib/console/liveGachas";
+import GachaCategoryPicker from "../GachaCategoryPicker";
 import {
   COVER_SLOT,
   loadGachaImages,
@@ -743,6 +744,10 @@ function GachaBody({
           </div>
         )}
       </div>
+
+      {/* ── どの棚に置くか ──
+            ★棚の名前をここに書かないこと。お店が作ったものだけを出します */}
+      <GachaCategoryPicker gachaId={g.id} mayEdit={mayEdit} />
 
       {/* ── 写真の差し替え ──
             ★販売中でも触れます。止めてから替える運用にすると、

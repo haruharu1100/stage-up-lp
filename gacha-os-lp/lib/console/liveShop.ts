@@ -46,7 +46,21 @@ export type ShopItem = {
    *   「画像未登録」と出します（components/console/customer/art.tsx）。
    */
   coverImageId: string | null;
+
+  /**
+   * この1本が入っている棚（カテゴリ）のID。
+   *
+   * ★棚の名前を、この画面側に書き置きしないこと。
+   *   名前は categories の側にあります（お店が作った値です）。
+   */
+  categoryIds: string[];
 };
+
+/** 絞り込みに出す棚。★中身が0本の棚は、サーバーが返しません */
+export type ShopCategory = { id: string; name: string; count: number };
+
+/** 売り場ぜんぶ（並ぶガチャと、絞り込みの棚） */
+export type ShopBoard = { gachas: ShopItem[]; categories: ShopCategory[] };
 
 export type ShopPrize = {
   grade: string;
@@ -150,15 +164,24 @@ function useLive<T>(
   return { state, reload };
 }
 
-const pickList = (raw: Record<string, unknown>) =>
-  Array.isArray(raw.gachas) ? (raw.gachas as ShopItem[]) : null;
+const pickList = (raw: Record<string, unknown>): ShopBoard | null =>
+  Array.isArray(raw.gachas)
+    ? {
+        gachas: raw.gachas as ShopItem[],
+        /* ★棚が無くても、売り場は出すこと。
+             棚を1つも作っていないお店でも、ガチャは並びます。 */
+        categories: Array.isArray(raw.categories)
+          ? (raw.categories as ShopCategory[])
+          : [],
+      }
+    : null;
 
 const pickDetail = (raw: Record<string, unknown>) =>
   raw.gacha && typeof raw.gacha === "object" ? (raw.gacha as ShopDetail) : null;
 
-/** 販売中のガチャを読む */
+/** 販売中のガチャと、絞り込みの棚を読む */
 export function useShopList() {
-  return useLive<ShopItem[]>("/api/customer/gachas", pickList);
+  return useLive<ShopBoard>("/api/customer/gachas", pickList);
 }
 
 /** ガチャ1本の中身を読む */

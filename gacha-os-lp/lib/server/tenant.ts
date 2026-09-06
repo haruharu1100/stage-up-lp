@@ -150,6 +150,23 @@ export const TENANT_TABLES = [
   "tenant_point_policy",
   "payment_reversals",
 
+  /* お店の看板と、法定ページと、ガチャの棚（019）。
+     ★ここを一覧から外さないこと。
+       tenant_settings … 会社名・代表者名・住所・電話番号が入っています。
+                         ★これは、そのお店の「登記されている情報」です。
+                           会社の壁が1枚抜けると、他社の法人情報が読めるだけでなく、
+                           ★書き換えられます。書き換えられた特商法ページは、
+                             そのお店が出した表示として、そのまま公開されます。
+                           この表は、お金の表と同じ厳しさで扱います。
+       tenant_faqs     … よくある質問。お店の運用が、そのまま出ます。
+       gacha_categories／gacha_category_links
+                       … どんな棚を作り、どのガチャを置いたか。
+                         次に何を売るつもりかが、公開前に見えてしまいます。 */
+  "tenant_settings",
+  "tenant_faqs",
+  "gacha_categories",
+  "gacha_category_links",
+
   /* 旧い形の注文・発送（008で改名したもの）。
      ★消さずに残しています。Previewで入れた行を、
        新しい形と見比べられるようにするためです。

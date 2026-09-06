@@ -42,7 +42,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { db, resetDbForTests } from "../lib/server/db";
-import { createTenant } from "../lib/server/seed";
+import { createTenant, makeTenantLaunchReady } from "../lib/server/seed";
 import {
   GachaAdminError,
   createGachaDraft,
@@ -151,7 +151,12 @@ test("★作った直後は必ず DRAFT で、検証結果は空であること"
   assert.equal(g.backtest_at ?? null, null, "検証していないのに検証日時が入っています");
   assert.equal(g.published_at ?? null, null, "作っただけで公開日時が入っています");
 
-  /* ★念のため、この状態で公開しようとしたら断られること */
+  /* ★念のため、この状態で公開しようとしたら断られること。
+       ここで確かめたいのは「検証していないこと」なので、
+       お店の設定は先にそろえておきます。
+       そうしないと、別の理由（お店の設定が空）で断られてしまい、
+       検証の関門が働いたのかどうかが分からなくなります。 */
+  await makeTenantLaunchReady(t);
   const code = await codeOf(() =>
     publishGacha({ tenantId: t, gachaId: r.gachaId, reason: "作ったばかりですが出したい", by: BY }),
   );
