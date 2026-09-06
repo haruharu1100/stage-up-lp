@@ -175,7 +175,10 @@ export default function SignupForm({
                       type="text"
                       autoComplete="organization"
                       spellCheck={false}
-                      placeholder="例：DEMO"
+                      /* ★ここに、それらしい会社コードの例を書かないこと。
+                           本物のお客様が、その例をご自分のコードだと思って
+                           そのまま入れてしまいます。書式だけを示します。 */
+                      placeholder="半角英数字"
                       value={tenantCode}
                       onChange={(e) => setTenantCode(e.target.value)}
                     />
@@ -316,6 +319,8 @@ export default function SignupForm({
           </Link>
         </p>
 
+        {/* 表示OK: demoAllowed() が真のときだけ。DEMO_MODE=true かつ本番でないの
+              両方がそろわないと出ません（lib/server/demo.ts）。本番では値に関わらず閉じます */}
         {demoMode && (
           <p className="mt-6 rounded-xl border border-warn/30 bg-warn/8 px-4 py-3 text-note leading-[1.85] text-warn-ink">
             <span className="mr-2 font-bold">ご案内</span>

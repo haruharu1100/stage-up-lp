@@ -115,7 +115,12 @@ test("等級ごとの在庫数を超えて当選が出ない（最後まで引�
   const drawn: Record<string, number> = {};
   let left = total;
   for (let n = 1; n <= total; n++) {
-    const out = drawOnce({ title, price, total, left, designedRtp: rtp }, drawn, seedOf("g_test"), n);
+    const out = drawOnce(
+      { title, price, total, left, designedRtp: rtp, pool },
+      drawn,
+      seedOf("g_test"),
+      n,
+    );
     if (out.grade !== "-") drawn[out.grade] = (drawn[out.grade] ?? 0) + 1;
     left -= 1;
   }
@@ -136,7 +141,14 @@ test("S賞は、箱に1本しか入っていない", () => {
 });
 
 test("同じ種・同じ回数なら、必ず同じ結果になる", () => {
-  const args = { title: "テスト用ガチャ", price: 500, total: 300, left: 300, designedRtp: 95 };
+  const args = {
+    title: "テスト用ガチャ",
+    price: 500,
+    total: 300,
+    left: 300,
+    designedRtp: 95,
+    pool: poolOf("テスト用ガチャ", 500, 300, 95),
+  };
   const a = drawOnce(args, {}, seedOf("g_test"), 7);
   const b = drawOnce(args, {}, seedOf("g_test"), 7);
   assert.deepEqual(a, b);

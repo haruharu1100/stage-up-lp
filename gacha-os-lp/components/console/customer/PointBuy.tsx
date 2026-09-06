@@ -421,7 +421,10 @@ export function PortalPointBuy() {
           <div className="mt-4">
             {/* ★このお知らせを消さないこと。
                  本物のお金が動くと誤解されたまま操作されるのが、
-                 いちばん危ない状態です。 */}
+                 いちばん危ない状態です。
+                 表示OK: 決済が練習用（PAYMENT_PROVIDER=mock）のときだけ出ます。
+                   本番の鍵が入っていれば出ません。しかも本番で練習用のままなら
+                   lib/server/pointPurchase.ts が購入そのものを止めます */}
             <Note tone="warn">
               ただいまは、動作確認用のお支払いです。実際の請求は発生しません。
             </Note>
@@ -436,7 +439,9 @@ export function PortalPointBuy() {
           >
             {busy
               ? "処理しています…"
-              : state.phase === "ok" && state.data.mock
+              : /* 表示OK: 決済が練習用のときだけ。本番の鍵があれば
+                   「お支払いに進む」になります（上と同じ仕組み） */
+                state.phase === "ok" && state.data.mock
                 ? "支払ったことにする（動作確認）"
                 : "お支払いに進む"}
           </BigBtn>

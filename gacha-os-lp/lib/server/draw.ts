@@ -36,7 +36,7 @@
  *   これなら、後から来た方は「0行しか変わらなかった」と分かります。
  */
 
-import { drawWith, type DrawOutcome } from "../console/draw";
+import { drawWith, isGrade, type DrawOutcome, type PoolEntry } from "../console/draw";
 import { appendAuditTx } from "./audit";
 import { SERVER_VERSION, withWriteTx } from "./db";
 import { id } from "./ids";
@@ -221,8 +221,19 @@ export async function drawOnceServer(args: {
     }
 
     /* ── ④ 箱の中身（等級ごとに、もう何本出たか） ───────── */
+    /**
+     * ★名前と価値も、必ずここから読むこと（2026-09-06）。
+     *
+     *   以前は grade・total・drawn・image_id だけを読み、
+     *   名前と価値は等級から計算し直していました。
+     *   その結果、お店が「PSA10 リザードンex SAR」と登録していても、
+     *   お客様の当選画面には「S賞 相当（デモ景品）」と出ていました。
+     *
+     *   gacha_stock が、箱の中身の正本です。
+     *   ここを別の計算に置き換えないこと。
+     */
     const st = await tx.execute({
-      sql: `SELECT grade, total, drawn, image_id FROM gacha_stock
+      sql: `SELECT grade, name, value, total, drawn, image_id FROM gacha_stock
              WHERE tenant_id = ? AND gacha_id = ?`,
       args: [args.tenantId, args.gachaId],
     });
@@ -230,9 +241,29 @@ export async function drawOnceServer(args: {
     /* 賞ごとの写真。★ここで「無いから表紙で代用」をしないこと。
        当たっていない物を当選画面に大きく出すことになります。 */
     const shashin: Record<string, string | null> = {};
+    /* 箱の中身。お店が登録したまま、1件も書き換えずに渡します */
+    const pool: PoolEntry[] = [];
     for (const r of st.rows as Row[]) {
-      drawn[str(r.grade)] = num(r.drawn);
-      shashin[str(r.grade)] = r.image_id == null ? null : String(r.image_id);
+      const grade = str(r.grade);
+      drawn[grade] = num(r.drawn);
+      shashin[grade] = r.image_id == null ? null : String(r.image_id);
+
+      /* ★扱えない等級が入っていたら、黙って捨てないこと。
+           捨てると、その賞は永久に当たらなくなります。
+           お客様は「入っているはずの賞が出ない」ガチャを引き続けます。 */
+      if (!isGrade(grade)) {
+        throw new DrawError(
+          "STOCK_CONFLICT",
+          "このガチャの賞の設定に、扱えない記号が入っています。" +
+            "安全のため、この抽選は行いませんでした。ポイントは減っていません。",
+        );
+      }
+      pool.push({
+        grade,
+        name: str(r.name),
+        value: num(r.value),
+        count: num(r.total),
+      });
     }
 
     /* ── ⑤ 抽選 ───────────────────────────────
@@ -246,6 +277,8 @@ export async function drawOnceServer(args: {
         total: num(g.total),
         left: leftBefore,
         designedRtp: num(g.designed_rtp),
+        /* ★箱の中身は gacha_stock が正本。ここで作り直さないこと */
+        pool,
       },
       drawn,
       pickBelow,

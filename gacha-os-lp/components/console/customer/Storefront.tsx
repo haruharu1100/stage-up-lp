@@ -658,6 +658,9 @@ function BuySheet({
           当たった現物の賞は「獲得商品」に入ります。
           発送するか、ポイントに換えるかは、後からお選びいただけます。
           <br />
+          {/* 表示OK: この BuySheet は GachaDetail の中だけにあり、
+                GachaDetail を描くのは見本の店（MyPage.tsx）だけです。
+                本物の売り場（LiveShop.tsx）は GachaDetail を読んでいません。 */}
           ★これはデモです。実際の決済・発送・メール送信は行いません。
         </p>
 
@@ -1131,6 +1134,8 @@ export function DrawTheater({
               ですので、その有無で出し分けます。
               ★ここに別の合図（環境変数など）を持ち込まないこと。
                 本物の売り場に出るかどうかが、また分からなくなります。 */}
+          {/* 表示OK: sampleKind を渡すのは見本の店だけ。
+                本物の売り場が渡していないことは scripts/check-real-art.mjs が見張ります */}
           {sampleKind && (
             <p className="mt-4 text-center text-[0.7rem] leading-[1.9] text-white/30">
               これはデモです。DEMO DATA（架空のデータ）で動いています。

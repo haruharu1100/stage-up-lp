@@ -37,7 +37,7 @@ import {
 } from "./audit";
 import { assess, SIGNALS, type Assessment, type Hit, type SignalKey } from "./fraud";
 import { marketSummary } from "./market";
-import { drawOnce, seedOf, type DrawRecord } from "./draw";
+import { drawOnce, poolOf, seedOf, type DrawRecord } from "./draw";
 import { buildSpec } from "./spec";
 import { aiAnswer } from "./support";
 import { backtestReport, designedRtp, type GachaSpec } from "@/lib/backtest";
@@ -2417,7 +2417,17 @@ function core(s: ConsoleState, a: ConsoleAction): Draft {
       const drawn = g.drawn ?? {};
       const nth = s.draws.filter((d) => d.gachaId === g.id).length + 1;
       const out = drawOnce(
-        { title: g.title, price: g.price, total: g.total, left: g.left, designedRtp: g.designedRtp },
+        {
+          title: g.title,
+          price: g.price,
+          total: g.total,
+          left: g.left,
+          designedRtp: g.designedRtp,
+          /* 見本の店なので、設計から中身を組みます。
+             ★本番はここではありません。本番は gacha_stock から読みます
+               （lib/server/draw.ts）。 */
+          pool: poolOf(g.title, g.price, g.total, g.designedRtp),
+        },
         drawn,
         seedOf(g.id),
         nth,

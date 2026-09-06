@@ -84,6 +84,8 @@ export default function VerifyEmailForm({ token }: { token: string }) {
               data-testid="verify-failed"
               className="mt-4 rounded-xl border border-danger/30 bg-danger/8 px-4 py-3 text-note leading-[1.85] text-danger-ink"
             >
+              {/* 表示OK: 「確認用」はデモの意味ではありません。
+                    メールアドレスをお確かめいただくためのリンク、という意味です */}
               確認用のリンクが正しくありません。
               メールに記載のリンクを、そのまま開いてください。
             </p>

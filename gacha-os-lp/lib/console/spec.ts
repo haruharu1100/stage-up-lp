@@ -109,9 +109,23 @@ export function buildSpec(
     .reduce((acc, cnt, i) => acc + cnt * values[i], 0);
   values[4] = Math.max(1, Math.round((budget - upperValue) / counts[4]));
 
+  /**
+   * 賞の名前の「仮置き」。
+   *
+   * ★ここに「デモ」「サンプル」と書かないこと（2026-09-06）。
+   *
+   *   以前は「S賞 相当（デモ景品）」と入れていました。
+   *   この名前は、そのまま gacha_stock に保存されます。
+   *   そして、お金を払って引いたお客様の当選画面にも出ていました。
+   *
+   *   ★お客様から見ると「デモ景品が当たった」と読めます。
+   *
+   *   ここは、お店が本当の景品名を入れるまでの仮置きです。
+   *   仮置きのまま公開されても、お客様が読んで困らない言葉にします。
+   */
   const prizes: Prize[] = GRADES.map((grade, i) => ({
     grade,
-    name: `${grade}賞 相当（デモ景品）`,
+    name: `${grade}賞`,
     count: counts[i],
     value: values[i],
   }));

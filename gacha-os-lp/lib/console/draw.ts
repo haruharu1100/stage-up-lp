@@ -208,18 +208,42 @@ export function normalizeRtp(designedRtp: number): number {
 }
 
 /**
- * このガチャの箱に、どの等級が何本入っているか。
+ * 箱に入っている札、1種類ぶん。
  *
- * 等級ごとの本数と価値は、ガチャを作ったときの設計から出します
- * （lib/console/spec.ts）。画面ごとに別々の数字を書くと、
- * 「バックテストの前提」と「実際に出る中身」がずれます。
+ * ★名前と価値は、お店が登録したものをそのまま持ち回ること。
+ *   ここで作り直さないこと（下の「★2026-09-06」を読んでください）。
+ */
+export type PoolEntry = {
+  grade: Grade;
+  /** お客様に見せる名前。お店が登録したもの */
+  name: string;
+  /** 景品の価値（円）。お店が登録したもの */
+  value: number;
+  /** 箱に入っている本数 */
+  count: number;
+};
+
+/** その文字が、扱える等級かどうか */
+export function isGrade(x: string): x is Grade {
+  return x === "S" || x === "A" || x === "B" || x === "C" || x === "D" || x === "-";
+}
+
+/**
+ * 設計から、箱の中身を組み立てる。
+ *
+ * ★これは「案を作る」ための道具です。
+ *   すでに登録されているガチャの中身を知りたいときに、これを使わないこと。
+ *   登録済みの中身は gacha_stock にあります。そちらが正本です。
+ *
+ *   使ってよい場所 … 公開前バックテスト・ガチャ作成の下書き・見本の店
+ *   使ってはいけない場所 … 本番の抽選・お客様に見せる賞の一覧
  */
 export function poolOf(
   title: string,
   price: number,
   total: number,
   designedRtp: number,
-): { grade: Grade; name: string; value: number; count: number }[] {
+): PoolEntry[] {
   const spec = buildSpec(title, price, total, 1, normalizeRtp(designedRtp));
   return spec.prizes.map((p) => ({
     grade: p.grade as Grade,
@@ -229,13 +253,56 @@ export function poolOf(
   }));
 }
 
-/** 箱の状態。どの等級が何本出たか、残り何口か */
+/**
+ * 箱の状態。どの等級が何本出たか、残り何口か。
+ *
+ * ═══════════════════════════════════════════════════════
+ * ★2026-09-06 見つかった不具合：箱の中身を、その場で作り直していた
+ * ═══════════════════════════════════════════════════════
+ *
+ *   以前、この下の drawWith は、箱の中身を引数で受け取らず、
+ *   ガチャの名前・値段・口数・還元率の4つから
+ *   その場で計算して作っていました（poolOf）。
+ *
+ *   ところが、お店が登録した本当の中身は、別の場所にあります。
+ *
+ *       gacha_stock … 等級・名前・価値・本数
+ *
+ *   お店は、ここに「PSA10 リザードンex SAR」のような
+ *   自分の景品の名前を入れます。
+ *
+ *   ★それなのに、引いた結果には
+ *
+ *         「S賞 相当（デモ景品）」
+ *
+ *     と出ていました。お客様の当選画面にも、
+ *     抽選の記録（draws）にも、獲得商品（prizes）にも、
+ *     この名前が入っていました。
+ *
+ *   ★さらに悪いことに、価値と本数も作り直していました。
+ *
+ *       ・価値がずれる  → 還元率（gachas.paid_value）が、実際と違う値になる
+ *       ・本数がずれる  → 在庫に無い等級を当ててしまい、
+ *                         お客様に「景品の在庫が合いませんでした」と出て、
+ *                         そのガチャが誰にも引けなくなる
+ *
+ *   ★ですので、箱の中身は必ず外から渡します（pool）。
+ *     ここで作り直さないこと。
+ *     渡す側（lib/server/draw.ts）が gacha_stock から読みます。
+ */
 export type BoxArgs = {
   title: string;
   price: number;
   total: number;
   left: number;
   designedRtp: number;
+  /**
+   * 箱の中身。★お店が登録したものを、そのまま渡すこと。
+   *
+   *   本番      … gacha_stock から読んだもの（lib/server/draw.ts）
+   *   バックテスト … 設計から組んだもの（poolOf）
+   */
+  pool: PoolEntry[];
 };
 
 /**
@@ -265,7 +332,10 @@ export function drawWith(
   drawn: Record<string, number>,
   pickBelow: (n: number) => number,
 ): DrawOutcome {
-  const pool = poolOf(args.title, args.price, args.total, args.designedRtp);
+  /* ★ここで poolOf を呼ばないこと。
+       箱の中身は、お店が登録したものを外から渡してもらいます。
+       ここで作り直すと、お店が付けた景品の名前が消えます（上の説明を参照）。 */
+  const pool = args.pool;
 
   /* 取り置いてあるラストワン賞が、まだ箱に残っているか */
   const keep = pool.find((p) => p.grade === LAST_ONE_GRADE);

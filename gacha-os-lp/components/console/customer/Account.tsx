@@ -877,6 +877,8 @@ export function ShipAddressCheck({
         </>
       )}
 
+      {/* 表示OK: この部品は見本の店（ClientConsole → MyPage.tsx）だけが描きます。
+            本物のマイページは Portal.tsx で、そちらは OrderList しか読みません */}
       <p className="mt-3 text-[0.76rem] leading-[1.85] text-white/40">
         ここは架空の住所です。デモのため、実際の配送は行いません。
       </p>
@@ -915,12 +917,16 @@ export function AddressForm({
       <H sub="変更には、もう一度ご本人かどうかの確認が入ります。">お届け先の変更</H>
 
       <Panel>
+        {/* 表示OK: この部品は見本の店（ClientConsole → MyPage.tsx）だけが描きます。
+              本物のお届け先の入力は Portal.tsx 側にあり、そちらには
+              「デモ」「架空」の断り書きは1文字もありません */}
         <div className="space-y-3.5">
           <Fld label="お名前" value={a.name} onChange={(v) => setA({ ...a, name: v })} />
           <Fld
             label="郵便番号"
             value={a.zip}
             inputMode="numeric"
+            /* 表示OK: 見本の店だけ（上と同じ理由） */
             hint="デモです。000-0000 のような架空の番号をご入力ください"
             onChange={(v) => setA({ ...a, zip: v })}
           />
@@ -929,6 +935,7 @@ export function AddressForm({
             label="お電話番号"
             value={a.tel}
             inputMode="tel"
+            /* 表示OK: 見本の店だけ（上と同じ理由） */
             hint="デモです。000-0000-0000 のような架空の番号をご入力ください"
             onChange={(v) => setA({ ...a, tel: v })}
           />
@@ -941,6 +948,7 @@ export function AddressForm({
           もう一度ご本人確認をお願いすることがあります。
           身に覚えのない変更を防ぐための仕組みです。
         </Note>
+        {/* 表示OK: 見本の店（MyPage.tsx）だけが描く部品。本物は Portal.tsx */}
         <Note tone="quiet">
           ここは架空の住所です。デモのため、実際の配送は行いません。
           実在するご住所・お電話番号はご入力にならないでください。
@@ -1278,11 +1286,15 @@ export function OrderList({
       <>
         <Back onClick={back} label="マイページ" />
         <H sub="ログインいただくと、実際のお届け状況を表示します。">発送状況</H>
+        {/* 表示OK: ログインしていない方だけに出ます（phase === "anon"）。
+              中身が本物ではないことを、こちらから先に申し上げるための一文です。
+              黙って見本を出す方が、よほど危ない状態になります */}
         <div className="space-y-3">
           <Note tone="info">
             以下は、画面の見本です。実際のお届け状況ではありません。
             ご自身の状況は、ログイン後にこの画面へ表示されます。
           </Note>
+          {/* 表示OK: 未ログインのときだけ（上と同じ理由） */}
           {demo.length === 0 ? (
             <Empty>見本にできる発送のご依頼がありません。</Empty>
           ) : (
