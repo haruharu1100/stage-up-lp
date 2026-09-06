@@ -119,7 +119,14 @@ export async function enterConsole(page, url, creds = null) {
 
   /* 会社コードの欄は、出ているときだけ埋める。
      1社しか入らない設定では、この欄そのものが出ません */
-  const tenant = page.locator('input[placeholder="例：DEMO"]');
+  /* ★見本の文字（placeholder）で欄を探さないこと。
+       ここは以前「例：DEMO」でしたが、本物のお客様が
+       その例をご自分のコードだと思って入れてしまうため、
+       「半角英数字」に書き換えました。
+       その日から、この道具は黙って会社コードを入れないまま
+       ログインを押し続けていました。
+       欄の役割（autocomplete）で探せば、言葉が変わっても壊れません。 */
+  const tenant = page.locator('input[autocomplete="organization"]');
   if ((await tenant.count()) > 0) {
     await tenant.fill(
       creds?.tenantCode || process.env.UX_TENANT_CODE || "DEMO",

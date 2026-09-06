@@ -310,6 +310,21 @@ export type OrderView = {
   paymentStatus: PaymentStatus;
   orderStatus: OrderStatus;
   updatedAt: string;
+  /**
+   * お届け先（注文を受けた時点で写したもの）。
+   *
+   * ★この欄を消さないこと。
+   *   注文の中身だけを見せて、どこへ送るのかを見せない画面を作っていました。
+   *   お店の方は、注文を確かめる場所に宛先が無いので、
+   *   発送の画面まで移動しないと「誰の、どこ宛か」が分かりません。
+   *   （2026-09-06、お店側の通し確認で見つかりました）
+   *
+   * ★登録が無いときに、会員情報から拾い直して埋めないこと。
+   *   注文はその時点の宛先で確定します。あとから住所を変えた方の分が、
+   *   古い注文の宛先として書き換わって見えます。
+   *   無いときは null のまま画面へ渡し、画面は「未登録」と書きます。
+   */
+  shipTo: AddressSnapshot | null;
   items: OrderItemView[];
 };
 
@@ -681,6 +696,9 @@ export async function getOrder(
     paymentStatus: str(o.payment_status) as PaymentStatus,
     orderStatus: str(o.order_status) as OrderStatus,
     updatedAt: str(o.updated_at),
+    /* 注文したときに写した宛先だけを読みます。
+       ★会員の今の住所を読みに行かないこと（上の説明のとおり） */
+    shipTo: parseAddress(o.shipping_address_snapshot, str(o.user_name)),
     items: (it.rows as Row[]).map(toItemView),
   };
 }

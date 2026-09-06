@@ -134,26 +134,14 @@ export function useShopInfo(): ShopInfoState {
  *   奥まった場所に1つずつ置くのではなく、
  *   どの画面のいちばん下にも同じ並びで出します。
  */
-export const SHOP_DOCS = [
-  "company",
-  "legal",
-  "terms",
-  "privacy",
-  "faq",
-  "contact",
-] as const;
+/* ★中身は lib/console/shopDocs.ts に移しました。
+     このファイルには "use client"（ブラウザの中で動く道具です、という札）が
+     付いています。札の付いたファイルから、サーバー側で作る画面が
+     isShopDoc を借りると、借りたものが本物の関数になりません。
+     そのせいで /store/company・/store/legal・/store/terms・/store/privacy が
+     全部 500 で落ちていました（2026-09-06 発覚）。
+     ★ここへ書き戻さないこと。 */
 
-export type ShopDoc = (typeof SHOP_DOCS)[number];
-
-export const SHOP_DOC_LABEL: Record<ShopDoc, string> = {
-  company: "会社情報",
-  legal: "特定商取引法に基づく表記",
-  terms: "利用規約",
-  privacy: "プライバシーポリシー",
-  faq: "よくあるご質問",
-  contact: "お問い合わせ",
-};
-
-export function isShopDoc(v: string): v is ShopDoc {
-  return (SHOP_DOCS as readonly string[]).includes(v);
-}
+/* ★ここから中継（再輸出）もしないこと。
+     中継しても、借りた先はこのファイル（ブラウザ側の道具）のままです。
+     読む側は "@/lib/console/shopDocs" から直に借りてください。 */

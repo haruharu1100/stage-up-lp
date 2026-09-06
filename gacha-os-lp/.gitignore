@@ -43,6 +43,7 @@ next-env.d.ts
 #   途中で止まります（2026-08-24 実測）。理由は .vercelignore に書いてあります。
 .next-prod/
 .next-verify/
+.next-e2e/
 _next-verify-local/
 
 # 検証用のスクリーンショット・録画（容量が大きいのでgitに入れない）

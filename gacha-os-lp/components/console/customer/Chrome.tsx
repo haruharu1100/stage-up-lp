@@ -49,12 +49,8 @@ import { useCallback, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { postHeaders } from "@/lib/csrf";
 import { useCustomerPoints } from "@/lib/console/liveMyPage";
-import {
-  SHOP_DOCS,
-  SHOP_DOC_LABEL,
-  useShopInfo,
-  type ShopInfo,
-} from "@/lib/console/shopInfo";
+import { SHOP_DOCS, SHOP_DOC_LABEL } from "@/lib/console/shopDocs";
+import { useShopInfo, type ShopInfo } from "@/lib/console/shopInfo";
 /* ★Sample で始まる部品を読まないこと。
      ここは本物のお客様が見る画面です（scripts/check-real-art.mjs が見張ります）。 */
 import { ShopPhoto } from "./art";

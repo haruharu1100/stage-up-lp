@@ -36,8 +36,8 @@
  */
 
 import type { PublicShopInfo } from "@/lib/server/publicShop";
-import type { ShopDoc } from "@/lib/console/shopInfo";
-import { SHOP_DOC_LABEL } from "@/lib/console/shopInfo";
+import type { ShopDoc } from "@/lib/console/shopDocs";
+import { SHOP_DOC_LABEL } from "@/lib/console/shopDocs";
 
 /* ══════════════════════════════════════════════
    小さな部品

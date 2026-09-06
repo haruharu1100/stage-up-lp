@@ -66,6 +66,39 @@ const STATUS: Record<string, number> = {
   TOO_MANY: 400,
 };
 
+/**
+ * 画面へ返す形を、ここ1か所で作る。
+ *
+ * ★読むときと保存したときで、返す形を変えないこと。
+ *   保存の返事に fields（項目の名前）を入れ忘れていたため、
+ *   1回保存した瞬間に、画面の項目名が
+ *   「運営法人名（販売業者）」から「legalName」に化けていました。
+ *   お店の方には、これが何の欄なのか分からなくなります。
+ *   canEdit も同じで、抜けると「変えられない人」扱いになります。
+ *   （2026-09-06、お店側の通し確認で見つかりました）
+ */
+function katachi(
+  requestId: string,
+  role: Parameters<typeof can>[0] | null,
+  settings: unknown,
+  faqs: unknown,
+) {
+  return {
+    ok: true as const,
+    requestId,
+    canEdit: role !== null && can(role, "settings.edit"),
+    settings,
+    faqs,
+    /* 画面が項目名を自分で持たなくて済むように、こちらから渡します。
+       ★画面側にラベルを書き写さないこと。書き写した日から、必ずずれます。 */
+    fields: SETTING_FIELDS.map((f) => ({
+      field: f,
+      label: FIELD_LABEL[f],
+      required: REQUIRED_FOR_PUBLISH.includes(f),
+    })),
+  };
+}
+
 export async function GET(req: NextRequest) {
   const gate = await guard(req, { kind: "ADMIN", permission: "settings.view" });
   if (!passed(gate)) return gate;
@@ -76,20 +109,9 @@ export async function GET(req: NextRequest) {
       listFaqs(gate.session.tenantId),
     ]);
 
-    return NextResponse.json({
-      ok: true,
-      requestId: gate.requestId,
-      canEdit: gate.role !== null && can(gate.role, "settings.edit"),
-      settings,
-      faqs,
-      /* 画面が項目名を自分で持たなくて済むように、こちらから渡します。
-         ★画面側にラベルを書き写さないこと。書き写した日から、必ずずれます。 */
-      fields: SETTING_FIELDS.map((f) => ({
-        field: f,
-        label: FIELD_LABEL[f],
-        required: REQUIRED_FOR_PUBLISH.includes(f),
-      })),
-    });
+    return NextResponse.json(
+      katachi(gate.requestId, gate.role, settings, faqs),
+    );
   } catch (e) {
     return internalError(gate.requestId, "console-settings-store", e);
   }
@@ -143,12 +165,14 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    return NextResponse.json({
-      ok: true,
-      requestId: gate.requestId,
-      settings: settings ?? (await getTenantSettings(gate.session.tenantId)),
-      faqs: faqs ?? (await listFaqs(gate.session.tenantId)),
-    });
+    return NextResponse.json(
+      katachi(
+        gate.requestId,
+        gate.role,
+        settings ?? (await getTenantSettings(gate.session.tenantId)),
+        faqs ?? (await listFaqs(gate.session.tenantId)),
+      ),
+    );
   } catch (e) {
     if (e instanceof TenantSettingsError) {
       return NextResponse.json(

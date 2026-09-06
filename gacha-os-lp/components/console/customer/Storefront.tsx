@@ -1040,6 +1040,11 @@ export function DrawTheater({
           </dl>
 
           {/* ═══ ここから先の操作 ═══
+              ★正本は docs/仕様_結果画面のボタン.md です。
+                ボタンを足す・減らす・並びを変える・文言を変えるときは、
+                先にあの文書を直してから、ここを直してください。
+                文書を直さずに画面だけ変えるのは禁止です。
+
               ★大きいボタンは、いつも1つだけにすること。
                 同じ大きさ・同じ色のボタンを2つ並べると、
                 お客様は、どちらが本筋なのかを考えます。
@@ -1081,14 +1086,24 @@ export function DrawTheater({
                 </p>
               </>
             ) : (
-              <button
-                type="button"
-                disabled
-                className="w-full rounded-2xl px-4 py-4 text-[0.98rem] font-bold text-white opacity-35"
-                style={{ background: "rgba(255,255,255,0.07)", border: `1px solid ${SHOP_EDGE}` }}
-              >
-                もう一度引く
-              </button>
+              <>
+                <button
+                  type="button"
+                  disabled
+                  className="w-full rounded-2xl px-4 py-4 text-[0.98rem] font-bold text-white opacity-35"
+                  style={{ background: "rgba(255,255,255,0.07)", border: `1px solid ${SHOP_EDGE}` }}
+                >
+                  もう一度引く
+                </button>
+                {/* ★薄くするだけで終わらせないこと。
+                      色が薄いだけでは、壊れているのか、
+                      条件が足りないのかが分かりません。
+                      押せない理由は、必ず文字で書きます。 */}
+                <p className="text-center text-[0.74rem] leading-[1.9] text-white/40">
+                  このガチャは、いま引けません。
+                  残り口数か、販売の状態をご確認ください。
+                </p>
+              </>
             )}
 
             <button

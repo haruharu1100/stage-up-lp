@@ -28,7 +28,11 @@ import { notFound } from "next/navigation";
 import { cookies } from "next/headers";
 import { CustomerShell } from "@/components/console/customer/Chrome";
 import { StoreDocView } from "@/components/console/customer/StoreDoc";
-import { SHOP_DOC_LABEL, isShopDoc } from "@/lib/console/shopInfo";
+/* ★ここを "@/lib/console/shopInfo" に戻さないこと。
+     あちらは "use client"（ブラウザの中で動く道具です）の札が付いています。
+     サーバー側で作るこの画面が、そこから isShopDoc を借りると
+     本物の関数になりません。この4ページが 500 で落ちます。 */
+import { SHOP_DOC_LABEL, isShopDoc } from "@/lib/console/shopDocs";
 import { readSession, SESSION_COOKIE } from "@/lib/server/session";
 import {
   getPublicShopInfo,

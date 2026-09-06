@@ -905,6 +905,15 @@ function ShipDrawer({
   const susumeru = s ? (NEXT_OF[s.status] ?? []) : [];
   const dashita = s ? ["SHIPPED", "IN_TRANSIT", "DELIVERED"].includes(s.status) : false;
   const owari = s ? s.status === "CANCELLED" || s.status === "DELIVERED" : false;
+  /**
+   * 追跡番号が、もう登録されているか。
+   *
+   * ★出荷の確定を、これ抜きで押せるようにしないこと。
+   *   追えない荷物は、お客様には「消えた」のと同じです。
+   *   サーバーも断りますが（NEED_TRACKING）、押してから断られるのでは
+   *   お店の方には「なぜ進めないのか」が分かりません。
+   */
+  const trackingAri = s ? (s.trackingNumber ?? "").trim() !== "" : false;
 
   return (
     <Drawer
@@ -1148,12 +1157,21 @@ function ShipDrawer({
               title="状態を進める"
               note="順路の外へは進めません（準備中から、いきなり配達完了にはできません）。"
             >
+              {/* ★押せない理由を、必ず文字で書くこと。
+                    薄くするだけだと、お店の方には
+                    「壊れている」のか「まだ条件が足りない」のかが分かりません。 */}
+              {susumeru.some((n) => n.to === "SHIPPED") && !trackingAri && (
+                <p className="mb-3 text-note leading-[1.85] text-slate3">
+                  追跡番号がまだ登録されていないため、出荷は確定できません。
+                  上の「配送会社と追跡番号」を登録すると、押せるようになります。
+                </p>
+              )}
               <div className="flex flex-wrap gap-2">
                 {susumeru.map((n) => (
                   <Btn
                     key={n.to}
                     kind={n.to === "SHIPPED" ? "primary" : "normal"}
-                    disabled={chu}
+                    disabled={chu || (n.to === "SHIPPED" && !trackingAri)}
                     onClick={() =>
                       void yaru(
                         { action: "advance", to: n.to },

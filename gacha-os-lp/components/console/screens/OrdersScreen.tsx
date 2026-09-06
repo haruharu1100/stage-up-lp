@@ -96,6 +96,8 @@ type OrderDetail = {
   paymentStatus: string;
   orderStatus: string;
   updatedAt: string;
+  /** お届け先（注文を受けた時点で写したもの）。未登録なら null */
+  shipTo: { name: string; zip: string; addr: string; tel: string } | null;
   items: OrderItem[];
 };
 
@@ -522,6 +524,50 @@ function OrderDrawer({
               <KV k="受付日時" v={<span className="num">{nichiji(order.orderedAt)}</span>} />
               <KV k="種類" v={order.orderType === "PRIZE_SHIPPING" ? "当選品の発送" : order.orderType} />
               <KV k="状態" v={st ? <Badge tone={st.tone}>{st.label}</Badge> : "-"} />
+            </div>
+          </section>
+
+          {/* ── お届け先 ──
+               ★この欄を消さないこと。
+                 注文を確かめる場所に宛先が無いと、お店の方は
+                 発送の画面まで行かないと「どこ宛か」が分かりません。
+               ★空のときに、会員情報から拾って埋めないこと。
+                 注文はそのときの宛先で確定します。 */}
+          <section>
+            <h3 className="mb-2 text-note font-bold text-slate">お届け先</h3>
+            <div className="rounded-xl border border-edge2 bg-paper2 px-4 py-3">
+              {order.shipTo ? (
+                <>
+                  <KV k="お名前" v={order.shipTo.name || "未登録"} />
+                  <KV
+                    k="郵便番号"
+                    v={
+                      order.shipTo.zip ? (
+                        <span className="num">〒{order.shipTo.zip}</span>
+                      ) : (
+                        "未登録"
+                      )
+                    }
+                  />
+                  <KV k="ご住所" v={order.shipTo.addr || "未登録"} />
+                  <KV
+                    k="お電話"
+                    v={
+                      order.shipTo.tel ? (
+                        <span className="num">{order.shipTo.tel}</span>
+                      ) : (
+                        "未登録"
+                      )
+                    }
+                  />
+                </>
+              ) : (
+                <p className="text-note leading-[1.85] text-slate3">
+                  お届け先が登録されていません。
+                  この注文のままでは発送を作れませんので、
+                  お客様に住所のご登録をお願いしてください。
+                </p>
+              )}
             </div>
           </section>
 
