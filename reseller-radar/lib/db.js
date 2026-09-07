@@ -138,6 +138,67 @@ async function init() {
       result_json TEXT,
       found_at TEXT DEFAULT (datetime('now'))
     );
+
+    -- 探索履歴：一度見た商品を記録し、次回いつ再確認するか（next_check_at）を決める。
+    -- 同じ商品(supplier + supplier_product_id)を毎回Keepa照合しないための土台。
+    -- NEAR_PROFIT（あと少しで利益）もここに保存し、価格下落時に優先再確認する。
+    CREATE TABLE IF NOT EXISTS product_history (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      supplier TEXT,
+      supplier_url TEXT,
+      supplier_product_id TEXT,
+      title TEXT,
+      jan TEXT,
+      jan_confidence TEXT,
+      model TEXT,
+      model_confidence TEXT,
+      asin TEXT,
+      first_seen_at TEXT DEFAULT (datetime('now')),
+      last_checked_at TEXT,
+      last_supplier_price INTEGER,
+      last_amazon_price INTEGER,
+      last_conservative_price INTEGER,
+      last_match_status TEXT,
+      last_profit_status TEXT,
+      last_profit INTEGER,
+      last_roi REAL,
+      near_profit INTEGER DEFAULT 0,
+      near_reason TEXT,
+      check_count INTEGER DEFAULT 0,
+      next_check_at TEXT,
+      created_at TEXT DEFAULT (datetime('now'))
+    );
+
+    -- 商品の一意キー（同一URLの重複行を防ぐ）。
+    CREATE UNIQUE INDEX IF NOT EXISTS ux_product_history_url
+      ON product_history(supplier_url);
+
+    -- 再確認の優先取得（next_check_at が過ぎた順に処理）。
+    CREATE INDEX IF NOT EXISTS ix_product_history_next
+      ON product_history(next_check_at);
+
+    -- 探索候補URL：セール/特価/在庫処分/アウトレット等の“安く買える一覧ページ”を貯める。
+    -- 自動で無制限に追加はしない（重複チェック後、priority付きで探索キューに入れる）。
+    CREATE TABLE IF NOT EXISTS candidate_source_url (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      url TEXT NOT NULL,
+      supplier_name TEXT,
+      kind TEXT,
+      discovered_from TEXT,
+      priority INTEGER DEFAULT 5,
+      status TEXT DEFAULT 'candidate',
+      score REAL DEFAULT 0,
+      checked_count INTEGER DEFAULT 0,
+      verified_count INTEGER DEFAULT 0,
+      estimated_profit_count INTEGER DEFAULT 0,
+      near_profit_count INTEGER DEFAULT 0,
+      first_seen_at TEXT DEFAULT (datetime('now')),
+      last_crawled_at TEXT,
+      next_check_at TEXT
+    );
+
+    CREATE UNIQUE INDEX IF NOT EXISTS ux_candidate_source_url
+      ON candidate_source_url(url);
   `);
 
   // 既存DBに後から列を足す（新規DBは上のCREATEに無いので個別に追加）。
@@ -164,6 +225,20 @@ async function init() {
   await addColumnIfMissing("notifications", "avg_price_90", "INTEGER");
   await addColumnIfMissing("findings", "price_risk_score", "INTEGER");
   await addColumnIfMissing("notifications", "price_risk_score", "INTEGER");
+
+  // Phase3（合否ゲート厳格化）：判定の根拠と表示区分（A/B/C）を保存する。
+  //   display_category = AUTO_PROFIT(利益商品) / ESTIMATED_PROFIT(推定利益候補) / MANUAL_REVIEW(要確認)
+  await addColumnIfMissing("findings", "display_category", "TEXT");
+  await addColumnIfMissing("findings", "roi", "REAL");
+  await addColumnIfMissing("findings", "profit_class", "TEXT");
+  await addColumnIfMissing("findings", "fee_status", "TEXT");
+  await addColumnIfMissing("findings", "risk_level", "TEXT");
+  await addColumnIfMissing("findings", "breakeven_sale_price", "INTEGER");
+  await addColumnIfMissing("findings", "stress_drop10_ok", "INTEGER");
+  await addColumnIfMissing("findings", "stress_fee500_ok", "INTEGER");
+  await addColumnIfMissing("findings", "market_new_price", "INTEGER");
+  await addColumnIfMissing("findings", "avg30_new", "INTEGER");
+  await addColumnIfMissing("findings", "gate_reasons", "TEXT");
 
   await seedSettings();
   await seedSuppliers();

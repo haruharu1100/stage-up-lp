@@ -76,6 +76,14 @@ function parseProduct(product) {
 
   const asin = product.asin || null;
 
+  // ★Amazonのカテゴリー情報（食品/サプリ等の出品要承認カテゴリ除外に使う）。
+  //   categoryTree=[{catId,name},...] の名前だけを配列で公開。欠損は空配列（でっち上げない）。
+  const categoryTree = Array.isArray(product.categoryTree)
+    ? product.categoryTree.map((c) => (c && c.name ? String(c.name) : "")).filter(Boolean)
+    : [];
+  const rootCategory = product.rootCategory != null ? product.rootCategory : null;
+  const productGroup = product.productGroup || null;
+
   let imageUrl = null;
   if (product.imagesCSV) {
     const file = String(product.imagesCSV).split(",")[0];
@@ -125,6 +133,10 @@ function parseProduct(product) {
     imageUrl,
     productUrl,
     title: product.title || "",
+    // Amazonカテゴリー（食品/サプリ等の要承認カテゴリ除外用・欠損は空/null）
+    categoryTree,
+    rootCategory,
+    productGroup,
     // 相場指標（円建て・欠損はnull）と値崩れリスク（0-100・高いほど危険）
     avg30: avg30New,
     avg90: avg90New,
@@ -431,7 +443,9 @@ export async function lookupProduct(item) {
       const jm = classifyJanMatch({
         supplierName: item.name,
         supplierJan: item.jan,
-        supplierModel: item.model || null,
+        // 型番は HIGH（明示品番/構造化）のみ照合の裏取りに使う。
+        // タイトル/本文由来(medium/low)は誤って矛盾判定を招くため渡さない。
+        supplierModel: item.modelConfidence === "high" ? item.model : null,
         candidateTitle: byJan.title,
         candidateCodes: codes,
         candidateModel: null, // Keepa側の明示品番は未取得（SP-API未接続のため）
@@ -461,6 +475,9 @@ export async function lookupProduct(item) {
     const cls = classifyMatch({
       supplierName: item && item.name,
       supplierJan: (item && item.jan) || null,
+      // 詳細ページで取れた HIGH 信頼の明示型番があれば照合に渡す
+      // （タイトル由来 medium/low は渡さない＝MODEL_VERIFIEDを過剰に出さない）。
+      supplierModel: item && item.modelConfidence === "high" ? item.model : null,
       amazonTitle: byName.title,
       amazonJan: null, // Keepa側JANは未取得（SP-API未接続のため）
     });
@@ -632,5 +649,7 @@ export async function judge(task, buyPrice, amazonPrice, monthlySales, keepaFees
     feeStatus: p.feeStatus,
     riskLevel: p.riskLevel,
     autoBuyEligible: p.autoBuyEligible,
+    // Phase3：合否ゲート(classifyDeal)へ渡すため計算結果の全体も返す。
+    detail: p,
   };
 }

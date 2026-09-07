@@ -225,6 +225,97 @@ export function bestValue(cands) {
   return cands && cands.length ? cands[0].value : null;
 }
 
+// ───────────────────────────────────────────────────────────
+// 安全採用レイヤー（AUTO判定に使う識別子を1セットにまとめて返す）
+//
+// 方針（ユーザー指示）：
+//   - source を HIGH/MEDIUM/LOW の3段に写像する。
+//   - 全文フォールバック(body)・タイトル(title)由来は AUTO(JAN_VERIFIED)に使わせない。
+//     → high = JSON-LD / microdata / ラベル付きスペック領域のみ。
+//   - 高信頼で「異なる値」が複数あれば JAN_AMBIGUOUS（採用しない）。
+//   - 取れなければ null。無理に推測しない。
+// ───────────────────────────────────────────────────────────
+
+// 数値confidence を持つ source を列挙(high/medium/low)に写像
+export function tierOfSource(source) {
+  if (source === "structured" || source === "microdata" || source === "spec") return "high";
+  if (source === "title") return "medium";
+  return "low"; // body（全文regex）ほか
+}
+
+// JAN候補配列から安全に1件を選ぶ。
+//   status: OK（一意採用）/ AMBIGUOUS（複数の異なる高信頼値）/ NONE（無し）
+function pickJanSafe(cands) {
+  if (!cands || !cands.length) return { value: null, source: null, confidence: null, status: "NONE" };
+  for (const tier of ["high", "medium", "low"]) {
+    const group = cands.filter((c) => tierOfSource(c.source) === tier);
+    if (!group.length) continue;
+    const distinct = new Set(group.map((c) => c.value));
+    if (distinct.size > 1) {
+      // 同一段の中で値が食い違う＝どれが正しいか裏取り不能。採用しない。
+      return { value: null, source: group[0].source, confidence: tier, status: "AMBIGUOUS" };
+    }
+    return { value: group[0].value, source: group[0].source, confidence: tier, status: "OK" };
+  }
+  return { value: null, source: null, confidence: null, status: "NONE" };
+}
+
+// 型番候補から最上位を選ぶ（confidence を列挙へ写像）。
+function pickModelSafe(cands) {
+  if (!cands || !cands.length) return { value: null, source: null, confidence: null };
+  const c = cands[0];
+  return { value: c.value, source: c.source, confidence: tierOfSource(c.source) };
+}
+
+// バリアント（色/容量/入数/サイズ）を本文・スペックから控えめに拾う。
+// 取れないものは null（推測しない）。誤マッチ防止の補助情報。
+function extractVariant(html, text, $doc) {
+  const out = { color: null, capacity: null, packCount: null, size: null };
+  let hay = String(text || "");
+  if (!hay && $doc) {
+    try {
+      hay = $doc("body").text();
+    } catch {
+      hay = "";
+    }
+  }
+  const cap = hay.match(/(\d+(?:\.\d+)?)\s?(TB|GB|MB|ml|mL|L|kg|g)\b/);
+  if (cap) out.capacity = (cap[1] + cap[2]).replace(/\s+/g, "");
+  const pk = hay.match(/(\d+)\s?(?:個入|個セット|本入|枚入|枚セット|パック入|パック|セット)/);
+  if (pk) out.packCount = parseInt(pk[1], 10);
+  const col = hay.match(/(?:カラー|色|color)\s*[:：]\s*([^\s、,。]{1,12})/i);
+  if (col) out.color = col[1].trim();
+  const sz = hay.match(/(?:サイズ|size)\s*[:：]\s*([^\s、,。]{1,12})/i);
+  if (sz) out.size = sz[1].trim();
+  return out;
+}
+
+// 仕入れ元ページから安全に採用できる識別子を1セットで返す。
+//   { jan:{value,source,confidence,status}, model:{value,source,confidence},
+//     brand:{value,source,confidence}, variant:{color,capacity,packCount,size},
+//     autoEligibleJan }
+// autoEligibleJan が true のときだけ JAN を AUTO(JAN_VERIFIED)照合に使ってよい。
+export function extractProductIdentifiers(html, text = "") {
+  const raw = extractIdentifiers(html, text);
+  const jan = pickJanSafe(raw.jan);
+  const model = pickModelSafe(raw.model);
+  const brandCand = raw.brand && raw.brand[0] ? raw.brand[0] : null;
+  const brand = brandCand
+    ? { value: brandCand.value, source: brandCand.source, confidence: tierOfSource(brandCand.source) }
+    : { value: null, source: null, confidence: null };
+
+  let $doc = null;
+  try {
+    $doc = cheerio.load(html || "");
+  } catch {
+    $doc = null;
+  }
+  const variant = extractVariant(html, text, $doc);
+
+  const autoEligibleJan = jan.confidence === "high" && jan.status === "OK" && !!jan.value;
+  return { jan, model, brand, variant, autoEligibleJan };
+}
+
 // JAN 候補が複数の“異なる値”を含み矛盾しているか
 export function hasJanConflict(janCands) {
   const distinct = new Set((janCands || []).map((c) => c.value));

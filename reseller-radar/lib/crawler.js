@@ -3,6 +3,71 @@ import { get, all, run, getSetting } from "./db.js";
 import { lookupProduct, judge, fetchImageByAsin } from "./amazon.js";
 import { sendNotificationEmail } from "./notify.js";
 import { normalizePlan, dealLimit } from "./plans.js";
+import { classifyDeal, GATE_CATEGORY } from "./gate.mjs";
+import { extractProductIdentifiers } from "./identifiers.mjs";
+import { classifyRestrictedFood } from "./category-filter.mjs";
+
+// Phase3：利益計算結果(verdict.detail)＋商品一致(match_status)＋値崩れ(price_risk)から
+// A/B/C/EXCLUDED を判定し、row に判定根拠列をセットして gate を返す。
+// 自動巡回(runTask)・手動巡回(stepCrawlJob)で共通利用する（合否ロジックを1か所に固定）。
+function applyGateToRow(row, verdict, info) {
+  const detail = verdict.detail || null;
+  const gate = classifyDeal({
+    profit: detail,
+    matchStatus: info.matchStatus || null,
+    priceRisk: {
+      score: info.priceRiskScore,
+      usable: info.priceRiskUsable,
+      level: info.priceRiskLevel,
+    },
+  });
+  // ★食品・飲料・サプリ(健康食品)はAmazon出品に承認が必要で無承認では販売不可。
+  //   利益が出ていても仕入れ候補から必ず EXCLUDE する（安全側）。
+  const food = classifyRestrictedFood({
+    title: row.product_name,
+    amazonTitle: info.title,
+    categoryTree: info.categoryTree,
+  });
+  if (food.excluded) {
+    gate.category = GATE_CATEGORY.EXCLUDED;
+    gate.isDeal = 0;
+    gate.reasons = [...(gate.reasons || []), food.reason];
+  }
+  const st = detail && detail.stress ? detail.stress : null;
+  const d10 = st && Array.isArray(st.priceDrops)
+    ? st.priceDrops.find((d) => Math.abs(d.drop - 0.1) < 1e-9) : null;
+  const f500 = st && Array.isArray(st.feeIncreases)
+    ? st.feeIncreases.find((f) => f.increase === 500) : null;
+  row.display_category = gate.category;
+  row.roi = detail ? detail.roi : null;
+  row.profit_class = detail ? detail.class : null;
+  row.fee_status = detail ? detail.feeStatus : null;
+  row.risk_level = detail ? detail.riskLevel : info.priceRiskLevel || null;
+  row.breakeven_sale_price = detail ? detail.breakevenSalePrice : null;
+  row.stress_drop10_ok = d10 ? (d10.profitable ? 1 : 0) : null;
+  row.stress_fee500_ok = f500 ? (f500.profitable ? 1 : 0) : null;
+  row.market_new_price = info.marketNewPrice != null ? info.marketNewPrice : null;
+  row.avg30_new = info.avg30New != null ? info.avg30New : null;
+  row.gate_reasons = gate.reasons && gate.reasons.length ? gate.reasons.join(" / ") : null;
+  row.is_deal = gate.isDeal;
+  return gate;
+}
+
+// findings への追加列（rowArgs の21列の後ろに続ける）。順番は FINDING_SQL と一致させること。
+const findingTail = (r) => [
+  r.display_category || null,
+  r.roi != null ? r.roi : null,
+  r.profit_class || null,
+  r.fee_status || null,
+  r.risk_level || null,
+  r.breakeven_sale_price != null ? r.breakeven_sale_price : null,
+  r.stress_drop10_ok != null ? r.stress_drop10_ok : null,
+  r.stress_fee500_ok != null ? r.stress_fee500_ok : null,
+  r.market_new_price != null ? r.market_new_price : null,
+  r.avg30_new != null ? r.avg30_new : null,
+  r.gate_reasons || null,
+  r.is_deal != null ? r.is_deal : 0,
+];
 
 const UA =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0 Safari/537.36";
@@ -11,17 +76,9 @@ function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms));
 }
 
-// テキスト/HTMLからJANを抽出（45|49始まり13桁を最優先、なければ8桁）
-function extractJan(text, html) {
-  const hay = `${text || ""} ${html || ""}`;
-  const jan13 = hay.match(/\b(4[59]\d{11})\b/);
-  if (jan13) return jan13[1];
-  const anyJan13 = hay.match(/\b(\d{13})\b/);
-  if (anyJan13) return anyJan13[1];
-  const jan8 = hay.match(/\b(\d{8})\b/);
-  if (jan8) return jan8[1];
-  return null;
-}
+// ※旧 extractJan（ページ全文regexで13桁を拾う方式）は誤照合の温床のため撤去。
+//   JANは商品詳細ページの構造化データ(JSON-LD/microdata/ラベル付きスペック)から
+//   identifiers.mjs の extractProductIdentifiers() で高信頼(HIGH)のみ取得する方針に統一した。
 
 // 価格文字列から「実際の値段」を賢く取り出す。
 // ¥／￥／円 の付いた金額を最優先する。
@@ -85,6 +142,104 @@ function absUrl(href, base) {
   } catch {
     return "";
   }
+}
+
+// ─────────────────────────────────────────────────────────────
+// 商品詳細ページから「信頼できるJAN・正式型番」を安全に取得する（enrich）。
+//
+// 方針（ユーザー指示）：
+//   - JANは全文regexで拾わない。詳細ページの構造化データ(JSON-LD/microdata/
+//     ラベル付きスペック)からのみ取得し、HIGH かつ一意(status=OK)のときだけ採用。
+//   - 高信頼が取れなければ JAN=null（推測しない・誤照合させない）。
+//   - 優先仕入れ先＝楽天/Yahoo/セブン/ヨドバシ/エディオン等。ヤフオク/メルカリ等は対象外。
+// ─────────────────────────────────────────────────────────────
+const PRIORITIZED_DETAIL_HOSTS = [
+  "rakuten.co.jp",
+  "shopping.yahoo.co.jp",
+  "store.shopping.yahoo.co.jp",
+  "paypaymall.yahoo.co.jp",
+  "7net.omni7.jp",
+  "omni7.jp",
+  "yodobashi.com",
+  "edion.com",
+  "biccamera.com",
+  "ksdenki.com",
+];
+// フリマ/オークション等は構造化JANの信頼性が低く、対象外。
+const DEPRIORITIZED_DETAIL_HOSTS = [
+  "auctions.yahoo.co.jp",
+  "mercari.com",
+  "fril.jp",
+  "netmall.hardoff.co.jp",
+];
+
+export function isPrioritizedDetailHost(u) {
+  try {
+    const h = new URL(u).hostname.replace(/^www\./, "");
+    if (DEPRIORITIZED_DETAIL_HOSTS.some((d) => h.includes(d))) return false;
+    return PRIORITIZED_DETAIL_HOSTS.some((d) => h.includes(d));
+  } catch {
+    return false;
+  }
+}
+
+// 1商品ぶんの詳細ページを取得して、HIGH信頼のJAN/型番を item に付与する。
+// 失敗しても何もしない（安全側）。JANはHIGH一意のときだけ。型番はHIGHのみ「明示型番」扱い。
+export async function enrichIdentifiers(it) {
+  if (!it || !it.link || !isPrioritizedDetailHost(it.link)) return;
+  let html;
+  try {
+    html = await fetchHtml(it.link);
+  } catch {
+    return;
+  }
+  if (!html) return;
+  let ids;
+  try {
+    ids = extractProductIdentifiers(html, "");
+  } catch {
+    return;
+  }
+  // JAN：HIGH かつ status=OK（一意）のときのみ採用。曖昧/低信頼は使わない。
+  if (ids.autoEligibleJan && ids.jan && ids.jan.value) {
+    it.jan = ids.jan.value;
+    it.janConfidence = "high";
+    it.janSource = ids.jan.source;
+  } else {
+    it.jan = null;
+    it.janConfidence = null;
+  }
+  // 型番：HIGH（明示品番欄/構造化）のみ「明示型番」として照合に渡す。
+  //   MEDIUM/LOW（タイトル/本文由来）は保存だけ＝MODEL_VERIFIEDには使わない。
+  if (ids.model && ids.model.value) {
+    it.model = ids.model.value;
+    it.modelConfidence = downgradeUntrustedModel(ids.model.value, ids.model.confidence, it.link);
+    it.modelSource = ids.model.source;
+  }
+  if (ids.brand && ids.brand.value) it.brand = ids.brand.value;
+  if (ids.variant) it.variant = ids.variant;
+}
+
+// ★安全措置：楽天由来の型番/SKUは「店舗管理番号(shop:itemcode)」を拾いやすく、
+//   メーカー正式型番と確認できるまで MODEL_VERIFIED の HIGH 根拠に使ってはいけない。
+//   - 楽天ホスト由来 → HIGH を medium へ降格（保存はするが AUTO 判定には使わない）
+//   - "shopname:itemcode" 形式の値 → サイト問わず HIGH を medium へ降格
+//   これにより誤って別商品を型番一致で自動採用する事故を防ぐ（JANは別途HIGHで有効）。
+export function looksLikeShopSku(value) {
+  const v = String(value || "");
+  // 「英数記号の塊 : 英数記号の塊」＝店舗:商品コード の典型。スペースを含まない。
+  return /^[a-z0-9][a-z0-9_-]*:[a-z0-9][a-z0-9._-]*$/i.test(v);
+}
+export function downgradeUntrustedModel(value, confidence, url) {
+  if (confidence !== "high") return confidence;
+  let isRakuten = false;
+  try {
+    isRakuten = new URL(url).hostname.replace(/^www\./, "").includes("rakuten.co.jp");
+  } catch {
+    isRakuten = false;
+  }
+  if (isRakuten || looksLikeShopSku(value)) return "medium"; // AUTO(HIGH)根拠にしない
+  return confidence;
 }
 
 // 商品ごとの個別リンクが取れなかったとき、トップページに飛ばすと使えないので、
@@ -307,16 +462,13 @@ function extractBySelector($, url, supplier) {
       $el.find(imgSel).first().attr("data-src") ||
       "";
 
-    const janText = supplier.selector_jan
-      ? $el.find(supplier.selector_jan).first().text()
-      : $el.text();
-    const jan = extractJan(janText, $.html($el));
-
     if (!name || !price) return;
     items.push({
       name: name.slice(0, 120),
       price,
-      jan,
+      // 一覧カードの全文regexでJANを拾う方式は禁止（誤照合の元）。
+      // JANは商品詳細ページの構造化データから安全に取得する（enrichIdentifiers）。
+      jan: null,
       link: absUrl(href, supplier.base_url || url),
       image: absUrl(imgSrc, supplier.base_url || url),
     });
@@ -360,12 +512,10 @@ function extractGeneric($, url) {
       $el.find("img").first().attr("src") ||
       $el.find("img").first().attr("data-src") ||
       "";
-    const jan = extractJan(fullText, $.html($el));
-
     items.push({
       name,
       price,
-      jan,
+      jan: null, // 一覧全文からのJAN推定は禁止（詳細ページの構造化データで取得）
       link: absUrl(href, url),
       image: absUrl(imgSrc, url),
     });
@@ -416,7 +566,7 @@ function extractYahoo($, url) {
         items.push({
           name: String(name).slice(0, 120),
           price: Math.round(price),
-          jan: extractJan(name, ""),
+          jan: null, // 商品名からのJAN推定は禁止（詳細ページの構造化データで取得）
           link: absUrl(link, url),
           image: absUrl(image, url),
         });
@@ -493,7 +643,7 @@ function extractRakuten($, url) {
     items.push({
       name: name.slice(0, 120),
       price,
-      jan: extractJan(name, ""),
+      jan: null, // 商品名からのJAN推定は禁止（詳細ページの構造化データで取得）
       link: absUrl(href, url),
       image: absUrl(imgSrc, url),
     });
@@ -535,7 +685,7 @@ function extractMercari($, url) {
     items.push({
       name: name.slice(0, 120),
       price,
-      jan: extractJan(name, ""),
+      jan: null, // 商品名からのJAN推定は禁止（詳細ページの構造化データで取得）
       link: absUrl(href, url),
       image: imgSrc,
       forceNew: true,
@@ -616,9 +766,12 @@ export async function runTask(taskId) {
 
   // 仕入れ先ページにバーコードが無くても、商品名でAmazon検索して照合する。
   // トークン消費を抑えるため、1回の巡回で照合する上限を設ける。
-  // ※ Vercelは1回の処理が60秒で強制終了されるため、上限を控えめにし、
+  // ※ Vercelは1回の処理が60秒で強制終了されるため、既定は控えめ(24)にし、
   //   さらに下の「経過時間の見張り」で時間切れ前に安全に打ち切る。
-  const MAX_LOOKUPS = 24;
+  // ※ ローカルの毎時巡回(scripts/crawl-hourly.mjs)は60秒制限が無いため、
+  //   環境変数 CRAWL_MAX_LOOKUPS で照合枠(母数)を段階的に増やせる。
+  //   Keepaは6時間キャッシュ＋429で自動停止するため過剰消費にはならない。
+  const MAX_LOOKUPS = Math.max(1, parseInt(process.env.CRAWL_MAX_LOOKUPS || "24", 10) || 24);
   const candidates = extracted.filter((it) => it.name && it.price).slice(0, MAX_LOOKUPS);
   let matched = 0;
   let notified = 0;
@@ -646,8 +799,10 @@ export async function runTask(taskId) {
   const FINDING_SQL = `INSERT INTO findings
       (task_id, supplier_name, product_name, amazon_title, condition, jan, asin, buy_price, amazon_price,
        fees, profit, profit_rate, monthly_sales, source_url, product_url, image_url, match_type,
-       match_status, attribute_conflicts, avg_price_90, price_risk_score, is_deal)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+       match_status, attribute_conflicts, avg_price_90, price_risk_score,
+       display_category, roi, profit_class, fee_status, risk_level, breakeven_sale_price,
+       stress_drop10_ok, stress_fee500_ok, market_new_price, avg30_new, gate_reasons, is_deal)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 
   // row（オブジェクト）を上記SQLの「?」の順番どおりの配列に並べ替える。
   const rowArgs = (r) => [
@@ -674,19 +829,46 @@ export async function runTask(taskId) {
     r.price_risk_score != null ? r.price_risk_score : null,
   ];
 
-  // 最新の巡回結果だけを見せるため、このタスクの前回結果は消してから入れ直す。
-  await run("DELETE FROM findings WHERE task_id = ?", [task.id]);
+  // 【蓄積方式】過去結果は全消ししない＝巡回のたびに候補を貯めていく（母数を増やすため）。
+  //   ・今回見つけた商品は、後で1件ずつ「同じ商品の古い行を消してから入れ直す」ので重複しない。
+  //   ・代わりに、古すぎる結果（既定30日／FINDINGS_RETAIN_DAYSで調整可）だけを掃除して、
+  //     DBの肥大と価格情報の陳腐化を防ぐ（＝売り物として鮮度も保つ）。
+  const FINDINGS_RETAIN_DAYS = Math.max(
+    1,
+    parseInt(process.env.FINDINGS_RETAIN_DAYS || "30", 10) || 30
+  );
+  await run("DELETE FROM findings WHERE task_id = ? AND found_at < datetime('now', ?)", [
+    task.id,
+    `-${FINDINGS_RETAIN_DAYS} days`,
+  ]);
 
   // Vercelは60秒で処理を強制終了する。その手前（約48秒）で自動的に照合を打ち切り、
   // それまでに見つかった利益商品はきちんと保存・表示する（504で全部失う事故を防ぐ）。
   const startedAt = Date.now();
   const TIME_BUDGET_MS = 38000;
   let timedOut = false;
+  // 詳細ページ取得(enrich)は1回あたり通信コストがかかるため、1巡回あたりの上限を設ける。
+  // 上限を超えたら enrich せず商品名照合へフォールバック（安全側・取りこぼしは次回巡回で拾う）。
+  const MAX_DETAIL_FETCH = 60;
+  let detailFetches = 0;
 
   for (const it of candidates) {
     if (Date.now() - startedAt > TIME_BUDGET_MS) {
       timedOut = true;
       break;
+    }
+    // 新品として出せる見込みの商品だけ、詳細ページから高信頼JAN/型番を取得する。
+    // （中古/フリマ無記載などは照合前に除外され、詳細取得コストの無駄を避ける）
+    if (
+      detailFetches < MAX_DETAIL_FETCH &&
+      (it.forceNew || isNewPurchasable(it.name, task.supplier_name)) &&
+      it.link &&
+      isPrioritizedDetailHost(it.link)
+    ) {
+      detailFetches++;
+      try {
+        await enrichIdentifiers(it);
+      } catch (_) {}
     }
     let info;
     try {
@@ -764,8 +946,10 @@ export async function runTask(taskId) {
       price_risk_score: info.priceRiskScore != null ? info.priceRiskScore : null,
     };
 
-    // 利益が出る商品だけを巡回結果として記録する（マイナスの商品は表示しない）。
-    if (!verdict.ok) continue;
+    // Phase3：合否ゲート（利益/一致/ストレス/値崩れ）で A/B/C/除外 を判定する。
+    const gate = applyGateToRow(row, verdict, info);
+    // 赤字・安全マージン未達・ストレス落ちは巡回結果に出さない（EXCLUDED）。
+    if (gate.category === GATE_CATEGORY.EXCLUDED) continue;
     // 月間販売数が0（＝ここ最近売れていない）商品は、仕入れても売れ残るので出さない。
     if (!info.monthlySales || info.monthlySales < 1) continue;
     // 同じ商品（ASIN）が複数出てきても、巡回結果には1回だけ表示する。
@@ -786,13 +970,24 @@ export async function runTask(taskId) {
     }
     row.image_url = imageUrl;
 
-    await run(FINDING_SQL, [...rowArgs(row), 1]);
+    // 蓄積方式：同じ商品(ASIN優先・無ければ商品URL)の古い行だけ消してから入れ直す。
+    // ＝重複を作らず、その商品だけ最新の価格・利益に更新。他タスク由来や別商品は残る。
+    if (row.asin) {
+      await run("DELETE FROM findings WHERE task_id = ? AND asin = ?", [row.task_id, row.asin]);
+    } else if (row.product_url) {
+      await run("DELETE FROM findings WHERE task_id = ? AND product_url = ?", [
+        row.task_id,
+        row.product_url,
+      ]);
+    }
+    await run(FINDING_SQL, [...rowArgs(row), ...findingTail(row)]);
 
-    // 通知（メール＝“買っていい”という積極的なお知らせ）は、
-    // JAN／型番で確認できた「確実な一致」だけに限定する。
-    // 名前だけの一致は別商品を掴む恐れがあるため、結果一覧には残す（赤い注意付き）が、
-    // 自動でメール通知はしない＝誤って仕入れて赤字になる事故を防ぐ。
-    const reliable = row.match_type === "jan" || row.match_type === "model";
+    // 通知（メール＝“買っていい”という積極的なお知らせ）は、合否ゲートを通過した
+    // 「利益商品(A)／推定利益候補(B)」＝一致確実＋利益/ストレス/値崩れ全通過だけに限定する。
+    // 要確認(C)は結果一覧には残す（別枠）が、自動メールはしない＝誤仕入れ事故を防ぐ。
+    const reliable =
+      gate.category === GATE_CATEGORY.AUTO_PROFIT ||
+      gate.category === GATE_CATEGORY.ESTIMATED_PROFIT;
     if (reliable) {
       const result = await run(NOTIF_SQL, rowArgs(row));
       if (result.changes > 0) {
@@ -801,9 +996,11 @@ export async function runTask(taskId) {
       }
     }
 
-    // プランの上限（利益商品の件数）に達したら、その巡回を終了する。
-    dealCount++;
-    if (dealCount >= maxDeals) break;
+    // プランの上限（利益商品の件数）は A/B の件数で数える。要確認(C)は数えない。
+    if (reliable) {
+      dealCount++;
+      if (dealCount >= maxDeals) break;
+    }
   }
 
   if (timedOut) {
@@ -838,8 +1035,10 @@ const JOB_NOTIF_SQL = `INSERT OR IGNORE INTO notifications
 const JOB_FINDING_SQL = `INSERT INTO findings
     (task_id, supplier_name, product_name, amazon_title, condition, jan, asin, buy_price, amazon_price,
      fees, profit, profit_rate, monthly_sales, source_url, product_url, image_url, match_type,
-     match_status, attribute_conflicts, avg_price_90, price_risk_score, is_deal)
-   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+     match_status, attribute_conflicts, avg_price_90, price_risk_score,
+     display_category, roi, profit_class, fee_status, risk_level, breakeven_sale_price,
+     stress_drop10_ok, stress_fee500_ok, market_new_price, avg30_new, gate_reasons, is_deal)
+   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 const jobRowArgs = (r) => [
   r.task_id,
   r.supplier_name,
@@ -904,8 +1103,16 @@ export async function startCrawlJob(taskId) {
     .filter((it) => it.name && it.price)
     .slice(0, MAX_LOOKUPS);
 
-  // 前回の結果と古いジョブを片付ける。
-  await run("DELETE FROM findings WHERE task_id = ?", [task.id]);
+  // 【蓄積方式】結果は全消しせず貯める（母数維持）。古すぎる結果だけ掃除する。
+  // 古いジョブ（進行管理用の一時データ）は従来どおり片付ける。
+  const FINDINGS_RETAIN_DAYS = Math.max(
+    1,
+    parseInt(process.env.FINDINGS_RETAIN_DAYS || "30", 10) || 30
+  );
+  await run("DELETE FROM findings WHERE task_id = ? AND found_at < datetime('now', ?)", [
+    task.id,
+    `-${FINDINGS_RETAIN_DAYS} days`,
+  ]);
   await run("DELETE FROM crawl_jobs WHERE task_id = ?", [task.id]);
 
   const info = await run(
@@ -970,11 +1177,26 @@ export async function stepCrawlJob(jobId) {
   const newDeals = [];
   let stopReason = null;
   let timeouts = 0;
+  const MAX_DETAIL_FETCH = 60;
+  let detailFetches = 0;
 
   while (cursor < candidates.length) {
     if (Date.now() - startedAt > BATCH_BUDGET_MS) break;
     const it = candidates[cursor];
     cursor++;
+
+    // 新品として出せる見込みの優先仕入れ先だけ、詳細ページから高信頼JAN/型番を取得。
+    if (
+      detailFetches < MAX_DETAIL_FETCH &&
+      (it.forceNew || isNewPurchasable(it.name, task.supplier_name)) &&
+      it.link &&
+      isPrioritizedDetailHost(it.link)
+    ) {
+      detailFetches++;
+      try {
+        await enrichIdentifiers(it);
+      } catch (_) {}
+    }
 
     let infoP;
     try {
@@ -1059,7 +1281,10 @@ export async function stepCrawlJob(jobId) {
       price_risk_score: infoP.priceRiskScore != null ? infoP.priceRiskScore : null,
     };
 
-    if (!verdict.ok) continue;
+    // Phase3：合否ゲート（利益/一致/ストレス/値崩れ）で A/B/C/除外 を判定する。
+    const gate = applyGateToRow(row, verdict, infoP);
+    // 赤字・安全マージン未達・ストレス落ちは巡回結果に出さない（EXCLUDED）。
+    if (gate.category === GATE_CATEGORY.EXCLUDED) continue;
     // 月間販売数が0（＝ここ最近売れていない）商品は、仕入れても売れ残るので出さない。
     if (!infoP.monthlySales || infoP.monthlySales < 1) continue;
     if (infoP.asin && seenAsin.has(infoP.asin)) continue;
@@ -1084,10 +1309,21 @@ export async function stepCrawlJob(jobId) {
     }
     row.image_url = imageUrl;
 
-    await run(JOB_FINDING_SQL, [...jobRowArgs(row), 1]);
-    // 通知（メール）は JAN／型番で確認できた確実な一致だけに限定する。
-    // 名前だけの一致は結果一覧に残す（赤い注意付き）が、自動メールはしない。
-    const reliable = row.match_type === "jan" || row.match_type === "model";
+    // 蓄積方式：同じ商品(ASIN優先・無ければ商品URL)の古い行だけ消してから入れ直す＝重複防止＋最新化。
+    if (row.asin) {
+      await run("DELETE FROM findings WHERE task_id = ? AND asin = ?", [row.task_id, row.asin]);
+    } else if (row.product_url) {
+      await run("DELETE FROM findings WHERE task_id = ? AND product_url = ?", [
+        row.task_id,
+        row.product_url,
+      ]);
+    }
+    await run(JOB_FINDING_SQL, [...jobRowArgs(row), ...findingTail(row)]);
+    // 通知（メール）は合否ゲート通過の「利益商品(A)／推定利益候補(B)」だけに限定する。
+    // 要確認(C)は結果一覧に残す（別枠）が、自動メールはしない＝誤仕入れ事故を防ぐ。
+    const reliable =
+      gate.category === GATE_CATEGORY.AUTO_PROFIT ||
+      gate.category === GATE_CATEGORY.ESTIMATED_PROFIT;
     if (reliable) {
       const result = await run(JOB_NOTIF_SQL, jobRowArgs(row));
       if (result.changes > 0) {

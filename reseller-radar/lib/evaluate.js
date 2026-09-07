@@ -3,6 +3,7 @@ import { lookupProduct } from "./amazon.js";
 import { getSetting } from "./db.js";
 import { sendNotificationEmail } from "./notify.js";
 import { calculateProfit } from "./profit.mjs";
+import { classifyRestrictedFood } from "./category-filter.mjs";
 
 // 全角数字・記号を半角に直し、カンマを除く。ルール文の数値抽出を安定させるため。
 function normalize(text) {
@@ -148,6 +149,11 @@ export async function evaluateWithRule({
         continue;
       }
       if (!info) continue;
+
+      // ★食品・飲料・サプリ(健康食品)はAmazon出品に承認が必要で販売不可＝候補から除外。
+      if (classifyRestrictedFood({ title: it.name, amazonTitle: info.title, categoryTree: info.categoryTree }).excluded) {
+        continue;
+      }
 
       // ★利益判定は「保守的販売想定価格」を使う（Marketplace Newと30日平均の低い方）。
       //   Amazon本体価格は主価格にしない。保守価格が無ければ対象外としてスキップ。
