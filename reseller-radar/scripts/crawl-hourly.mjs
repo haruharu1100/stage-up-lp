@@ -62,8 +62,11 @@ function roundRobinBySupplier(tasks) {
 }
 
 const raw = await all(
-  // 実績のある仕入れ先（楽天=3 / Yahoo=4）＋セブン(8)/ヤフオク(13) の有効タスク
-  "SELECT id, name, supplier_id FROM tasks WHERE enabled=1 AND supplier_id IN (3,4,8,13) ORDER BY id"
+  // 実績のある仕入れ先（楽天=3 / Yahoo=4）＋セブン(8)/ヤフオク(13) の有効タスク。
+  // ★並び順＝「まだ回っていない→最終巡回が古い順」。毎回ID順で始めると、トークンが尽きる頃には
+  //   後ろのタスク（新しい特価タスク等）に永久に順番が来ず飢える。last_run基準で全タスクを公平に回す。
+  "SELECT id, name, supplier_id FROM tasks WHERE enabled=1 AND supplier_id IN (3,4,8,13) " +
+    "ORDER BY (last_run IS NULL) DESC, last_run ASC, id"
 );
 const tasks = roundRobinBySupplier(raw);
 
