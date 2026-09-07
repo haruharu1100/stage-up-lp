@@ -60,6 +60,50 @@ export async function press(page, selector, until, tries = 8) {
 }
 
 /**
+ * 画面が「本当に押せる状態」になるまで待つ。
+ *
+ * ═══════════════════════════════════════════════════════
+ * ★これが無いと、ログインが黙って素通りします（2026-09-07）
+ * ═══════════════════════════════════════════════════════
+ *
+ *   画面の見た目は、中身が動き出す前に先に出ます。
+ *   （サーバーが作ったHTMLが先に届き、
+ *     そのあとブラウザ側の仕組みが後から乗ります）
+ *
+ *   乗る前にログインを押すと、こうなります。
+ *
+ *       ・押した合図を受け取る係が、まだ居ない
+ *       ・そのため、ブラウザが昔ながらのやり方で
+ *         ページごと送信してしまう（/login? へ移動）
+ *       ・打ち込んだ内容は消え、ログイン画面に戻る
+ *       ・エラーは1つも出ない
+ *
+ *   実際に、これで「20秒待っても管理画面が出ない」と
+ *   出続けました。通信の記録にも、画面のエラーにも、
+ *   何も残らないので、原因がまったく見えません。
+ *
+ *   ★「待ち時間を伸ばす」で誤魔化さないこと。
+ *     待っても、押し直さないかぎり永遠に入れません。
+ *
+ *   見分け方：ブラウザ側の仕組みが乗ると、
+ *   その部品のDOMに専用の目印が付きます。それを見ます。
+ */
+export async function machiUgokidasu(page, selector = "form", ms = 20000) {
+  await page.waitForSelector(selector, { timeout: ms });
+  await page.waitForFunction(
+    (sel) => {
+      const el = document.querySelector(sel);
+      if (!el) return false;
+      return Object.keys(el).some(
+        (k) => k.startsWith("__react") || k.startsWith("_reactListening"),
+      );
+    },
+    selector,
+    { timeout: ms },
+  );
+}
+
+/**
  * 管理画面の中まで入る。
  *
  * 入り方は2通りあります。どちらでも入れます。
@@ -115,6 +159,8 @@ export async function enterConsole(page, url, creds = null) {
 
   /* 本物のログイン */
   await page.waitForSelector('input[type="email"]', { timeout: 20000 });
+  /* ★中身が動き出すまで待つこと。理由は machiUgokidasu に書いてあります */
+  await machiUgokidasu(page, "form", 30000);
   await page.locator('button:has-text("運営の方")').first().click().catch(() => {});
 
   /* 会社コードの欄は、出ているときだけ埋める。
@@ -141,7 +187,30 @@ export async function enterConsole(page, url, creds = null) {
     .fill(creds?.password || process.env.UX_ADMIN_PASSWORD || "");
 
   await page.locator('button[type="submit"]').first().click();
-  await page.waitForSelector('nav[aria-label="管理メニュー"]', { timeout: 20000 });
+
+  /* ★念のための受け皿。
+       それでもページごと送信されてしまったとき（URLに ? が付いて
+       ログイン画面に戻る）は、打ち直してもう一度だけ押します。
+       黙って20秒待ち続けるより、原因が分かる形で残ります。 */
+  try {
+    await page.waitForSelector('nav[aria-label="管理メニュー"]', { timeout: 20000 });
+  } catch (e) {
+    if (!/\/login/.test(page.url())) throw e;
+    await machiUgokidasu(page, "form", 30000);
+    await page.locator('button:has-text("運営の方")').first().click().catch(() => {});
+    const t2 = page.locator('input[autocomplete="organization"]');
+    if ((await t2.count()) > 0) {
+      await t2.fill(creds?.tenantCode || process.env.UX_TENANT_CODE || "DEMO");
+    }
+    await page
+      .locator('input[type="email"]')
+      .fill(creds?.email || process.env.UX_ADMIN_EMAIL || "boss@demo.example");
+    await page
+      .locator('input[type="password"]')
+      .fill(creds?.password || process.env.UX_ADMIN_PASSWORD || "");
+    await page.locator('button[type="submit"]').first().click();
+    await page.waitForSelector('nav[aria-label="管理メニュー"]', { timeout: 20000 });
+  }
   await page.waitForTimeout(400);
   return "login";
 }

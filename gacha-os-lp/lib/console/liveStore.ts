@@ -392,3 +392,93 @@ export async function categoryOp(
     };
   }
 }
+
+/* ══════════════════════════════════════════════
+   賞の呼び名（特賞 / 1等 / PSA10賞 …）
+   ══════════════════════════════════════════════
+
+   ★ここで扱うのは「見せる文字」だけです。
+     中の記号（S / A / B / C / D）は変えません。
+     記号は在庫（gacha_stock）の主キーの一部で、
+     当選履歴にも入っており、還元率の計算にも使われています。
+     名前を変えただけで在庫が消える、ということが起きないよう、
+     記号と呼び名は最初から別のものとして持っています。 */
+
+export type GradeLabelRow = {
+  /** 中の記号。★お店の管理画面には出してよい（どの等級かを示すため） */
+  grade: string;
+  /** いま出ている呼び名 */
+  label: string;
+  /** お店が何も決めていないときの呼び名 */
+  defaultLabel: string;
+  /** お店が変えたか（false = 既定のまま） */
+  customized: boolean;
+};
+
+export type GradeLabelsData = {
+  canEdit: boolean;
+  grades: GradeLabelRow[];
+  maxLength: number;
+};
+
+const pickGradeLabels = (
+  raw: Record<string, unknown>,
+): GradeLabelsData | null =>
+  Array.isArray(raw.grades)
+    ? {
+        canEdit: raw.canEdit === true,
+        grades: raw.grades as GradeLabelRow[],
+        maxLength: typeof raw.maxLength === "number" ? raw.maxLength : 20,
+      }
+    : null;
+
+/** 賞の呼び名を読む */
+export function useGradeLabels() {
+  return useLive<GradeLabelsData>("/api/console/grade-labels", pickGradeLabels);
+}
+
+/**
+ * 賞の呼び名を保存する。
+ *
+ * ★触った等級だけを送ること。
+ *   全部を毎回送ると、画面に出ていない等級まで上書きします。
+ */
+export async function saveGradeLabels(
+  labels: Record<string, string>,
+): Promise<SaveAnswer<GradeLabelsData & { message: string | null }>> {
+  try {
+    const res = await fetch("/api/console/grade-labels", {
+      method: "PUT",
+      headers: postHeaders(),
+      body: JSON.stringify({ labels }),
+    });
+    const raw = (await res.json()) as Record<string, unknown>;
+
+    if (res.ok && raw.ok === true) {
+      const data = pickGradeLabels(raw);
+      if (data !== null) {
+        return {
+          ok: true,
+          data: {
+            ...data,
+            message: typeof raw.message === "string" ? raw.message : null,
+          },
+        };
+      }
+    }
+    return {
+      ok: false,
+      message:
+        typeof raw.message === "string"
+          ? raw.message
+          : "賞の呼び名を保存できませんでした。",
+    };
+  } catch {
+    /* ★「保存されたかもしれません」と書かないこと。
+         送れていません。入力はそのまま残っています。 */
+    return {
+      ok: false,
+      message: "通信できませんでした。賞の呼び名は変わっていません。",
+    };
+  }
+}

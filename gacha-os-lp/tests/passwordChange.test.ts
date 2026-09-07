@@ -139,11 +139,28 @@ async function login(
   return { token: r.session.token, csrf: r.session.csrfToken };
 }
 
+/*
+ * ★お店ごとに「住所」を分けて持つこと（2026-09-07）
+ *
+ *   どのお店かは、いまや会社コードではなく
+ *   「開いている住所」で決まります。
+ *   そして入口（lib/server/context.ts）は、
+ *   「A店の住所に、B店のログインで来た依頼」を 403 で断ります。
+ *   これは守ってほしい動きです。ゆるめないこと。
+ *
+ *   ですから試験でも、よその会社の依頼には
+ *   よその会社の住所を使います。
+ *   ここを一つの住所で済ませると、
+ *   本番の正しい遮断を「不具合」と読み違えます。
+ */
+const HOST = "example.test";
+const YOSO_HOST = "other.test";
+
 /** 読むだけの依頼（CSRFの合図は要らない） */
-function get(url: string, who: Login) {
-  return new NextRequest(`https://example.test${url}`, {
+function get(url: string, who: Login, host: string = HOST) {
+  return new NextRequest(`https://${host}${url}`, {
     method: "GET",
-    headers: { cookie: `${SESSION_COOKIE}=${who.token}` },
+    headers: { cookie: `${SESSION_COOKIE}=${who.token}`, host },
   });
 }
 
@@ -151,14 +168,25 @@ function post(
   url: string,
   who: Login | null,
   body: unknown,
-  opts: { csrf?: boolean } = {},
+  opts: { csrf?: boolean; host?: string } = {},
 ) {
-  const headers: Record<string, string> = { "content-type": "application/json" };
+  /* ★host を必ず付けること。
+       2026-09-07から、お客様側の入口は「会社コード」ではなく
+       「いま開いている住所」だけを見て会社を決めます
+       （lib/server/tenantHost.ts）。
+       付け忘れると、本番なら正しい動きである
+       「どこの店か分からないのでお断り」が返ってきて、
+       試験のほうが誤って不合格になります。 */
+  const host = opts.host ?? HOST;
+  const headers: Record<string, string> = {
+    "content-type": "application/json",
+    host,
+  };
   if (who) {
     headers.cookie = `${SESSION_COOKIE}=${who.token}`;
     if (opts.csrf !== false) headers[CSRF_HEADER] = who.csrf;
   }
-  return new NextRequest(`https://example.test${url}`, {
+  return new NextRequest(`https://${host}${url}`, {
     method: "POST",
     headers,
     body: JSON.stringify(body),
@@ -193,6 +221,17 @@ async function sessionCount(adminId: string): Promise<number> {
 
 test("準備：全権・サポート・発行される人を用意する", async () => {
   tenant = await createTenant({ code: "PWTEST", name: "パスワード試験株式会社" });
+
+  /* この試験で使う住所を、この会社のものとして登録しておく。
+     ★お客様側の入口は「開いている住所」で会社を決めるため、
+       住所を登録していないと、入口は正しく
+       「どこの店か分からない」としてお断りします。
+       これは試験の下ごしらえで、作りは変えていません。 */
+  await db().execute({
+    sql: `INSERT OR REPLACE INTO tenant_domains (host, tenant_id, note, created_at)
+          VALUES (?, ?, ?, ?)`,
+    args: [HOST, tenant, "パスワード試験用", new Date().toISOString()],
+  });
 
   boss = await createAdmin({
     tenantId: tenant, no: 1, email: "boss@pw.example",
@@ -525,6 +564,12 @@ test("よその会社の発行の記録は、1件も混ざらない", async () =
     code: "PWOTHER",
     name: "よその会社株式会社",
   });
+  /* よその会社にも、よその会社の住所を持たせる */
+  await db().execute({
+    sql: `INSERT OR REPLACE INTO tenant_domains (host, tenant_id, note, created_at)
+          VALUES (?, ?, ?, ?)`,
+    args: [YOSO_HOST, yoso, "よその会社の試験用", new Date().toISOString()],
+  });
   const yosoBoss = await createAdmin({
     tenantId: yoso, no: 1, email: "boss@other.example",
     name: "よその全権", role: "SUPER_ADMIN",
@@ -552,10 +597,15 @@ test("よその会社の発行の記録は、1件も混ざらない", async () =
   yosoTenant = yoso;
 
   const hakko = await tempPost(
-    post(TEMP, yosoIn, {
-      adminId: yosoTarget,
-      reason: "よその会社での発行（混ざらないことの確認）",
-    }),
+    post(
+      TEMP,
+      yosoIn,
+      {
+        adminId: yosoTarget,
+        reason: "よその会社での発行（混ざらないことの確認）",
+      },
+      { host: YOSO_HOST },
+    ),
   );
   assert.equal(hakko.status, 200, "よその会社で発行できませんでした");
 
@@ -573,7 +623,7 @@ test("よその会社の発行の記録は、1件も混ざらない", async () =
   );
 
   /* ★逆向きも見ます。よその会社から、こちらが見えないこと */
-  const gyaku = await tempHistoryGet(get(TEMP, yosoIn));
+  const gyaku = await tempHistoryGet(get(TEMP, yosoIn, YOSO_HOST));
   assert.equal(gyaku.status, 200);
   const gyakuText = await gyaku.text();
   assert.equal(
@@ -782,7 +832,7 @@ test("よその会社の監査ログは、1件も混ざらない", async () => {
   );
 
   /* ★逆向きも見ます */
-  const gyaku = await auditGet(get(`${AUDIT}?limit=200`, yosoIn));
+  const gyaku = await auditGet(get(`${AUDIT}?limit=200`, yosoIn, YOSO_HOST));
   assert.equal(gyaku.status, 200);
   const gyakuText = await gyaku.text();
   assert.equal(

@@ -2028,6 +2028,95 @@ export function knownMigrations(): string[] {
 let queue: Promise<unknown> = Promise.resolve();
 
 /**
+ * この保存先は「手元のファイル」か。
+ *
+ * ★遠くのDB（Turso / libSQL）とは、取引のやり方を変えます。
+ *   理由はすぐ下の withWriteTx に書いてあります。
+ */
+function fileNoHozonsaki(): boolean {
+  return databaseUrl().startsWith("file:");
+}
+
+/**
+ * 手元のファイル用の「取引の入れ物」。
+ *
+ * ═══════════════════════════════════════════════════════
+ * ★なぜ、こんな回りくどいことをしているのか（2026-09-07）
+ * ═══════════════════════════════════════════════════════
+ *
+ *   DBの部品には、いま直せない不具合があります。
+ *
+ *     client.transaction() で取引を作ると、
+ *     機械語で書かれた本体（index.node）の中に、
+ *     返しそこねた借り物が少しずつ残ります。
+ *     それがある程度たまると、掃除係（GC）が片付けに行った瞬間、
+ *     プロセスごと落ちます（SIGSEGV）。
+ *
+ *   ★思いつきではありません。手元で数えました。
+ *
+ *     ・transaction() を 2000 回 …… 落ちる
+ *     ・transaction() を 3000 回 …… 落ちる
+ *     ・BEGIN IMMEDIATE を自分で打つやり方で 10000 回 …… 落ちない
+ *     ・取引を使わない普通の問い合わせ 10000 回 …… 落ちない
+ *
+ *     tx.close() を足しても、足さなくても、同じように落ちました。
+ *     つまり、こちらの使い方の問題ではありません。
+ *     （macOS の異常終了の記録にも、落ちた場所がそのまま残っています。
+ *       napi の Finalize → index.node）
+ *
+ *   ★これは「試験がたまに赤くなる」だけの話ではありません。
+ *
+ *     落ちているのは、終わりぎわの後片付けではなく、
+ *     ふだんの処理の合間（掃除係が動くとき）です。
+ *     つまり、お客様が引いている最中に、
+ *     お店のサーバーが丸ごと落ちうる、ということです。
+ *
+ *   そこで、手元のファイルにつないでいるときは、
+ *   取引を自分で開け閉めします（BEGIN IMMEDIATE … COMMIT）。
+ *   守りたいことは何も変わりません。
+ *
+ *     ・BEGIN IMMEDIATE なので、最初から書き込みの順番を取ります
+ *     ・失敗したら ROLLBACK で、途中まで書いたものは残しません
+ *     ・書き込みは、もともと下の順番待ちの列で1つずつにしています
+ *       （同じ接続で2つの取引が重なることはありません）
+ *
+ * ═══════════════════════════════════════════════════════
+ * ★遠くのDB（Turso）では、絶対にこのやり方をしないこと
+ * ═══════════════════════════════════════════════════════
+ *
+ *   遠くのDBへは HTTP で1回ずつ問い合わせます。
+ *   1回ごとに別の話として扱われるので、
+ *   「BEGIN」と「COMMIT」を別々に送っても、
+ *   その間の書き込みが同じ取引にまとまる保証がありません。
+ *
+ *   まとまらないまま途中で落ちると、
+ *   ポイントだけ引かれて景品が付かない人が出ます。
+ *   ★ですから、遠くのDBのときは、これまでどおり
+ *     client.transaction() を使います。
+ */
+function fileTxAdapter(c: Client): Transaction {
+  const yobenai = (na: string) => () => {
+    /* ★取引の開け閉めは withWriteTx の仕事です。
+         中の処理から呼ばれたら、黙って見逃さずに止めます。 */
+    throw new Error(
+      `取引の ${na} は、withWriteTx の中の処理からは呼べません。` +
+        "（開け閉めは withWriteTx が行います）",
+    );
+  };
+  return {
+    execute: ((...a: unknown[]) =>
+      (c.execute as (...x: unknown[]) => unknown)(...a)) as Transaction["execute"],
+    batch: ((...a: unknown[]) =>
+      (c.batch as (...x: unknown[]) => unknown)(...a)) as Transaction["batch"],
+    executeMultiple: (sql: string) => c.executeMultiple(sql),
+    commit: yobenai("commit"),
+    rollback: yobenai("rollback"),
+    close: () => undefined,
+    closed: false,
+  } as Transaction;
+}
+
+/**
  * 書き込みを1件ずつ、取引としてまとめて実行する。
  *
  * 途中で例外が出たら全部やめる（ロールバック）。
@@ -2039,6 +2128,27 @@ export async function withWriteTx<T>(
   await migrate();
 
   const run = queue.then(async () => {
+    /* ── 手元のファイルのとき：自分で BEGIN IMMEDIATE を打つ ──
+         理由は fileTxAdapter の説明に書いてあります。
+         ★「同じことなんだから片方に寄せよう」と、
+           遠くのDBまでこちらに寄せないこと。壊れます。 */
+    if (fileNoHozonsaki()) {
+      const c = db();
+      await c.execute("BEGIN IMMEDIATE");
+      try {
+        const out = await fn(fileTxAdapter(c));
+        await c.execute("COMMIT");
+        return out;
+      } catch (e) {
+        try {
+          await c.execute("ROLLBACK");
+        } catch {
+          /* すでに終わっている場合は何もしない */
+        }
+        throw e;
+      }
+    }
+
     const tx = await db().transaction("write");
     try {
       const out = await fn(tx);
@@ -2051,6 +2161,37 @@ export async function withWriteTx<T>(
         /* すでに閉じている場合は何もしない */
       }
       throw e;
+    } finally {
+      /*
+       * ═══════════════════════════════════════════════════════
+       * ★取引は、必ずここで手放すこと（2026-09-07）
+       * ═══════════════════════════════════════════════════════
+       *
+       *   DBの部品は、機械語で書かれた本体（index.node）を
+       *   JavaScript から借りて使っています。
+       *   借りたものを返さないと、あとで掃除係（GC）が
+       *   勝手に返しに行きます。
+       *
+       *   その「勝手に返す」処理が、実機で異常終了しました。
+       *   macOS の記録に、落ちた場所がそのまま残っています。
+       *
+       *       napi の Finalize → index.node
+       *
+       *   1000件を同時に流した直後に、必ず落ちます。
+       *   ★中身は全部通っているのに、まとめだけが出ずに消えます。
+       *     いちばん見つけにくい壊れ方です。
+       *
+       *   commit / rollback が済んでいれば、ここは空振りします。
+       *   空振りしても害はありません。
+       *   ★「commit したから要らない」と外さないこと。
+       *     commit そのものが失敗した回に、借りたままになります。
+       *     混み合っているときほど、そうなります。
+       */
+      try {
+        tx.close();
+      } catch {
+        /* すでに手放していれば、それでよい */
+      }
     }
   });
 

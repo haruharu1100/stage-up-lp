@@ -65,6 +65,7 @@ import {
 } from "@/lib/console/liveStore";
 import { uploadImage } from "@/lib/console/liveImages";
 import CategoryPanel from "../CategoryPanel";
+import GradeLabelPanel from "../GradeLabelPanel";
 
 /* ══════════════════════════════════════════════
    ウィザードの中身
@@ -1078,6 +1079,7 @@ export default function StoreSetupScreen() {
         <Wizard data={data} onSaved={put} onJump={onJump} />
         <FaqEditor faqs={data.faqs} onSaved={put} />
         <CategoryPanel />
+        <GradeLabelPanel />
         <PublicLinks />
       </>
     );

@@ -301,6 +301,10 @@ function toTheater(k: DrawOutcome, coverImageId: string | null): TheaterRecord[]
       id: k.drawId,
       gachaId: k.gachaId,
       grade: k.grade,
+      /* ★呼び名は、必ずサーバーが返したものを渡すこと。
+           ここで「S賞」と組み立てると、お店が「特賞」と
+           名付けていても、当選画面だけ「S賞」と出ます。 */
+      gradeLabel: k.gradeLabel,
       prizeName: k.prizeName,
       prizeValue: k.prizeValue,
       price: k.price,
@@ -609,7 +613,7 @@ function Tile({
                 border: "1px solid rgba(255,255,255,0.12)",
               }}
             >
-              <GradeChip grade={g.top.grade} onDark />
+              <GradeChip grade={g.top.grade} label={g.top.gradeLabel} onDark />
               <span className="num nb truncate text-[0.72rem] font-bold text-white/85">
                 {g.top.value.toLocaleString()}円相当
               </span>
@@ -795,7 +799,7 @@ export function ShopDetailScreen({
                 border: "1px solid rgba(255,255,255,0.12)",
               }}
             >
-              <GradeChip grade={g.top.grade} onDark />
+              <GradeChip grade={g.top.grade} label={g.top.gradeLabel} onDark />
               <span className="truncate text-[0.76rem] font-bold text-white/85">
                 {g.top.name}
               </span>
@@ -933,7 +937,7 @@ export function ShopDetailScreen({
                 />
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5">
-                    <GradeChip grade={p.grade} onDark />
+                    <GradeChip grade={p.grade} label={p.gradeLabel} onDark />
                     <span className="truncate text-[0.82rem] font-bold text-white/90">
                       {p.name}
                     </span>

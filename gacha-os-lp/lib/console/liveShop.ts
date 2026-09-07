@@ -37,7 +37,18 @@ export type ShopItem = {
   total: number;
   left: number;
   publishedAt: string | null;
-  top: { grade: string; name: string; value: number } | null;
+  /**
+   * いちばん高い賞。
+   *
+   * ★grade は中の記号です。画面に出すのは gradeLabel の方です。
+   *   お店が「S賞」を「特賞」に変えても、記号は S のままです。
+   */
+  top: {
+    grade: string;
+    gradeLabel: string;
+    name: string;
+    value: number;
+  } | null;
   sLeft: number;
   /**
    * 表紙の写真のID。お店がまだ入れていなければ null。
@@ -63,7 +74,10 @@ export type ShopCategory = { id: string; name: string; count: number };
 export type ShopBoard = { gachas: ShopItem[]; categories: ShopCategory[] };
 
 export type ShopPrize = {
+  /** 中の記号（S / A / B / C / D）。★画面に出さないこと */
   grade: string;
+  /** お店が決めた呼び名。★画面に出すのは必ずこちら */
+  gradeLabel: string;
   name: string;
   value: number;
   total: number;
@@ -84,7 +98,10 @@ export type DrawOutcome = {
   pointBefore: number;
   pointAfter: number;
   pointReturned: number;
+  /** 中の記号。★画面に出さないこと */
   grade: string;
+  /** お店が決めた呼び名。★画面に出すのは必ずこちら */
+  gradeLabel: string;
   prizeName: string;
   prizeValue: number;
   lastOne: boolean;

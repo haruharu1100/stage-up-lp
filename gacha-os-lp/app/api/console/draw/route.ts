@@ -34,6 +34,7 @@
 
 import { NextResponse, type NextRequest } from "next/server";
 import { DrawError, drawOnceServer } from "@/lib/server/draw";
+import { getGradeLabels, gradeLabelOf } from "@/lib/server/gradeLabels";
 import { SESSION_COOKIE, readSession } from "@/lib/server/session";
 import { id } from "@/lib/server/ids";
 
@@ -168,7 +169,27 @@ export async function POST(req: NextRequest) {
       idempotencyKey,
       requestId,
     });
-    return NextResponse.json({ ok: true, requestId, result }, { status: 200 });
+
+    /* ★賞の呼び名は、ここで足すこと（台帳には入れない）。
+
+         drawOnceServer が返した中身は、そのまま idempotency に
+         保存されます（連打・再送で同じ結果を返すため）。
+         そこへ「特賞」などの表示用の文字を混ぜると、
+         お店が呼び名を変えた日から、保存された文字と
+         いま画面に出る文字が食い違います。
+
+         呼び名は「同じ等級の言い換え」でしかないので、
+         台帳には記号（S / A / B / C / D）だけを残し、
+         見せる文字は毎回いまの設定から足します。 */
+    const yobina = await getGradeLabels(session.tenantId);
+    return NextResponse.json(
+      {
+        ok: true,
+        requestId,
+        result: { ...result, gradeLabel: gradeLabelOf(yobina, result.grade) },
+      },
+      { status: 200 },
+    );
   } catch (e) {
     if (e instanceof DrawError) {
       return NextResponse.json(

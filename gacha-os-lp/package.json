@@ -26,7 +26,8 @@
     "seed:preview": "tsx scripts/seed-preview.mjs",
     "check:csrf": "node scripts/check-csrf.mjs",
     "check:art": "node scripts/check-real-art.mjs",
-    "check:words": "node scripts/check-customer-words.mjs"
+    "check:words": "node scripts/check-customer-words.mjs",
+    "check:grade": "tsx scripts/check-grade-labels.mjs"
   },
   "dependencies": {
     "@libsql/client": "^0.17.4",

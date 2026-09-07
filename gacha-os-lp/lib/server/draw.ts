@@ -39,6 +39,7 @@
 import { drawWith, isGrade, type DrawOutcome, type PoolEntry } from "../console/draw";
 import { appendAuditTx } from "./audit";
 import { SERVER_VERSION, withWriteTx } from "./db";
+import { getGradeLabels, gradeLabelOf } from "./gradeLabels";
 import { id } from "./ids";
 import { nonce, pickBelow } from "./rng";
 
@@ -119,6 +120,27 @@ export async function drawOnceServer(args: {
   now?: string;
 }): Promise<DrawResult> {
   const at = args.now ?? new Date().toISOString();
+
+  /**
+   * そのお店の、いまの賞の呼び名。
+   *
+   * ═══════════════════════════════════════════════════════
+   * ★記録（台帳・監査ログ）には、そのときの呼び名を書き残すこと
+   * ═══════════════════════════════════════════════════════
+   *
+   *   画面に出す呼び名（売り場・当選画面・獲得商品の一覧）は、
+   *   毎回いまの設定から足しています。お店が「S賞」を「特賞」に
+   *   改めたら、過去の当選も「特賞」と出ます。
+   *   同じ賞の言い換えなので、そのほうが自然だからです。
+   *
+   *   ですが、台帳と監査ログは別です。ここは記録です。
+   *   「そのとき、お客様の画面に何と出ていたか」を残します。
+   *   あとから書き換わる記録は、記録として使えません。
+   *
+   *   ★取引を始める前に読むこと（tx の中で読まない）。
+   *     取引の中で別の接続に読みに行くと、待ち合いになります。
+   */
+  const yobina = await getGradeLabels(args.tenantId);
 
   return withWriteTx(async (tx) => {
     /* ── ① 同じ鍵で、もう処理していないか ─────────────
@@ -462,7 +484,7 @@ export async function drawOnceServer(args: {
           pointReturned,
           out.grade === "-"
             ? "はずれ（参加ポイント）"
-            : `${out.grade}賞（ポイントでお返し）`,
+            : `${gradeLabelOf(yobina, out.grade)}（ポイントでお返し）`,
           drawId,
           at,
         ],
@@ -479,7 +501,18 @@ export async function drawOnceServer(args: {
       actorRole: "CUSTOMER",
       action: "DRAW",
       target: args.gachaId,
-      summary: `${str(g.title)} を1回引き、${out.grade === "-" ? "はずれ" : `${out.grade}賞`}（${out.name}）が出ました。`,
+      /* ★記号（S / A …）も、必ず一緒に残すこと。
+           呼び名だけ残すと、お店が呼び名を変えたあと、
+           過去の記録がどの等級のことか分からなくなります。
+
+         ★賞の呼び名と、景品の名前を、同じ括弧でつなげないこと。
+           「参加賞（D）（○○カード）」のように括弧が続くと、
+           どちらが等級で、どちらが品物なのかが読み取れません。
+           後から読む人（多くは、苦情の調べ物をしている人）が
+           一目で分かる書き方にします。 */
+      summary: `${str(g.title)} を1回引き、${
+        out.grade === "-" ? "はずれ" : `${gradeLabelOf(yobina, out.grade)}（${out.grade}）`
+      }の「${out.name}」が出ました。`,
       before: `残高 ${pointBefore.toLocaleString()}pt ／ 残り ${leftBefore.toLocaleString()}口`,
       after: `残高 ${pointAfter.toLocaleString()}pt ／ 残り ${leftAfter.toLocaleString()}口`,
       requestId: args.requestId,

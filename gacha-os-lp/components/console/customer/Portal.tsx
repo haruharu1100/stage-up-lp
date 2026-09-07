@@ -54,7 +54,7 @@ import { SHOP_EDGE, SHOP_ACCENT, SHOP_SURFACE } from "./Storefront";
 import { CustomerShell } from "./Chrome";
 import { Back, H, Note, Empty, BigBtn, Panel, Fld, TapRow, TONE } from "./ui";
 /* ★Sample で始まる部品を、ここで読まないこと（描いた絵です） */
-import { PrizeThumb } from "./art";
+import { PrizeThumb, GradeChip } from "./art";
 import {
   useCustomerPrizes,
   useCustomerPoints,
@@ -958,6 +958,12 @@ function PrizeRow({
       />
 
       <span className="min-w-0 flex-1">
+        {/* 何の賞で当たったのか。★呼び名は必ずお店の設定（gradeLabel）を出すこと。
+              ここで `${p.grade}賞` と組み立てると、お店が「特賞」と
+              名付けていても、この一覧だけ「S賞」と出ます。 */}
+        <span className="mb-1 flex items-center gap-1.5">
+          <GradeChip grade={p.grade} label={p.gradeLabel} onDark />
+        </span>
         <span className="block text-[0.88rem] font-bold text-white">{p.name}</span>
         <span className="mt-0.5 block text-[0.73rem] text-white/40">
           {p.gachaTitle} ／ {nichiji(p.wonAt)}

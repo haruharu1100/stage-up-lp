@@ -201,6 +201,15 @@ export function shelf(gachas: ConsoleGacha[], key: ShelfKey): Card[] {
  * ★「おすすめ」の理由を、必ず一緒に返すこと。
  *   理由の無いおすすめは、ただの広告枠です。
  *   なぜこれが上に出ているのかを、お客様に読めるようにします。
+ *
+ * ★ここは見本の店（架空の店）だけが使います。
+ *   Storefront.tsx の Shop → MyPage.tsx → ClientConsole.tsx の順で、
+ *   営業用の見本にしか描かれません。
+ *   本物のお客様の売り場は LiveShop.tsx で、そちらは
+ *   サーバーが返した呼び名（gradeLabel）を出しています。
+ *   ですので、下の「S賞」はお客様の目には入りません。
+ *   ★もしこの関数を本物の売り場から呼ぶことになったら、
+ *     そのときは必ず呼び名（gradeLabel）を受け取る形に直すこと。
  */
 export function featured(gachas: ConsoleGacha[]): { card: Card; why: string }[] {
   const live = shelf(gachas, "all");

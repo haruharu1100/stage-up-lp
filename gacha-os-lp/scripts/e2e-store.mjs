@@ -189,8 +189,13 @@ function watch(page, who) {
       return;
     }
     /* ★409 のうち、わざと断っているところを不具合として数えないこと。
-         「確認していないガチャは公開させない」は、守ってほしい動きです。 */
-    if (r.status() === 409 && /\/api\/console\/gachas\/action/.test(r.url())) {
+         「確認していないガチャは公開させない」は、守ってほしい動きです。
+         「同じ呼び名を2つの賞に付けさせない」も、同じく守ってほしい動きです
+         （2つの賞が同じ名前だと、お客様には同じ賞に見えてしまいます）。 */
+    if (
+      r.status() === 409 &&
+      /\/api\/console\/(gachas\/action|grade-labels)/.test(r.url())
+    ) {
       WAZATO_409.push(rec);
       return;
     }
@@ -201,6 +206,19 @@ function watch(page, who) {
 
 const yoso = (t) => /vercel\.live|_next-live\/feedback|__nextjs|hot-reloader|webpack/.test(t);
 const sakiyomi = (t) => /_rsc=/.test(t) && /ERR_ABORTED/.test(t);
+
+/* ★手元の開発サーバーだけに出る、見た目の警告（2026-09-07）
+     「/_next/static/css/… ?v=数字 を先に読み込んだのに使われなかった」。
+     開発サーバーが毎回 ?v=数字 を付け替えるせいで出るもので、
+     本番の同じ画面には出ません（本番のCSSは ?v= が付かないため）。
+
+     ★消し方を広げないこと。
+       「/_next/static/css/」と「?v=」と「preloaded」の3つが
+       すべて揃った時だけ消します。 */
+const kaihatsuDakeNoKeikoku = (t) =>
+  /\/_next\/static\/css\//.test(t) &&
+  /\?v=\d+/.test(t) &&
+  /preloaded using link preload/.test(t);
 
 /* ══════════════════════════════════════════════
    画面まわりの小道具（お客様側E2Eと同じ考え方）
@@ -589,7 +607,55 @@ kyaku.setDefaultTimeout(20000);
 /** 管理画面の画面へ行く（URLは kebab-case） */
 async function gamen(slug) {
   await mise.goto(`${BASE}/client-demo/${slug}`, { waitUntil: "domcontentloaded" });
-  await mise.waitForTimeout(900);
+  /* ★「900ミリ秒待つ」で済ませないこと（2026-09-07）。
+       管理画面は、外枠（左メニュー）が先に出て、
+       中身はそのあとから届きます。
+       決め打ちの待ち時間だと、混んでいるときだけ
+       外枠しか読めず、「文字が無い＝不合格」と記録されます。
+       実際に、それだけで数件が赤くなりました。
+       外枠と中身の両方がそろうまで待ちます。 */
+  await mise
+    .waitForSelector('nav[aria-label="管理メニュー"]', { timeout: 20000 })
+    .catch(() => {});
+  await mise
+    .waitForFunction(
+      () => {
+        const m = document.querySelector("main") ?? document.body;
+        return (m.innerText || "").replace(/\s/g, "").length > 200;
+      },
+      undefined,
+      { timeout: 20000 },
+    )
+    .catch(() => {});
+  await mise.waitForTimeout(400);
+}
+
+/**
+ * お客様側で「ご本人の確認」を求められたら、合言葉を入れて通る。
+ *
+ * ★「1.5秒待って、出ていたら入れる」で済ませないこと（2026-09-07）。
+ *   確認のお願いは、サーバーへ問い合わせた答えが返ってから出ます。
+ *   混んでいると1.5秒では間に合いません。
+ *   間に合わないと、お届け先が保存されないまま先へ進み、
+ *   そのあとの発送依頼が「住所が無い」で断られます。
+ *   実際に、それだけで注文まわりが3件まとめて赤くなりました。
+ *
+ *   ★出ないこともあります（前の確認がまだ効いている場合）。
+ *     出なければ、そのまま何もしません。
+ */
+async function honninKakunin() {
+  const deta = await machi(kyaku, "text=ご本人の確認をお願いいたします", 12000);
+  if (!deta) return false;
+  await kyaku.locator('input[type="password"]').last().fill(PASSWORD);
+  await kyaku.locator('button:has-text("確認する")').first().click();
+  /* 確認の窓が閉じるまで待つ */
+  await kyaku
+    .waitForSelector("text=ご本人の確認をお願いいたします", {
+      state: "hidden",
+      timeout: 20000,
+    })
+    .catch(() => {});
+  return true;
 }
 
 let gachaId = null;
@@ -809,15 +875,38 @@ try {
     /画像未登録/.test(maeGazo),
   );
 
+  /* いま画面に貼り付いている写真が何枚か、を数える */
+  const gazoKazoeru = () =>
+    mise.evaluate(
+      () =>
+        Array.from(document.querySelectorAll("img"))
+          .map((i) => /\/api\/images\/([A-Za-z0-9_-]+)/.exec(i.getAttribute("src") ?? "")?.[1])
+          .filter(Boolean).length,
+    );
+  /* ★決め打ちの待ち時間で次の写真へ進まないこと。
+       写真を預けるのには時間がかかります。
+       混んでいる日は1.1秒では終わらず、
+       「6枚のはずが4枚」という、日によって変わる不合格になります。
+       枚数が増えたことを見届けてから、次へ進みます。 */
+  const machiGazo = async (hoshii, ms = 30000) => {
+    const owari = Date.now() + ms;
+    for (;;) {
+      if ((await gazoKazoeru()) >= hoshii) return true;
+      if (Date.now() > owari) return false;
+      await mise.waitForTimeout(300);
+    }
+  };
+
   const pickers = mise.locator('input[type="file"]');
   const pickerKazu = await pickers.count();
   await pickers.nth(0).setInputFiles(COVER);
-  await mise.waitForTimeout(1500);
+  await machiGazo(1);
   const shoKazu = Math.min(pickerKazu - 1, SHASHIN.length);
   for (let i = 0; i < shoKazu; i += 1) {
     await pickers.nth(i + 1).setInputFiles(SHASHIN[i]);
-    await mise.waitForTimeout(1100);
+    await machiGazo(i + 2);
   }
+  await mise.waitForTimeout(500);
   const gazoIds = await mise.evaluate(() =>
     Array.from(document.querySelectorAll("img"))
       .map((i) => /\/api\/images\/([A-Za-z0-9_-]+)/.exec(i.getAttribute("src") ?? "")?.[1])
@@ -1076,6 +1165,162 @@ try {
   await tabShousai.close();
 
   /* ══════════════════════════════════════════
+     ①-3 賞の呼び名
+
+     ★お店ごとに、賞の呼び名が違います。
+       特賞／1等／ラストワン賞／PSA10賞 など、
+       呼び方はお店の売り方そのものです。
+       ここが S賞〜D賞 に固定だと、
+       お店は自分の売り方ができません。
+
+     ★ここで確かめるのは3つです。
+       ①お店が自分で変えられること
+       ②変えた呼び名が、お客様の売り場に出ること
+       ③同じ呼び名を2つの賞に付けさせないこと
+         （お客様から見て同じ賞になり、優良誤認になり得ます）
+     ══════════════════════════════════════════ */
+  H("①-3 賞の呼び名を、お店が自分で変えられるか");
+
+  await gamen("store-setup");
+  const yobinaAri = await machiAru(mise, 'input[aria-label="S の呼び名"]', 20000);
+  T(
+    "S-26g",
+    "開店準備の画面に「賞の呼び名」を決める欄がある",
+    yobinaAri,
+    yobinaAri ? "S〜D の5つぶん" : "★欄が見つからない",
+  );
+
+  /* 既定のまま何も決めていない状態では、S賞 と出ていること
+     （★空欄にしないこと。空欄のまま公開すると、
+        お客様の当選画面に「（空白）が当たりました」と出ます） */
+  const yobinaHajime = await mise
+    .locator('input[aria-label="S の呼び名"]')
+    .first()
+    .inputValue()
+    .catch(() => "");
+  T(
+    "S-26h",
+    "何も決めていないときは、欄が空ではなく「S賞」と入っている",
+    yobinaHajime === "S賞",
+    `いまの値：「${yobinaHajime}」`,
+  );
+
+  /* ── 変えてみる ── */
+  await mise.locator('input[aria-label="S の呼び名"]').first().fill("特賞");
+  await mise.locator('input[aria-label="A の呼び名"]').first().fill("1等");
+  await mise.locator('button:has-text("呼び名を保存する")').first().click();
+  const hozonDeta = await machiAru(mise, "text=賞の呼び名を保存しました", 20000);
+  T(
+    "S-26i",
+    "呼び名を変えて保存できた",
+    hozonDeta,
+    hozonDeta ? "S→特賞 ／ A→1等" : "★保存できたと出ない",
+  );
+
+  /* ★読み込み直しても残っていること。
+       画面の中だけで持っていると、更新した瞬間に消えます。 */
+  await mise.reload({ waitUntil: "domcontentloaded" });
+  await machiAru(mise, 'input[aria-label="S の呼び名"]', 20000);
+  const yobinaNokori = await mise
+    .locator('input[aria-label="S の呼び名"]')
+    .first()
+    .inputValue()
+    .catch(() => "");
+  T(
+    "S-26j",
+    "画面を読み込み直しても、変えた呼び名が残っている",
+    yobinaNokori === "特賞",
+    `いまの値：「${yobinaNokori}」`,
+  );
+
+  /* ── お客様の売り場に出ているか ── */
+  const [tabYobina] = await Promise.all([
+    miseCtx.waitForEvent("page", { timeout: 15000 }),
+    mise.locator('a[target="_blank"]:has-text("ガチャ詳細")').first().click(),
+  ]);
+  watch(tabYobina, "お客様（別タブ）");
+  await tabYobina.waitForLoadState("domcontentloaded");
+  await tabYobina
+    .locator("text=特賞")
+    .first()
+    .waitFor({ timeout: 20000 })
+    .catch(() => {});
+  const yobinaMoji = await moji(tabYobina);
+  T(
+    "S-26k",
+    "変えた呼び名が、お客様のガチャ詳細に出ている",
+    yobinaMoji.includes("特賞") && yobinaMoji.includes("1等"),
+    `特賞=${yobinaMoji.includes("特賞") ? "あり" : "★なし"} ／ 1等=${yobinaMoji.includes("1等") ? "あり" : "★なし"}`,
+  );
+  /* ★ここでページ全体の文字を見ないこと。
+       景品そのものの名前が「S賞」で登録されていることがあります。
+       名前は、お店が登録した商品名なので、
+       呼び名を変えても書き換わりません（書き換えたら偽装になります）。
+       見るのは「賞の札」だけにします。 */
+  const fuda = await tabYobina
+    .locator("[data-grade]")
+    .allInnerTexts()
+    .then((xs) => xs.map((s) => s.trim()).filter(Boolean))
+    .catch(() => []);
+  /* ★見るのは、名前を変えた S と A の2つだけにすること。
+       B・C・D は、この試験ではわざと既定のままにしています。
+       「B賞」が残っているのは正しい状態です。 */
+  const furuiFuda = fuda.filter((s) => /^[SA]賞$/.test(s));
+  T(
+    "S-26l",
+    "名前を変えた賞の札が、古い呼び名（S賞・A賞）のまま残っていない",
+    fuda.length > 0 && furuiFuda.length === 0,
+    fuda.length === 0
+      ? "★賞の札が1つも見つからない"
+      : furuiFuda.length > 0
+        ? `★古い呼び名の札：${furuiFuda.join(" / ")}`
+        : `札：${fuda.join(" / ")}`,
+  );
+  await tabYobina.close();
+
+  /* ── 同じ呼び名を2つに付けさせない ── */
+  await mise.locator('input[aria-label="B の呼び名"]').first().fill("特賞");
+  await mise.locator('button:has-text("呼び名を保存する")').first().click();
+  const hajikareta = await machiAru(mise, "text=2つの賞に付いています", 20000);
+  T(
+    "S-26m",
+    "同じ呼び名を2つの賞に付けようとすると、はねられる",
+    hajikareta,
+    hajikareta ? "お客様から見て同じ賞になるため" : "★通ってしまった",
+  );
+  const nokottaB = await mise
+    .locator('input[aria-label="B の呼び名"]')
+    .first()
+    .inputValue()
+    .catch(() => "");
+  T(
+    "S-26n",
+    "はねられたとき、打ち込んだ文字が消えていない（打ち直しにならない）",
+    nokottaB === "特賞",
+    `いまの値：「${nokottaB}」`,
+  );
+
+  /* ── 後の試験に影響しないよう、既定へ戻す ── */
+  await mise.locator('input[aria-label="B の呼び名"]').first().fill("");
+  await mise.locator('input[aria-label="S の呼び名"]').first().fill("");
+  await mise.locator('input[aria-label="A の呼び名"]').first().fill("");
+  await mise.locator('button:has-text("呼び名を保存する")').first().click();
+  await machiAru(mise, "text=賞の呼び名を保存しました", 20000);
+  await mise.reload({ waitUntil: "domcontentloaded" });
+  await machiAru(mise, 'input[aria-label="S の呼び名"]', 20000);
+  const modotta = await mise
+    .locator('input[aria-label="S の呼び名"]')
+    .first()
+    .inputValue()
+    .catch(() => "");
+  T(
+    "S-26o",
+    "空欄で保存すると、既定の呼び名（S賞）に戻る",
+    modotta === "S賞",
+    `いまの値：「${modotta}」`,
+  );
+
+  /* ══════════════════════════════════════════
      ② 店舗情報／③ 法定表示（お客様の目で見る）
      ══════════════════════════════════════════ */
   H("②③ 店舗情報と法定表示が、お客様の画面に出る");
@@ -1098,7 +1343,10 @@ try {
   T("S-27", "お客様がログインできた", inMypage, kyaku.url());
   if (!inMypage) throw new Error("お客様がログインできませんでした");
 
-  const kanban = await machi(kyaku, `[data-testid="chrome-logo"]:has-text("${SHOPNAME}")`, 10000);
+  /* ★看板は、開いた直後は仮の名前（オンラインガチャ）で出て、
+       お店の名前を取りに行ってから差し替わります。
+       短く切ると、仮の名前を読んで誤った不合格になります。 */
+  const kanban = await machi(kyaku, `[data-testid="chrome-logo"]:has-text("${SHOPNAME}")`, 20000);
   T("S-28", "お店が決めた店舗名が、お客様の画面の看板に出ている", kanban, SHOPNAME);
 
   await kyaku.goto(`${BASE}/store/company`, { waitUntil: "domcontentloaded" });
@@ -1317,6 +1565,10 @@ try {
   );
 
   await gamen("gachas");
+  /* ★一覧は、開いたあとに中身を取りに行きます。
+       待たずに読むと、まだ空の表を読んでしまいます。 */
+  await machiAru(mise, `text=${GACHA_TITLE}`, 20000);
+  await mise.waitForTimeout(500);
   const gText = await moji(mise);
   T(
     "S-43",
@@ -1349,7 +1601,12 @@ try {
   const cGyou = mise.locator('tr:visible:has-text("試験 花子（架空）")');
   if ((await cGyou.count()) > 0) await cGyou.first().click().catch(() => {});
   else await mise.locator('button:visible:has-text("試験 花子（架空）")').first().click().catch(() => {});
-  await mise.waitForTimeout(2000);
+  /* ★2秒の決め打ちで済ませないこと（2026-09-07）。
+       会員の中身は、押してからサーバーに取りに行きます。
+       混んでいると2秒では届かず、
+       「引いた記録が無い」と誤って記録されます。 */
+  await machi(mise, "text=引いた記録", 20000);
+  await machi(mise, "text=獲得した景品", 20000);
 
   const cText = await moji(mise);
   const kachi = await all(
@@ -1387,11 +1644,7 @@ try {
     .fill("東京都千代田区皇居外苑1-1 試験用ハイツ202");
   await kyaku.locator('label:has-text("お電話番号") input').first().fill("0300000001");
   await kyaku.locator('button:has-text("この内容で保存する")').click();
-  await kyaku.waitForTimeout(1500);
-  if ((await kyaku.locator("text=ご本人の確認をお願いいたします").count()) > 0) {
-    await kyaku.locator('input[type="password"]').last().fill(PASSWORD);
-    await kyaku.locator('button:has-text("確認する")').first().click();
-  }
+  await honninKakunin();
   const addrOk = await machi(kyaku, "text=お届け先を変更いたしました", 20000);
   T("S-50", "お届け先を保存できた", addrOk);
 
@@ -1403,11 +1656,7 @@ try {
   await kyaku.locator('button:has-text("発送を依頼する")').first().click();
   await machi(kyaku, 'button:has-text("はい、発送を依頼します")', 10000);
   await kyaku.locator('button:has-text("はい、発送を依頼します")').click();
-  await kyaku.waitForTimeout(1500);
-  if ((await kyaku.locator("text=ご本人の確認をお願いいたします").count()) > 0) {
-    await kyaku.locator('input[type="password"]').last().fill(PASSWORD);
-    await kyaku.locator('button:has-text("確認する")').first().click();
-  }
+  await honninKakunin();
   const hOk = await machi(kyaku, "text=発送を承りました", 25000);
   const chumon = await one(
     `SELECT id FROM orders WHERE tenant_id = ? AND user_id = ? ORDER BY rowid DESC LIMIT 1`,
@@ -1555,7 +1804,29 @@ try {
        （SHIP_REQUESTED のまま止まっているのは正しい作りです）
        見るべきは、お客様の獲得商品の画面に何と書いてあるか、です。 */
   await kyaku.goto(`${BASE}/mypage/prizes`, { waitUntil: "domcontentloaded" });
-  await kyaku.waitForTimeout(1800);
+  /* ★1.8秒の決め打ちで読み取らないこと（2026-09-07）。
+       この画面は、開いてから中身をサーバーへ取りに行きます。
+       間に合わないと、まだ空の枠を読んでしまい、
+       「発送依頼済みのまま止まっている」という
+       誤った不合格になります。実際にそれで1件赤くなりました。
+       （そのとき台帳の中身は、正しく発送済みになっていました）
+
+       ★「合格の文字が出るまで待つ」だけにしないこと。
+         それだと、いつまでも出ない時に理由が残りません。
+         先に「中身が届いたか」を待ち、そのうえで読みます。 */
+  await machiAru(kyaku, "text=獲得商品", 20000);
+  await kyaku
+    .waitForFunction(
+      () => {
+        const t = document.body?.innerText ?? "";
+        /* 状態の文字が1つでも出れば、中身は届いています */
+        return /未選択|発送依頼済み|発送中|発送済み|ポイント交換済み|まだありません/.test(t);
+      },
+      undefined,
+      { timeout: 20000 },
+    )
+    .catch(() => {});
+  await machi(kyaku, "text=発送中", 15000);
   const kPrize = await moji(kyaku);
   const susunda = /発送中|発送済み|お届け/.test(kPrize);
   T(
@@ -1568,7 +1839,12 @@ try {
   );
 
   await kyaku.goto(`${BASE}/mypage/shipping`, { waitUntil: "domcontentloaded" });
-  await kyaku.waitForTimeout(1500);
+  /* ★決め打ちの待ち時間だけで読み取らないこと。
+       この画面は、開いたあとに中身を取りに行きます。
+       間に合わないと、まだ空の枠を読んでしまい、
+       「出ていない」という誤った不合格になります。 */
+  await machiAru(kyaku, "text=0000-0000-0000", 20000);
+  await kyaku.waitForTimeout(500);
   const kShip = await moji(kyaku);
   T(
     "S-62",
@@ -1614,6 +1890,7 @@ try {
   let nokoriWazato = WAZATO_409.length;
   const cons = CONSOLE_LOG.filter((c) => {
     if (yoso(c.text)) return false;
+    if (kaihatsuDakeNoKeikoku(c.text)) return false;
     if (nokoriStepUp > 0 && /403 \(Forbidden\)/.test(c.text)) {
       nokoriStepUp -= 1;
       return false;

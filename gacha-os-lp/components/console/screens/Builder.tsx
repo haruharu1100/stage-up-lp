@@ -62,6 +62,8 @@ import { backtestReport, designedRtp, verdictLabel, type GachaSpec } from "@/lib
 import { createGachaDraft } from "@/lib/console/liveGachas";
 import { uploadImage, type ImageKind } from "@/lib/console/liveImages";
 import { STRENGTH_LABEL, buildSpec, type Strength } from "@/lib/console/spec";
+/* 賞の呼び名（特賞 / 1等 …）。★仮置きの景品名を、この呼び名で作るために読みます */
+import { useGradeLabels } from "@/lib/console/liveStore";
 import { BACKTEST_SEED, can, type ConsoleState } from "@/lib/console/state";
 import type { MenuKey } from "../menu";
 import { Badge, Btn, Card, DemoNote, Field, KV, RowCard, Rows, Table, Td, WhatIsThis, inputClass } from "../ui";
@@ -214,6 +216,23 @@ export default function Builder({
 
   const mayEdit = s.me ? can(s.me.role, "gacha.edit") : false;
 
+  /**
+   * そのお店が決めた、賞の呼び名。
+   *
+   * ★読めていないときは、渡さないこと（undefined のまま）。
+   *   ここで「S賞」を組み立てて渡すと、
+   *   通信が遅かった日にだけ「S賞」で保存される、という
+   *   再現しにくい取り違えが起きます。
+   *   渡さなければ、buildSpec 側の既定（S賞…）が1か所で決まります。
+   */
+  const { state: yobinaState } = useGradeLabels();
+  const yobina = useMemo(() => {
+    if (yobinaState.phase !== "ok") return undefined;
+    const out: Record<string, string> = {};
+    for (const g of yobinaState.data.grades) out[g.grade] = g.label;
+    return out;
+  }, [yobinaState]);
+
   const generate = (nextStrength = strength, nextTarget = target, note?: string) => {
     const read = readPrompt(text);
     const p = read.price ?? price;
@@ -223,7 +242,7 @@ export default function Builder({
     setTotal(t);
     setStrength(st);
     setTarget(nextTarget);
-    const atarashii = buildSpec("AIが組んだ案", p, t, st, nextTarget);
+    const atarashii = buildSpec("AIが組んだ案", p, t, st, nextTarget, yobina);
     setSpec(atarashii);
 
     /* 組み直しても、預けた写真はそのまま残します。

@@ -743,7 +743,20 @@ const LITE_KEY = "gachaos.lite";
 export type TheaterRecord = {
   id: string;
   gachaId: string;
+  /**
+   * 中の記号（S / A / B / C / D / -）。色を決めるのに使います。
+   * ★これを文字として画面に出さないこと。
+   */
   grade: string;
+  /**
+   * お店が決めた、その等級の呼び名（特賞 / 1等 / PSA10賞 など）。
+   *
+   * ★渡さなくても動きますが、本物の売り場では必ず渡してください。
+   *   渡さないと「S賞」という、こちらが決めた呼び名が出ます。
+   *   お店が「特賞」と名付けているのに、当選画面だけ
+   *   「S賞」と出るのは、お客様には別の賞に見えます。
+   */
+  gradeLabel?: string;
   prizeName: string;
   prizeValue: number;
   /** 1回の料金（pt） */
@@ -969,7 +982,7 @@ export function DrawTheater({
                 </div>
                 <div className="px-4 py-3.5">
                   <div className="flex items-center gap-2">
-                    <GradeChip grade={best.grade} onDark />
+                    <GradeChip grade={best.grade} label={best.gradeLabel} onDark />
                     <p className="min-w-0 flex-1 truncate text-[0.9rem] font-bold text-white">
                       {best.prizeName}
                     </p>
@@ -991,10 +1004,14 @@ export function DrawTheater({
               <div className="grid grid-cols-5 gap-1.5">
                 {records.map((r) => {
                   const a = gradeArt(r.grade);
+                  /* ★呼び名は、お店の設定を優先すること。
+                       渡ってこなかった時だけ、こちらの既定（S賞など）に落とします。 */
+                  const yobina =
+                    r.gradeLabel && r.gradeLabel.trim() !== "" ? r.gradeLabel : a.label;
                   return (
                     <div
                       key={r.id}
-                      title={`${a.label}：${r.prizeName}`}
+                      title={`${yobina}：${r.prizeName}`}
                       className="overflow-hidden rounded-lg"
                       style={{ border: `1px solid ${a.line}66` }}
                     >
@@ -1013,11 +1030,15 @@ export function DrawTheater({
                           />
                         )}
                       </div>
+                      {/* ★この升は幅が狭いので、はみ出さないよう truncate を付けること。
+                            呼び名は「ラストワン賞」のように長い場合があります。
+                            ポイントだけの回は賞ではないので、これまで通り pt と出します。
+                            全文は、上の title（長押し・マウスを乗せると出る）で読めます。 */}
                       <p
-                        className="nb py-0.5 text-center text-[0.62rem] font-bold"
+                        className="nb truncate px-0.5 py-0.5 text-center text-[0.62rem] font-bold"
                         style={{ background: "rgba(0,0,0,0.35)", color: a.chip }}
                       >
-                        {r.grade === "-" ? "pt" : r.grade}
+                        {r.grade === "-" ? "pt" : yobina}
                       </p>
                     </div>
                   );

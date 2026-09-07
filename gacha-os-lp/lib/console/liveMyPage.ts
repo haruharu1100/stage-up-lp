@@ -196,7 +196,10 @@ export type PrizeState =
 export type LivePrize = {
   id: string;
   name: string;
+  /** 中の記号（S / A / B / C / D）。★画面に出さないこと */
   grade: string;
+  /** お店が決めた呼び名（特賞 / 1等 / PSA10賞 など）。★画面に出すのは必ずこちら */
+  gradeLabel: string;
   gachaTitle: string;
   value: number;
   exchangePt: number;

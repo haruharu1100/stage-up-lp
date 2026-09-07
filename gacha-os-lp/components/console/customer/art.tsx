@@ -521,17 +521,36 @@ export function SampleProductThumb({
  */
 export function GradeChip({
   grade,
+  label,
   onDark = false,
   children,
 }: {
+  /**
+   * 中の記号（S / A / B / C / D / -）。
+   * ★色を決めるためだけに使います。この文字は画面に出しません。
+   */
   grade: string;
+  /**
+   * お店が決めた呼び名（特賞 / 1等 / PSA10賞 など）。
+   *
+   * ★本物の売り場では必ず渡すこと。
+   *   渡さないと、こちらが決めた「S賞」が出ます。
+   *   お店が別の呼び方をしている場合、お客様には別の賞に見えます。
+   *   渡さなくても動くのは、営業用の見本（架空の店）のためです。
+   */
+  label?: string;
   /** 濃い背景の上に置くか */
   onDark?: boolean;
   children?: React.ReactNode;
 }) {
   const a = gradeArt(grade);
+  const moji = label && label.trim() !== "" ? label : a.label;
   return (
     <span
+      /* ★中の記号は「印」としてだけ残す。画面には出さない。
+           お店が呼び名を変えたあと、点検のときに
+           「どの等級の札か」を機械で見分けるために使います。 */
+      data-grade={grade}
       className="nb inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[0.72rem] font-bold"
       style={
         onDark
@@ -539,7 +558,7 @@ export function GradeChip({
           : { color: a.ink, background: a.from, border: `1px solid ${a.line}` }
       }
     >
-      {children ?? a.label}
+      {children ?? moji}
     </span>
   );
 }

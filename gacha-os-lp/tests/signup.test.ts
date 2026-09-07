@@ -121,6 +121,18 @@ before(async () => {
   await migrate();
   tenantCode = `t${Math.random().toString(36).slice(2, 8)}`;
   tenantId = await createTenant({ code: tenantCode, name: "試験用の会社" });
+
+  /* この試験用の住所を、この会社のものとして登録しておく。
+     ★2026-09-07から、お客様の入口は「会社コード」ではなく
+       「開いている住所」で会社を決めます（lib/server/tenantHost.ts）。
+       ですので、住所を登録していないと、
+       入口は正しく NO_TENANT でお断りします。
+     ★これは試験の下ごしらえです。作りは変えていません。 */
+  await db().execute({
+    sql: `INSERT OR REPLACE INTO tenant_domains (host, tenant_id, note, created_at)
+          VALUES (?, ?, ?, ?)`,
+    args: ["example.test", tenantId, "会員登録の試験用", new Date().toISOString()],
+  });
 });
 
 /** ふつうの申し込みを1件出す */
@@ -151,7 +163,11 @@ async function kaiin(email: string) {
 function req(body: unknown): NextRequest {
   return new NextRequest("https://example.test/api/auth/signup", {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    /* ★host を必ず付けること。
+         入口は、この住所だけを見て会社を決めます。
+         付け忘れると、本番なら正しい動きである
+         「どこの店か分からないのでお断り」が返ります。 */
+    headers: { "content-type": "application/json", host: "example.test" },
     body: JSON.stringify(body),
   });
 }

@@ -197,6 +197,21 @@ function watch(page, who) {
 const yoso = (t) => /vercel\.live|_next-live\/feedback|__nextjs|hot-reloader|webpack/.test(t);
 const sakiyomi = (t) => /_rsc=/.test(t) && /ERR_ABORTED/.test(t);
 
+/* ★手元の開発サーバーだけに出る、見た目の警告（2026-09-07）
+     「/_next/static/css/… ?v=数字 を先に読み込んだのに使われなかった」
+     という警告が、430 と 1280 の時だけ出ていました。
+     これは開発サーバーが毎回 ?v=数字 を付け替えるせいで出るもので、
+     本番の同じ画面には出ません（本番のCSSは ?v= が付かないため）。
+
+     ★消し方を広げないこと。
+       「/_next/static/css/」と「?v=」と「preloaded」の3つが
+       すべて揃った時だけ消します。
+       ざっくり消すと、本物の警告まで隠れます。 */
+const kaihatsuDakeNoKeikoku = (t) =>
+  /\/_next\/static\/css\//.test(t) &&
+  /\?v=\d+/.test(t) &&
+  /preloaded using link preload/.test(t);
+
 /* ══════════════════════════════════════════════
    画面まわりの小道具
    ══════════════════════════════════════════════ */
@@ -635,6 +650,15 @@ try {
   const sign1 = await machi(page, 'input[type="email"]');
   T("C-03", "新規会員登録の画面が出た", sign1);
 
+  /* ★中身が動き出すまで待つこと（2026-09-07）。
+       画面の見た目は、中身が動き出す前に先に出ます。
+       乗る前に「登録する」を押すと、ブラウザが昔ながらのやり方で
+       ページごと送信してしまい、打ち込みが消えたまま
+       同じ画面に戻ります。エラーは1つも出ません。
+       同じことで、お店側のログインが丸ごと止まりました。 */
+  const { machiUgokidasu } = await import(`${ROOT}/scripts/lib/console-enter.mjs`);
+  await machiUgokidasu(page, "form", 30000).catch(() => {});
+
   /* ★会社コードの欄は、お客様の画面には二度と出しません（2026-09-07）。
        どのお店かは、開いている住所からサーバー側で決まります。
        欄が復活したら、ここで落ちます。 */
@@ -778,8 +802,13 @@ try {
   /* お店の名前は、あとから読み込まれます。
      ★出るまでの間、既定の「オンラインガチャ」が見えています。
        どれくらい見えているのかを測ります。 */
+  /* ★短く切らないこと。
+       開発中のサーバーは、初めて開く画面をその場で組み立てるため、
+       ここだけ数秒よけいにかかることがあります。
+       8秒で切ると、日によって合否が変わる試験になります。
+       「どれくらい既定の名前が見えていたか」は machiMs に出ます。 */
   const t0 = Date.now();
-  const kanban = await machi(page, `[data-testid="chrome-logo"]:has-text("${SHOPNAME}")`, 8000);
+  const kanban = await machi(page, `[data-testid="chrome-logo"]:has-text("${SHOPNAME}")`, 20000);
   const machiMs = Date.now() - t0;
   const hajime = await page
     .locator('[data-testid="chrome-logo"]')
@@ -1285,8 +1314,11 @@ try {
   T("C-63", "押した瞬間には依頼せず、最終確認が出る", hKakunin);
 
   await page.locator('button:has-text("はい、発送を依頼します")').click();
-  await page.waitForTimeout(1500);
-  const stepUpShip = (await page.locator("text=ご本人の確認をお願いいたします").count()) > 0;
+  /* ★1.5秒の決め打ちで数えないこと。
+       サーバーに一度尋ねてから「もう一度パスワードを」の窓が出ます。
+       混んでいると1.5秒では間に合わず、
+       「本人確認が入らなかった」という誤った不合格になります。 */
+  const stepUpShip = await machiAru(page, "text=ご本人の確認をお願いいたします", 15000);
   if (stepUpShip) {
     await page.locator('input[type="password"]').last().fill(PASSWORD);
     await page.locator('button:has-text("確認する")').first().click();
@@ -1315,7 +1347,10 @@ try {
   H("⑮ 発送状況");
 
   await page.goto(`${BASE}/mypage/shipping`, { waitUntil: "domcontentloaded" });
-  await page.waitForTimeout(1200);
+  /* ★開いた直後に読まないこと。中身はあとから取りに行きます。
+       間に合わないと、空の枠を読んで誤った不合格になります。 */
+  await machiAru(page, `text=${shina2}`, 20000);
+  await page.waitForTimeout(400);
   const shipText = await moji(page);
   T(
     "C-67",
@@ -1387,6 +1422,7 @@ try {
   let nokoriStepUp = STEPUP_403.length;
   const cons = CONSOLE_LOG.filter((c) => {
     if (yoso(c.text)) return false;
+    if (kaihatsuDakeNoKeikoku(c.text)) return false;
     if (nokoriStepUp > 0 && /403 \(Forbidden\)/.test(c.text)) {
       nokoriStepUp -= 1;
       return false;

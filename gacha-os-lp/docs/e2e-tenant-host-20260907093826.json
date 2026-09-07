@@ -1,0 +1,193 @@
+{
+  "date": "2026-09-07T09:38:47.345Z",
+  "base": "http://localhost:3212",
+  "hostA": "shop-a-uzw.test.invalid",
+  "hostB": "shop-b-uzw.test.invalid",
+  "hostNashi": "dokonimo-nai-uzw.test.invalid",
+  "tenantA": "ten_01M1XKQE9EABF6T38ED4NK2M3B",
+  "tenantB": "ten_01M1XKQE9JDFBJQVNC8TGVJPCV",
+  "ok": 30,
+  "ng": 0,
+  "items": [
+    {
+      "no": "H-00",
+      "name": "お店2つと、住所2つを用意した",
+      "pass": true,
+      "memo": "shop-a-uzw.test.invalid→A ／ shop-b-uzw.test.invalid→B"
+    },
+    {
+      "no": "H-01",
+      "name": "A店の住所で登録できた（会社コードは1文字も送っていない）",
+      "pass": true,
+      "memo": "HTTP 200"
+    },
+    {
+      "no": "H-02",
+      "name": "登録された会員は、A店の名簿に入っている",
+      "pass": true,
+      "memo": "tenant_id=ten_01M1XKQE9EABF6T38ED4NK2M3B ／ A=ten_01M1XKQE9EABF6T38ED4NK2M3B"
+    },
+    {
+      "no": "H-03",
+      "name": "本文に他店の会社コードを混ぜても、登録は通る",
+      "pass": true,
+      "memo": "HTTP 200"
+    },
+    {
+      "no": "H-04",
+      "name": "混ぜた会社コードは無視され、A店の名簿に入っている",
+      "pass": true,
+      "memo": "tenant_id=ten_01M1XKQE9EABF6T38ED4NK2M3B ／ A=ten_01M1XKQE9EABF6T38ED4NK2M3B ／ B=ten_01M1XKQE9JDFBJQVNC8TGVJPCV"
+    },
+    {
+      "no": "H-05",
+      "name": "B店の名簿は、1人も増えていない",
+      "pass": true,
+      "memo": "B店の会員=0人"
+    },
+    {
+      "no": "H-06",
+      "name": "未登録の住所からの登録は、断られる",
+      "pass": true,
+      "memo": "HTTP 400 ／ NO_TENANT"
+    },
+    {
+      "no": "H-07",
+      "name": "未登録の住所では、登録の入口そのものを出さない",
+      "pass": true,
+      "memo": "お断りの画面が出た"
+    },
+    {
+      "no": "H-08",
+      "name": "お断りの画面に、こちらの仕組みの言葉が出ていない",
+      "pass": true,
+      "memo": "tenant_domains 等が本文に出ていない"
+    },
+    {
+      "no": "H-09",
+      "name": "断られた登録は、どのお店にも入っていない",
+      "pass": true,
+      "memo": "会員=0人"
+    },
+    {
+      "no": "H-10",
+      "name": "A店の住所で、A店の会員がログインできた",
+      "pass": true,
+      "memo": "HTTP 200"
+    },
+    {
+      "no": "H-11",
+      "name": "A店の住所では、自分の情報が読める",
+      "pass": true,
+      "memo": "HTTP 200"
+    },
+    {
+      "no": "H-12",
+      "name": "同じ合言葉でも、B店の住所からは断られる（入口）",
+      "pass": true,
+      "memo": "HTTP 403 ／ TENANT_HOST_MISMATCH"
+    },
+    {
+      "no": "H-13",
+      "name": "獲得商品の入口も、B店の住所からは断られる",
+      "pass": true,
+      "memo": "HTTP 403 ／ TENANT_HOST_MISMATCH"
+    },
+    {
+      "no": "H-14",
+      "name": "B店の住所でマイページを開くと、ログイン画面へ戻される（画面）",
+      "pass": true,
+      "memo": "HTTP 307 ／ 行き先=/login?next=%2Fmypage"
+    },
+    {
+      "no": "H-15",
+      "name": "A店の住所なら、マイページはそのまま開く",
+      "pass": true,
+      "memo": "HTTP 200"
+    },
+    {
+      "no": "H-16",
+      "name": "B店の住所では、A店の会員はログインできない",
+      "pass": true,
+      "memo": "HTTP 401 ／ INVALID"
+    },
+    {
+      "no": "H-17",
+      "name": "本文に会社コードを添えても、B店の住所からは入れない",
+      "pass": true,
+      "memo": "HTTP 401 ／ INVALID"
+    },
+    {
+      "no": "H-18",
+      "name": "解約・停止したお店の住所では、登録できない",
+      "pass": true,
+      "memo": "HTTP 400 ／ NO_TENANT"
+    },
+    {
+      "no": "H-19",
+      "name": "A店の住所では、ログインしなくてもA店の棚が読める",
+      "pass": true,
+      "memo": "HTTP 200 ／ 1本"
+    },
+    {
+      "no": "H-20",
+      "name": "A店の棚に、B店のガチャが1本も混ざっていない",
+      "pass": true,
+      "memo": "1本のうち、B店のものは 0本"
+    },
+    {
+      "no": "H-21",
+      "name": "A店の住所でB店のガチャIDを直に叩いても、見つからない",
+      "pass": true,
+      "memo": "HTTP 404 ／ NOT_FOUND"
+    },
+    {
+      "no": "H-22",
+      "name": "そのお断りに、B店の題名が入っていない",
+      "pass": true,
+      "memo": "断り文に、よそのお店の中身を書かないこと"
+    },
+    {
+      "no": "H-23",
+      "name": "A店の住所でA店のガチャは、そのまま読める",
+      "pass": true,
+      "memo": "HTTP 200"
+    },
+    {
+      "no": "H-24",
+      "name": "登録されていない住所では、棚を1本も返さない",
+      "pass": true,
+      "memo": "HTTP 404 ／ NO_TENANT"
+    },
+    {
+      "no": "H-25",
+      "name": "登録されていない住所の売り場は、はっきりお断りする（画面）",
+      "pass": true,
+      "memo": "HTTP 200"
+    },
+    {
+      "no": "H-26",
+      "name": "そのお断りに、中の事情（表や設定の名前）が出ていない",
+      "pass": true,
+      "memo": "お客様に、こちらの仕組みの名前を見せないこと"
+    },
+    {
+      "no": "H-27",
+      "name": "お店の住所でトップを開くと、そのお店の売り場へ行く",
+      "pass": true,
+      "memo": "HTTP 307 ／ 行き先=/shop"
+    },
+    {
+      "no": "H-28",
+      "name": "どのお店でもない住所のトップは、これまで通りこちらのご案内を出す",
+      "pass": true,
+      "memo": "HTTP 200"
+    },
+    {
+      "no": "H-29",
+      "name": "ログインしていない人は、棚が見えても引けない",
+      "pass": true,
+      "memo": "HTTP 401 ／ UNAUTHENTICATED"
+    }
+  ]
+}

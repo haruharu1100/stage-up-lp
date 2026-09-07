@@ -73,13 +73,38 @@ export const metadata: Metadata = {
   },
   robots: { index: true, follow: true },
   alternates: { canonical: "/" },
-  // Search Console の所有権確認（NEXT_PUBLIC_GSC_VERIFICATION を設定したときだけ出す）
-  verification: process.env.NEXT_PUBLIC_GSC_VERIFICATION
-    ? { google: process.env.NEXT_PUBLIC_GSC_VERIFICATION }
-    : undefined,
+  // Search Console の所有権確認。
+  // 既定値は os.morika.work（URLプレフィックス）の確認用トークン。
+  // 環境変数 NEXT_PUBLIC_GSC_VERIFICATION があればそれを優先する。
+  // ※このトークンは所有権確認専用の公開値で、秘密情報ではない。
+  verification: {
+    google:
+      process.env.NEXT_PUBLIC_GSC_VERIFICATION ||
+      "D1fX6gKxPaVPeh0LM-y_YWTB-B-DP-w8iP6rJGG40qc",
+  },
 };
 
 const jsonLd = [
+  {
+    /* 会社そのものを表す構造化データ。
+       「株式会社MORIKA」という社名と、このサイト(url)を結びつけて
+       検索エンジンに伝えるためのもの。社名で検索されたときに
+       このLPが会社の公式ページとして認識されやすくなる。 */
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    name: site.company,
+    legalName: site.company,
+    url: site.domain,
+    description:
+      "オンラインガチャ・オリパ運営システム「AI GACHA OS」を提供する会社です。",
+    contactPoint: {
+      "@type": "ContactPoint",
+      email: "info@morika.work",
+      contactType: "customer support",
+      areaServed: "JP",
+      availableLanguage: ["ja"],
+    },
+  },
   {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",

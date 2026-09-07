@@ -41,6 +41,7 @@
 
 import { appendAuditTx } from "./audit";
 import { withWriteTx, db } from "./db";
+import { getGradeLabels, gradeLabelOf } from "./gradeLabels";
 import { id } from "./ids";
 import type { Actor } from "./orders";
 
@@ -82,7 +83,20 @@ export type PrizeView = {
   id: string;
   gachaId: string;
   gachaTitle: string;
+  /**
+   * 中の記号（S / A / B / C / D）。
+   * ★お客様に出すのは、これではなく下の gradeLabel です。
+   */
   grade: string;
+  /**
+   * お店が決めた、その等級の呼び名（特賞 / 1等 / PSA10賞 など）。
+   *
+   * ★呼び名は「今の呼び名」を出します。当たった時点の呼び名ではありません。
+   *   写真や景品名と違い、呼び名は同じ等級の言い換えでしかないためです。
+   *   お店が「S賞」を「特賞」に改めたのに、過去の当選だけ
+   *   「S賞」と出続けると、お客様には別の賞に見えます。
+   */
+  gradeLabel: string;
   name: string;
   value: number;
   exchangePt: number;
@@ -213,6 +227,9 @@ export async function listCustomerPrizes(
     args: [tenantId, userId],
   });
 
+  /* ★呼び名は1回だけ読むこと。1件ずつ読むと件数ぶん往復します */
+  const yobina = await getGradeLabels(tenantId);
+
   return (r.rows as Row[]).map((p) => {
     const state = stateOf(str(p.status), nul(p.shipment_status));
 
@@ -225,6 +242,7 @@ export async function listCustomerPrizes(
       gachaId: str(p.gacha_id),
       gachaTitle: str(p.gacha_title) || "（ガチャ情報なし）",
       grade: str(p.grade),
+      gradeLabel: gradeLabelOf(yobina, str(p.grade)),
       name: str(p.name),
       value: num(p.value),
       exchangePt: num(p.exchange_pt),

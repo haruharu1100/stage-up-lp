@@ -82,6 +82,13 @@ export const NOTICE_LABEL: Record<NoticeKind, string> = {
  *   新着ガチャは運営から見れば重要ですが、
  *   お客様にとっては「まだ受け取っていない商品」のほうが上です。
  *   店の都合で並べ替えると、大事な連絡が下へ流れます。
+ *
+ * ★ここは見本の店（架空の店）だけが使います。
+ *   MyPage.tsx → ClientConsole.tsx の営業用の見本にしか描かれません。
+ *   本物のお客様のお知らせは /api/customer/notices が返します。
+ *   ですので、下の「S賞」はお客様の目には入りません。
+ *   ★もしこの関数を本物の画面から呼ぶことになったら、
+ *     そのときは必ず呼び名（gradeLabel）を受け取る形に直すこと。
  */
 export function noticesOf(s: ConsoleState, userId: string): Notice[] {
   const out: Notice[] = [];

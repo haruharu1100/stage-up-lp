@@ -43,6 +43,7 @@
 
 import { db } from "./db";
 import { getCategoriesForGachas } from "./gachaCategories";
+import { getGradeLabels, gradeLabelOf } from "./gradeLabels";
 
 type Row = Record<string, unknown>;
 
@@ -67,8 +68,8 @@ export type ShopItem = {
    * ★残っていない賞を「目玉」として出さないこと。
    *   売り切れた賞を表紙に出し続けるのは、有利誤認です。
    */
-  top: { grade: string; name: string; value: number } | null;
-  /** S賞の残り本数（0 なら出しません） */
+  top: { grade: string; gradeLabel: string; name: string; value: number } | null;
+  /** いちばん上の等級の残り本数（0 なら出しません） */
   sLeft: number;
 
   /**
@@ -117,7 +118,18 @@ export type ShopCategory = { id: string; name: string; count: number };
 /** 1本ぶんの詳しい中身 */
 export type ShopDetail = ShopItem & {
   prizes: {
+    /**
+     * 中の記号（S / A / B / C / D）。
+     * ★これは仕様であって、お客様に見せる文字ではありません。
+     *   見せるのは、必ず下の gradeLabel を使ってください。
+     */
     grade: string;
+    /**
+     * お店が決めた、その等級の呼び名（特賞 / 1等 / PSA10賞 など）。
+     * 決めていなければ「S賞」のような既定の呼び名が入ります。
+     * ★空文字は入りません。呼ぶ側で「無かったら」を書かなくて済みます。
+     */
+    gradeLabel: string;
     name: string;
     value: number;
     total: number;
@@ -143,7 +155,14 @@ function medama(prizes: ShopDetail["prizes"]): {
       : nokori.reduce((a, b) => (b.value > a.value ? b : a));
   const s = prizes.find((p) => p.grade === "S");
   return {
-    top: top ? { grade: top.grade, name: top.name, value: top.value } : null,
+    top: top
+      ? {
+          grade: top.grade,
+          gradeLabel: top.gradeLabel,
+          name: top.name,
+          value: top.value,
+        }
+      : null,
     sLeft: s ? s.left : 0,
   };
 }
@@ -181,12 +200,17 @@ export async function listShopGachas(tenantId: string): Promise<ShopItem[]> {
     args: [tenantId, ...ids],
   });
 
+  /* ★呼び名は、この1回だけ読むこと。
+       賞の行ごとに読みに行くと、20本×5等級で100往復になります。 */
+  const yobina = await getGradeLabels(tenantId);
+
   const betsu = new Map<string, ShopDetail["prizes"]>();
   for (const x of s.rows as Row[]) {
     const key = str(x.gacha_id);
     const list = betsu.get(key) ?? [];
     list.push({
       grade: str(x.grade),
+      gradeLabel: gradeLabelOf(yobina, str(x.grade)),
       name: str(x.name),
       value: num(x.value),
       total: num(x.total),
@@ -288,8 +312,10 @@ export async function shopGachaDetail(
     args: [tenantId, gachaId],
   });
 
+  const yobina = await getGradeLabels(tenantId);
   const prizes = (s.rows as Row[]).map((x) => ({
     grade: str(x.grade),
+    gradeLabel: gradeLabelOf(yobina, str(x.grade)),
     name: str(x.name),
     value: num(x.value),
     total: num(x.total),

@@ -80,6 +80,18 @@ export function buildSpec(
   total: number,
   strength: Strength,
   targetRtp: number,
+  /**
+   * そのお店が決めた、等級ごとの呼び名（記号 → 見せる文字）。
+   *
+   * ★渡せるときは必ず渡すこと。
+   *   渡さないと、仮置きの景品名が「S賞」になります。
+   *   お店が「特賞」と名付けているのに、
+   *   作りかけのガチャだけ「S賞」と出るのは、直し忘れのもとです。
+   *
+   *   渡さなくても動くのは、営業用の見本（架空の店）や
+   *   バックテストの計算のように、お店が決まっていない場所があるためです。
+   */
+  gradeLabels?: Record<string, string>,
 ): GachaSpec {
   const safeTotal = Math.max(1, Math.floor(total));
   const budget = price * safeTotal * (targetRtp / 100);
@@ -125,7 +137,14 @@ export function buildSpec(
    */
   const prizes: Prize[] = GRADES.map((grade, i) => ({
     grade,
-    name: `${grade}賞`,
+    /* ★お店が呼び名を決めていれば、そちらを使うこと。
+         「S賞」と書き込んでしまうと、お店が「特賞」と名付けていても、
+         景品名の欄だけ「S賞」で残ります。
+         直し忘れると、その文字がそのままお客様の当選画面に出ます。 */
+    name:
+      gradeLabels?.[grade] !== undefined && gradeLabels[grade].trim() !== ""
+        ? gradeLabels[grade]
+        : `${grade}賞`,
     count: counts[i],
     value: values[i],
   }));
