@@ -45,6 +45,7 @@ next-env.d.ts
 .next-verify/
 .next-e2e/
 _next-verify-local/
+_next-e2e-local/
 
 # 検証用のスクリーンショット・録画（容量が大きいのでgitに入れない）
 /_verify/

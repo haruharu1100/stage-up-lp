@@ -32,6 +32,11 @@ _verify/
 _next-verify-local/
 .next-prod/
 
+# E2Eテスト用の手元ビルド（テスト用の認証キーを含むため公開しない）
+# ★名前を「.next」で始めないこと（Vercelが自分の作業場所として扱い除外できないため）。
+#   元の名前 .next-e2e から _next-e2e-local へ変更済み。
+_next-e2e-local/
+
 # 社内向けの資料（公開ページからは読み込まれない）
 docs/
 

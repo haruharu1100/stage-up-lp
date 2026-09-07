@@ -27,7 +27,11 @@
     "check:csrf": "node scripts/check-csrf.mjs",
     "check:art": "node scripts/check-real-art.mjs",
     "check:words": "node scripts/check-customer-words.mjs",
-    "check:grade": "tsx scripts/check-grade-labels.mjs"
+    "check:grade": "tsx scripts/check-grade-labels.mjs",
+    "db:migrate": "tsx scripts/db-migrate.mjs",
+    "db:dump": "node scripts/db-dump.mjs",
+    "db:restore-verify": "tsx scripts/db-restore-verify.mjs",
+    "db:check-clean": "node scripts/check-production-clean.mjs"
   },
   "dependencies": {
     "@libsql/client": "^0.17.4",

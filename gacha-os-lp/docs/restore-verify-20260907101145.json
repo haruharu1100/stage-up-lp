@@ -1,0 +1,69 @@
+{
+  "at": "2026-09-07T10:11:45.377Z",
+  "tool": "scripts/db-restore-verify.mjs",
+  "backup": "/Volumes/ORICO/保存用/hp用/hp-auto-system/gacha-os-lp/.data/backup-chain-20260907191141",
+  "backupAt": "2026-09-07T10:11:42.713Z",
+  "backupSource": "file:./.data/e2e-d1.db",
+  "restoredTo": "file:/Volumes/ORICO/保存用/hp用/hp-auto-system/gacha-os-lp/.data/restore-check-20260907101144.db",
+  "tables": 44,
+  "totalRows": 3089,
+  "ok": 9,
+  "ng": 0,
+  "RESTORE_VERIFIED": "YES",
+  "results": [
+    {
+      "no": "R-01",
+      "title": "戻す先が空である（上書きしない）",
+      "ok": true,
+      "detail": "空でした"
+    },
+    {
+      "no": "R-02",
+      "title": "控えにある「表の作り方」がそのまま流せる",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "no": "R-03",
+      "title": "控えの全行を入れられた",
+      "ok": true,
+      "detail": "3089 行"
+    },
+    {
+      "no": "R-04",
+      "title": "表の数が同じ",
+      "ok": true,
+      "detail": "控え 44 表 ／ 戻した先 44 表"
+    },
+    {
+      "no": "R-05",
+      "title": "すべての表の行数が同じ",
+      "ok": true,
+      "detail": "合計 3089 行"
+    },
+    {
+      "no": "R-06",
+      "title": "すべての表の指紋が一致する",
+      "ok": true,
+      "detail": "44 表すべて一致"
+    },
+    {
+      "no": "R-07",
+      "title": "適用済みのスキーマの段が同じ（1段以上あること）",
+      "ok": true,
+      "detail": "控え 20 段 ／ 戻した先 20 段（最後 020_tenant_domains_grade_labels）"
+    },
+    {
+      "no": "R-08",
+      "title": "全会員で、保有ポイント＝台帳の合計",
+      "ok": true,
+      "detail": "会員 48 人ぶん、すべて一致"
+    },
+    {
+      "no": "R-09",
+      "title": "すべての店舗で、記録の鎖がつながっている",
+      "ok": true,
+      "detail": "56 店舗ぶん、すべて無事"
+    }
+  ]
+}
