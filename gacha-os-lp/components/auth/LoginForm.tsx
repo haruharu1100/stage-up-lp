@@ -53,7 +53,24 @@ export default function LoginForm({
 }: {
   /** ログイン後の戻り先。すでにサーバー側で安全な形にしてあります */
   next: string;
-  /** 会社コードの入力欄を出すか（既定の会社が決まっていないとき） */
+  /**
+   * 会社コードの入力欄を出すか。
+   *
+   * ═══════════════════════════════════════════════
+   * ★お客様には、絶対に出さないこと（2026-09-07）
+   * ═══════════════════════════════════════════════
+   *
+   *   ふつうのオンラインガチャのお店で、
+   *   ログインのときに「会社コード」を聞かれることはありません。
+   *   聞かれた時点で、多くの方はそこで帰ります。
+   *
+   *   どのお店かは、開いている住所（ドメイン）から
+   *   サーバー側が決めます。お客様に答えさせる必要はありません。
+   *
+   *   ここが true になるのは、
+   *   「住所からお店が決まらない配置」に置いた管理用の入口だけです。
+   *   その場合でも、出すのはお店の担当者の側だけにします。
+   */
   needTenantCode: boolean;
   /** デモの案内を出してよいか */
   demoMode: boolean;
@@ -87,7 +104,12 @@ export default function LoginForm({
         cache: "no-store",
         body: JSON.stringify({
           kind,
-          tenantCode: tenantCode.trim() || undefined,
+          /* ★お客様の分では、会社コードを送らないこと。
+               サーバー側も、お客様の分は本文を見ません（住所から決めます）。
+               ここで送る形を残すと、
+               「本文だけ書き換えてよその店に入る」道が復活します。 */
+          tenantCode:
+            kind === "ADMIN" ? tenantCode.trim() || undefined : undefined,
           email: email.trim(),
           password,
           mfaCode: step === "MFA" ? mfaCode : undefined,
@@ -251,7 +273,11 @@ export default function LoginForm({
           >
             {step === "PASSWORD" ? (
               <div className="mt-5 space-y-4">
-                {needTenantCode && (
+                {/* ★お客様には出さないこと。
+                      「会社コード」を聞くお店は、ほかにありません。
+                      出すのは、住所からお店が決まらない配置に置いた
+                      管理用の入口で、お店の担当者が入るときだけです。 */}
+                {needTenantCode && kind === "ADMIN" && (
                   <label className="block">
                     <span className="block text-note font-bold text-slate2">
                       会社コード

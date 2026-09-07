@@ -899,10 +899,86 @@ function FaqEditor({
    お客様に、いま何が出ているか
    ══════════════════════════════════════════════ */
 
+/**
+ * 「お客様側で確認」。
+ *
+ * ═══════════════════════════════════════════════════════
+ * ★お店の方が、自分の目で確かめられるようにすること
+ * ═══════════════════════════════════════════════════════
+ *
+ *   管理画面に「済」と出ていても、
+ *   実際のページを見るまで、お店の方は安心できません。
+ *   ここは、その9か所をまとめて開ける場所です。
+ *
+ *   ★以前は法定ページ6つだけで、
+ *     いちばん見たいもの（トップ・ガチャ一覧・ガチャ詳細）が
+ *     ありませんでした。あっても開けませんでした。
+ *     売り場がお客様ログインの向こう側にあったからです。
+ *     お店の方は、自分の店の棚を見るために、
+ *     自分の店の会員登録をする必要がありました。
+ *
+ * ═══════════════════════════════════════════════════════
+ * ★行き先を、必ず「/」で始まる相対の住所にすること
+ * ═══════════════════════════════════════════════════════
+ *
+ *   https:// から書いた住所をここに入れると、
+ *   設定を1つ間違えた日に、よそのお店のページが開きます。
+ *   相対の住所なら、いま開いている住所のまま移動します。
+ *   「いま開いている住所＝このお店」はサーバーが保証しています
+ *   （lib/server/tenantHost.ts）。
+ *
+ * ═══════════════════════════════════════════════════════
+ * ★ガチャ詳細は、本物の1本を指すこと
+ * ═══════════════════════════════════════════════════════
+ *
+ *   見本のIDを埋め込むと、押した先が「見つかりません」になります。
+ *   お店の方は、自分の設定が悪いのだと思って探し始めます。
+ *   ですので、公開中の1本をサーバーから取ってきて指します。
+ *   1本も公開していないときは、押せなくして理由を書きます。
+ */
 function PublicLinks() {
-  /* ★お店の方が、自分の目で確かめられるようにすること。
-       管理画面で「済」と出ていても、実際のページを見ないと安心できません。 */
-  const DOCS = [
+  /* 公開中のガチャ1本（詳細ページの行き先）。
+     null = まだ読めていない／1本も公開していない */
+  const [gachaId, setGachaId] = useState<string | null>(null);
+  const [yonda, setYonda] = useState(false);
+
+  useEffect(() => {
+    let ikiteru = true;
+    (async () => {
+      try {
+        /* ★ここで管理用の入口を使わないこと。
+             「お客様に見えている物」だけを見たいので、
+             お客様とまったく同じ入口から取ります。
+             どのお店かは、開いている住所からサーバーが決めます。 */
+        const res = await fetch("/api/shop/gachas", { cache: "no-store" });
+        const raw = (await res.json()) as Record<string, unknown>;
+        if (!ikiteru) return;
+        const list = Array.isArray(raw.gachas)
+          ? (raw.gachas as { id?: unknown }[])
+          : [];
+        const first = list.find((g) => typeof g.id === "string");
+        setGachaId(first ? String(first.id) : null);
+      } catch {
+        if (ikiteru) setGachaId(null);
+      } finally {
+        if (ikiteru) setYonda(true);
+      }
+    })();
+    return () => {
+      ikiteru = false;
+    };
+  }, []);
+
+  const LINKS: { path: string | null; label: string; why?: string }[] = [
+    { path: "/", label: "お客様のトップ" },
+    { path: "/shop", label: "ガチャ一覧" },
+    {
+      path: gachaId === null ? null : `/shop/${encodeURIComponent(gachaId)}`,
+      label: "ガチャ詳細",
+      why: yonda
+        ? "いま公開中のガチャがありません。1本公開すると、ここから開けるようになります。"
+        : "読み込んでいます…",
+    },
     { path: "/store/company", label: "会社情報" },
     { path: "/store/legal", label: "特定商取引法に基づく表記" },
     { path: "/store/terms", label: "利用規約" },
@@ -910,25 +986,43 @@ function PublicLinks() {
     { path: "/store/faq", label: "よくあるご質問" },
     { path: "/store/contact", label: "お問い合わせ" },
   ];
+
   return (
     <Card
-      title="お客様に見えているページ"
-      note="設定した内容が、実際にどう出るかを確認できます"
+      title="お客様側で確認"
+      note="お客様に実際どう見えているかを、別のタブで開いて確かめられます"
     >
       <ul className="grid gap-2 sm:grid-cols-2">
-        {DOCS.map((d) => (
-          <li key={d.path}>
-            <a
-              href={d.path}
-              target="_blank"
-              rel="noreferrer"
-              className="nb block rounded-xl border border-edge bg-paper px-4 py-3 text-note font-bold text-slate transition-colors hover:bg-paper2"
-            >
-              {d.label} ↗
-            </a>
+        {LINKS.map((d) => (
+          <li key={d.label}>
+            {d.path === null ? (
+              /* ★押せないものを、押せるように見せないこと。
+                   押しても何も起きない場所は、故障に見えます。 */
+              <span className="nb block rounded-xl border border-dashed border-edge bg-paper2 px-4 py-3 text-note font-bold text-slate3">
+                {d.label}
+                <span className="mt-1 block text-[0.72rem] font-normal leading-[1.7] text-slate3">
+                  {d.why}
+                </span>
+              </span>
+            ) : (
+              <a
+                href={d.path}
+                target="_blank"
+                rel="noreferrer"
+                className="nb block rounded-xl border border-edge bg-paper px-4 py-3 text-note font-bold text-slate transition-colors hover:bg-paper2"
+              >
+                {d.label} ↗
+              </a>
+            )}
           </li>
         ))}
       </ul>
+
+      {/* ★「よその店は開きません」と、はっきり書いておくこと。
+            書いていないと、必ず一度は聞かれます。 */}
+      <p className="mt-3 text-[0.72rem] leading-[1.8] text-slate3">
+        いずれも、このお店のページが開きます。ほかのお店のページが開くことはありません。
+      </p>
     </Card>
   );
 }

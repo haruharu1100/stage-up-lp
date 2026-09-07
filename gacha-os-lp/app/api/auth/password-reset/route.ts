@@ -34,7 +34,8 @@
  */
 
 import { NextResponse, type NextRequest } from "next/server";
-import { tenantByCode } from "@/lib/server/auth";
+import { tenantById } from "@/lib/server/auth";
+import { hostFromHeaders, resolveTenantByHost } from "@/lib/server/tenantHost";
 import {
   completePasswordReset,
   startPasswordReset,
@@ -62,7 +63,8 @@ export async function POST(req: NextRequest) {
 
   let body: {
     step?: unknown;
-    tenantCode?: unknown;
+    /* ★tenantCode をここに戻さないこと（2026-09-07）。
+         どのお店かは、開いている住所からサーバー側だけで決めます。 */
     email?: unknown;
     token?: unknown;
     newPassword?: unknown;
@@ -116,13 +118,11 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  /* ── ① 申し込む ── */
-  const tenantCode =
-    str(body.tenantCode).trim() !== ""
-      ? str(body.tenantCode).trim()
-      : process.env.DEFAULT_TENANT_CODE;
-
-  const tenant = await tenantByCode(tenantCode);
+  /* ── ① 申し込む ──
+     ★どのお店かは、開いている住所からだけ決めること。
+       本文の会社コードを見に行く形へ戻さないこと（2026-09-07）。 */
+  const here = await resolveTenantByHost(hostFromHeaders(req.headers));
+  const tenant = here ? await tenantById(here.tenantId) : null;
 
   /* ★会社が見つからなくても、同じ返事にすること。
        違う返事にすると、会社コードを当てる道具になります。 */

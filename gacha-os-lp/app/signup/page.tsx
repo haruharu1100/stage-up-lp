@@ -8,7 +8,9 @@
 
 import type { Metadata } from "next";
 import SignupForm from "@/components/auth/SignupForm";
+import UnknownDomain from "@/components/auth/UnknownDomain";
 import { demoAllowed } from "@/lib/server/demo";
+import { currentHost, resolveTenantByHost } from "@/lib/server/tenantHost";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -18,11 +20,19 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-export default function Page() {
-  /* ★会社コードの欄は、必要なときだけ出すこと。
-       1社しか入らない環境で毎回コードを打たせるのは、
-       登録をやめる理由を1つ増やすだけです。 */
-  const needTenantCode = !process.env.DEFAULT_TENANT_CODE;
+export default async function Page() {
+  /* ═══ どのお店の登録画面か ═══
+     ★お客様に「会社コード」を打たせないこと（2026-09-07）。
+       開いている住所から、サーバー側で決めます。
 
-  return <SignupForm needTenantCode={needTenantCode} demoMode={demoAllowed()} />;
+     ★決まらないときは、登録の入口そのものを出さないこと。
+       出すと「送信 → お断り」になり、
+       お客様には、なぜ断られたのかが分かりません。
+       それ以前に、決まらないまま登録を通すと、
+       よそのお店の会員名簿に人が増えます。 */
+  const host = currentHost();
+  const here = await resolveTenantByHost(host);
+  if (!here) return <UnknownDomain host={host} />;
+
+  return <SignupForm needTenantCode={false} demoMode={demoAllowed()} />;
 }

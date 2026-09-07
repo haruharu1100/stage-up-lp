@@ -28,7 +28,8 @@
  */
 
 import { NextResponse, type NextRequest } from "next/server";
-import { tenantByCode } from "@/lib/server/auth";
+import { tenantById } from "@/lib/server/auth";
+import { hostFromHeaders, resolveTenantByHost } from "@/lib/server/tenantHost";
 import { signupCustomer, SignupError, VERIFY_LINK_HOURS } from "@/lib/server/signup";
 import { id } from "@/lib/server/ids";
 
@@ -61,7 +62,20 @@ export async function POST(req: NextRequest) {
   const requestId = id("req");
 
   let body: {
-    tenantCode?: unknown;
+    /**
+     * ★tenantCode をここに戻さないこと（2026-09-07）。
+     *
+     *   以前は、お客様に「会社コード」を打たせていました。
+     *   ふつうのオンラインガチャのお店で聞かれないものです。
+     *   聞かれた時点で、多くの方はそこで帰ります。
+     *
+     *   さらに、本文で受け取る形は
+     *   「本文の会社コードだけ書き換えて、よそのお店に登録する」
+     *   ということができる形でもありました。
+     *
+     *   どのお店かは、開いている住所（ドメイン）から
+     *   サーバー側だけで決めます。lib/server/tenantHost.ts を見てください。
+     */
     email?: unknown;
     password?: unknown;
     name?: unknown;
@@ -79,15 +93,24 @@ export async function POST(req: NextRequest) {
 
   const str = (v: unknown) => (typeof v === "string" ? v : "");
 
-  const tenantCode =
-    str(body.tenantCode).trim() !== ""
-      ? str(body.tenantCode).trim()
-      : process.env.DEFAULT_TENANT_CODE;
+  /* ★どのお店かは、開いている住所からだけ決めること。
+       本文（body）から受け取る形に戻さないこと。
+       戻すと、本文を書き換えるだけで他社の会員名簿に人が増えます。 */
+  const here = await resolveTenantByHost(hostFromHeaders(req.headers));
+  if (!here) {
+    return NextResponse.json(
+      {
+        ok: false,
+        code: "NO_TENANT",
+        message:
+          "このアドレスは、どのお店にも結びついていません。お店のご案内にあるアドレスからお入りください。",
+        requestId,
+      },
+      { status: 400 },
+    );
+  }
 
-  /* ★会社が決まらなければ、その場で断ること。
-       「決まらなかったので、とりあえず1社目」をやらないこと。
-       やると、他社の会員名簿に人が増えていきます。 */
-  const tenant = await tenantByCode(tenantCode);
+  const tenant = await tenantById(here.tenantId);
   if (!tenant || tenant.status !== "ACTIVE") {
     return NextResponse.json(
       { ok: false, code: "NO_TENANT", message: "登録先が見つかりません。", requestId },

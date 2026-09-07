@@ -41,12 +41,16 @@ export default function SignupForm({
   needTenantCode,
   demoMode,
 }: {
-  /** 会社コードの入力欄を出すか（既定の会社が決まっていないとき） */
+  /**
+   * ★お客様に会社コードを聞くことは、もうありません（2026-09-07）。
+   *   この欄は残していますが、画面には出しません。
+   *   「住所からお店が決まらない配置かどうか」を、
+   *   ご案内の文言に使うためだけに受け取っています。
+   */
   needTenantCode: boolean;
   /** 確認用の環境かどうか */
   demoMode: boolean;
 }) {
-  const [tenantCode, setTenantCode] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
@@ -71,7 +75,10 @@ export default function SignupForm({
         credentials: "same-origin",
         cache: "no-store",
         body: JSON.stringify({
-          tenantCode: tenantCode.trim() || undefined,
+          /* ★tenantCode を送らないこと。
+               サーバー側も本文を見ません（住所から決めます）。
+               送る形を残すと、本文を書き換えるだけで
+               よその店に登録できる道が復活します。 */
           email: email.trim(),
           password,
           name: name.trim(),
@@ -165,25 +172,22 @@ export default function SignupForm({
               }}
             >
               <div className="space-y-4">
-                {needTenantCode && (
-                  <label className="block">
-                    <span className="block text-note font-bold text-slate2">
-                      会社コード
-                    </span>
-                    <input
-                      className={`${FIELD} mt-2`}
-                      type="text"
-                      autoComplete="organization"
-                      spellCheck={false}
-                      /* ★ここに、それらしい会社コードの例を書かないこと。
-                           本物のお客様が、その例をご自分のコードだと思って
-                           そのまま入れてしまいます。書式だけを示します。 */
-                      placeholder="半角英数字"
-                      value={tenantCode}
-                      onChange={(e) => setTenantCode(e.target.value)}
-                    />
-                  </label>
-                )}
+                {/* ═══ 会社コードの欄は、ここにありました ═══
+                      ★戻さないこと（2026-09-07）。
+
+                        ふつうのオンラインガチャのお店で、
+                        会員登録のときに「会社コード」を聞かれることはありません。
+                        聞かれた時点で、多くの方はそこで帰ります。
+
+                        そして、お客様はもう答えを持って来ています。
+                        「このお店のページを開いた」ことが、そのまま答えです。
+                        どのお店かは、開いている住所からサーバー側が決めます。
+                        （lib/server/tenantHost.ts）
+
+                        住所からお店が決まらない場合は、
+                        登録そのものをお断りします。
+                        「決まらなかったので、とりあえず1社目」は、
+                        よそのお店の会員名簿に人が増えるということです。 */}
 
                 <label className="block">
                   <span className="block text-note font-bold text-slate2">

@@ -470,6 +470,24 @@ H("下ごしらえ（お店だけを作る）");
 
 const tenantId = await seed.createTenant({ code: CODE, name: `E2E確認用ショップ ${STAMP}` });
 await seed.makeTenantLaunchReady(tenantId);
+
+/* ── この試験で開く住所を、このお店のものにする ──────────
+     ★お客様に会社コードを打たせないための、いちばん大事な仕込みです。
+       本番では「shop-a.example.com はA店」という割り当てを
+       tenant_domains の表に入れます。試験でも同じ表を使います。
+       （環境変数の TENANT_HOST_MAP は検証用の別口です。
+         本番の割り当てを環境変数に書かないこと。） */
+const HOST = new URL(BASE).host.toLowerCase();
+await db().execute({
+  sql: `INSERT INTO tenant_domains (host, tenant_id, note, created_at)
+        VALUES (?, ?, ?, ?)
+        ON CONFLICT(host) DO UPDATE SET
+          tenant_id  = excluded.tenant_id,
+          note       = excluded.note,
+          created_at = excluded.created_at`,
+  args: [HOST, tenantId, `E2E試験用 ${STAMP}`, new Date().toISOString()],
+});
+
 const gachaId = await seed.createGacha({
   tenantId,
   title: `通し確認ガチャ ${STAMP}`,
@@ -494,6 +512,15 @@ T(
   zaiko.length > 0,
   zaiko.map((r) => `${r.grade}:${r.name}(${n(r.value)}円)×${n(r.total)}`).join(" / "),
 );
+{
+  const d = await one(`SELECT tenant_id FROM tenant_domains WHERE host = ?`, [HOST]);
+  T(
+    "準備3",
+    "この住所が、このお店のものとして登録されている",
+    String(d.tenant_id ?? "") === tenantId,
+    `${HOST} → ${String(d.tenant_id ?? "（無し）")}`,
+  );
+}
 
 const mailFrom = mailLogSize();
 
@@ -509,7 +536,88 @@ page.setDefaultTimeout(20000);
 
 let customerId = null;
 
+/* お客様が「会社コード」を打たされた回数。★最後まで0であること */
+let codeUchi = 0;
+
 try {
+  /* ══════════════════════════════════════════
+     ⓪ 会員登録の前に、棚を見られるか
+
+     ★ふつうのお店は、並んでいる物を見てから会員になります。
+       「何が売っているかは会員登録してからお見せします」では、
+       ほとんどの方はそこで帰ってしまいます。
+
+     ★ただし、ここから引けてはいけません。
+       引くとポイントが減ります。減らす相手（お客様）が
+       決まっていない状態で引かせる作りは、絶対に作らないこと。
+     ══════════════════════════════════════════ */
+  H("⓪ 会員登録の前に、棚を見られるか");
+
+  await page.goto(`${BASE}/`, { waitUntil: "domcontentloaded" });
+  await page.waitForTimeout(1500);
+  T(
+    "C-00a",
+    "お店の住所でトップを開くと、そのお店の売り場が出る",
+    new URL(page.url()).pathname === "/shop",
+    page.url(),
+  );
+
+  const tanaMieta = await machi(page, `text=通し確認ガチャ ${STAMP}`, 20000);
+  const mise0 = await moji(page);
+  T(
+    "C-00b",
+    "ログインする前でも、売っているガチャが見えている",
+    tanaMieta,
+    mise0.split("\n").filter(Boolean).slice(0, 4).join(" / "),
+  );
+
+  /* ★ログイン前に、会員向けの表示（保有ポイント・＋購入）を出さないこと。
+       一瞬でも出して引っ込めると、壊れて見えます。 */
+  T(
+    "C-00b2",
+    "ログイン前のヘッダーが「ログイン／新規会員登録」になっている",
+    !/保有ポイント/.test(mise0) &&
+      (await page.locator('[data-testid="chrome-signup"]').count()) > 0,
+    /保有ポイント/.test(mise0) ? "★ログイン前なのに保有ポイントが出ている" : "ログイン／新規会員登録",
+  );
+
+  const hami0 = await hamidashi(page);
+  hamiT("C-00c", `ログイン前の売り場が横にはみ出していない（${VIEW.label}）`, hami0);
+
+  await page.locator(`text=通し確認ガチャ ${STAMP}`).first().click().catch(() => {});
+  await page.waitForURL(`**/shop/${gachaId}`, { timeout: 15000 }).catch(() => {});
+  await machi(page, '[data-testid="guest-login-to-draw"]', 20000);
+  T(
+    "C-00d",
+    "ガチャを押すと、ログインしなくても中身（賞の一覧）まで見える",
+    new URL(page.url()).pathname === `/shop/${gachaId}`,
+    page.url(),
+  );
+
+  /* ★一番大事な一行です。ここが「1回引く」に戻ったら落とします。 */
+  const guestHiku = await page.locator('[data-testid="guest-login-to-draw"]').count();
+  const guestNama = await page.locator('[data-testid="draw-open"]').count();
+  T(
+    "C-00e",
+    "ログイン前は引けない（ボタンが「ログインして引く」だけ）",
+    guestHiku > 0 && guestNama === 0,
+    `ログインして引く=${guestHiku}件 ／ そのまま引く=${guestNama}件`,
+  );
+
+  /* ★会社コードは、ここでも一度も出てはいけません */
+  const code0 = await page.locator('input[autocomplete="organization"]').count();
+  if (code0 > 0) codeUchi += 1;
+  T("C-00f", "ログイン前の売り場に、会社コードの欄が無い", code0 === 0, `欄=${code0}件`);
+
+  await page.locator('[data-testid="guest-login-to-draw"]').first().click().catch(() => {});
+  await page.waitForURL("**/login**", { timeout: 15000 }).catch(() => {});
+  T(
+    "C-00g",
+    "「ログインして引く」を押すと、戻り先つきでログイン画面へ行く",
+    /\/login/.test(page.url()) && /next=/.test(page.url()),
+    page.url(),
+  );
+
   /* ══════════════════════════════════════════
      ① 新規会員登録
      ══════════════════════════════════════════ */
@@ -527,17 +635,19 @@ try {
   const sign1 = await machi(page, 'input[type="email"]');
   T("C-03", "新規会員登録の画面が出た", sign1);
 
-  /* 会社コードの欄は、DEFAULT_TENANT_CODE が無いときだけ出ます */
+  /* ★会社コードの欄は、お客様の画面には二度と出しません（2026-09-07）。
+       どのお店かは、開いている住所からサーバー側で決まります。
+       欄が復活したら、ここで落ちます。 */
   const codeBox = page.locator('input[autocomplete="organization"]');
   const codeAri = (await codeBox.count()) > 0;
-  if (codeAri) await codeBox.fill(CODE);
+  if (codeAri) codeUchi += 1;
   T(
     "C-04",
-    "会社コードの欄の扱い",
-    true,
+    "登録画面に会社コードの欄が無い",
+    !codeAri,
     codeAri
-      ? "出ているので入力した（★本物のお客様に会社コードを打たせるのは負担。DEFAULT_TENANT_CODE の検討が要る）"
-      : "出ていない（DEFAULT_TENANT_CODE が設定済み）",
+      ? "★欄が出ている。お客様に会社コードを打たせてはいけません"
+      : `住所（${HOST}）からお店が決まっている`,
   );
 
   await page.locator('input[type="email"]').fill(EMAIL);
@@ -616,10 +726,17 @@ try {
        打ち込みも押し直しも、まとめてやり直します。 */
   let inMypage = false;
   let loginNG = "";
+  let loginCodeAri = false;
   for (let i = 0; i < 6 && !inMypage; i += 1) {
     await page.locator('button[role="tab"]:has-text("お客様")').click().catch(() => {});
+    /* ★お客様のログインにも、会社コードの欄は出しません。
+         出ていたら、打たずに数えるだけにします（打ってしまうと
+         「0回で通った」かどうかが分からなくなります）。 */
     const codeBox2 = page.locator('input[autocomplete="organization"]');
-    if ((await codeBox2.count()) > 0) await codeBox2.fill(CODE).catch(() => {});
+    if ((await codeBox2.count()) > 0) {
+      loginCodeAri = true;
+      codeUchi += 1;
+    }
     await page.locator('input[type="email"]').fill(EMAIL).catch(() => {});
     await page.locator('input[type="password"]').fill(PASSWORD).catch(() => {});
     await page.locator('button[type="submit"]').first().click().catch(() => {});
@@ -638,6 +755,19 @@ try {
   }
   T("C-13", "ログインできてマイページへ入った", inMypage, inMypage ? page.url() : `${page.url()} ／ ${loginNG}`);
   if (!inMypage) throw new Error("ログインできませんでした");
+
+  T(
+    "C-13b",
+    "お客様のログイン画面に会社コードの欄が無い",
+    !loginCodeAri,
+    loginCodeAri ? "★欄が出ている" : `住所（${HOST}）からお店が決まっている`,
+  );
+  T(
+    "C-13c",
+    "新規登録→ログイン→マイページを、会社コード入力0回で通せた",
+    codeUchi === 0,
+    `会社コードを打った回数＝${codeUchi}`,
+  );
 
   T(
     "C-14",

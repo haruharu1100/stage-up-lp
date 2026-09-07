@@ -1,0 +1,580 @@
+{
+  "at": "2026-09-07T04:59:08.691Z",
+  "base": "http://localhost:3212",
+  "viewport": {
+    "width": 390,
+    "height": 844,
+    "label": "スマホ小(390)"
+  },
+  "tenantCode": "E2E0907045637ETO",
+  "tenantId": "ten_01M1X3KDJBW6KASTNKGJX9RWWR",
+  "gachaId": "gac_01M1X3KDJP9SNP7WF97M1F4YY0",
+  "customerId": "cus_01M1X3M66SQNFDREN4HKVE70FJ",
+  "email": "e2e-c-20260907045637-eto@shop.example",
+  "ok": 93,
+  "ng": 0,
+  "results": [
+    {
+      "no": "準備1",
+      "title": "お店とガチャを作った",
+      "pass": true,
+      "detail": "会社=E2E0907045637ETO ／ ガチャ=gac_01M1X3KDJP9SNP7WF97M1F4YY0 ／ 500pt"
+    },
+    {
+      "no": "準備2",
+      "title": "景品がお店の登録どおりに入っている",
+      "pass": true,
+      "detail": "A:A賞(1000円)×2 / B:B賞(800円)×4 / C:C賞(400円)×10 / D:D賞(239円)×23 / S:S賞(1300円)×1"
+    },
+    {
+      "no": "準備3",
+      "title": "この住所が、このお店のものとして登録されている",
+      "pass": true,
+      "detail": "localhost:3212 → ten_01M1X3KDJBW6KASTNKGJX9RWWR"
+    },
+    {
+      "no": "C-00a",
+      "title": "お店の住所でトップを開くと、そのお店の売り場が出る",
+      "pass": true,
+      "detail": "http://localhost:3212/shop"
+    },
+    {
+      "no": "C-00b",
+      "title": "ログインする前でも、売っているガチャが見えている",
+      "pass": true,
+      "detail": "試験用ショップ / ログイン / 新規会員登録 / ガチャ一覧"
+    },
+    {
+      "no": "C-00b2",
+      "title": "ログイン前のヘッダーが「ログイン／新規会員登録」になっている",
+      "pass": true,
+      "detail": "ログイン／新規会員登録"
+    },
+    {
+      "no": "C-00c",
+      "title": "ログイン前の売り場が横にはみ出していない（スマホ小(390)）",
+      "pass": true,
+      "detail": "中身 390px ／ 画面 390px"
+    },
+    {
+      "no": "C-00d",
+      "title": "ガチャを押すと、ログインしなくても中身（賞の一覧）まで見える",
+      "pass": true,
+      "detail": "http://localhost:3212/shop/gac_01M1X3KDJP9SNP7WF97M1F4YY0"
+    },
+    {
+      "no": "C-00e",
+      "title": "ログイン前は引けない（ボタンが「ログインして引く」だけ）",
+      "pass": true,
+      "detail": "ログインして引く=1件 ／ そのまま引く=0件"
+    },
+    {
+      "no": "C-00f",
+      "title": "ログイン前の売り場に、会社コードの欄が無い",
+      "pass": true,
+      "detail": "欄=0件"
+    },
+    {
+      "no": "C-00g",
+      "title": "「ログインして引く」を押すと、戻り先つきでログイン画面へ行く",
+      "pass": true,
+      "detail": "http://localhost:3212/login?next=%2Fmypage%2Fshop%2Fgac_01M1X3KDJP9SNP7WF97M1F4YY0"
+    },
+    {
+      "no": "C-01",
+      "title": "ログイン画面に、はじめての方の入口がある",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "no": "C-02",
+      "title": "ログイン画面が横にはみ出していない（スマホ小(390)）",
+      "pass": true,
+      "detail": "中身 390px ／ 画面 390px"
+    },
+    {
+      "no": "C-03",
+      "title": "新規会員登録の画面が出た",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "no": "C-04",
+      "title": "登録画面に会社コードの欄が無い",
+      "pass": true,
+      "detail": "住所（localhost:3212）からお店が決まっている"
+    },
+    {
+      "no": "C-05",
+      "title": "登録画面が横にはみ出していない（スマホ小(390)）",
+      "pass": true,
+      "detail": "中身 390px ／ 画面 390px"
+    },
+    {
+      "no": "C-06",
+      "title": "登録を受け付けた画面が出た",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "no": "C-07",
+      "title": "受け付けの画面で「登録完了」と言い切っていない",
+      "pass": true,
+      "detail": "新規会員登録 / ご登録は無料です。1分ほどで終わります。 / お申し込みを受け付けました。ご入力のメールアドレス宛に、確認のご案内をお送りします（24時間有効）。メールに記載のリンクを開くと、ご利用いただけるようになります。"
+    },
+    {
+      "no": "C-08",
+      "title": "確認メールが出た（記録の紙で確認）",
+      "pass": true,
+      "detail": "鍵=FPkRpNez_2TU…"
+    },
+    {
+      "no": "C-09",
+      "title": "開く前は、まだ確認前になっている",
+      "pass": true,
+      "detail": "null"
+    },
+    {
+      "no": "C-09b",
+      "title": "確認のボタンが出た（開いただけでは確認しない）",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "no": "C-10",
+      "title": "メールの確認が通った",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "no": "C-11",
+      "title": "確認した記録が残った",
+      "pass": true,
+      "detail": "確認日時=2026-09-07T04:57:14.448Z ／ 経路=SELF"
+    },
+    {
+      "no": "C-12",
+      "title": "確認のあと、次に押すものがある",
+      "pass": true,
+      "detail": "ログインする"
+    },
+    {
+      "no": "C-13",
+      "title": "ログインできてマイページへ入った",
+      "pass": true,
+      "detail": "http://localhost:3212/mypage"
+    },
+    {
+      "no": "C-13b",
+      "title": "お客様のログイン画面に会社コードの欄が無い",
+      "pass": true,
+      "detail": "住所（localhost:3212）からお店が決まっている"
+    },
+    {
+      "no": "C-13c",
+      "title": "新規登録→ログイン→マイページを、会社コード入力0回で通せた",
+      "pass": true,
+      "detail": "会社コードを打った回数＝0"
+    },
+    {
+      "no": "C-14",
+      "title": "確認前のお知らせが、もう出ていない",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "no": "C-15",
+      "title": "マイページの上に、この店の名前が出る",
+      "pass": true,
+      "detail": "3846ms で「試験用ショップ」に変わった（★変わるまでは既定の「オンラインガチャ」が見えている）"
+    },
+    {
+      "no": "C-16",
+      "title": "はじめの残高は0pt",
+      "pass": true,
+      "detail": "残高=0pt ／ 台帳合計=0"
+    },
+    {
+      "no": "C-17",
+      "title": "作ったガチャが売り場に並んでいる",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "no": "C-18",
+      "title": "一覧に、お店が登録した景品の名前が出ている",
+      "pass": true,
+      "detail": "試験用ショップ / 保有ポイント / 0pt / ＋ 購入"
+    },
+    {
+      "no": "C-19",
+      "title": "残高0のときは、一覧から「引く」ではなく「買う」が出ている",
+      "pass": true,
+      "detail": "買う=1 ／ 引く=0"
+    },
+    {
+      "no": "C-20",
+      "title": "売り場が横にはみ出していない（スマホ小(390)）",
+      "pass": true,
+      "detail": "中身 390px ／ 画面 390px"
+    },
+    {
+      "no": "C-21",
+      "title": "ガチャ詳細が開いた",
+      "pass": true,
+      "detail": "http://localhost:3212/mypage/shop/gac_01M1X3KDJP9SNP7WF97M1F4YY0"
+    },
+    {
+      "no": "C-22",
+      "title": "詳細に「足りない」ことがはっきり書いてある",
+      "pass": true,
+      "detail": "保有ポイントが不足しています（1回 500pt ／ 保有 0pt）。"
+    },
+    {
+      "no": "C-23",
+      "title": "残高が足りないので「引く」は押せない",
+      "pass": true,
+      "detail": "disabled=true"
+    },
+    {
+      "no": "C-24",
+      "title": "代わりに「ポイントを購入する」が出ている",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "no": "C-25",
+      "title": "詳細で、押せるものがある",
+      "pass": true,
+      "detail": "保有ポイント0pt / ＋ 購入 / ガチャ一覧 / 獲得商品 / マイページ / ログアウト"
+    },
+    {
+      "no": "C-26",
+      "title": "ガチャ詳細が横にはみ出していない（スマホ小(390)）",
+      "pass": true,
+      "detail": "中身 390px ／ 画面 390px"
+    },
+    {
+      "no": "C-27",
+      "title": "購入画面へ、戻り先を持ったまま来た",
+      "pass": true,
+      "detail": "http://localhost:3212/mypage/points/buy?from=%2Fmypage%2Fshop%2Fgac_01M1X3KDJP9SNP7WF97M1F4YY0"
+    },
+    {
+      "no": "C-28",
+      "title": "買えるポイントが並んでいる",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "no": "C-29",
+      "title": "最終確認の画面が出た",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "no": "C-30",
+      "title": "動作確認のお支払いであることが、はっきり書いてある",
+      "pass": true,
+      "detail": "ただいまは、動作確認用のお支払いです。実際の請求は発生しません。 / 支払ったことにする（動作確認）"
+    },
+    {
+      "no": "C-31",
+      "title": "お支払いが終わった画面が出た",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "no": "C-32",
+      "title": "残高が増え、台帳と一致している",
+      "pass": true,
+      "detail": "残高=1000pt ／ 台帳合計=1000"
+    },
+    {
+      "no": "C-33",
+      "title": "「元のガチャへ戻る」が出ている",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "no": "C-34",
+      "title": "買う前に見ていたガチャへ、そのまま戻った",
+      "pass": true,
+      "detail": "http://localhost:3212/mypage/shop/gac_01M1X3KDJP9SNP7WF97M1F4YY0"
+    },
+    {
+      "no": "C-35",
+      "title": "残高が足りたので「引く」が押せる",
+      "pass": true,
+      "detail": "disabled=false"
+    },
+    {
+      "no": "C-36",
+      "title": "押した瞬間には引かず、確認が出る",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "no": "C-37",
+      "title": "確認の板が画面の外に出ていない（スマホ小(390)）",
+      "pass": true,
+      "detail": "中身 390px ／ 画面 390px"
+    },
+    {
+      "no": "C-38",
+      "title": "結果の画面が出た",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "no": "C-39",
+      "title": "1回分だけ引かれている（残高・在庫・当選が全部1回分）",
+      "pass": true,
+      "detail": "引いた=1回 ／ 在庫消化=1 ／ D賞「D賞」 ／ 現物=0件（この賞はその場でポイントに戻る賞） ／ 残高=739pt（1000 −500 ＋戻り239）"
+    },
+    {
+      "no": "C-40",
+      "title": "当たった景品の名前が、お店の登録どおりに出ている",
+      "pass": true,
+      "detail": "台帳=D賞 ／ 画面に出ている=true"
+    },
+    {
+      "no": "C-41",
+      "title": "結果画面のボタンが仕様どおり（引ける：もう一度引く／獲得商品を見る／閉じる）",
+      "pass": true,
+      "detail": "もう一度引く=1 ／ 購入して引く=0 ／ 獲得商品=1 ／ 閉じる=1"
+    },
+    {
+      "no": "C-42",
+      "title": "結果画面が横にはみ出していない（スマホ小(390)）",
+      "pass": true,
+      "detail": "中身 390px ／ 画面 390px"
+    },
+    {
+      "no": "C-43",
+      "title": "結果画面から、そのまま次の確認へ進めた",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "no": "C-44",
+      "title": "2回目の結果画面が出た",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "no": "C-45",
+      "title": "2回目も1回分だけ引かれている",
+      "pass": true,
+      "detail": "引いた=2回 ／ A賞「A賞」 ／ 現物=1件 ／ 残高=239pt（739 −500 ＋戻り0）"
+    },
+    {
+      "no": "C-46",
+      "title": "残高が足りなくなったら、結果画面が「購入して、もう一度引く」に変わる",
+      "pass": true,
+      "detail": "残高=239pt ／ 購入して引く=1 ／ もう一度引く=1"
+    },
+    {
+      "no": "C-47",
+      "title": "なぜ引けないのかが、文字で書いてある",
+      "pass": true,
+      "detail": "いまの残高では、このガチャをもう一度引けません。"
+    },
+    {
+      "no": "C-47b",
+      "title": "発送とポイント交換の両方をためせるだけ、手元に商品がそろった",
+      "pass": true,
+      "detail": "手元の商品=2点 ／ 追加で引いた=2回 ／ 買い足し=1回 ／ 引いた合計=4回 ／ 残高=639pt"
+    },
+    {
+      "no": "C-48",
+      "title": "獲得商品の画面が開いた（品物の札まで出ている）",
+      "pass": true,
+      "detail": "http://localhost:3212/mypage/prizes"
+    },
+    {
+      "no": "C-49",
+      "title": "手元の商品が、ぜんぶ名前つきで並んでいる",
+      "pass": true,
+      "detail": "2点：A賞(1000pt/UNCHOSEN) / B賞(800pt/UNCHOSEN)"
+    },
+    {
+      "no": "C-50",
+      "title": "1件ごとに、いまどうなっているかが文字で出ている",
+      "pass": true,
+      "detail": "お手続きがお済みでない商品は、発送またはポイント交換をお選びいただけます。"
+    },
+    {
+      "no": "C-51",
+      "title": "選ぶと、操作のボタンが出る",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "no": "C-52",
+      "title": "押した瞬間には交換せず、最終確認が出る",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "no": "C-53",
+      "title": "「取り消せない」ことが、確認の板に書いてある",
+      "pass": true,
+      "detail": "交換後、商品はお送りできなくなります。 / 合計 1,000pt を差し上げます。交換されますと、この商品はお送りできなくなります。取り消しはできません。"
+    },
+    {
+      "no": "C-54",
+      "title": "交換のとき、追加の本人確認は入らなかった",
+      "pass": true,
+      "detail": "設計どおり（交換は求めない）"
+    },
+    {
+      "no": "C-55",
+      "title": "交換できたお知らせが出た",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "no": "C-56",
+      "title": "交換した分だけ、残高が増えている",
+      "pass": true,
+      "detail": "残高=639→1639pt（+1000） ／ 台帳合計=1639"
+    },
+    {
+      "no": "C-57",
+      "title": "交換したのは1点だけで、残りは手つかずのまま",
+      "pass": true,
+      "detail": "A賞=EXCHANGED / B賞=UNCHOSEN"
+    },
+    {
+      "no": "C-58",
+      "title": "交換済みの商品が、消えずに「もう選べない理由」つきで残っている",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "no": "C-59",
+      "title": "お届け先の画面が開いた",
+      "pass": true,
+      "detail": "http://localhost:3212/mypage/address"
+    },
+    {
+      "no": "C-60",
+      "title": "お届け先の変更に、追加の本人確認が入った",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "no": "C-61",
+      "title": "お届け先を保存できた",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "no": "C-62",
+      "title": "残った商品を選ぶと「発送を依頼する」が出る",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "no": "C-63",
+      "title": "押した瞬間には依頼せず、最終確認が出る",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "no": "C-64",
+      "title": "住所を変えた直後の発送依頼に、追加の本人確認が入った",
+      "pass": true,
+      "detail": "確認の有効時間が切れている状態で、きちんと聞き直された"
+    },
+    {
+      "no": "C-65",
+      "title": "発送依頼を受け付けたお知らせが出た",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "no": "C-66",
+      "title": "注文が1件できている",
+      "pass": true,
+      "detail": "注文=1件"
+    },
+    {
+      "no": "C-67",
+      "title": "発送状況の画面に、いま依頼した分が出ている",
+      "pass": true,
+      "detail": "試験用ショップ / 保有ポイント / 1,639pt / ＋ 購入 / ガチャ一覧"
+    },
+    {
+      "no": "C-68",
+      "title": "発送状況から、次に行ける場所がある",
+      "pass": true,
+      "detail": "保有ポイント1,639pt / ＋ 購入 / ガチャ一覧 / 獲得商品 / マイページ / ログアウト"
+    },
+    {
+      "no": "C-69",
+      "title": "発送状況が横にはみ出していない（スマホ小(390)）",
+      "pass": true,
+      "detail": "中身 390px ／ 画面 390px"
+    },
+    {
+      "no": "C-70",
+      "title": "ログアウトの入口が、どの画面からでも見える",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "no": "C-70b",
+      "title": "ログアウトを押したら、ログイン画面へ戻った",
+      "pass": true,
+      "detail": "http://localhost:3212/login"
+    },
+    {
+      "no": "C-71",
+      "title": "ログアウトしたあとは、マイページに入れない",
+      "pass": true,
+      "detail": "http://localhost:3212/login?next=%2Fmypage%2Fprizes"
+    },
+    {
+      "no": "C-72",
+      "title": "ログイン前の画面に、デモ・サンプル等が出ていない",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "no": "E-01",
+      "title": "Console のエラー・警告",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "no": "E-01b",
+      "title": "本人確認をお願いした回数（設計どおりの 403）",
+      "pass": true,
+      "detail": "2回：PUT /api/customer/address ／ POST /api/customer/orders"
+    },
+    {
+      "no": "E-02",
+      "title": "読み込み失敗（timeout・接続断）",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "no": "E-03",
+      "title": "4xx / 5xx の通信",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "no": "E-04",
+      "title": "次に何を押せばよいか分からない画面",
+      "pass": true,
+      "detail": ""
+    }
+  ],
+  "console": [],
+  "pageErrors": [],
+  "badHttp": [],
+  "mayoi": []
+}

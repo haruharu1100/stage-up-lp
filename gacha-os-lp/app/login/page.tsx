@@ -22,6 +22,7 @@ import type { Metadata } from "next";
 import LoginForm from "@/components/auth/LoginForm";
 import { demoAllowed } from "@/lib/server/demo";
 import { safeReturnTo } from "@/lib/returnTo";
+import { currentHost, resolveTenantByHost } from "@/lib/server/tenantHost";
 
 export const dynamic = "force-dynamic";
 
@@ -30,17 +31,23 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-export default function Page({
+export default async function Page({
   searchParams,
 }: {
   searchParams: { next?: string };
 }) {
   const next = safeReturnTo(searchParams.next);
 
-  /* ★会社コードの欄は、必要なときだけ出すこと。
-       1社しか入らない環境で毎回コードを打たせるのは、
-       毎朝の手間を増やすだけです。 */
-  const needTenantCode = !process.env.DEFAULT_TENANT_CODE;
+  /* ═══ どのお店へのログインか ═══
+     ★お客様に「会社コード」を打たせないこと（2026-09-07）。
+       開いている住所から、サーバー側で決めます。
+
+     ★ここで、お客様向けにお断り画面を出さないこと。
+       ログイン画面は、お店の担当者も使います。
+       住所からお店が決まらない配置（社内共通の管理用アドレス）でも、
+       担当者は会社コードを打って入る必要があります。
+       その欄は、担当者を選んだときだけ出ます（LoginForm 側）。 */
+  const needTenantCode = (await resolveTenantByHost(currentHost())) === null;
 
   return (
     <LoginForm

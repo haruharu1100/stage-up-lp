@@ -495,6 +495,24 @@ console.log(`${"═".repeat(64)}`);
 H("下ごしらえ（からっぽの会社・担当者・会員だけ）");
 
 const tenantId = await seed.createTenant({ code: CODE, name: `E2E店舗確認用 ${STAMP}` });
+
+/* ── この試験で開く住所を、このお店のものにする ──────────
+     ★お店側の試験でも、必ず入れ直すこと。
+       同じ手元のデータベースでお客様側の試験を先に流していると、
+       この住所は前の会社に割り当てられたままです。
+       そのままだと、住所と合言葉が食い違って、
+       担当者が自分の管理画面に入れません（これは正しい動きです）。 */
+const HOST = new URL(BASE).host.toLowerCase();
+await db().execute({
+  sql: `INSERT INTO tenant_domains (host, tenant_id, note, created_at)
+        VALUES (?, ?, ?, ?)
+        ON CONFLICT(host) DO UPDATE SET
+          tenant_id  = excluded.tenant_id,
+          note       = excluded.note,
+          created_at = excluded.created_at`,
+  args: [HOST, tenantId, `E2E店舗試験用 ${STAMP}`, new Date().toISOString()],
+});
+
 const adminId = await seed.createAdmin({
   tenantId,
   no: 1,
@@ -936,6 +954,128 @@ try {
   );
 
   /* ══════════════════════════════════════════
+     ①-2 「お客様側で確認」
+
+     ★これが無いと、お店の方はご自分の売り場を見られません。
+       管理画面から押しても、お客様用のログイン画面に飛ばされて、
+       自分の店の棚を見るために自分の店の会員登録が要る、
+       という状態になっていました。
+
+     ★行き先は必ず「/」で始まる相対の住所にすること。
+       いま開いている住所のまま移動するので、
+       よそのお店のページが開くことがありません。
+     ══════════════════════════════════════════ */
+  H("①-2 管理画面から、お客様に見えているページを開けるか");
+
+  const KITAI = [
+    "お客様のトップ",
+    "ガチャ一覧",
+    "ガチャ詳細",
+    "会社情報",
+    "特定商取引法に基づく表記",
+    "利用規約",
+    "プライバシーポリシー",
+    "よくあるご質問",
+    "お問い合わせ",
+  ];
+  /* ★「ガチャ詳細」だけは、いま公開中のガチャを1本読んでから出ます。
+       読み終わる前に数えると、まだ入口になっていません。 */
+  await mise
+    .locator('a[target="_blank"]:has-text("ガチャ詳細")')
+    .first()
+    .waitFor({ state: "attached", timeout: 20000 })
+    .catch(() => {});
+  const nakami = await mise
+    .locator('a[target="_blank"]')
+    .evaluateAll((els) =>
+      els.map((e) => ({ text: e.textContent ?? "", href: e.getAttribute("href") ?? "" })),
+    );
+  const ari = KITAI.filter((k) => nakami.some((n) => n.text.includes(k)));
+  T(
+    "S-26a",
+    "「お客様側で確認」に、お客様の9ページぶんの入口がそろっている",
+    ari.length === KITAI.length,
+    ari.length === KITAI.length
+      ? `${ari.length}件`
+      : `足りない： ${KITAI.filter((k) => !ari.includes(k)).join(" / ")}`,
+  );
+
+  /* ★よそのお店へ飛ばない、をここで機械的に止めます */
+  const soto = nakami
+    .filter((n) => KITAI.some((k) => n.text.includes(k)))
+    .filter((n) => !n.href.startsWith("/"));
+  T(
+    "S-26b",
+    "その入口が、ほかのお店（外の住所）を向いていない",
+    soto.length === 0,
+    soto.length === 0 ? "すべて相対の住所（＝いまのお店のまま）" : soto.map((n) => n.href).join(" / "),
+  );
+
+  /* 実際に押して、別のタブで開くところまで見ます */
+  const [tabIchiran] = await Promise.all([
+    miseCtx.waitForEvent("page", { timeout: 15000 }),
+    mise.locator('a[target="_blank"]:has-text("ガチャ一覧")').first().click(),
+  ]);
+  watch(tabIchiran, "お客様（別タブ）");
+  await tabIchiran.waitForLoadState("domcontentloaded");
+  /* ★決まった秒数だけ待つのはやめること。
+       売り場の中身は、あとから読み込まれて出てきます。
+       秒数で待つと、その日の機械の速さで結果が変わります。
+       「棚に自分の店のガチャが並んだこと」そのものを待ちます。 */
+  await tabIchiran
+    .locator(`text=${GACHA_TITLE}`)
+    .first()
+    .waitFor({ timeout: 20000 })
+    .catch(() => {});
+  const ichiranMoji = await moji(tabIchiran);
+  T(
+    "S-26c",
+    "「ガチャ一覧」を押すと、別のタブでこのお店の売り場が開いた",
+    new URL(tabIchiran.url()).pathname === "/shop" && ichiranMoji.includes(GACHA_TITLE),
+    `${tabIchiran.url()} ／ ${ichiranMoji.includes(GACHA_TITLE) ? "自店のガチャあり" : "★自店のガチャが出ていない"}`,
+  );
+  T(
+    "S-26d",
+    "その売り場は、ログインしていなくても中身が見えている",
+    !/\/login/.test(tabIchiran.url()) && ichiranMoji.includes(GACHA_TITLE),
+    ichiranMoji.split("\n").filter(Boolean).slice(0, 4).join(" / "),
+  );
+
+  const [tabShousai] = await Promise.all([
+    miseCtx.waitForEvent("page", { timeout: 15000 }),
+    mise.locator('a[target="_blank"]:has-text("ガチャ詳細")').first().click(),
+  ]);
+  watch(tabShousai, "お客様（別タブ）");
+  await tabShousai.waitForLoadState("domcontentloaded");
+  /* ★理由は「ガチャ一覧」と同じです。
+       ここは「ログインして引く」が出るまで待ちます。
+       このボタンが出た時点で、中身の読み込みが終わっています。 */
+  await tabShousai
+    .locator('[data-testid="guest-login-to-draw"]')
+    .first()
+    .waitFor({ timeout: 20000 })
+    .catch(() => {});
+  const shousaiMoji = await moji(tabShousai);
+  T(
+    "S-26e",
+    "「ガチャ詳細」を押すと、そのガチャの中身が開いた",
+    /^\/shop\//.test(new URL(tabShousai.url()).pathname) && shousaiMoji.includes(GACHA_TITLE),
+    tabShousai.url(),
+  );
+  /* ★ここから引けてはいけません。引くとポイントが減ります。
+       減らす相手（お客様）が決まっていないからです。 */
+  const botanLogin = await tabShousai.locator('button:has-text("ログインして引く")').count();
+  const botanHiku = await tabShousai.locator('button:has-text("1回引く")').count();
+  T(
+    "S-26f",
+    "ログインしていない売り場からは引けない（「ログインして引く」だけ）",
+    botanLogin > 0 && botanHiku === 0,
+    `ログインして引く=${botanLogin}件 ／ 1回引く=${botanHiku}件`,
+  );
+  await tabIchiran.close();
+  await tabShousai.close();
+
+  /* ══════════════════════════════════════════
      ② 店舗情報／③ 法定表示（お客様の目で見る）
      ══════════════════════════════════════════ */
   H("②③ 店舗情報と法定表示が、お客様の画面に出る");
@@ -1288,7 +1428,14 @@ try {
 
   const oGyou = mise.locator('tr:visible:has-text("試験 花子")');
   if ((await oGyou.count()) > 0) await oGyou.first().click().catch(() => {});
-  await mise.waitForTimeout(1500);
+  /* ★決まった秒数で待たないこと。中身が出たことそのものを待ちます。
+       秒数待ちにすると、その日の機械の速さで結果が変わり、
+       直っているのに落ちる／壊れているのに通る、が起きます。 */
+  await mise
+    .locator("text=東京都千代田区皇居外苑1-1 試験用ハイツ202")
+    .first()
+    .waitFor({ timeout: 20000 })
+    .catch(() => {});
   const oText = await moji(mise);
   T(
     "S-53",
@@ -1310,7 +1457,6 @@ try {
   await mise.goto(`${BASE}/client-demo/shipping?order=${orderId}`, {
     waitUntil: "domcontentloaded",
   });
-  await mise.waitForTimeout(2000);
 
   const item = await one(
     `SELECT id FROM order_items WHERE tenant_id = ? AND order_id = ? ORDER BY rowid LIMIT 1`,
@@ -1318,6 +1464,11 @@ try {
   );
   const itemId = item.id ? String(item.id) : null;
   const check = itemId ? mise.locator(`#pick-${itemId}`) : null;
+  /* ★品物の一覧はあとから読み込まれます。
+       秒数で待たず、「その品物の行が出たこと」を待ちます。 */
+  if (check !== null) {
+    await check.first().waitFor({ state: "attached", timeout: 20000 }).catch(() => {});
+  }
   const checkAri = check !== null && (await check.count()) > 0;
   T("S-55", "発送を作る画面が、その注文の品物を並べて開いた", checkAri, `品物=${String(itemId)}`);
   if (!checkAri) throw new Error("発送を作る画面が開きませんでした");

@@ -179,15 +179,32 @@ const pickList = (raw: Record<string, unknown>): ShopBoard | null =>
 const pickDetail = (raw: Record<string, unknown>) =>
   raw.gacha && typeof raw.gacha === "object" ? (raw.gacha as ShopDetail) : null;
 
+/*
+ * ★入口が2つある理由（2026-09-07）
+ *
+ *   /api/customer/... … ログインしている方。合言葉からお店が決まります。
+ *   /api/shop/...     … ログインしていない方。住所からお店が決まります。
+ *
+ *   返す中身は、どちらもまったく同じ関数（lib/server/shop.ts）で
+ *   作っています。ですので、画面はどちらから来た値かを気にしません。
+ *
+ *   ★guest 側にだけ列を足さないこと。
+ *     ログイン前の人にだけ見える情報、という置き場所になります。
+ */
+
 /** 販売中のガチャと、絞り込みの棚を読む */
-export function useShopList() {
-  return useLive<ShopBoard>("/api/customer/gachas", pickList);
+export function useShopList(guest = false) {
+  return useLive<ShopBoard>(
+    guest ? "/api/shop/gachas" : "/api/customer/gachas",
+    pickList,
+  );
 }
 
 /** ガチャ1本の中身を読む */
-export function useShopDetail(gachaId: string) {
+export function useShopDetail(gachaId: string, guest = false) {
+  const base = guest ? "/api/shop/gachas" : "/api/customer/gachas";
   return useLive<ShopDetail>(
-    `/api/customer/gachas/${encodeURIComponent(gachaId)}`,
+    `${base}/${encodeURIComponent(gachaId)}`,
     pickDetail,
   );
 }

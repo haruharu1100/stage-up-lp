@@ -35,7 +35,7 @@
  */
 
 import { db } from "./db";
-import { tenantByCode } from "./auth";
+import { currentHost, resolveTenantByHost } from "./tenantHost";
 
 type Row = Record<string, unknown>;
 
@@ -98,18 +98,25 @@ export async function resolvePublicTenantId(
   sessionTenantId: string | null,
   env: NodeJS.ProcessEnv = process.env,
 ): Promise<string | null> {
+  /* ★まず、開いている住所から決めること（2026-09-07）。
+       以前はここが「ログインしている人＝そのセッションの会社」だけで、
+       ログインしていない人は DEFAULT_TENANT_CODE 頼みでした。
+       そのため、お店の担当者が管理画面から
+       「お客様に見えているページ」を押すと、
+       設定が無い配置では何も出ませんでした。 */
+  const here = await resolveTenantByHost(currentHost(), env);
+  if (here) return here.tenantId;
+
+  /* 住所からは決まらない配置（社内共通の管理用アドレスなど）。
+     ログインしている人がいれば、その方のお店を見せます。 */
   if (sessionTenantId !== null && sessionTenantId.trim() !== "") {
     return sessionTenantId;
   }
-  /* ログインしていない人。1つのお店＝1つの配置なので、
-     設定してある会社コードから決めます。
-     ★決まらなければ null。ここで「1社目」を拾わないこと。 */
-  const code = env.DEFAULT_TENANT_CODE;
-  if (!code || code.trim() === "") return null;
 
-  const tenant = await tenantByCode(code.trim());
-  if (!tenant || tenant.status !== "ACTIVE") return null;
-  return tenant.id;
+  /* ★ここで「1社目」を拾わないこと。
+       よそのお店の会社名・住所・電話番号が、
+       このお店の特商法ページとして表示されます。 */
+  return null;
 }
 
 export async function getPublicShopInfo(

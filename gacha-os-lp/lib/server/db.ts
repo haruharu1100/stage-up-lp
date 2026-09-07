@@ -1865,6 +1865,77 @@ const M019: string[] = [
      ON gacha_category_links (tenant_id, category_id)`,
 ];
 
+/**
+ * M020 — 「どのお店のサイトか」を、住所（ドメイン）で決める。あわせて賞の呼び名。
+ *
+ * ═══════════════════════════════════════════════════════
+ * ★なぜ、会社コードを打たせるのをやめるのか
+ * ═══════════════════════════════════════════════════════
+ *
+ *   これまで、お客様は会員登録とログインのときに
+ *   「会社コード」を打っていました。
+ *
+ *   ふつうのオンラインガチャのお店で、そんなものを聞かれることはありません。
+ *   聞かれた時点で、お客様は「何これ」と思って、そこで帰ります。
+ *
+ *   そもそも、お客様はもう答えを持って来ています。
+ *   「shop-a.example.com を開いた」という事実そのものが答えです。
+ *   聞く必要がないものを聞いていました。
+ *
+ * ═══════════════════════════════════════════════════════
+ * ★どのお店かを、ブラウザ側に決めさせないこと
+ * ═══════════════════════════════════════════════════════
+ *
+ *   会社コードを本文で受け取る形は、
+ *   「どの会社の入口を使うか」をブラウザ側が指定できる形です。
+ *
+ *   この表は、その決定をサーバー側へ取り上げるためにあります。
+ *   ★登録されていない住所は、はっきり断ります。
+ *     「決まらなかったので1社目」は絶対にやりません。
+ *     よそのお店のページとして開いてしまいます。
+ *
+ * ═══════════════════════════════════════════════════════
+ * ★賞の呼び名を、コードから追い出す
+ * ═══════════════════════════════════════════════════════
+ *
+ *   これまで賞の名前は「S賞・A賞・B賞・C賞・D賞」で固定でした。
+ *   お店によっては「特賞」「1等」「PSA10賞」「BOX賞」と呼びます。
+ *   呼び名を変えるのに、こちらの作業が要る状態でした。
+ *
+ *   ★ただし、中の仕組みは今までどおり S/A/B/C/D のままにします。
+ *     呼び名を鍵にすると、「特賞」に変えた日に、
+ *     抽選・残数・当選履歴・記録のつながりが全部切れます。
+ *     ここで持つのは「見せる文字」だけです。
+ */
+const M020: string[] = [
+  /* ①お店のサイトの住所。1つの住所は、1つのお店にしか結びつきません。
+       ★host を主キーにすること。
+         同じ住所を2社に割り当てられる形にすると、
+         どちらのお店として開くかが運任せになります。 */
+  `CREATE TABLE IF NOT EXISTS tenant_domains (
+     host       TEXT PRIMARY KEY,
+     tenant_id  TEXT NOT NULL,
+     note       TEXT,
+     created_at TEXT NOT NULL
+   )`,
+
+  `CREATE INDEX IF NOT EXISTS ix_tenant_domains_tenant
+     ON tenant_domains (tenant_id)`,
+
+  /* ②賞の呼び名。中の記号（grade）はそのまま、見せる文字だけを持ちます。
+       ★grade を書き換える形にしないこと。
+         gacha_stock の主キーの一部なので、書き換えると
+         在庫・当選履歴とのつながりが切れます。 */
+  `CREATE TABLE IF NOT EXISTS tenant_grade_labels (
+     tenant_id  TEXT NOT NULL,
+     grade      TEXT NOT NULL,
+     label      TEXT NOT NULL,
+     updated_at TEXT NOT NULL,
+     updated_by TEXT,
+     PRIMARY KEY (tenant_id, grade)
+   )`,
+];
+
 const MIGRATIONS: Migration[] = [
   { name: "001_initial", sql: M001 },
   { name: "002_tenant_tables", sql: M002 },
@@ -1885,6 +1956,7 @@ const MIGRATIONS: Migration[] = [
   { name: "017_point_purchase", sql: M017 },
   { name: "018_image_replace_reversal", sql: M018 },
   { name: "019_tenant_settings_categories", sql: M019 },
+  { name: "020_tenant_domains_grade_labels", sql: M020 },
 ];
 
 /** どの段まで済んだかを覚えておく表 */

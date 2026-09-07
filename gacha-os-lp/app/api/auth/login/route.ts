@@ -28,8 +28,10 @@ import {
   loginAdmin,
   loginCustomer,
   tenantByCode,
+  tenantById,
   type LoginResult,
 } from "@/lib/server/auth";
+import { hostFromHeaders, resolveTenantByHost } from "@/lib/server/tenantHost";
 import {
   CSRF_COOKIE,
   SESSION_COOKIE,
@@ -75,10 +77,6 @@ export async function POST(req: NextRequest) {
   const email = typeof body.email === "string" ? body.email : "";
   const password = typeof body.password === "string" ? body.password : "";
   const mfaCode = typeof body.mfaCode === "string" ? body.mfaCode : undefined;
-  const tenantCode =
-    typeof body.tenantCode === "string" && body.tenantCode.trim() !== ""
-      ? body.tenantCode.trim()
-      : process.env.DEFAULT_TENANT_CODE;
 
   if (!email || !password) {
     return NextResponse.json(
@@ -92,9 +90,31 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  /* ★会社が決まらなければ、その場で断ること。
-       「決まらなかったので1社目」にすると、他社に入れてしまいます。 */
-  const tenant = await tenantByCode(tenantCode);
+  /* ═══ どのお店へのログインか ═══
+     ★開いている住所からだけ決めること。
+       本文の会社コードを見に行く形へ戻さないこと（2026-09-07）。
+
+       お客様に「会社コード」を打たせるのをやめました。
+       ふつうのオンラインガチャのお店で聞かれないものだからです。
+       同時に、本文で会社を指定できる形もやめました。
+       本文を書き換えるだけで、よその店の入口を使えたためです。
+
+     ★お店の担当者だけは、住所からお店が決まらない配置
+       （社内共通の管理用アドレスなど）のときに限り、
+       会社コードを打って入れる道を残します。
+       お客様にはこの道はありません。 */
+  const here = await resolveTenantByHost(hostFromHeaders(req.headers));
+
+  let tenant = here ? await tenantById(here.tenantId) : null;
+
+  if (!tenant && kind === "ADMIN") {
+    const typed =
+      typeof body.tenantCode === "string" && body.tenantCode.trim() !== ""
+        ? body.tenantCode.trim()
+        : undefined;
+    tenant = await tenantByCode(typed);
+  }
+
   if (!tenant || tenant.status !== "ACTIVE") {
     return NextResponse.json(
       { ok: false, code: "NO_TENANT", message: "ログイン先が見つかりません。", requestId },

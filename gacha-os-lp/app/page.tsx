@@ -35,6 +35,14 @@ import ClosingMessage from "@/components/sections/ClosingMessage";
 import Cta from "@/components/sections/Cta";
 /* ★画面に出す文字は jp() を通す。日本語が語の途中で割れるのを止める */
 import { jp } from "@/lib/jp";
+import { redirect } from "next/navigation";
+import { resolveTenantHere } from "@/lib/server/tenantHost";
+import { currentCustomer } from "@/lib/server/pageAuth";
+
+/* ★このページは、開いている住所によって中身が変わります。
+     作り置き（静的生成）にすると、
+     いちばん最初に開いた人の住所の結果が、全員に配られます。 */
+export const dynamic = "force-dynamic";
 
 /*
   ★このページの決まり（2026-08-21 に作り直し／2026-08-22 に並びを入れ替え）
@@ -89,7 +97,39 @@ import { jp } from "@/lib/jp";
     リンク（#tour / #os / #builder / #price / #infra）は移動先に残してあります。
 */
 
-export default function Home() {
+/*
+  ═══════════════════════════════════════════════════════
+  ★お店のアドレスで開いたときは、このLPを出さないこと（2026-09-07）
+  ═══════════════════════════════════════════════════════
+
+    ここは AI GACHA OS（＝こちらの商品）を売るためのページです。
+    お客様が shop-a.example.com を開いたときに、
+    「オンラインガチャのシステムを売っています」という
+    法人向けの営業ページが出ていました。
+    ガチャを引きに来た方には、まったく意味の分からない画面です。
+    しかも「導入のご相談」から、こちらへ連絡が来ます。
+
+    ですので、開いている住所がどこかのお店に割り当てられていれば、
+    そのお店の売り場（/shop）へお送りします。
+
+    ★どこにも割り当てられていない住所（＝こちらの営業用アドレス）
+      だけが、このLPを見ます。これが既定です。
+      設定が空でも、LPが消えることはありません。
+
+    ★条件をここに書き写さないこと。
+      住所からお店を決めるのは lib/server/tenantHost.ts の1か所だけです。
+*/
+export default async function Home() {
+  const here = await resolveTenantHere();
+  if (here !== null) {
+    /* ★すでにログインしている方を、ログイン前の売り場へ落とさないこと。
+         ログイン前の売り場は、残高が出ず、ボタンも「ログインして引く」です。
+         入っているのに入っていない扱いをされると、
+         お客様は「ログアウトさせられた」と受け取ります。 */
+    const kaiin = await currentCustomer();
+    redirect(kaiin === null ? "/shop" : "/mypage/shop");
+  }
+
   return (
     <>
       <Header />

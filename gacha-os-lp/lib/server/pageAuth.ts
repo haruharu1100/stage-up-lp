@@ -42,6 +42,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { SESSION_COOKIE, readSession, type Session } from "./session";
 import { asRole } from "@/lib/permissions";
+import { hostMatchesTenant } from "./tenantHost";
 
 /*
  * ★この形は lib/currentUser.ts にあります。
@@ -101,6 +102,20 @@ export async function currentCustomer(): Promise<CustomerAuth | null> {
   /* ★ここを外さないこと。担当者のクッキーで
        お客様の画面に入れてしまいます */
   if (session.subjectKind !== "CUSTOMER") return null;
+
+  /*
+   * ★A店の会員証で、B店の画面を開かせないこと（2026-09-07）。
+   *
+   *   会社コードを廃止して、住所（ドメイン）でお店を決めるようにしました。
+   *   その結果、「A店でログインしたまま、B店の住所を開く」が
+   *   起こり得ます。そのとき画面はB店の看板を出しながら、
+   *   中身はA店の残高と獲得商品を出します。
+   *
+   *   食い違ったら、ログインしていない扱いにします。
+   *   （住所からお店が決まらない配置では判断しません。
+   *     判断できないものを不合格にすると、正しい方まで締め出します）
+   */
+  if (!(await hostMatchesTenant(session.tenantId))) return null;
 
   const { db } = await import("./db");
 
@@ -191,6 +206,11 @@ export async function currentAdmin(): Promise<PageAuth | null> {
        同じクッキーを使っているので、ここを見落とすと
        お客様が管理画面に入れます。 */
   if (session.subjectKind !== "ADMIN") return null;
+
+  /* ★担当者も同じです。B店の住所でA店の管理画面を開かせないこと。
+       住所からお店が決まらない入口（社内共通の管理用アドレス）では、
+       ここは判断しません。 */
+  if (!(await hostMatchesTenant(session.tenantId))) return null;
 
   const { db } = await import("./db");
 

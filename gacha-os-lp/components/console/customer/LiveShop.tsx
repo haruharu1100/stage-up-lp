@@ -318,10 +318,30 @@ function toTheater(k: DrawOutcome, coverImageId: string | null): TheaterRecord[]
    売り場（一覧）
    ══════════════════════════════════════════════ */
 
-export function ShopList() {
+/**
+ * @param guest true = まだログインしていない方に見せる売り場（/shop）。
+ *
+ * ═══════════════════════════════════════════════════════
+ * ★ログイン前でも、棚は見せること（2026-09-07 追加）
+ * ═══════════════════════════════════════════════════════
+ *
+ *   以前は、売り場が /mypage の中にありました。つまり、
+ *   何が売っているのかを見るために、先に会員登録が要りました。
+ *   お店の方ですら、自分の売り場を見るのに
+ *   自分の店の会員登録をする必要がありました。
+ *
+ *   ★ただし、ログイン前に「引ける」ようにはしないこと。
+ *     引くとポイントが減ります。減らす相手が決まっていない
+ *     状態で引かせる作りは、絶対に作らないでください。
+ *     ここでは「ログインして引く」へ案内するだけです。
+ */
+export function ShopList({ guest = false }: { guest?: boolean } = {}) {
   const router = useRouter();
-  const { state, reload } = useShopList();
-  const points = useCustomerPoints();
+  const { state, reload } = useShopList(guest);
+  /* ★ログインが要らない画面では、残高を見に行かないこと。
+       見に行っても必ず断られます（401）。断られること自体は正しいのですが、
+       ブラウザの記録が赤いエラーで埋まり、本当の不具合が埋もれます。 */
+  const points = useCustomerPoints(!guest);
   const balance =
     points.state.phase === "ok" ? points.state.data.balance : null;
 
@@ -376,11 +396,16 @@ export function ShopList() {
     kekka === null
       ? null
       : (board?.gachas.find((g) => g.id === kekka.gachaId) ?? null);
+  /* ★残高は、引いた結果が持っている「引いた後の残高」を先に使うこと。
+       別便で読み直している balance は、返ってくるまで引く前の値です。
+       その一瞬に「もう一度引く」を大きく出すと、
+       押した方は、押してから残高不足で断られます。 */
+  const atoZandaka = kekka === null ? balance : kekka.pointAfter;
   const mataHikeru =
-    ima !== null && ima.left > 0 && balance !== null && balance >= ima.price;
+    ima !== null && ima.left > 0 && atoZandaka !== null && atoZandaka >= ima.price;
 
   return (
-    <CustomerShell>
+    <CustomerShell guest={guest}>
       <h1 className="text-[1.15rem] font-bold text-white">ガチャを引く</h1>
       <p className="mt-1 text-[0.78rem] text-white/45">
         お引きになるガチャをお選びください。
@@ -462,10 +487,22 @@ export function ShopList() {
               <Tile
                 key={g.id}
                 g={g}
+                guest={guest}
                 balance={balance}
                 busy={okuruChu}
-                onOpen={() => router.push(`/mypage/shop/${g.id}`)}
+                onOpen={() =>
+                  router.push(guest ? `/shop/${g.id}` : `/mypage/shop/${g.id}`)
+                }
                 onDraw={() => {
+                  /* ★ログイン前に引かせないこと。
+                       減らす相手（お客様）が決まっていません。
+                       引いたあとの1本へ戻れるように next を渡します。 */
+                  if (guest) {
+                    router.push(
+                      `/login?next=${encodeURIComponent(`/mypage/shop/${g.id}`)}`,
+                    );
+                    return;
+                  }
                   setShippai(null);
                   setTarget(g);
                 }}
@@ -525,6 +562,7 @@ export function ShopList() {
  */
 function Tile({
   g,
+  guest,
   balance,
   busy,
   onOpen,
@@ -532,6 +570,7 @@ function Tile({
   onBuyPoints,
 }: {
   g: ShopItem;
+  guest: boolean;
   balance: number | null;
   busy: boolean;
   onOpen: () => void;
@@ -539,7 +578,9 @@ function Tile({
   onBuyPoints: () => void;
 }) {
   const soldOut = g.left <= 0;
-  const short = !soldOut && balance !== null && balance < g.price;
+  /* ★ログイン前に「ポイントが足りません」と出さないこと。
+       まだ会員でない方に、残高の話をしても意味が分かりません。 */
+  const short = !guest && !soldOut && balance !== null && balance < g.price;
 
   return (
     <div
@@ -631,7 +672,7 @@ function Tile({
             className="w-full rounded-xl py-2.5 text-[0.8rem] font-bold text-[#050912] disabled:opacity-40"
             style={{ background: SHOP_ACCENT }}
           >
-            1回引く
+            {guest ? "ログインして引く" : "1回引く"}
           </button>
         )}
       </div>
@@ -643,10 +684,18 @@ function Tile({
    1本の中身と、引く
    ══════════════════════════════════════════════ */
 
-export function ShopDetailScreen({ gachaId }: { gachaId: string }) {
+export function ShopDetailScreen({
+  gachaId,
+  guest = false,
+}: {
+  gachaId: string;
+  /** true = まだログインしていない方（/shop/[id]）。引くことはできません */
+  guest?: boolean;
+}) {
   const router = useRouter();
-  const detail = useShopDetail(gachaId);
-  const points = useCustomerPoints();
+  const detail = useShopDetail(gachaId, guest);
+  /* ★理由は ShopList と同じです。ログイン前は残高を見に行きません。 */
+  const points = useCustomerPoints(!guest);
 
   /* 確認 → 送信中 → 結果、の3つ。
      ★「送信中」を持たないと、二重に押せてしまいます。 */
@@ -680,7 +729,7 @@ export function ShopDetailScreen({ gachaId }: { gachaId: string }) {
 
   if (!g) {
     return (
-      <CustomerShell>
+      <CustomerShell guest={guest}>
         <div className="mt-2">
           <Unreadable state={detail.state} />
         </div>
@@ -689,11 +738,28 @@ export function ShopDetailScreen({ gachaId }: { gachaId: string }) {
   }
 
   const soldOut = g.left <= 0;
-  const tarinai = balance !== null && balance < g.price;
+  /* ★ログイン前の方に、残高不足の話をしないこと（意味が通じません） */
+  const tarinai = !guest && balance !== null && balance < g.price;
   const hikenai = soldOut || tarinai || okuruChu;
 
+  /* ★結果画面だけは、引いた直後の残高で判断すること（2026-09-07）。
+
+       上の balance は、別便で読み直している値です。読み直しが返るまでの
+       あいだ、引く前の残高のままになります。その一瞬に
+
+         残高が足りないのに「もう一度引く」が大きく出る
+
+       という状態が起きます。押した方は、押してから断られます。
+       断られた回数だけ、お店の信用が減ります。
+
+       引いた結果そのものが「引いた後にいくら残ったか」を持っているので、
+       そちらを先に使います。 */
+  const ato = kekka === null ? null : kekka.pointAfter;
+  const mataHikeruKekka =
+    !soldOut && !okuruChu && (ato === null ? !hikenai : ato >= g.price);
+
   return (
-    <CustomerShell>
+    <CustomerShell guest={guest}>
       {/* ═══════════════════════════════════════════
           ★「引く」までスクロールさせないこと
           ═══════════════════════════════════════════
@@ -758,15 +824,20 @@ export function ShopDetailScreen({ gachaId }: { gachaId: string }) {
                 pt / 1回
               </span>
             </div>
-            {/* ★残高を、読めていないのに 0pt と書かないこと */}
-            <div className="text-right">
-              <span className="block text-[0.62rem] font-bold text-white/40">
-                保有ポイント
-              </span>
-              <span className="num text-[0.95rem] font-bold text-white">
-                {balance === null ? "—" : `${balance.toLocaleString()} pt`}
-              </span>
-            </div>
+            {/* ★残高を、読めていないのに 0pt と書かないこと。
+                  ★ログイン前の方には、この枠ごと出さないこと。
+                    まだ会員でない方に「保有ポイント —」とだけ出すと、
+                    自分のポイントが読めていないように見えます。 */}
+            {!guest && (
+              <div className="text-right">
+                <span className="block text-[0.62rem] font-bold text-white/40">
+                  保有ポイント
+                </span>
+                <span className="num text-[0.95rem] font-bold text-white">
+                  {balance === null ? "—" : `${balance.toLocaleString()} pt`}
+                </span>
+              </div>
+            )}
           </div>
 
           <div className="mt-3">
@@ -813,9 +884,30 @@ export function ShopDetailScreen({ gachaId }: { gachaId: string }) {
           </>
         )}
 
-        <BigBtn testId="draw-open" onClick={() => setKakunin(true)} disabled={hikenai}>
-          {okuruChu ? "引いています…" : `${g.price.toLocaleString()}pt で 1回引く`}
-        </BigBtn>
+        {/* ★ログイン前に引かせないこと。
+              減らす相手（お客様）が決まっていません。
+              押した1本へそのまま戻れるよう next を渡します。 */}
+        {guest ? (
+          <BigBtn
+            testId="guest-login-to-draw"
+            onClick={() =>
+              router.push(
+                `/login?next=${encodeURIComponent(`/mypage/shop/${g.id}`)}`,
+              )
+            }
+            note="ログインまたは新規会員登録のあと、このガチャへお戻りいただけます。"
+          >
+            ログインして引く
+          </BigBtn>
+        ) : (
+          <BigBtn
+            testId="draw-open"
+            onClick={() => setKakunin(true)}
+            disabled={hikenai}
+          >
+            {okuruChu ? "引いています…" : `${g.price.toLocaleString()}pt で 1回引く`}
+          </BigBtn>
+        )}
 
         <p className="text-[0.72rem] leading-[1.9] text-white/45">
           お引きになった時点でポイントを申し受けます。当選された商品は、マイページの「獲得商品」からお手続きいただけます。
@@ -865,7 +957,7 @@ export function ShopDetailScreen({ gachaId }: { gachaId: string }) {
       <button
         type="button"
         data-testid="detail-back-to-list"
-        onClick={() => router.push("/mypage/shop")}
+        onClick={() => router.push(guest ? "/shop" : "/mypage/shop")}
         className="mt-5 w-full rounded-xl py-3 text-[0.82rem] font-bold text-white/55"
         style={{ border: `1px solid ${SHOP_EDGE}` }}
       >
@@ -887,7 +979,7 @@ export function ShopDetailScreen({ gachaId }: { gachaId: string }) {
       {kekka && (
         <DrawTheater
           records={toTheater(kekka, g.coverImageId)}
-          canAgain={!hikenai}
+          canAgain={mataHikeruKekka}
           onAgain={() => {
             setKekka(null);
             setKakunin(true);

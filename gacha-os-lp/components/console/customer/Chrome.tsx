@@ -82,6 +82,10 @@ export type NavKey = (typeof NAV)[number]["key"];
 /** いま開いている場所を、URLから決める */
 function activeFromPath(path: string | null): NavKey | null {
   if (path === null) return null;
+  /* ★/shop（ログイン前の売り場）も「ガチャ一覧」として扱うこと。
+       ログインの前と後で印の付く場所が変わると、
+       同じ棚を見ているのに別の店に見えます。 */
+  if (path === "/shop" || path.startsWith("/shop/")) return "shop";
   if (path.startsWith("/mypage/shop")) return "shop";
   if (path.startsWith("/mypage/prizes")) return "prizes";
   if (path === "/mypage") return "mypage";
@@ -92,15 +96,24 @@ function activeFromPath(path: string | null): NavKey | null {
    ヘッダー
    ══════════════════════════════════════════════ */
 
-function ShopHeader({ info }: { info: ShopInfo | null }) {
+function ShopHeader({ info, guest = false }: { info: ShopInfo | null; guest?: boolean }) {
   const router = useRouter();
   const path = usePathname();
   const active = activeFromPath(path);
 
-  const points = useCustomerPoints();
+  /* ★ログインが要らない画面では、残高を見に行かないこと（2026-09-07）。
+       見に行くと、必ず断られます（401）。断られること自体は正しいのですが、
+
+         ・ブラウザの記録が、赤いエラーで埋まります
+         ・断られるまでの一瞬だけ「保有ポイント —pt ／ ＋購入」が出て、
+           そのあと「ログイン ／ 新規会員登録」に入れ替わります
+
+       はじめてのお客様に、一瞬だけ会員向けの表示を見せて
+       すぐ引っ込める、という作りにしないでください。 */
+  const points = useCustomerPoints(!guest);
   /* ★読めたときだけ数字を出す。それ以外は「—」 */
   const balance = points.state.phase === "ok" ? points.state.data.balance : null;
-  const anon = points.state.phase === "anon";
+  const anon = guest || points.state.phase === "anon";
 
   const [deteru, setDeteru] = useState(false);
 
@@ -226,7 +239,28 @@ function ShopHeader({ info }: { info: ShopInfo | null }) {
 
         {/* ── 下の段：行き先 ──
             ★ログインしていない方に「獲得商品」を出さないこと。
-              押しても入れない場所を並べると、壊れて見えます。 */}
+              押しても入れない場所を並べると、壊れて見えます。
+
+            ★ただし「ガチャ一覧」だけは、ログイン前でも出すこと（2026-09-07）。
+              何が売っているのかを見てから会員になる、という
+              ふつうの順番にするためです。行き先は /shop です。 */}
+        {anon && (
+          <nav className="-mx-4 flex items-stretch gap-1 overflow-x-auto px-4 pb-1.5">
+            <button
+              type="button"
+              data-testid="chrome-nav-shop-guest"
+              onClick={() => router.push("/shop")}
+              className="shrink-0 rounded-lg px-3 py-2 text-[0.78rem] font-bold transition"
+              style={{
+                color: active === "shop" ? "#050912" : "rgba(255,255,255,0.66)",
+                background: active === "shop" ? accent : "transparent",
+              }}
+            >
+              ガチャ一覧
+            </button>
+          </nav>
+        )}
+
         {!anon && (
           <nav className="-mx-4 flex items-stretch gap-1 overflow-x-auto px-4 pb-1.5">
             {NAV.map((n) => {
@@ -326,13 +360,19 @@ function ShopFooter({ info }: { info: ShopInfo | null }) {
  *   ヘッダーが出る画面と出ない画面が混ざると、
  *   お客様は「行き止まりに入った」と感じます。
  */
-export function CustomerShell({ children }: { children: React.ReactNode }) {
+export function CustomerShell({
+  children,
+  guest = false,
+}: {
+  children: React.ReactNode;
+  guest?: boolean;
+}) {
   const info = useShopInfo();
   const shop = info.phase === "ok" ? info.data : null;
 
   return (
     <div className="flex min-h-[100dvh] flex-col" style={{ background: SHOP_BG }}>
-      <ShopHeader info={shop} />
+      <ShopHeader info={shop} guest={guest} />
       <div className="mx-auto w-full max-w-[560px] flex-1 px-4 pb-14 pt-4">
         {children}
       </div>

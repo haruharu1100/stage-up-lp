@@ -246,6 +246,46 @@ async function guardHonbun(
     return deny(requestId, "FORBIDDEN", "この操作は行えません。", 403);
   }
 
+  /* ── ②' いま開いている住所と、合言葉のお店が合っているか ──
+
+       ═══════════════════════════════════════════════════════
+       ★画面側だけで見ないこと（2026-09-07）
+       ═══════════════════════════════════════════════════════
+
+         会社コードをやめて、住所（ドメイン）でお店を決めました。
+         画面（lib/server/pageAuth.ts）でも同じ確認をしていますが、
+         画面を開かずに入口だけを直接叩くことができます。
+
+             curl -H "Cookie: gos_session=…" https://shop-b.example.com/api/…
+
+         このとき、合言葉がA店のものなら、
+         B店の住所からA店の中身が取り出せてしまいます。
+         ですから、入口の側でも同じ確認をします。
+
+       ★住所からお店が決まらない配置では判断しません。
+         判断できないものを断ると、正しく入っている方まで
+         すべての操作ができなくなります（tenantHost.ts に理由）。
+
+       ★判断のもとは tenantHost.ts の1か所だけです。
+         ここに条件を書き写さないこと。 */
+  {
+    const { hostFromHeaders, hostMatchesTenantFor } = await import(
+      "./tenantHost"
+    );
+    const h = hostFromHeaders(req.headers);
+    if (!(await hostMatchesTenantFor(h, session.tenantId))) {
+      console.warn(
+        `[guard] host不一致 ${requestId} host=${h} ${req.method} ${req.nextUrl.pathname}`,
+      );
+      return deny(
+        requestId,
+        "TENANT_HOST_MISMATCH",
+        "このアドレスでは、いまのログインはお使いいただけません。お手数ですが、ログインし直してください。",
+        403,
+      );
+    }
+  }
+
   /* ── ③ 状態が変わる依頼なら、CSRF の合図を確かめる ──
        ★読み取りだけの依頼にまで求めないこと。
          画面を開くたびに落ちるようになり、

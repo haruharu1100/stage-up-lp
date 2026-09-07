@@ -128,6 +128,30 @@ const MESSAGES: Record<LoginFailure, string> = {
    会社を決める
    ══════════════════════════════════════════════ */
 
+/**
+ * IDから会社を探す。無ければ null。
+ *
+ * ★これは「開いている住所からお店を決めたあと」に使う道具です。
+ *   ブラウザから受け取ったIDを、そのままここへ渡さないこと。
+ *   渡すと、IDを書き換えるだけで他社になります。
+ */
+export async function tenantById(tenantId: string | undefined | null) {
+  if (!tenantId) return null;
+  await migrate();
+  const res = await db().execute({
+    sql: `SELECT id, code, name, status FROM tenants WHERE id = ? LIMIT 1`,
+    args: [tenantId],
+  });
+  const row = res.rows[0] as Record<string, unknown> | undefined;
+  if (!row) return null;
+  return {
+    id: String(row.id),
+    code: String(row.code),
+    name: String(row.name),
+    status: String(row.status),
+  };
+}
+
 /** 会社コードから会社を探す。無ければ null */
 export async function tenantByCode(code: string | undefined | null) {
   if (!code) return null;
