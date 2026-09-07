@@ -19,8 +19,9 @@ import { all, getSetting } from "../lib/db.js";
 import { runTask } from "../lib/crawler.js";
 
 // ── 設定（環境変数で調整可能）──
-// ローカルは60秒制限なし → 照合枠を段階的に増やす（既定40）。
-if (!process.env.CRAWL_MAX_LOOKUPS) process.env.CRAWL_MAX_LOOKUPS = "40";
+// ローカルは60秒制限なし → 照合枠を段階的に増やす（既定80）。
+// タスク数を大幅に増やしたので1回の巡回でより広く照合する。トークン見張りが枯渇を防ぐので安全。
+if (!process.env.CRAWL_MAX_LOOKUPS) process.env.CRAWL_MAX_LOOKUPS = "80";
 const MAX_LOOKUPS = parseInt(process.env.CRAWL_MAX_LOOKUPS, 10);
 // トークンがこの値を下回ったら巡回間隔を延ばす／打ち切る（枯渇保護）。
 const TOKEN_FLOOR = parseInt(process.env.KEEPA_TOKEN_FLOOR || "40", 10);
