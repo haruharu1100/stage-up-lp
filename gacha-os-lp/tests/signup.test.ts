@@ -59,6 +59,7 @@ import {
   signupCustomer,
   verifyEmail,
   resendVerification,
+  RESEND_PER_HOUR,
   SignupError,
 } from "../lib/server/signup";
 import { POST as signupPost } from "../app/api/auth/signup/route";
@@ -411,6 +412,20 @@ async function mikakunin(email: string) {
   assert.equal(r.ok, true, "確認前だとログインすらできません（行き止まりです）");
   if (!r.ok) throw new Error("unreachable");
 
+  /* ★登録のときに出た1通を、5分前のことにします。
+       再送には間隔（RESEND_COOLDOWN_SEC）を入れてあるため、
+       ここを直さないと、続く試験が「連打」で止まります。
+       本体に裏口は作りません（作ると、いつか本番から呼ばれます）。 */
+  await db().execute({
+    sql: `UPDATE email_verifications SET created_at = ?
+           WHERE tenant_id = ? AND customer_id = ?`,
+    args: [
+      new Date(Date.now() - 5 * 60_000).toISOString(),
+      tenantId,
+      customerId,
+    ],
+  });
+
   return {
     customerId,
     token,
@@ -472,6 +487,23 @@ async function mochiMikakunin(email: string, points: number) {
   });
   const m = /\/verify-email\?token=([A-Za-z0-9_-]+)/.exec(since(from).join("\n"));
   assert.ok(m, "確認メールの本文に、開けるリンクが入っていません");
+
+  /* ★下ごしらえで送った1通を、5分前に送ったことにします。
+       再送には間隔（RESEND_COOLDOWN_SEC）を入れてあるので、
+       ここを直さないと、続く試験が「連打」と見なされて止まります。
+
+     ★本体に「上限を無視する裏口」を作らないこと。
+       裏口は、いつか本番の道から呼ばれます。
+       時計をずらすほうを、試験の側でやります。 */
+  await db().execute({
+    sql: `UPDATE email_verifications SET created_at = ?
+           WHERE tenant_id = ? AND customer_id = ?`,
+    args: [
+      new Date(Date.now() - 5 * 60_000).toISOString(),
+      tenantId,
+      customerId,
+    ],
+  });
 
   return { customerId, token: m[1] };
 }
@@ -680,6 +712,178 @@ test("⑫' 確認が済んだ人に再送しても、新しいリンクは作ら
   assert.ok(
     !/\/verify-email\?token=/.test(since(from).join("\n")),
     "確認済みの方に、確認リンクを送り直しています",
+  );
+});
+
+/* ══════════════════════════════════════════════
+   ⑫'' 再送の連打
+   ══════════════════════════════════════════════
+
+   ★ここが無いと、いちばん困っている方が、いちばん詰まります。
+
+     再送は、押すたびに前のリンクを使えなくします。
+     ですから「届かない」と思って3回押した方は、
+     1通目・2通目を開いても「使えません」と言われます。
+     3通目が正しいのですが、それは本人には分かりません。 */
+
+/** その方に、いま何通の確認リンクがあるか */
+async function tsuusuu(customerId: string) {
+  const r = await db().execute({
+    sql: `SELECT count(*) AS n FROM email_verifications
+           WHERE tenant_id = ? AND customer_id = ?`,
+    args: [tenantId, customerId],
+  });
+  return Number((r.rows[0] as Record<string, unknown>).n ?? 0);
+}
+
+test("⑫'' 続けて押しても、2通目は作らない（前のリンクを壊さない）", async () => {
+  const who = await mikakunin("renda@example.test");
+  const mae = await tsuusuu(who.customerId);
+
+  const ichi = await resendVerification({
+    tenantId,
+    tenantName: "試験用の会社",
+    customerId: who.customerId,
+  });
+  assert.equal(ichi.sent, true, "1回目が送られていません");
+
+  const from = mark();
+  const ni = await resendVerification({
+    tenantId,
+    tenantName: "試験用の会社",
+    customerId: who.customerId,
+  });
+
+  assert.equal(ni.sent, false, "連打しても、2通目が送られています");
+  assert.equal(
+    ni.sent === false ? ni.skip : "",
+    "TOO_SOON",
+    "断る理由が「まだ間がない」になっていません",
+  );
+  assert.ok(
+    ni.sent === false && (ni.waitSec ?? 0) > 0,
+    "あと何秒待てばよいかを返していません（画面に出せません）",
+  );
+  assert.ok(
+    !/\/verify-email\?token=/.test(since(from).join("\n")),
+    "断ったはずなのに、メールが出ています",
+  );
+  assert.equal(
+    await tsuusuu(who.customerId),
+    mae + 1,
+    "断ったはずなのに、リンクが増えています",
+  );
+});
+
+test("⑫'' 断られた後も、直前に送ったリンクは生きている", async () => {
+  const who = await mikakunin("renda-b@example.test");
+
+  const from = mark();
+  await resendVerification({
+    tenantId,
+    tenantName: "試験用の会社",
+    customerId: who.customerId,
+  });
+  const m = /\/verify-email\?token=([A-Za-z0-9_-]+)/.exec(since(from).join("\n"));
+  assert.ok(m, "1回目のリンクが出ていません");
+
+  /* すぐもう一度押す（＝断られる） */
+  await resendVerification({
+    tenantId,
+    tenantName: "試験用の会社",
+    customerId: who.customerId,
+  });
+
+  /* ★ここが本題。断ったことで、届いているリンクを
+       道連れに壊していないこと。 */
+  const r = await verifyEmail({ token: m![1] });
+  assert.equal(
+    r.ok,
+    true,
+    "連打を断ったときに、届いているリンクまで壊しています",
+  );
+});
+
+test("⑫'' 同時に2つ届いても、リンクは1つしか増えない", async () => {
+  const who = await mikakunin("renda-c@example.test");
+  const mae = await tsuusuu(who.customerId);
+
+  const [a, b] = await Promise.all([
+    resendVerification({
+      tenantId,
+      tenantName: "試験用の会社",
+      customerId: who.customerId,
+    }),
+    resendVerification({
+      tenantId,
+      tenantName: "試験用の会社",
+      customerId: who.customerId,
+    }),
+  ]);
+
+  const okita = [a, b].filter((x) => x.sent).length;
+  assert.equal(okita, 1, `同時に押したら ${okita} 通、送られました`);
+  assert.equal(
+    await tsuusuu(who.customerId),
+    mae + 1,
+    "同時に押したら、リンクが2つ増えています",
+  );
+});
+
+test("⑫'' 1時間の上限ちょうどまで送れて、その次は送らない", async () => {
+  const who = await mikakunin("renda-d@example.test");
+
+  /* ★ここは「上限ちょうど」を見たいので、
+       下ごしらえで出た1通を消して、0通から数え直します。 */
+  await db().execute({
+    sql: `DELETE FROM email_verifications
+           WHERE tenant_id = ? AND customer_id = ?`,
+    args: [tenantId, who.customerId],
+  });
+
+  /* 1回ごとに「90秒前のこと」にして、間隔（60秒）だけをすり抜けます。
+     ★1時間の上限のほうは、すり抜けさせません。そこが見たい所です。 */
+  const furuku = async () =>
+    db().execute({
+      sql: `UPDATE email_verifications SET created_at = ?
+             WHERE tenant_id = ? AND customer_id = ?
+               AND created_at > ?`,
+      args: [
+        new Date(Date.now() - 90_000).toISOString(),
+        tenantId,
+        who.customerId,
+        new Date(Date.now() - 60_000).toISOString(),
+      ],
+    });
+
+  const okuru = () =>
+    resendVerification({
+      tenantId,
+      tenantName: "試験用の会社",
+      customerId: who.customerId,
+    });
+
+  /* 上限ちょうどまでは、全部送れること
+     （厳しすぎると、お客様が先へ進めなくなります） */
+  for (let i = 1; i <= RESEND_PER_HOUR; i += 1) {
+    const r = await okuru();
+    assert.equal(r.sent, true, `${i} 通目が送れません（上限より手前です）`);
+    await furuku();
+  }
+
+  /* ★次の1通は、断ること。
+       ここが、上限そのものを見ている行です。
+       上限を外すと、この行が落ちます。 */
+  const tsugi = await okuru();
+  assert.equal(
+    tsugi.sent,
+    false,
+    `1時間に ${RESEND_PER_HOUR + 1} 通、送れてしまいました`,
+  );
+  assert.equal(
+    tsugi.sent === false ? tsugi.skip : "",
+    "TOO_MANY",
+    "断る理由が「送りすぎ」になっていません",
   );
 });
 

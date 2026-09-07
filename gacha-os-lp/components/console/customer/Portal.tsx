@@ -361,6 +361,10 @@ function LogoutRow() {
 function MikakuninBanner() {
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState<string | null>(null);
+  /* ★送れなかったときは、押す所を残すこと。
+       文言だけ出してボタンを消すと、少し待てば送れる方まで
+       行き止まりになります（サーバーは60秒で受け付けます）。 */
+  const [okureta, setOkureta] = useState(false);
 
   const okuru = useCallback(async () => {
     if (busy) return;
@@ -372,7 +376,12 @@ function MikakuninBanner() {
         credentials: "same-origin",
         cache: "no-store",
       });
-      const data = (await res.json()) as { ok?: boolean; message?: string };
+      const data = (await res.json()) as {
+        ok?: boolean;
+        sent?: boolean;
+        message?: string;
+      };
+      setOkureta(res.ok && data.sent === true);
       setDone(
         data.message ??
           (res.ok
@@ -380,6 +389,7 @@ function MikakuninBanner() {
             : "ただいまお送りできません。少し時間をおいてからお試しください。"),
       );
     } catch {
+      setOkureta(false);
       setDone("通信に失敗しました。少し時間をおいてから、もう一度お試しください。");
     } finally {
       setBusy(false);
@@ -407,7 +417,9 @@ function MikakuninBanner() {
         >
           {done}
         </p>
-      ) : (
+      ) : null}
+
+      {okureta ? null : (
         <button
           type="button"
           data-testid="resend-verification"
@@ -420,7 +432,11 @@ function MikakuninBanner() {
             color: TONE.warn.fg,
           }}
         >
-          {busy ? "お送りしています…" : "確認メールを、もう一度送る"}
+          {busy
+            ? "お送りしています…"
+            : done
+              ? "もう一度、送ってみる"
+              : "確認メールを、もう一度送る"}
         </button>
       )}
     </div>

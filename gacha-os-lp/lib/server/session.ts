@@ -270,10 +270,26 @@ export async function rotateSession(
   const s = await readSession(token);
   if (!s) return null;
 
+  /* ★延びないほうの期限（absolute）を、そのまま引き継ぐこと。
+       ここを渡さないと、作り直すたびに 12 時間が新しく始まります。
+       つまり、合言葉を盗んだ人が作り直しを繰り返せば、
+       いつまでもログインしたままにできます。
+
+       いまは、この関数を呼んでいるのは試験だけです。
+       ですが、あとで「権限が変わったら作り直す」などに
+       つないだ瞬間、そこが穴になります。
+       呼ばれてから直すのでは遅いので、ここで塞いでおきます。
+       （2026-09-07） */
+  const nokoriHours = Math.max(
+    0,
+    Date.parse(s.absoluteExpiresAt) - Date.now(),
+  ) / 3_600_000;
+
   const issued = await createSession({
     tenantId: s.tenantId,
     subjectKind: s.subjectKind,
     subjectId: s.subjectId,
+    absoluteHours: nokoriHours,
     replaces: token,
     /* ★「見るだけ」の印を、必ず引き継ぐこと。
          ここを落とすと、合言葉を作り直しただけで

@@ -46,26 +46,41 @@ export async function POST(req: NextRequest) {
     (t.rows[0] as Record<string, unknown> | undefined)?.name ?? "",
   );
 
+  /* ★既定は「送った」ではなく「送っていない」。
+       途中で落ちたときに、送っていないのに送ったと
+       お伝えしないためです。 */
+  let sent = false;
+  let waitSec: number | undefined;
+
   try {
-    await resendVerification({
+    const r = await resendVerification({
       tenantId: gate.session.tenantId,
       tenantName,
       customerId: gate.session.subjectId,
       ip: req.headers.get("x-forwarded-for") ?? undefined,
     });
+    sent = r.sent;
+    if (!r.sent && r.skip === "TOO_SOON") waitSec = r.waitSec;
   } catch (e) {
     /* ★失敗しても、外へは同じ返事にすること。 */
     console.error("[resend-verification] failed", gate.requestId, e);
   }
 
+  /* ★連打したときに「送りました」と言わないこと。
+       言うと、お客様は届いていない4通目を待ち続けます。
+       この方はログイン済みで、宛先はご自分のアドレスですから、
+       ここは正直にお伝えしてかまいません。 */
+  const message = sent
+    ? "確認のご案内を、ご登録のメールアドレスへお送りしました。" +
+      "前回のリンクは使えなくなります。"
+    : waitSec != null
+      ? `先ほどお送りしています。あと ${waitSec} 秒ほどお待ちいただくと、もう一度お送りできます。` +
+        "届いていない場合は、迷惑メールに入っていないかご確認ください。"
+      : "確認のご案内は、すでにお送りしています。" +
+        "届いていない場合は、迷惑メールをご確認のうえ、しばらくしてからお試しください。";
+
   return NextResponse.json(
-    {
-      ok: true,
-      requestId: gate.requestId,
-      message:
-        "確認のご案内を、ご登録のメールアドレスへお送りしました。" +
-        "前回のリンクは使えなくなります。",
-    },
+    { ok: true, requestId: gate.requestId, sent, message },
     { status: 200 },
   );
 }

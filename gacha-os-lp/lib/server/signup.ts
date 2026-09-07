@@ -58,6 +58,38 @@ export const VERIFY_LINK_HOURS = 24;
 /** 同じ回線から、1時間に受け付ける登録の上限 */
 const SIGNUP_PER_IP_PER_HOUR = 5;
 
+/* ══════════════════════════════════════════════
+   確認メールの再送に、間隔を空けさせる
+   ══════════════════════════════════════════════
+
+   ★これが無いと、どうなるか（2026-09-07 に見つけた穴）
+
+     再送は、押すたびに前のリンクを使えなくします。
+     間隔を空けさせないと、こうなります。
+
+       ① お客様が「届かない」と思って、再送を3回続けて押す
+       ② 3通届く。1通目を開く → 「このリンクは使えません」
+       ③ 最後の1通が正しいと気づけない → 問い合わせになる
+
+     つまり、連打したお客様ほど、先に進めなくなります。
+     いちばん困っている方を、いちばん詰まらせる作りでした。
+
+     もう1つ、メールの費用と、送信元の評判の問題があります。
+     ログインした方しか押せませんが、1人でも、押し続ければ
+     何百通でも出ます。送りすぎた送信元は、迷惑メール扱いになり、
+     そのお店の全員にメールが届かなくなります。
+
+   ★上限を、あとから緩めないこと。
+     「お客様が待たされる」と言われても、緩めてよいのは
+     待ち時間の秒数であって、上限そのものではありません。 */
+
+/** 前に送ってから、次に送れるまでの秒数 */
+export const RESEND_COOLDOWN_SEC = 60;
+/** 1時間に送れる回数 */
+export const RESEND_PER_HOUR = 5;
+/** 1日に送れる回数 */
+export const RESEND_PER_DAY = 10;
+
 const sha256 = (s: string) => createHash("sha256").update(s, "utf8").digest("hex");
 const nowIso = () => new Date().toISOString();
 const str = (v: unknown) => (typeof v === "string" ? v : "");
@@ -490,69 +522,147 @@ export async function verifyEmail(input: {
    確認メールの再送
    ══════════════════════════════════════════════ */
 
+/** 再送しなかったときの、理由 */
+export type ResendSkip =
+  | "ALREADY_DONE" /* もう確認が済んでいる */
+  | "NO_TARGET" /* その方が見つからない */
+  | "TOO_SOON" /* 前に送ってから、まだ間がない */
+  | "TOO_MANY"; /* 1時間・1日の上限に達している */
+
+export type ResendResult =
+  | { accepted: true; sent: true }
+  | { accepted: true; sent: false; skip: ResendSkip; waitSec?: number };
+
 /**
  * ログイン済みの、まだ確認が済んでいない方へ、もう一度お送りする。
  *
  * ★古いリンクを、その場で使えなくすること。
  *   何通も生きたままにすると、いちばん古い（＝いちばん漏れやすい）
  *   ものが、いつまでも有効なままになります。
+ *
+ * ★数えるところと、作るところを、1回の書き込みにまとめること。
+ *   別々にすると、2つ同時に届いたときに、2つとも
+ *   「まだ1通しか送っていない」と答えて、2通作ります。
+ *   （＝連打が、そのまま通ります）
+ *
+ * ★上限に達したときも、外へ返すのは同じ accepted: true です。
+ *   ただし sent は false になります。この方はログイン済みで、
+ *   ご自分のアドレス宛なので、画面には正直に
+ *   「先ほどお送りしています」とお伝えしてかまいません。
+ *   （名簿を作られる心配は、ここにはありません）
  */
 export async function resendVerification(input: {
   tenantId: string;
   tenantName: string;
   customerId: string;
   ip?: string;
-}): Promise<{ accepted: true }> {
+}): Promise<ResendResult> {
   await migrate();
 
-  const r = await db().execute({
-    sql: `SELECT id, name, email, email_verified_at
-            FROM customers WHERE id = ? AND tenant_id = ? LIMIT 1`,
-    args: [input.customerId, input.tenantId],
-  });
-  const row = r.rows[0] as Record<string, unknown> | undefined;
+  const made = await withWriteTx(async (tx) => {
+    const r = await tx.execute({
+      sql: `SELECT id, name, email, email_verified_at
+              FROM customers WHERE id = ? AND tenant_id = ? LIMIT 1`,
+      args: [input.customerId, input.tenantId],
+    });
+    const row = r.rows[0] as Record<string, unknown> | undefined;
 
-  /* すでに済んでいる方・見つからない方にも、同じ返事にします */
-  if (!row || row.email_verified_at != null || row.email == null) {
-    return { accepted: true };
+    if (!row || row.email == null) {
+      return { skip: "NO_TARGET" as const };
+    }
+    if (row.email_verified_at != null) {
+      return { skip: "ALREADY_DONE" as const };
+    }
+
+    /* ── ここまでに、何通お送りしたか ──
+         email_verifications そのものを数えます。
+         別に「送った回数」の表を作ると、片方だけ増えて
+         ずれます。証拠は1か所にしておきます。 */
+    const now = Date.now();
+    const kazoe = await tx.execute({
+      sql: `SELECT
+              max(created_at) AS saigo,
+              sum(CASE WHEN created_at > ? THEN 1 ELSE 0 END) AS jikan,
+              sum(CASE WHEN created_at > ? THEN 1 ELSE 0 END) AS hi
+            FROM email_verifications
+           WHERE tenant_id = ? AND customer_id = ?`,
+      args: [
+        new Date(now - 3_600_000).toISOString(),
+        new Date(now - 86_400_000).toISOString(),
+        input.tenantId,
+        input.customerId,
+      ],
+    });
+    const k = kazoe.rows[0] as Record<string, unknown> | undefined;
+    const saigo = k?.saigo == null ? null : Date.parse(String(k.saigo));
+    const jikan = Number(k?.jikan ?? 0);
+    const hi = Number(k?.hi ?? 0);
+
+    if (saigo != null && Number.isFinite(saigo)) {
+      const keika = Math.floor((now - saigo) / 1000);
+      if (keika < RESEND_COOLDOWN_SEC) {
+        return {
+          skip: "TOO_SOON" as const,
+          waitSec: RESEND_COOLDOWN_SEC - keika,
+        };
+      }
+    }
+    if (jikan >= RESEND_PER_HOUR || hi >= RESEND_PER_DAY) {
+      return { skip: "TOO_MANY" as const };
+    }
+
+    const at = new Date(now).toISOString();
+    const token = randomBytes(32).toString("base64url");
+
+    await tx.execute({
+      sql: `UPDATE email_verifications SET used_at = ?
+             WHERE tenant_id = ? AND customer_id = ? AND used_at IS NULL`,
+      args: [at, input.tenantId, input.customerId],
+    });
+    await tx.execute({
+      sql: `INSERT INTO email_verifications
+              (id, tenant_id, customer_id, email, token_hash,
+               expires_at, used_at, created_at, created_ip)
+            VALUES (?,?,?,?,?,?,NULL,?,?)`,
+      args: [
+        id("evf"),
+        input.tenantId,
+        input.customerId,
+        String(row.email),
+        sha256(token),
+        new Date(now + VERIFY_LINK_HOURS * 3_600_000).toISOString(),
+        at,
+        input.ip ?? null,
+      ],
+    });
+
+    return {
+      skip: null,
+      token,
+      to: String(row.email),
+      name: String(row.name ?? ""),
+    };
+  });
+
+  if (made.skip != null) {
+    return {
+      accepted: true,
+      sent: false,
+      skip: made.skip,
+      ...("waitSec" in made && made.waitSec != null
+        ? { waitSec: made.waitSec }
+        : {}),
+    };
   }
 
-  const at = nowIso();
-  const token = randomBytes(32).toString("base64url");
-
-  await db().batch(
-    [
-      {
-        sql: `UPDATE email_verifications SET used_at = ?
-               WHERE tenant_id = ? AND customer_id = ? AND used_at IS NULL`,
-        args: [at, input.tenantId, input.customerId],
-      },
-      {
-        sql: `INSERT INTO email_verifications
-                (id, tenant_id, customer_id, email, token_hash,
-                 expires_at, used_at, created_at, created_ip)
-              VALUES (?,?,?,?,?,?,NULL,?,?)`,
-        args: [
-          id("evf"),
-          input.tenantId,
-          input.customerId,
-          String(row.email),
-          sha256(token),
-          new Date(Date.now() + VERIFY_LINK_HOURS * 3_600_000).toISOString(),
-          at,
-          input.ip ?? null,
-        ],
-      },
-    ],
-    "write",
-  );
-
+  /* ★メールを出すのは、書き込みが終わってから。
+       送信の途中で失敗しても、DBが中途半端にならないようにします。 */
   await sendVerificationMail({
     tenantName: input.tenantName,
-    to: String(row.email),
-    name: String(row.name ?? ""),
-    token,
+    to: made.to,
+    name: made.name,
+    token: made.token,
   });
 
-  return { accepted: true };
+  return { accepted: true, sent: true };
 }
