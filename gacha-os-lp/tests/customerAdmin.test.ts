@@ -56,6 +56,8 @@ import {
   maskEmail,
   setCustomerSuspended,
 } from "../lib/server/customerAdmin";
+/* ★止めた人が、その場で出されるかを確かめるために使う */
+import { createSession, readSession } from "../lib/server/session";
 /* ★台帳を通さずに残高を壊せる、ただ1つの出口。手元の使い捨てDBでしか動かない */
 import { breakBalanceForTest } from "../scripts/lib/fixtures-danger.mjs";
 
@@ -406,6 +408,94 @@ test("★止まっていない会員の解除は、断る", async () => {
       }),
     ),
     "SAME_VALUE",
+  );
+});
+
+/* ══════════════════════════════════════════════
+   ⑨ 止めたら、その場でログアウトさせる
+
+   ★この3本を必ず残すこと。
+
+     もともと「セッションの行が消えるか」を数える試験は1本ありました
+     （下の「★止めたら、開いていた画面のセッションも消える」）。
+     足りなかったのは、次の2つです（2026-09-07）。
+
+       ・本物のログイン（合言葉で読める状態）から確かめていない
+       ・「関係のない人まで巻き添えで切っていないか」を
+         誰も見ていない
+
+     行を数えるだけだと、
+     「その会社のセッションを全部消す」に書き換わっても気づけません。
+     止めた相手の画面が開いたままになるのも困りますが、
+     何もしていないお客様が全員ログアウトさせられるのは、
+     もっと困ります。
+   ══════════════════════════════════════════════ */
+
+test("★止めたら、開いていたログインが、その場で使えなくなる", async () => {
+  const t = await createTenant({ code: code(), name: "会員社S1" });
+  const c = await createCustomer({
+    tenantId: t, no: 1, name: "架空 開いたまま", points: 0, email: "s1@x.example",
+  });
+
+  /* すでにログイン中、という形を作ります */
+  const s = await createSession({ tenantId: t, subjectKind: "CUSTOMER", subjectId: c });
+  assert.ok(await readSession(s.token), "止める前に、まずログインできていないと試験になりません");
+
+  await setCustomerSuspended({
+    tenantId: t, customerId: c, suspend: true, reason: "不審な操作のため停止", by: BY,
+  });
+
+  assert.equal(
+    await readSession(s.token),
+    null,
+    "★止めたのに、開いていた画面がそのまま使えています",
+  );
+});
+
+test("★止めても、よその会員のログインは切れない", async () => {
+  const t = await createTenant({ code: code(), name: "会員社S2" });
+  const a = await createCustomer({
+    tenantId: t, no: 1, name: "架空 止める人", points: 0, email: "s2a@x.example",
+  });
+  const b = await createCustomer({
+    tenantId: t, no: 2, name: "架空 関係ない人", points: 0, email: "s2b@x.example",
+  });
+
+  const sa = await createSession({ tenantId: t, subjectKind: "CUSTOMER", subjectId: a });
+  const sb = await createSession({ tenantId: t, subjectKind: "CUSTOMER", subjectId: b });
+
+  await setCustomerSuspended({
+    tenantId: t, customerId: a, suspend: true, reason: "確認のため停止", by: BY,
+  });
+
+  assert.equal(await readSession(sa.token), null, "止めた人が切れていません");
+  assert.ok(
+    await readSession(sb.token),
+    "★関係のない会員まで、まとめてログアウトさせています",
+  );
+});
+
+test("★他社の会員は、止められないし、ログインも切られない", async () => {
+  const a = await createTenant({ code: code(), name: "S3-A社" });
+  const b = await createTenant({ code: code(), name: "S3-B社" });
+  const bCustomer = await createCustomer({
+    tenantId: b, no: 1, name: "B社の架空", points: 0, email: "s3b@x.example",
+  });
+
+  const sb = await createSession({
+    tenantId: b, subjectKind: "CUSTOMER", subjectId: bCustomer,
+  });
+
+  /* A社から、B社の会員を止めにいきます */
+  await codeOf(() =>
+    setCustomerSuspended({
+      tenantId: a, customerId: bCustomer, suspend: true, reason: "他社を止めてみる", by: BY,
+    }),
+  );
+
+  assert.ok(
+    await readSession(sb.token),
+    "★止めるのは断ったのに、ログアウトだけさせています（会社をまたいで人を追い出せる）",
   );
 });
 

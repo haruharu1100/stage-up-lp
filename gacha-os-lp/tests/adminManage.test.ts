@@ -683,12 +683,24 @@ test("【永久固定】止めると、その人のログインはその場で�
   await login("staff@adm.example");
   assert.ok((await sessionCount(staff)) >= 2, "確認用のログインが作れていません");
 
+  /* ★止めた本人以外が、巻き添えで落ちていないことも見ること。
+       「その会社のセッションを全部消す」に書き換わっても、
+       止めた人の数を数えるだけでは気づけません。
+       止めた瞬間に、営業中のお店の全員がログアウトします。 */
+  const bossMae = await sessionCount(boss);
+  assert.ok(bossMae >= 1, "確認のため、止める人のログインも残っている必要があります");
+
   const r = await yomu(
     await suspendPost(post(SUSPEND, bossIn, { adminId: staff, suspend: true, reason: "本日付で退職" })),
   );
   assert.equal(r.status, 200);
   assert.equal((await nowOf(staff)).status, "SUSPENDED");
   assert.equal(await sessionCount(staff), 0, "止めたのに、ログインが残っています");
+  assert.equal(
+    await sessionCount(boss),
+    bossMae,
+    "★止めた本人以外のログインまで切れています（関係のない担当者が追い出されます）",
+  );
 });
 
 test("止めた人は、正しいパスワードでもログインできない", async () => {
