@@ -137,7 +137,19 @@ const LOG = [];
 let ok = 0;
 let ng = 0;
 
+/**
+ * ★同じ番号を2回使わないこと。
+ *   同じ番号が2つあると、控えの表で片方が上書きされ、
+ *   「落ちた項目が、表からは消えている」という起き方をします。
+ *   落ちたことに気づけない確認は、無いのと同じです。
+ */
+const TSUKATTA = new Set();
+
 function T(no, title, pass, detail) {
+  if (TSUKATTA.has(no)) {
+    throw new Error(`試験番号 ${no} が重複しています（別の番号にしてください）`);
+  }
+  TSUKATTA.add(no);
   LOG.push({ no, title, pass, detail: detail ?? "" });
   if (pass) ok += 1;
   else ng += 1;
@@ -606,7 +618,21 @@ kyaku.setDefaultTimeout(20000);
 
 /** 管理画面の画面へ行く（URLは kebab-case） */
 async function gamen(slug) {
-  await mise.goto(`${BASE}/client-demo/${slug}`, { waitUntil: "domcontentloaded" });
+  /* ★1回目が間に合わなかっただけで、試験そのものを止めないこと。
+       開発用サーバーは、その画面を初めて開くときに組み立てを始めます。
+       混んでいる日は、この組み立てが20秒に間に合わないことがあります。
+       それは「画面が壊れている」ではありません。もう一度だけ開き直します。
+     ★ここで待ち時間を無制限にはしないこと。
+       本当に開かない画面を、いつまでも待つだけになります。 */
+  try {
+    await mise.goto(`${BASE}/client-demo/${slug}`, { waitUntil: "domcontentloaded" });
+  } catch {
+    await mise.waitForTimeout(1500);
+    await mise.goto(`${BASE}/client-demo/${slug}`, {
+      waitUntil: "domcontentloaded",
+      timeout: 45000,
+    });
+  }
   /* ★「900ミリ秒待つ」で済ませないこと（2026-09-07）。
        管理画面は、外枠（左メニュー）が先に出て、
        中身はそのあとから届きます。
@@ -681,6 +707,42 @@ try {
   }
   T("S-01", "お店の担当者が、本物のログインで管理画面に入れた", hairi === "login", hairi);
   if (hairi !== "login") throw new Error("管理画面に入れませんでした");
+
+  /* ══ 契約したお店が、初めてログインした日に最初に見る画面 ══
+       ★ここに「何をすればよいか」が出ていないと、電話がかかってきます。
+         開店していないお店にとって、発送0件・問い合わせ0件は当たり前です。
+         その数字をいくら並べても、開店には1歩も近づきません。 */
+  await gamen("dashboard");
+  /* ★読み込みの途中を「出ていない」と数えないこと */
+  await mise
+    .locator(
+      '[data-testid="dash-kaiten"], [data-testid="dash-kaiten-kanryou"], [data-testid="dash-kaiten-yomenai"]',
+    )
+    .first()
+    .waitFor({ state: "visible", timeout: 15000 })
+    .catch(() => {});
+  const dash = await moji(mise);
+  const kaitenAru = (await mise.locator('[data-testid="dash-kaiten"]').count()) > 0;
+  T(
+    "S-01b",
+    "初回ログイン直後のダッシュボードに「開店までにやること」が出ている",
+    kaitenAru,
+    kaitenAru ? "" : `★出ていません ／ ${dash.split("\n").filter(Boolean).slice(0, 4).join(" / ")}`,
+  );
+  const dashPct = /(\d+)\s*\/\s*(\d+)\s*完了/.exec(dash);
+  T(
+    "S-01c",
+    "残っている項目が「何をすればよいか」つきで並んでいる",
+    /店舗設定で、お客様に見せる店舗名を入力してください/.test(dash),
+    dashPct ? `${dashPct[1]} / ${dashPct[2]} 完了` : "★あと何件かが出ていません",
+  );
+  T(
+    "S-01d",
+    "そこから、その設定画面をその場で開ける",
+    (await mise
+      .locator('[data-testid="dash-kaiten"] button:has-text("この設定を開く")')
+      .count()) > 0,
+  );
 
   await gamen("store-setup");
   const setup1 = await machi(mise, 'button:has-text("保存して次へ →")', 20000);
@@ -1041,6 +1103,39 @@ try {
     /販売開始できます/.test(ato) && !/まだ販売開始できません/.test(ato),
     atoPct ? `公開準備 ${atoPct[1]}/${atoPct[2]} 完了` : ato.split("\n").filter(Boolean).slice(0, 4).join(" / "),
   );
+
+  /* ★開店が済んだお店に、いつまでも「開店までにやること」を出し続けないこと。
+       済んだ人に同じ注意を出し続ける画面は、だんだん読まれなくなります。
+       読まれなくなった注意書きは、無いのと同じです。 */
+  await gamen("dashboard");
+  /* ★「まだ読んでいる途中」を「畳まれた」と数えないこと。
+       どれか1つの状態が出るまで待ってから見ます。 */
+  await mise
+    .locator(
+      '[data-testid="dash-kaiten"], [data-testid="dash-kaiten-kanryou"], [data-testid="dash-kaiten-yomenai"]',
+    )
+    .first()
+    .waitFor({ state: "visible", timeout: 15000 })
+    .catch(() => {});
+  const mada = await mise.locator('[data-testid="dash-kaiten"]').count();
+  const tatanda = await mise.locator('[data-testid="dash-kaiten-kanryou"]').count();
+  const yomenai = await mise.locator('[data-testid="dash-kaiten-yomenai"]').count();
+  T(
+    "S-26z",
+    "開店できたら、ダッシュボードの「開店までにやること」は1行に畳まれる",
+    mada === 0 && tatanda === 1,
+    mada > 0
+      ? "★開店前の呼びかけが出たままです"
+      : yomenai > 0
+        ? "★読み取れませんでした（済んだ扱いにしていないのは正しい）"
+        : tatanda === 1
+          ? "「開店準備 完了」の1行になった"
+          : "★どの状態も出ていません",
+  );
+
+  /* ★このあとの試験は店舗設定の画面を見ます。見ていた場所へ戻します。 */
+  await gamen("store-setup");
+  await mise.waitForTimeout(1200);
 
   /* ══════════════════════════════════════════
      ①-2 「お客様側で確認」

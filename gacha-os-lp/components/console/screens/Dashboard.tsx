@@ -48,8 +48,10 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
+import { useRouter } from "next/navigation";
 import type { ConsoleState } from "@/lib/console/state";
 import { liveTodos, useLiveCounts } from "@/lib/console/liveCounts";
+import { useReadiness, type ReadinessItem } from "@/lib/console/liveStore";
 import type { MenuKey } from "../menu";
 import Icon from "../Icon";
 
@@ -119,6 +121,16 @@ export default function Dashboard({
         shouldCount={should.length}
         onNav={onNav}
       />
+
+      {/* ══ ⓪ 開店までにやること ══
+            ★ここは「今日やること」より上に置くこと。
+              まだ開店していないお店にとって、
+              発送0件・問い合わせ0件は当たり前です。
+              その画面をいくら見ても、開店には近づきません。
+            ★開店が済んだら、この場所は1行に畳みます。
+              毎朝「12/12 完了」の大きなカードを見せられても、
+              じゃまなだけです。 */}
+      <Kaiten />
 
       {/* ══ ① 今日やること ══ */}
       <Today must={must} should={should} onNav={onNav} />
@@ -351,6 +363,187 @@ export default function Dashboard({
         </p>
       </section>
     </div>
+  );
+}
+
+/* ══════════════════════════════════════════════
+   ⓪ 開店までにやること
+   ══════════════════════════════════════════════ */
+
+/**
+ * 契約したお店が、初めてログインした日に見る場所。
+ *
+ * ═══════════════════════════════════════════════
+ * ★この部品が要る理由
+ * ═══════════════════════════════════════════════
+ *
+ *   初めてログインしたお店の画面には、こう出ていました。
+ *
+ *       今日、確認することはありません。
+ *       本日の売上 0円 ／ 発送待ち 0件 ／ 問い合わせ 0件
+ *
+ *   全部そのとおりです。そして、何をすればよいかは1つも書いてありません。
+ *   お店は、ここでこちらに電話をかけてきます。
+ *   電話がかかってくる商品は、複数社へ売れる商品ではありません。
+ *
+ * ═══════════════════════════════════════════════
+ * ★ここで「開店してよいか」を判定しないこと
+ * ═══════════════════════════════════════════════
+ *
+ *   判定は lib/server/launchReadiness.ts の1か所だけです。
+ *   ここは受け取った結果を並べるだけにします。
+ *   画面で数え直すと、書いた日から必ずずれます。
+ *   ずれ方が最悪です。ここには「準備できています」と出ているのに、
+ *   公開ボタンを押すと断られる、という形になります。
+ *
+ * ═══════════════════════════════════════════════
+ * ★読めなかったときに、済んだことにしないこと
+ * ═══════════════════════════════════════════════
+ *
+ *   権限が足りない・通信できない、のどちらでも、
+ *   このカードを黙って消してはいけません。
+ *   消すと、開店準備が終わったように見えます。
+ */
+function Kaiten() {
+  const router = useRouter();
+  const { state } = useReadiness();
+
+  /* 読んでいる間は、何も出しません。
+     一瞬だけ「まだ開店できません」と出して消えるのは、いちばん不安にさせます。 */
+  if (state.phase === "loading") return null;
+
+  if (state.phase === "ng") {
+    return (
+      <section
+        data-testid="dash-kaiten-yomenai"
+        className="rounded-2xl border border-edge2 bg-mist px-5 py-4"
+      >
+        <p className="nb text-note font-bold text-slate3">開店準備</p>
+        <p className="mt-1.5 text-note leading-[1.85] text-slate3">
+          いまは読み取れませんでした（{state.why}）。
+          読めていないだけで、済んだという意味ではありません。
+        </p>
+      </section>
+    );
+  }
+
+  const r = state.data.readiness;
+  const nokori = r.blockers;
+  /* 公開は止めないが、まだのもの。★「済み」に混ぜないこと */
+  const attaHouGaYoi = r.items.filter((i) => !i.done && !i.blocking);
+
+  /* ── 開店できる状態。1行に畳む ── */
+  if (r.canPublish) {
+    return (
+      <section
+        data-testid="dash-kaiten-kanryou"
+        className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-2xl border border-ok/30 bg-ok/10 px-5 py-4"
+      >
+        <span className="nb text-note font-bold text-ok-ink">開店準備 完了</span>
+        <span className="num text-note font-bold text-slate2">
+          {r.doneCount} / {r.totalCount}
+        </span>
+        <span className="text-note leading-[1.85] text-slate3">
+          お店として公開できる状態です。
+          {attaHouGaYoi.length > 0 &&
+            `（公開は止めないものが、あと ${attaHouGaYoi.length} 件あります）`}
+        </span>
+        <button
+          type="button"
+          onClick={() => router.push("/client-demo/store-setup")}
+          className="nb ml-auto text-note font-bold text-blue-ink underline underline-offset-4"
+        >
+          店舗設定を見る
+        </button>
+      </section>
+    );
+  }
+
+  /* ── まだ開店できない。いちばん上に、大きく出す ── */
+  return (
+    <section
+      data-testid="dash-kaiten"
+      className="overflow-hidden rounded-2xl border border-warn/40 bg-warn/8"
+    >
+      <div className="border-b border-warn/25 px-5 py-4 sm:px-6">
+        <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
+          <h2 className="text-[1.25rem] font-bold tracking-tight text-slate">
+            開店までにやること
+          </h2>
+          <p className="num text-note font-bold text-slate2">
+            {r.doneCount} / {r.totalCount} 完了
+          </p>
+        </div>
+        {/* ★「準備中です」に言い換えないこと。
+              売れるかどうかは、お店にとってお金の話です。 */}
+        <p className="mt-2 text-note leading-[1.9] text-slate3">
+          {state.data.blockMessage ??
+            "あと少しで、お客様に公開できます。下の項目を上から埋めてください。"}
+        </p>
+      </div>
+
+      <ul className="space-y-2 px-5 py-4 sm:px-6">
+        {nokori.map((it) => (
+          <KaitenRow
+            key={it.key}
+            item={it}
+            onJump={(h) => router.push(h)}
+          />
+        ))}
+      </ul>
+
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-warn/25 px-5 py-3.5 sm:px-6">
+        <p className="text-note leading-[1.85] text-slate3">
+          順番に聞かれる形で進めたいときは、店舗設定の
+          <span className="font-bold text-slate2">初期設定（12ステップ）</span>
+          からどうぞ。
+        </p>
+        <button
+          type="button"
+          onClick={() => router.push("/client-demo/store-setup")}
+          className="nb ml-auto text-note font-bold text-blue-ink underline underline-offset-4"
+        >
+          初期設定をはじめる
+        </button>
+      </div>
+    </section>
+  );
+}
+
+function KaitenRow({
+  item,
+  onJump,
+}: {
+  item: ReadinessItem;
+  onJump: (href: string) => void;
+}) {
+  return (
+    <li className="rounded-xl border border-edge2 bg-paper px-4 py-3">
+      <div className="flex flex-wrap items-center gap-2.5">
+        <span
+          aria-hidden
+          className="nb flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-edge text-[0.7rem] font-bold text-slate3"
+        >
+          –
+        </span>
+        <span className="text-note font-bold text-slate">{item.label}</span>
+      </div>
+      {/* ★「未設定です」で終わらせないこと。何を押せばよいかまで出します。 */}
+      {item.todo !== null && (
+        <p className="mt-2 whitespace-pre-wrap text-note leading-[1.9] text-slate3">
+          {item.todo}
+        </p>
+      )}
+      {item.href !== null && (
+        <button
+          type="button"
+          onClick={() => onJump(item.href as string)}
+          className="nb mt-2.5 text-note font-bold text-blue-ink underline underline-offset-4"
+        >
+          この設定を開く
+        </button>
+      )}
+    </li>
   );
 }
 
