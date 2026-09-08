@@ -1974,6 +1974,30 @@ export async function migrate(): Promise<void> {
   if (migrated) return;
   const c = db();
   await c.execute("PRAGMA foreign_keys = ON");
+
+  /* ★手元のファイルにつないでいるときだけ、順番待ちを許すこと（2026-09-08）
+   *
+   *   手元のファイル（file:）は、同時に書けるのが1人だけです。
+   *   ところが試験のときは、書く人が2人います。
+   *
+   *     ・開発用サーバー（画面からの保存）
+   *     ・試験の道具そのもの（お店やガチャを作る／台帳を突き合わせる）
+   *
+   *   ここを何も指定しないと、あとから来たほうは待たずに、
+   *   その場で「database is locked」を投げて終わります。
+   *   実測で、通しの試験が毎回この形で途中終了していました。
+   *
+   *   ★これは「試験の合否をゆるめる」話ではありません。
+   *     合否の条件は1つも変えていません。
+   *     変えたのは「1人目が書き終わるまで待つ」という設定だけです。
+   *
+   *   ★遠くのDB（Turso）には入れないこと。
+   *     あちらは HTTP で、そもそもファイルの鍵という考え方がありません。
+   *     入れても意味がなく、意味のない指定は誤解のもとです。 */
+  if (fileNoHozonsaki()) {
+    await c.execute("PRAGMA busy_timeout = 10000");
+  }
+
   await c.execute(LEDGER);
 
   const done = new Set(

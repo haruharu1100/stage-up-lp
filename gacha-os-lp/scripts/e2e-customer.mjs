@@ -317,6 +317,30 @@ async function press(page, sel, until, tries = 8) {
   return false;
 }
 
+/**
+ * 画面を開く。
+ *
+ * ★途中で開き直さないこと。
+ *   前は「20秒で間に合わなければ、もう一度開き直す」にしていました。
+ *   これは間違いでした。開き直すと、1回目の通信が途中で打ち切られ、
+ *   その打ち切りが「読み込み失敗（ERR_ABORTED）」として記録されます。
+ *   つまり、直したつもりで、別の場所に嘘の失敗を作っていました。
+ *   さらに、打ち切られた画面は中途半端なまま残り、
+ *   そのあとの試験（売り場に並んでいるか等）まで巻き添えで落ちます。
+ *
+ * ★かわりに、最初から長めに待ちます。
+ *   開発用サーバーは、その画面を初めて開くときに組み立てを始めます。
+ *   組み立てに20秒では足りない日があります。
+ *   それは「画面が壊れている」ではありません。
+ * ★ただし無制限にはしないこと。
+ *   本当に開かない画面を、いつまでも待つだけになります。
+ */
+const HIRAKU_MS = 60000;
+
+async function hiraku(p, url) {
+  await p.goto(url, { waitUntil: "domcontentloaded", timeout: HIRAKU_MS });
+}
+
 /** 画面に出ている文字（見えているものだけ） */
 async function moji(page) {
   return await page.evaluate(() => document.body?.innerText ?? "");
@@ -539,6 +563,47 @@ T(
 
 const mailFrom = mailLogSize();
 
+/* ── 先に画面を温めておく ─────────────────────
+   ★開発用サーバーは、その画面を「初めて開いた人」を待たせて組み立てます。
+     ブラウザで初めて開くと、その組み立ての時間まで
+     「画面が遅い・出ない」として測ってしまいます。
+     それは本番の速さではありません。
+   ★ここで測っているのは中身の正しさであって、組み立ての速さではないので、
+     先に1回ずつ叩いて組み立てだけ済ませておきます。
+   ★温められなくても止めないこと。
+     温めは、あくまで下ごしらえです。 */
+{
+  const atatameru = [
+    "/",
+    "/shop",
+    `/shop/${gachaId}`,
+    "/signup",
+    "/login",
+    "/mypage",
+    "/mypage/shop",
+    `/mypage/shop/${gachaId}`,
+    "/mypage/points",
+    "/mypage/points/buy",
+    "/mypage/prizes",
+    "/store/legal",
+    "/store/company",
+    "/store/terms",
+    "/store/privacy",
+    "/store/faq",
+    "/store/contact",
+  ];
+  for (const p of atatameru) {
+    try {
+      await fetch(`${BASE}${p}`, {
+        headers: { host: HOST, "x-forwarded-host": HOST },
+        redirect: "follow",
+      });
+    } catch {
+      /* 温められなくても、そのまま進みます */
+    }
+  }
+}
+
 /* ── ブラウザを開く ─────────────────────────── */
 const browser = await chromium.launch({ headless: true });
 const ctx = await browser.newContext({
@@ -568,7 +633,7 @@ try {
      ══════════════════════════════════════════ */
   H("⓪ 会員登録の前に、棚を見られるか");
 
-  await page.goto(`${BASE}/`, { waitUntil: "domcontentloaded" });
+  await hiraku(page, `${BASE}/`);
   await page.waitForTimeout(1500);
   T(
     "C-00a",
@@ -638,7 +703,7 @@ try {
      ══════════════════════════════════════════ */
   H("① 新規会員登録");
 
-  await page.goto(`${BASE}/login`, { waitUntil: "domcontentloaded" });
+  await hiraku(page, `${BASE}/login`);
   const login1 = await machi(page, '[data-testid="go-signup"]');
   T("C-01", "ログイン画面に、はじめての方の入口がある", login1);
 
@@ -711,7 +776,7 @@ try {
   );
   T("C-09", "開く前は、まだ確認前になっている", !mae.email_verified_at, String(mae.email_verified_at ?? "null"));
 
-  await page.goto(`${BASE}/verify-email?token=${kagi}`, { waitUntil: "domcontentloaded" });
+  await hiraku(page, `${BASE}/verify-email?token=${kagi}`);
   const vs = await machi(page, '[data-testid="verify-submit"]', 15000);
   T("C-09b", "確認のボタンが出た（開いただけでは確認しない）", vs);
   /* ★1回押して終わりにしないこと。
@@ -742,7 +807,7 @@ try {
      ══════════════════════════════════════════ */
   H("③ ログイン");
 
-  await page.goto(`${BASE}/login`, { waitUntil: "domcontentloaded" });
+  await hiraku(page, `${BASE}/login`);
 
   /* ★1回で決めつけないこと。
        手元のサーバーは、初めて開く画面をその場で組み立てます。
@@ -831,7 +896,7 @@ try {
      ══════════════════════════════════════════ */
   H("④ ガチャ一覧（売り場）");
 
-  await page.goto(`${BASE}/mypage/shop`, { waitUntil: "domcontentloaded" });
+  await hiraku(page, `${BASE}/mypage/shop`);
   const tile = await machi(page, `[data-testid="tile-open-${gachaId}"]`);
   T("C-17", "作ったガチャが売り場に並んでいる", tile);
 
@@ -1084,9 +1149,9 @@ try {
       if ((await kauBtn.count()) > 0) {
         await kauBtn.first().click().catch(() => {});
       } else {
-        await page.goto(
+        await hiraku(
+          page,
           `${BASE}/mypage/points/buy?from=${encodeURIComponent(`/mypage/shop/${gachaId}`)}`,
-          { waitUntil: "domcontentloaded" },
         );
       }
       if (!(await machi(page, '[data-testid="buy-product"]', 20000))) break;
@@ -1108,7 +1173,7 @@ try {
     if (oseru) {
       await mou.first().click().catch(() => {});
     } else {
-      await page.goto(`${BASE}/mypage/shop/${gachaId}`, { waitUntil: "domcontentloaded" });
+      await hiraku(page, `${BASE}/mypage/shop/${gachaId}`);
       if (!(await machi(page, '[data-testid="draw-open"]', 15000))) break;
       await page.locator('[data-testid="draw-open"]').click();
     }
@@ -1261,7 +1326,7 @@ try {
   H("⑭ 発送を依頼する");
 
   /* お届け先が無いと依頼できません。先に登録します */
-  await page.goto(`${BASE}/mypage/address`, { waitUntil: "domcontentloaded" });
+  await hiraku(page, `${BASE}/mypage/address`);
   const addrOpen = await machi(page, 'button:has-text("お届け先を変更する")', 15000);
   T("C-59", "お届け先の画面が開いた", addrOpen, page.url());
   if (addrOpen) await page.locator('button:has-text("お届け先を変更する")').click();
@@ -1303,7 +1368,7 @@ try {
   });
 
   const okuru = String(nokori[0]?.name ?? shina2);
-  await page.goto(`${BASE}/mypage/prizes`, { waitUntil: "domcontentloaded" });
+  await hiraku(page, `${BASE}/mypage/prizes`);
   await machi(page, `button:not([disabled]):has-text("${okuru}")`, 15000);
   await erabu(okuru).click();
   const hassou = await machi(page, 'button:has-text("発送を依頼する")', 8000);
@@ -1346,7 +1411,7 @@ try {
      ══════════════════════════════════════════ */
   H("⑮ 発送状況");
 
-  await page.goto(`${BASE}/mypage/shipping`, { waitUntil: "domcontentloaded" });
+  await hiraku(page, `${BASE}/mypage/shipping`);
   /* ★開いた直後に読まないこと。中身はあとから取りに行きます。
        間に合わないと、空の枠を読んで誤った不合格になります。 */
   await machiAru(page, `text=${shina2}`, 20000);
@@ -1369,7 +1434,7 @@ try {
      ══════════════════════════════════════════ */
   H("⑯ ログアウト");
 
-  await page.goto(`${BASE}/mypage`, { waitUntil: "domcontentloaded" });
+  await hiraku(page, `${BASE}/mypage`);
   const logoutAri = await machi(page, '[data-testid="chrome-logout"]', 10000);
   T("C-70", "ログアウトの入口が、どの画面からでも見える", logoutAri);
 
@@ -1383,7 +1448,7 @@ try {
   await page.waitForTimeout(1000);
   T("C-70b", "ログアウトを押したら、ログイン画面へ戻った", deta && /\/login/.test(page.url()), page.url());
 
-  await page.goto(`${BASE}/mypage/prizes`, { waitUntil: "domcontentloaded" });
+  await hiraku(page, `${BASE}/mypage/prizes`);
   await page.waitForTimeout(1200);
   const detteru = /\/login/.test(page.url());
   T("C-71", "ログアウトしたあとは、マイページに入れない", detteru, page.url());
@@ -1400,7 +1465,7 @@ try {
   const NGWORD = /(デモ|サンプル|モック|テストユーザー|開発用|ダミー)/;
   const detaNG = [];
   for (const [path, label] of gamenList) {
-    await page.goto(`${BASE}${path}`, { waitUntil: "domcontentloaded" });
+    await hiraku(page, `${BASE}${path}`);
     await page.waitForTimeout(600);
     const t = await moji(page);
     const hit = t.split("\n").filter((l) => NGWORD.test(l));
