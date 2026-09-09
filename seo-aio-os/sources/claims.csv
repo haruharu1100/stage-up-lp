@@ -1,0 +1,11 @@
+id,主張,本文に書いてよい言い方,根拠,出典URL,確認日,使用可否,メモ
+GOOG-001,llms.txtはGoogle検索では使われず順位に影響しない,Google検索はllms.txtを使いません,Google Search Central 公式ドキュメント（AI最適化ガイドの追記）,https://developers.google.com/search/docs/fundamentals/ai-optimization-guide,2026-09-09,可,2026-06-15に公式追記
+GOOG-002,AI OverviewsやAI Modeに追加要件は無く普通のSEOが土台,AI検索向けの特別な最適化は必要ありません,Google Search Central 公式ガイド（2026-05-15公開）,https://developers.google.com/search/docs/appearance/ai-features,2026-09-09,可,
+GOOG-003,GBPの投稿は日付範囲を指定しなければ6か月でアーカイブされる,投稿は6か月を過ぎるとアーカイブされます,Google ビジネス プロフィール ヘルプ,https://support.google.com/business/answer/7342169,2026-09-09,可,「7日で消える」は誤り
+GOOG-004,口コミへの謝礼・文言指定・肯定的な人だけへの依頼は禁止,口コミは内容を指定せずお願いします,Google 禁止および制限されているコンテンツ ポリシー,https://support.google.com/contributionpolicy/answer/7400114,2026-09-09,可,違反すると新規口コミ受付停止などの制限
+GOOG-005,地域名だけ差し替えた類似ページの量産は誘導ページ違反,地域ページは中身を変えられる時だけ作ります,Google 検索スパムに関するポリシー（誘導ページ）,https://developers.google.com/search/docs/essentials/spam-policies,2026-09-09,可,
+GA4-001,GA4のAI Assistantチャネルは2026-05-13に追加され過去データは再分類されない,2026年5月13日以降のAI経由の訪問だけが分かります,Google Analytics 公式アナウンス,https://support.google.com/analytics/answer/9756891,2026-09-09,可,リファラの無い流入はDirectのまま＝実際より少なく出る
+GSC-001,Search Consoleの生成AIレポートは2026-08-31に全世界展開され表示回数のみ,生成AIでの表示回数だけが分かります（クリック数は出ません）,Google Search Central Blog / Search Console ヘルプ,https://support.google.com/webmasters/answer/16984139,2026-09-09,可,通常のウェブ検索レポートにも含まれる数字なので足さない
+BIZ-001,［自社の料金をここに書く］,,［見積書・料金表など根拠資料］,,,要確認,料金を本文に書く前に必ずこの行を埋める
+BIZ-002,［導入実績・件数をここに書く］,,［契約書・請求書など根拠資料］,,,要確認,件数や社数を書く前に必ずこの行を埋める
+BIZ-003,［作業時間の短縮など効果の数値をここに書く］,,［測定した記録・対象と期間］,,,要確認,対象・期間・測定方法・ばらつきまで書けない数値は使わない

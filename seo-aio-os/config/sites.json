@@ -1,0 +1,44 @@
+{
+  "_説明": "検査する自社サイトの定義。own_domains に無いドメインは、道具の側が取得を拒否する（他社サイトの巡回禁止）。",
+
+  "sites": {
+    "review-blog": {
+      "label": "レビューブログ（review.gorogorogacha.com）",
+      "base_url": "https://review.gorogorogacha.com",
+      "own_domains": ["review.gorogorogacha.com"],
+      "sitemap": "https://review.gorogorogacha.com/sitemap.xml",
+      "brand_terms": ["ごろごろ", "ゴロゴロ", "gorogoro", "オリパ研究所"],
+      "cta": {
+        "label": "オリパEC（ごろごろガチャ）への送客",
+        "link_contains": ["gorogorogacha.com"]
+      },
+      "notes": "Cloudflareの静的サイト。GA未接続が保留ブロッカー（2026-09-09時点）。"
+    },
+
+    "oripa-blog": {
+      "label": "オリパ研究所ブログ（blog.gorogorogacha.com）",
+      "base_url": "https://blog.gorogorogacha.com",
+      "own_domains": ["blog.gorogorogacha.com"],
+      "sitemap": null,
+      "brand_terms": ["ごろごろ", "ゴロゴロ", "gorogoro", "オリパ研究所"],
+      "cta": {
+        "label": "オリパEC（ごろごろガチャ）への送客",
+        "link_contains": ["gorogorogacha.com/"]
+      },
+      "notes": "WordPress。gorogoro-growth が記事を自動投稿している。2026-09-09時点でサイトマップが見つからない（/sitemap.xml・/wp-sitemap.xml・/sitemap_index.xml すべて404、robots.txtにも記載なし）。見つけ次第ここに書く。それまでは --urls でページを指定して検査する。"
+    },
+
+    "stage-up": {
+      "label": "STAGE UP 法人営業LP（ルート）",
+      "base_url": "https://stage-up.biz",
+      "own_domains": ["stage-up.biz"],
+      "sitemap": null,
+      "brand_terms": ["STAGE UP", "ステージアップ"],
+      "cta": {
+        "label": "問い合わせ・無料相談",
+        "link_contains": ["contact", "mailto:", "form"]
+      },
+      "notes": "公開URLは実物で要確認。違っていれば base_url を直すこと（推測で巡回しない）。"
+    }
+  }
+}

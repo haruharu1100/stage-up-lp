@@ -1,0 +1,8 @@
+# 検査の出力（毎回作り直せるもの）。中身にURLや数値が入るので共有しない。
+artifacts/
+
+# Search Console / GA4 から落としたCSVの置き場
+data/
+
+.DS_Store
+__pycache__/
