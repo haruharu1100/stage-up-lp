@@ -162,6 +162,12 @@ export { csp, securityHeaders };
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  /*
+    自前のサーバー（コンテナ）で動かすときだけ、必要な物だけをまとめた
+    小さな出力を作る。NEXT_STANDALONE=1 のときだけ有効。
+    ふだんの開発・Vercel への公開には一切影響しない。
+  */
+  output: process.env.NEXT_STANDALONE === "1" ? "standalone" : undefined,
   // 開発サーバーと本番確認用サーバーを同時に動かせるよう、出力先を切り替えられるようにする
   distDir: process.env.NEXT_DIST_DIR || ".next",
   poweredByHeader: false,

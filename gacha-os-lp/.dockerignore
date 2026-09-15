@@ -1,0 +1,16 @@
+# 入れ物に入れない物（重い・不要・秘密）
+node_modules
+.next
+_next-e2e-local
+_next-verify-local
+_verify
+.data
+.git
+.vercel
+.secrets
+.env
+.env.local
+.env.*.local
+*.log
+.DS_Store
+tsconfig.tsbuildinfo

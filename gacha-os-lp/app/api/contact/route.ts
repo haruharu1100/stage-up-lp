@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { LEAD_STATUSES } from "@/lib/leadStatus";
+import { appendLead, leadSinkEnabled } from "@/lib/server/leadSink";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -307,6 +308,15 @@ export async function POST(req: Request) {
 
   if (!webhook) {
     if (process.env.NODE_ENV === "production") {
+      // 送信先が無いときの最後の砦：サーバー上に書き残せたら受け付ける。
+      // 書き残せた＝どこにも無い状態にはならない、ので「受け付けました」と返してよい。
+      if (leadSinkEnabled() && (await appendLead(payload))) {
+        console.warn(
+          "[contact] CONTACT_WEBHOOK_URL is not configured. stored to lead sink. requestId=",
+          requestId
+        );
+        return reply(true, 200);
+      }
       // 届かないまま「送信できました」と返さない
       console.error(
         "[contact] CONTACT_WEBHOOK_URL is not configured. requestId=",
