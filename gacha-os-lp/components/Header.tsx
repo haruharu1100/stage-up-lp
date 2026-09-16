@@ -80,17 +80,16 @@ export default function Header() {
           </nav>
 
           {/*
-            ★「無料デモ」は、どこまでスクロールしても押せる場所に必ず1つ置くこと。
-              2026-09-16 まで、ここは「料金を見る」と「導入について相談する」の
-              2つだけで、サイトのどこにも /demo へのリンクがありませんでした。
-              料金は左のメニューにも入っているので、枠はデモに譲っています。
+            ★ここに「無料デモ」を置かないこと（2026-09-17・本人の判断）。
+              誰でも触れる場所にデモを出すと、画面と作りをそのまま真似されます。
+              見せたい相手には、商談の場で個別に URL をお伝えする運用です。
           */}
-          <div className="hidden shrink-0 items-center gap-3 sm:flex">
+          <div className="hidden shrink-0 items-center gap-4 sm:flex">
             <Link
-              href="/demo"
-              className="btn-outline whitespace-nowrap !px-5 !py-3 !text-[15px]"
+              href="/#pricing"
+              className="whitespace-nowrap text-[15px] font-medium text-slate2 transition-colors hover:text-blue-ink"
             >
-              無料デモ
+              料金を見る
             </Link>
             <Link
               href="/#contact"
@@ -144,17 +143,18 @@ export default function Header() {
           ))}
         </nav>
         <div className="mt-9 flex flex-col gap-3.5">
+          {/* ★スマホのメニューにも「無料デモ」を置かないこと（2026-09-17）。理由は上のPC側と同じです。 */}
           <Link
-            href="/demo"
+            href="/#pricing"
             onClick={() => setOpen(false)}
-            className="btn-primary btn-lg"
+            className="btn-outline btn-lg"
           >
-            無料デモを触る
+            料金を見る
           </Link>
           <Link
             href="/#contact"
             onClick={() => setOpen(false)}
-            className="btn-outline btn-lg"
+            className="btn-primary btn-lg"
           >
             導入について相談する
           </Link>

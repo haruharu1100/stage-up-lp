@@ -103,7 +103,7 @@ export default function ClosingMessage() {
             <div className="relative mx-auto max-w-3xl text-center">
               {/*
                 この3行は、下の2つのボタンとそのまま対応しています。
-                1行目＝これから始める方（無料デモ）
+                1行目＝これから始める方（導入の相談）
                 2行目＝すでに運営している方（移行の相談）
                 順番を入れ替えないこと。
               */}
@@ -119,16 +119,12 @@ export default function ClosingMessage() {
 
               <div className="mt-12 flex flex-wrap justify-center gap-3">
                 {/*
-                  ★1つ目は「無料デモ」に戻しました（2026-09-16）。
-                    上の3行のうち1行目（これから始める方）に対応する入口が
-                    ここだけ「導入について相談する」になっていて、
-                    サイト全体から /demo へ行ける場所が消えていました。
-                    相談フォームはこのすぐ下にあります。順番を入れ替えないこと。
+                  ★ここに「無料デモ」を置かないこと（2026-09-17・本人の判断）。
+                    誰でも触れる場所にデモを出すと、画面と作りをそのまま真似されます。
+                    見せたい相手には、商談の場で個別に URL をお伝えする運用です。
+                    tests/demoPrivate.test.ts が見張っています。
                 */}
-                <Link href="/demo" className="btn-primary">
-                  無料デモを触る
-                </Link>
-                <Link href="#contact" className="btn-ghost">
+                <Link href="#contact" className="btn-primary">
                   導入について相談する
                 </Link>
                 {/* 既存事業者向けの入口。文言を「導入相談」に戻さないこと（項目37） */}
@@ -138,7 +134,7 @@ export default function ClosingMessage() {
               </div>
 
               <p className="mt-7 text-note text-white/45">
-                デモはお申し込み・ご登録なしでそのまま触れます。管理画面は、オンラインの画面共有で実物をご覧いただきながらご説明することもできます。
+                管理画面は、オンラインの画面共有で実物をご覧いただきながらご説明します。
               </p>
             </div>
           </div>

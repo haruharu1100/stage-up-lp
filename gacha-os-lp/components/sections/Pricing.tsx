@@ -102,18 +102,10 @@ export default function Pricing() {
           </p>
 
           {/*
-            ★料金を見ている人ほど、実物を見ないまま判断しようとします。
-              ここに「先に触れます」を1本だけ置きます。
-              金額を隠したり、見るために登録させたりはしません。
+            ★ここに「無料デモ」を置かないこと（2026-09-17・本人の判断）。
+              誰でも触れる場所にデモを出すと、画面と作りをそのまま真似されます。
+              実物は商談の場で、画面共有で個別にご案内します。
           */}
-          <div className="mt-7 border-t border-edge2 pt-6">
-            <p className="text-note text-slate2">
-              金額を検討する前に、実物をそのまま触っていただけます。お申し込み・ご登録は必要ありません。
-            </p>
-            <a href="/demo" className="btn-outline mt-4 w-full sm:w-auto">
-              無料デモを触る
-            </a>
-          </div>
         </div>
       </Reveal>
 

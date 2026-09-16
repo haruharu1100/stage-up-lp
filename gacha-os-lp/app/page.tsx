@@ -9,7 +9,6 @@ import OperatingDay from "@/components/sections/OperatingDay";
 import PublishStory from "@/components/sections/PublishStory";
 import CustomerSide from "@/components/sections/CustomerSide";
 import CustomerPlay from "@/components/sections/CustomerPlay";
-import DemoInvite from "@/components/sections/DemoInvite";
 import RoleFlow from "@/components/sections/RoleFlow";
 import Problems from "@/components/sections/Problems";
 import Diagnose from "@/components/sections/Diagnose";
@@ -187,14 +186,6 @@ export default async function Home() {
               「で、お客さんはどうやって遊ぶの？」が残ります。そこを埋めるための並びです。 */}
         <CustomerSide />
         <CustomerPlay />
-
-        {/*
-          ★05を見終わったところに「自分で触れます」を1つだけ置きます。
-            ここまでで「何を買うのか」は見終わっているのに、
-            2026-09-16 まで /demo への入口がページ上に1つもありませんでした。
-            料金（07）より前です。後ろへ動かさないこと。
-        */}
-        <DemoInvite />
 
         {/* ── 06 すでに運営している方の、移行 ──
             ここまでは「これから始める人」に向けて書いてあるので、

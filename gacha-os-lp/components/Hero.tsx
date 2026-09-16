@@ -179,7 +179,10 @@ export default function Hero() {
               <Link
                 href={site.hero.ctaPrimary.href}
                 onClick={() =>
-                  track(EV.heroCta, { target: "demo", variant: activeHeroVariant })
+                  track(EV.heroCta, {
+                    target: "contact",
+                    variant: activeHeroVariant,
+                  })
                 }
                 className="btn-primary btn-lg w-full sm:w-auto"
               >
@@ -198,7 +201,7 @@ export default function Hero() {
                 href={site.hero.ctaSecondary.href}
                 onClick={() =>
                   track(EV.heroCta, {
-                    target: "contact",
+                    target: "pricing",
                     variant: activeHeroVariant,
                   })
                 }
@@ -208,8 +211,14 @@ export default function Hero() {
               </Link>
             </motion.div>
 
+            {/*
+              ★「約3分で体験できます」と書かないこと（2026-09-17）。
+                主ボタンの行き先は相談フォームです。デモへの入口は
+                模倣対策で全部外しました（本人の判断）。
+                行き先と合わない言葉を残すと、それだけで嘘になります。
+            */}
             <motion.p {...rise(0.3)} className="mt-5 text-note text-slate3">
-              約3分で体験できます。お申し込みや登録は必要ありません。
+              実際の管理画面は、オンラインの画面共有でご覧いただけます。
             </motion.p>
 
             <motion.div {...rise(0.36)} className="mt-10 lg:mt-12">
