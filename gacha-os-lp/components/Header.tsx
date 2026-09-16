@@ -79,12 +79,18 @@ export default function Header() {
             ))}
           </nav>
 
-          <div className="hidden shrink-0 items-center gap-4 sm:flex">
+          {/*
+            ★「無料デモ」は、どこまでスクロールしても押せる場所に必ず1つ置くこと。
+              2026-09-16 まで、ここは「料金を見る」と「導入について相談する」の
+              2つだけで、サイトのどこにも /demo へのリンクがありませんでした。
+              料金は左のメニューにも入っているので、枠はデモに譲っています。
+          */}
+          <div className="hidden shrink-0 items-center gap-3 sm:flex">
             <Link
-              href="/#pricing"
-              className="whitespace-nowrap text-[15px] font-medium text-slate2 transition-colors hover:text-blue-ink"
+              href="/demo"
+              className="btn-outline whitespace-nowrap !px-5 !py-3 !text-[15px]"
             >
-              料金を見る
+              無料デモ
             </Link>
             <Link
               href="/#contact"
@@ -139,16 +145,16 @@ export default function Header() {
         </nav>
         <div className="mt-9 flex flex-col gap-3.5">
           <Link
-            href="/#pricing"
+            href="/demo"
             onClick={() => setOpen(false)}
-            className="btn-outline btn-lg"
+            className="btn-primary btn-lg"
           >
-            料金を見る
+            無料デモを触る
           </Link>
           <Link
             href="/#contact"
             onClick={() => setOpen(false)}
-            className="btn-primary btn-lg"
+            className="btn-outline btn-lg"
           >
             導入について相談する
           </Link>

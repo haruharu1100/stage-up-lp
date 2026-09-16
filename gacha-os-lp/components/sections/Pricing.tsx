@@ -100,6 +100,20 @@ export default function Pricing() {
             <span className="font-bold text-slate">運営業務そのものを減らす</span>
             ための金額です。
           </p>
+
+          {/*
+            ★料金を見ている人ほど、実物を見ないまま判断しようとします。
+              ここに「先に触れます」を1本だけ置きます。
+              金額を隠したり、見るために登録させたりはしません。
+          */}
+          <div className="mt-7 border-t border-edge2 pt-6">
+            <p className="text-note text-slate2">
+              金額を検討する前に、実物をそのまま触っていただけます。お申し込み・ご登録は必要ありません。
+            </p>
+            <a href="/demo" className="btn-outline mt-4 w-full sm:w-auto">
+              無料デモを触る
+            </a>
+          </div>
         </div>
       </Reveal>
 

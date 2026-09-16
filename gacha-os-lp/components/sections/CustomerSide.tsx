@@ -308,7 +308,18 @@ export default function CustomerSide() {
                   />
                 </svg>
               </Link>
-              <Link href="/#contact" className="btn-outline w-full sm:w-auto">
+              {/*
+                ★ここはお客様（買う人）の画面を説明している章です。
+                  説明を読み終えた直後に「じゃあ触ってみる」が無いと、
+                  そのまま下へ流れて終わります。お客様デモへ直接つなぎます。
+              */}
+              <Link
+                href="/demo?side=customer"
+                className="btn-outline w-full sm:w-auto"
+              >
+                お客様デモを触る
+              </Link>
+              <Link href="/#contact" className="btn-ghost w-full sm:w-auto">
                 導入について相談する
               </Link>
             </div>

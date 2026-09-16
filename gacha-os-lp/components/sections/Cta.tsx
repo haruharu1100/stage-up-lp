@@ -273,7 +273,14 @@ export default function Cta() {
                     c.primary ? "text-blue-ink" : "text-slate2"
                   }`}
                 >
-                  {c.primary ? "相談する" : "この内容で送る"}
+                  {/*
+                    ★行き先に合わせた言葉を出すこと。
+                      以前は「primary なら必ず 相談する」でした。
+                      1枚目をデモへ向けた瞬間、押す前の言葉だけが嘘になります。
+                  */}
+                  {("action" in c && typeof c.action === "string"
+                    ? c.action
+                    : null) ?? (isForm ? "この内容で送る" : "開く")}
                   <svg
                     width="16"
                     height="16"
