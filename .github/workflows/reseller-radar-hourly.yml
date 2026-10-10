@@ -1,8 +1,8 @@
-name: Reseller Radar Hourly Crawl
+name: Reseller Radar Crawl (3h)
 
 on:
   schedule:
-    - cron: '0 * * * *'
+    - cron: '0 */3 * * *'
   workflow_dispatch:
 
 jobs:
